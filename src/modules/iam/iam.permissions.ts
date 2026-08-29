@@ -11,4 +11,7 @@ export const PERMISSION_CATALOG: readonly Permission[] = [
   { code: 'iam.role.manage', module: 'IAM', action: 'manage', sensitive: true },
   { code: 'iam.assignment.manage', module: 'IAM', action: 'manage', sensitive: true },
   { code: 'iam.audit.view', module: 'IAM', action: 'view', sensitive: true },
+  { code: 'media.asset.upload', module: 'Media', action: 'upload', sensitive: true },
+  { code: 'media.asset.view', module: 'Media', action: 'view', sensitive: false },
+  { code: 'media.asset.manage', module: 'Media', action: 'manage', sensitive: true },
 ] as const;

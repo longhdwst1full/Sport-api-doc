@@ -1,19 +1,26 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import {
-  CreateUploadUrlInput,
+  CreateSignedImageUploadInput,
   ObjectStorageClient,
-  UploadUrlResult,
+  SignedImageUploadResult,
+  StoredImageAsset,
+  VerifyImageUploadInput,
 } from './object-storage.client';
 
 @Injectable()
 export class DisabledObjectStorageClient extends ObjectStorageClient {
-  createUploadUrl(input: CreateUploadUrlInput): Promise<UploadUrlResult> {
+  createSignedImageUpload(input: CreateSignedImageUploadInput): Promise<SignedImageUploadResult> {
     void input;
     throw new ServiceUnavailableException('Object storage provider is not configured');
   }
 
-  deleteObject(objectKey: string): Promise<void> {
-    void objectKey;
+  verifyImageUpload(input: VerifyImageUploadInput): Promise<StoredImageAsset> {
+    void input;
+    throw new ServiceUnavailableException('Object storage provider is not configured');
+  }
+
+  deleteImage(publicId: string): Promise<void> {
+    void publicId;
     throw new ServiceUnavailableException('Object storage provider is not configured');
   }
 }
