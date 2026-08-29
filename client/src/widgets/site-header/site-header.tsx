@@ -1,7 +1,13 @@
+'use client';
+
 import Link from 'next/link';
 import { Dumbbell, Menu, ShoppingBag } from 'lucide-react';
+import { useAppSelector } from '@/app/store/hooks';
 
 export function SiteHeader() {
+  const cartQuantity = useAppSelector((state) =>
+    state.cart.items.reduce((total, item) => total + item.quantity, 0),
+  );
   return (
     <header className="mx-auto flex max-w-7xl items-center justify-between px-6 py-6 lg:px-10">
       <Link href="/" className="flex items-center gap-3 text-xl font-extrabold">
@@ -21,10 +27,15 @@ export function SiteHeader() {
       </nav>
       <div className="flex items-center gap-2">
         <button
-          className="hidden rounded-full border border-ink/15 p-3 md:grid"
-          aria-label="Mở giỏ hàng"
+          className="relative hidden rounded-full border border-ink/15 p-3 md:grid"
+          aria-label={`Mở giỏ hàng, ${cartQuantity} sản phẩm`}
         >
           <ShoppingBag />
+          {cartQuantity > 0 && (
+            <span className="absolute -right-1 -top-1 grid min-w-5 place-items-center rounded-full bg-brand-600 px-1 text-xs font-bold text-white">
+              {cartQuantity > 99 ? '99+' : cartQuantity}
+            </span>
+          )}
         </button>
         <button className="rounded-full border border-ink/15 p-3 md:hidden" aria-label="Mở menu">
           <Menu />

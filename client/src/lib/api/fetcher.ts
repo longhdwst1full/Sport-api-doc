@@ -1,3 +1,5 @@
+import axios, { type AxiosRequestConfig } from 'axios';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
 export class ApiError<T = unknown> extends Error {
@@ -5,40 +7,34 @@ export class ApiError<T = unknown> extends Error {
     public readonly status: number,
     public readonly payload: T,
   ) {
-    super(`API request failed with status ${status}`);
+    super(status ? `API request failed with status ${status}` : 'API request failed');
+    this.name = 'ApiError';
   }
 }
 
-type ApiRequestConfig = Omit<RequestInit, 'body'> & {
-  url: string;
-  params?: object;
-  data?: unknown;
-};
-
-function buildUrl(path: string, params?: object): string {
-  const search = new URLSearchParams();
-  Object.entries(params ?? {}).forEach(([key, value]) => {
-    if (value !== undefined && value !== null) search.set(key, String(value));
-  });
-  const query = search.toString();
-  return `${API_URL}${path}${query ? `?${query}` : ''}`;
-}
+const apiClient = axios.create({
+  baseURL: API_URL,
+  withCredentials: true,
+  headers: { Accept: 'application/json' },
+});
 
 export async function apiFetcher<T>(
-  config: ApiRequestConfig,
-  options: RequestInit = {},
+  config: AxiosRequestConfig,
+  options: AxiosRequestConfig = {},
 ): Promise<T> {
-  const { url, params, data, ...request } = config;
-  const response = await fetch(buildUrl(url, params), {
-    ...request,
-    ...options,
-    credentials: 'include',
-    headers: { Accept: 'application/json', ...request.headers, ...options.headers },
-    body: data === undefined ? options.body : JSON.stringify(data),
-  });
-  const payload = response.status === 204 ? undefined : await response.json();
-  if (!response.ok) throw new ApiError(response.status, payload);
-  return payload as T;
+  try {
+    const response = await apiClient.request<T>({
+      ...config,
+      ...options,
+      headers: { ...config.headers, ...options.headers },
+    });
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new ApiError(error.response?.status ?? 0, error.response?.data);
+    }
+    throw error;
+  }
 }
 
 export type ErrorType<Error> = ApiError<Error>;

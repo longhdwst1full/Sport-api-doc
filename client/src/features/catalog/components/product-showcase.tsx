@@ -2,10 +2,13 @@
 
 import Image from 'next/image';
 import { ShoppingBag, Star } from 'lucide-react';
+import { addCartItem } from '@/app/store/cart.slice';
+import { useAppDispatch } from '@/app/store/hooks';
 import { useListCatalogProducts } from '@/generated/api/storefront-catalog/storefront-catalog';
 import { vndMoney } from '@/shared/format/money';
 
 export function ProductShowcase() {
+  const dispatch = useAppDispatch();
   const { data, isPending, isError } = useListCatalogProducts({ page: 1, limit: 8 });
   if (isPending)
     return <div className="rounded-3xl bg-white p-10 text-center">Đang tải sản phẩm…</div>;
@@ -51,6 +54,15 @@ export function ProductShowcase() {
               <button
                 aria-label={`Thêm ${product.name} vào giỏ`}
                 className="grid size-11 place-items-center rounded-full bg-ink text-white transition hover:bg-brand-600"
+                onClick={() =>
+                  dispatch(
+                    addCartItem({
+                      productId: product.id,
+                      name: product.name,
+                      price: product.price,
+                    }),
+                  )
+                }
               >
                 <ShoppingBag className="size-5" />
               </button>

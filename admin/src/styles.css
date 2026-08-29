@@ -11,3 +11,7 @@ body {
 * {
   box-sizing: border-box;
 }
+
+.ck-editor__editable_inline {
+  min-height: 320px;
+}

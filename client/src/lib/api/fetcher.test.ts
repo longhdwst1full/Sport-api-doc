@@ -1,28 +1,33 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { AxiosAdapter, InternalAxiosRequestConfig } from 'axios';
+import { describe, expect, it } from 'vitest';
 import { apiFetcher } from './fetcher';
 
 describe('apiFetcher', () => {
-  afterEach(() => vi.unstubAllGlobals());
-
-  it('serializes generated query parameters and returns JSON', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ items: [] }), {
+  it('passes generated query parameters to Axios', async () => {
+    let request: InternalAxiosRequestConfig | undefined;
+    const adapter: AxiosAdapter = async (config) => {
+      request = config;
+      return {
+        config,
+        data: { items: [] },
+        headers: {},
         status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }),
-    );
-    vi.stubGlobal('fetch', fetchMock);
+        statusText: 'OK',
+      };
+    };
 
-    const result = await apiFetcher<{ items: unknown[] }>({
-      url: '/api/v1/catalog/products',
-      method: 'GET',
-      params: { page: 1, search: 'tạ tay' },
-    });
+    const result = await apiFetcher<{ items: unknown[] }>(
+      {
+        url: '/api/v1/catalog/products',
+        method: 'GET',
+        params: { page: 1, search: 'tạ tay' },
+      },
+      { adapter },
+    );
 
     expect(result).toEqual({ items: [] });
-    expect(fetchMock).toHaveBeenCalledWith(
-      'http://localhost:4000/api/v1/catalog/products?page=1&search=t%E1%BA%A1+tay',
-      expect.objectContaining({ method: 'GET', credentials: 'include' }),
-    );
+    expect(request?.baseURL).toBe('http://localhost:4000');
+    expect(request?.params).toEqual({ page: 1, search: 'tạ tay' });
+    expect(request?.withCredentials).toBe(true);
   });
 });

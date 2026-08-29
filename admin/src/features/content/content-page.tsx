@@ -1,15 +1,35 @@
-import { Avatar, Card, Table, Tag, Typography } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
+import { Avatar, Button, Card, Skeleton, Table, Tag, Typography } from 'antd';
+import { lazy, Suspense, useState } from 'react';
+import { PermissionGate } from '@/core/auth/permissions';
 import { useListAdminPosts } from '@/generated/api/admin-content/admin-content';
 
+const ContentEditorDrawer = lazy(() =>
+  import('./content-editor-drawer').then((module) => ({ default: module.ContentEditorDrawer })),
+);
+
 export function ContentPage() {
+  const [editorOpen, setEditorOpen] = useState(false);
   const query = useListAdminPosts();
   return (
     <div className="space-y-6">
-      <div>
-        <Typography.Text type="secondary">CMS</Typography.Text>
-        <Typography.Title level={2} className="!mb-0 !mt-1">
-          Bài viết
-        </Typography.Title>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <Typography.Text type="secondary">CMS</Typography.Text>
+          <Typography.Title level={2} className="!mb-0 !mt-1">
+            Bài viết
+          </Typography.Title>
+        </div>
+        <PermissionGate permission="content.post.manage">
+          <Button
+            type="primary"
+            size="large"
+            icon={<PlusOutlined />}
+            onClick={() => setEditorOpen(true)}
+          >
+            Soạn bài viết
+          </Button>
+        </PermissionGate>
       </div>
       <Card>
         <Table
@@ -49,6 +69,11 @@ export function ContentPage() {
           ]}
         />
       </Card>
+      {editorOpen && (
+        <Suspense fallback={<Skeleton active />}>
+          <ContentEditorDrawer open={editorOpen} onClose={() => setEditorOpen(false)} />
+        </Suspense>
+      )}
     </div>
   );
 }

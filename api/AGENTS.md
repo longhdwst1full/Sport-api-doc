@@ -15,6 +15,7 @@ Scope: `api/` only. Do not load storefront rendering/PWA rules or admin UI rules
 - OpenAPI export or contract change: read `.agent/skills/api-contract-generation/SKILL.md`.
 - Model, aggregate, transition, transaction or persistence work: read `.agent/skills/domain-model-implementation/SKILL.md`.
 - Review/handoff: read `.agent/skills/api-quality-review/SKILL.md`.
+- Architecture discovery, execution-flow tracing or impact analysis: read `.agent/skills/api-codebase-navigation/SKILL.md`.
 - Apply all relevant files in `.agent/rules/`; these rules are local to API.
 
 ## Quality gate

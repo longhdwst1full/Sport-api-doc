@@ -2,15 +2,23 @@ import { PlusOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { Avatar, Button, Card, Input, Space, Table, Tag, Typography } from 'antd';
 import { useState } from 'react';
+import { useDebounce } from 'use-debounce';
 import { PermissionGate } from '@/core/auth/permissions';
 import { useListAdminProducts } from '@/generated/api/admin-products/admin-products';
+import { ProductFormDrawer } from './product-form-drawer';
 
 const money = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' });
 
 export function ProductsPage() {
   const [search, setSearch] = useState('');
+  const [createOpen, setCreateOpen] = useState(false);
+  const [debouncedSearch] = useDebounce(search.trim(), 350);
   const queryClient = useQueryClient();
-  const query = useListAdminProducts({ page: 1, limit: 20, search: search || undefined });
+  const query = useListAdminProducts({
+    page: 1,
+    limit: 20,
+    search: debouncedSearch || undefined,
+  });
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -21,7 +29,12 @@ export function ProductsPage() {
           </Typography.Title>
         </div>
         <PermissionGate permission="catalog.product.manage">
-          <Button type="primary" size="large" icon={<PlusOutlined />}>
+          <Button
+            type="primary"
+            size="large"
+            icon={<PlusOutlined />}
+            onClick={() => setCreateOpen(true)}
+          >
             Thêm sản phẩm
           </Button>
         </PermissionGate>
@@ -30,9 +43,10 @@ export function ProductsPage() {
         <div className="mb-5 flex flex-wrap gap-3">
           <Input.Search
             allowClear
+            value={search}
             placeholder="Tên, SKU hoặc thương hiệu"
             className="max-w-md"
-            onSearch={setSearch}
+            onChange={(event) => setSearch(event.target.value)}
           />
           <Button icon={<ReloadOutlined />} onClick={() => void queryClient.invalidateQueries()}>
             Làm mới
@@ -75,6 +89,7 @@ export function ProductsPage() {
           ]}
         />
       </Card>
+      <ProductFormDrawer open={createOpen} onClose={() => setCreateOpen(false)} />
     </div>
   );
 }

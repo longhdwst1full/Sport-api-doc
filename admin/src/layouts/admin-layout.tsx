@@ -1,15 +1,17 @@
 import { Avatar, Badge, Button, Input, Layout, Menu, Typography } from 'antd';
 import { MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons';
-import { useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { NAVIGATION_ITEMS } from '@/app/navigation/navigation.config';
+import { useAppDispatch, useAppSelector } from '@/app/store/hooks';
+import { toggleSidebar } from '@/app/store/layout.slice';
 import { usePermissions } from '@/core/auth/permissions';
 import { PageContainer } from '@/foundation/layout/page-container';
 
 const { Content, Header, Sider } = Layout;
 
 export function AdminLayout() {
-  const [collapsed, setCollapsed] = useState(false);
+  const collapsed = useAppSelector((state) => state.layout.sidebarCollapsed);
+  const dispatch = useAppDispatch();
   const location = useLocation();
   const navigate = useNavigate();
   const permissions = usePermissions();
@@ -52,7 +54,7 @@ export function AdminLayout() {
               type="text"
               aria-label="Thu gọn menu"
               icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-              onClick={() => setCollapsed((value) => !value)}
+              onClick={() => dispatch(toggleSidebar())}
             />
             <Input.Search
               placeholder="Tìm nhanh sản phẩm, đơn hàng, khách..."

@@ -1,19 +1,31 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { App as AntApp, ConfigProvider } from 'antd';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Provider as ReduxProvider } from 'react-redux';
 import { createAdminQueryClient } from '@/app/config/query-client';
 import { ADMIN_THEME } from '@/app/config/theme';
+import { hydrateLayout } from '@/app/store/layout.slice';
+import { readPersistedLayout } from '@/app/store/root.saga';
+import { adminStore } from '@/app/store/store';
 import { PermissionProvider } from '@/core/auth/permissions';
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(createAdminQueryClient);
+
+  useEffect(() => {
+    const persistedLayout = readPersistedLayout();
+    if (persistedLayout) adminStore.dispatch(hydrateLayout(persistedLayout));
+  }, []);
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <ConfigProvider theme={ADMIN_THEME}>
-        <AntApp>
-          <PermissionProvider>{children}</PermissionProvider>
-        </AntApp>
-      </ConfigProvider>
-    </QueryClientProvider>
+    <ReduxProvider store={adminStore}>
+      <QueryClientProvider client={queryClient}>
+        <ConfigProvider theme={ADMIN_THEME}>
+          <AntApp>
+            <PermissionProvider>{children}</PermissionProvider>
+          </AntApp>
+        </ConfigProvider>
+      </QueryClientProvider>
+    </ReduxProvider>
   );
 }

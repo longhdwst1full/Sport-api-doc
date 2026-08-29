@@ -4,8 +4,19 @@ import {
   DatabaseOutlined,
   RocketOutlined,
 } from '@ant-design/icons';
-import { Card, Col, Progress, Row, Table, Tag, Typography } from 'antd';
+import { Card, Col, Progress, Row, Typography } from 'antd';
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import { useListSystemModules } from '@/generated/api/admin-system/admin-system';
+import { SystemModuleList } from './components/system-module-list';
 
 export function DashboardPage() {
   const query = useListSystemModules();
@@ -22,6 +33,11 @@ export function DashboardPage() {
     { label: 'Bảng P1', value: data?.p1Models ?? 0, icon: <AppstoreOutlined />, color: '#722ed1' },
     { label: 'Module có API', value: active, icon: <CheckCircleOutlined />, color: '#fa8c16' },
   ];
+  const chartData = (data?.items ?? []).map((item) => ({
+    name: item.name,
+    P0: item.p0Count,
+    P1: item.p1Count,
+  }));
 
   return (
     <div className="space-y-6">
@@ -51,6 +67,21 @@ export function DashboardPage() {
           </Col>
         ))}
       </Row>
+      <Card title="Phân bổ model theo module" loading={query.isPending}>
+        <div className="h-80">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} margin={{ left: 0, right: 12, top: 8, bottom: 28 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="name" angle={-20} textAnchor="end" height={64} interval={0} />
+              <YAxis allowDecimals={false} />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="P0" fill="#16a56a" radius={[5, 5, 0, 0]} />
+              <Bar dataKey="P1" fill="#722ed1" radius={[5, 5, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
       <Card
         title="Tiến độ bounded context"
         extra={
@@ -61,43 +92,9 @@ export function DashboardPage() {
           />
         }
       >
-        <Table
-          rowKey="key"
-          loading={query.isPending}
-          dataSource={data?.items ?? []}
-          pagination={false}
-          columns={[
-            {
-              title: 'Module',
-              dataIndex: 'name',
-              render: (value, row) => (
-                <div>
-                  <strong>{value}</strong>
-                  <div className="text-xs text-gray-500">{row.key}</div>
-                </div>
-              ),
-            },
-            {
-              title: 'Trạng thái',
-              dataIndex: 'status',
-              render: (value) => (
-                <Tag color={value === 'ACTIVE' ? 'green' : 'default'}>
-                  {value === 'ACTIVE' ? 'Đã có API' : 'Đã scaffold'}
-                </Tag>
-              ),
-            },
-            { title: 'P0', dataIndex: 'p0Count', align: 'center' },
-            { title: 'P1', dataIndex: 'p1Count', align: 'center' },
-            {
-              title: 'Bảng',
-              dataIndex: 'tables',
-              responsive: ['lg'],
-              render: (tables: string[]) => (
-                <span className="text-xs text-gray-500">{tables.join(', ')}</span>
-              ),
-            },
-          ]}
-        />
+        <div className="overflow-x-auto">
+          <SystemModuleList items={data?.items ?? []} />
+        </div>
       </Card>
     </div>
   );

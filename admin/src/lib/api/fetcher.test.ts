@@ -1,32 +1,34 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { AxiosAdapter, InternalAxiosRequestConfig } from 'axios';
+import { describe, expect, it } from 'vitest';
 import { apiFetcher } from './fetcher';
 
 describe('apiFetcher', () => {
-  afterEach(() => vi.unstubAllGlobals());
-
   it('serializes request bodies for generated mutations', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ id: 'product-1' }), {
+    let request: InternalAxiosRequestConfig | undefined;
+    const adapter: AxiosAdapter = async (config) => {
+      request = config;
+      return {
+        config,
+        data: { id: 'product-1' },
+        headers: {},
         status: 201,
-        headers: { 'Content-Type': 'application/json' },
-      }),
-    );
-    vi.stubGlobal('fetch', fetchMock);
+        statusText: 'Created',
+      };
+    };
 
-    const result = await apiFetcher<{ id: string }>({
-      url: '/api/v1/admin/products',
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      data: { name: 'Tạ tay' },
-    });
+    const result = await apiFetcher<{ id: string }>(
+      {
+        url: '/api/v1/admin/products',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        data: { name: 'Tạ tay' },
+      },
+      { adapter },
+    );
 
     expect(result).toEqual({ id: 'product-1' });
-    expect(fetchMock).toHaveBeenCalledWith(
-      'http://localhost:4000/api/v1/admin/products',
-      expect.objectContaining({
-        method: 'POST',
-        body: JSON.stringify({ name: 'Tạ tay' }),
-      }),
-    );
+    expect(request?.baseURL).toBe('http://localhost:4000');
+    expect(request?.method).toBe('post');
+    expect(request?.data).toBe(JSON.stringify({ name: 'Tạ tay' }));
   });
 });
