@@ -1,0 +1,114 @@
+# Thiết kế dữ liệu V1
+
+## 1. Chuẩn chung
+
+- PostgreSQL; tên bảng/cột `snake_case`; PK `uuid` do ứng dụng sinh (khuyến nghị UUIDv7).
+- Thời gian dùng `timestamptz` UTC; API hiển thị theo `Asia/Ho_Chi_Minh` hoặc timezone người dùng.
+- Tiền dùng `numeric(19,2)` + `currency_code char(3)`; không dùng float/double.
+- Số lượng hàng V1 dùng `integer`; mọi quantity phải `>= 0` trừ `inventory_movements.quantity_delta` có dấu.
+- Trạng thái dùng `varchar` + CHECK/application enum; không dùng PostgreSQL enum để migration trạng thái dễ hơn.
+- JSONB chỉ dùng cho snapshot, metadata, audit diff, UTM và payload tích hợp; không giấu quan hệ lõi trong JSONB.
+- Aggregate hay tranh chấp có `version bigint not null default 0` để optimistic locking.
+- Master data có `created_at/by`, `updated_at/by`, `deleted_at/by` khi cần soft-delete. Ledger, transaction, history không soft-delete và không update nội dung nghiệp vụ.
+- Mã nghiệp vụ (`order_no`, `sku`, `payment_ref`) tách khỏi PK, có unique index và không tái sử dụng.
+
+## 2. Aggregate và quan hệ chính
+
+```text
+branch 1──1 warehouse 1──n inventory_balance n──1 product_variant n──1 product
+                                  │
+                                  ├──n inventory_movement (append-only)
+                                  └──n inventory_reservation n──1 order
+
+customer 1──n cart 1──n cart_item n──1 product_variant
+customer 1──n order 1──n order_item n──1 product_variant
+                    ├──1 payment 1──n payment_transaction
+                    ├──1 fulfillment 1──n fulfillment_status_history
+                    └──0..1 return_request 1──n return_item
+
+user n──m role (user_role_assignment có GLOBAL/BRANCH/WAREHOUSE/OWN)
+role n──m permission
+
+product_bundle 1──n bundle_item n──1 product_variant
+order_item 1──n order_item_component n──1 product_variant
+```
+
+## 3. Nguồn sự thật
+
+| Dữ liệu | Source of truth | Derived/cache |
+|---|---|---|
+| Tồn vật lý và giữ chỗ | `inventory_balances` + `inventory_movements` + active `inventory_reservations` | Search index, Redis availability |
+| Giá hiện tại | `product_prices` + flash sale hợp lệ | Redis/display price |
+| Giá đơn hàng | Snapshot trong `order_items` | Không tính lại từ catalog |
+| Tổng tiền đơn | Snapshot do server tính ở checkout | UI chỉ preview |
+| Quyền | Role/permission/assignment trong DB | JWT/Redis có permission version |
+| Trạng thái giao dịch | Bảng aggregate + history tương ứng | Dashboard/read model |
+| Doanh thu | Order `COMPLETED` | Báo cáo tổng hợp |
+
+## 4. Constraint quan trọng
+
+- `warehouses(code)`, `branches(code)`, `product_variants(sku)`, barcode khác null và `orders(order_no)` là unique.
+- `inventory_balances(warehouse_id, product_variant_id)` unique; `on_hand >= 0`; `reserved >= 0`; `reserved <= on_hand`.
+- `payments(order_id)` unique ở V1; payment có nhiều attempt/event qua `payment_transactions`.
+- `warehouses(branch_id)` unique: một branch đúng một warehouse; branch phải có warehouse trước khi ACTIVE.
+- Guest checkout luôn tạo/upsert `customers` với `user_id` null; bắt buộc normalized phone. Đăng ký sau sẽ link user vào customer cũ sau xác minh.
+- `order_items`: quantity > 0; unit/list/discount/final price và tên/SKU/thuế được snapshot.
+- Giá storefront/order đã gồm VAT. `tax_total` là thành phần VAT để báo cáo; `grand_total = subtotal - discount_total + shipping_total`.
+- Combo V1 là bundle ảo cố định: không giữ balance riêng; reserve/ship các component và snapshot vào `order_item_components`.
+- Một cart ACTIVE cho mỗi user; một cart ACTIVE cho mỗi anonymous token bằng partial unique index.
+- `user_role_assignments`: CHECK bảo đảm GLOBAL không có branch/warehouse; BRANCH chỉ có branch; WAREHOUSE có warehouse; OWN không có scope id.
+- Regular price của cùng variant/currency/channel không được chồng khoảng hiệu lực. Có thể dùng exclusion constraint `tstzrange` hoặc serialize trong service + integration test.
+- Reference/idempotency của movement, payment transaction, refund, outbox và API phải unique trong namespace.
+- Transaction/history không cascade delete. FK delete mặc định `RESTRICT`; chỉ junction/master child chưa dùng mới được `CASCADE`.
+
+## 5. Transaction boundary bắt buộc
+
+### Create order
+
+Trong một DB transaction: validate quote → khóa/conditional update balance theo thứ tự warehouse+variant → tạo reservations → tạo order/items/address/payment → consume flash quota reservation → ghi outbox. Nếu một item thiếu tồn, rollback toàn bộ.
+
+### Payment success
+
+Khóa payment/order → kiểm tra idempotency → payment `SUCCESS` → reservation `COMMITTED` → order `CONFIRMED` → tạo fulfillment PENDING → history/audit/outbox. Nếu reservation đã hết hạn, payment chuyển `NEED_REVIEW`, không tự cấp lại tồn.
+
+### Ship
+
+Khóa fulfillment/order/balance theo thứ tự cố định → bảo đảm reservation COMMITTED → giảm đồng thời `on_hand` và `reserved` → ghi movement `SALE_SHIP` → fulfillment `SHIPPED` → history/outbox.
+
+### Cancel trước payment
+
+Khóa order/reservation → order `CANCELLED` → release active reservation và giảm `reserved` → flash quota release nếu còn hiệu lực → history/outbox. Chạy lặp lại phải cho cùng kết quả.
+
+### Refund/stock adjustment
+
+Maker tạo `approval_request` chứa immutable proposed payload. Approver khác maker approve. Worker/service thực thi với idempotency key và ghi `execution_status`; không cho sửa payload sau submit.
+
+### Giao thất bại
+
+Fulfillment ghi reason bắt buộc rồi chuyển `DELIVERY_FAILED -> RETURNING_TO_WAREHOUSE -> RETURNED_TO_WAREHOUSE`. Hàng luôn về warehouse đã xuất. Chỉ condition `RESTOCK` mới tạo movement `DELIVERY_RETURN_RESTOCK` tăng sellable `on_hand`; DAMAGED/MISSING không tăng tồn bán được.
+
+## 6. Index tối thiểu
+
+- Mọi FK có index; history/movement có `(aggregate_id, created_at desc)`.
+- Product list: `(status, published_at desc)`, category junction, `slug`, search vector; variant `(product_id, status)`.
+- Availability: balance unique key; reservation `(status, expires_at)` và `(order_id)`.
+- Order admin: `(branch_id, created_at desc)`, `(status, created_at desc)`, `(customer_id, created_at desc)`, payment/fulfillment status.
+- Audit: `(actor_user_id, created_at desc)`, `(entity_type, entity_id, created_at desc)`, `(request_id)`; partition theo tháng khi dung lượng lớn.
+- Outbox: partial index `(available_at, created_at)` WHERE status IN (`PENDING`,`RETRY`).
+
+## 7. Retention và PII
+
+- Audit/financial/order/inventory ledger giữ theo yêu cầu kế toán và chính sách pháp lý; mặc định đề xuất 10 năm cho giao dịch tài chính.
+- Idempotency body/response 24–72 giờ tùy API; outbox thành công 30–90 ngày rồi archive.
+- Session và OTP hết hạn được purge định kỳ.
+- PII mã hóa ở storage/backup; log không chứa token, password, full bank data hoặc nội dung file.
+- Yêu cầu xóa tài khoản phải anonymize dữ liệu nhận diện nhưng giữ snapshot giao dịch tối thiểu bắt buộc.
+
+## 8. Những thứ không nên gộp
+
+- Không gộp product và variant; SKU/barcode/tồn/giá nằm ở variant.
+- Không gộp branch và warehouse; V1 chỉ áp constraint một-to-one hoạt động.
+- Không gộp order/payment/fulfillment thành một status.
+- Không gộp balance và ledger; balance để đọc nhanh, ledger để đối soát.
+- Không dùng cart làm reservation; cart có thể tồn tại dài ngày.
+- Không dùng boolean `is_paid/is_delivered`; dùng state machine + history.

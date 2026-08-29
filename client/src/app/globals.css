@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: #f6f3ea;
+  color: #17211b;
+  font-family: Inter, Arial, sans-serif;
+}
+h1,
+h2,
+h3 {
+  font-family: 'Arial Black', Inter, Arial, sans-serif;
+}
+button,
+input {
+  font: inherit;
+}

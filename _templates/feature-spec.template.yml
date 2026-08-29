@@ -1,0 +1,10 @@
+feature: feature-name
+version: 1
+actors: []
+permissions: []
+offline_contract: A
+states: []
+screens: []
+api_operations: []
+acceptance_criteria: []
+open_questions: []
