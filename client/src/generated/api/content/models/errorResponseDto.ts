@@ -5,14 +5,15 @@
  * Contract for storefront and admin applications
  * OpenAPI spec version: 1.0.0
  */
-import type { ErrorResponseDtoDetails } from './errorResponseDtoDetails';
+import type { ErrorDetailDto } from './errorDetailDto';
 
 export interface ErrorResponseDto {
   statusCode: number;
   code: string;
   message: string;
-  details?: ErrorResponseDtoDetails;
+  details?: ErrorDetailDto[];
   path: string;
+  method: string;
   timestamp: string;
   requestId?: string;
 }

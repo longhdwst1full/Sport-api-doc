@@ -168,10 +168,15 @@ components:
           type: string
           example: Request validation failed
         details:
-          type: object
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorDetailDto"
         path:
           type: string
           example: /api/v1/catalog/products
+        method:
+          type: string
+          example: POST
         timestamp:
           type: string
           format: date-time
@@ -182,6 +187,7 @@ components:
         - code
         - message
         - path
+        - method
         - timestamp
     FinalizeMediaUploadDto:
       type: object
@@ -240,6 +246,21 @@ components:
         - sizeBytes
         - format
         - version
+    ErrorDetailDto:
+      type: object
+      properties:
+        field:
+          type: string
+          example: name
+        code:
+          type: string
+          example: INVALID_VALUE
+        message:
+          type: string
+          example: name should not be empty
+      required:
+        - code
+        - message
   securitySchemes:
     bearer:
       scheme: bearer

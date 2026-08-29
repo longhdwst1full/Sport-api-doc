@@ -90,6 +90,125 @@ paths:
       summary: List branch warehouses
       tags:
         - Admin Organization
+  /api/v1/admin/organization/branches/active:
+    get:
+      operationId: searchActiveAdminBranches
+      parameters:
+        - name: search
+          required: false
+          in: query
+          description: Search by business code or display label
+          schema:
+            maxLength: 100
+            type: string
+        - name: page
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            default: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            maximum: 50
+            default: 20
+            type: number
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActiveLookupResponseDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Search active branches for admin lookups
+      tags:
+        - Admin Organization
+  /api/v1/admin/organization/warehouses/active:
+    get:
+      operationId: searchActiveAdminWarehouses
+      parameters:
+        - name: search
+          required: false
+          in: query
+          description: Search by business code or display label
+          schema:
+            maxLength: 100
+            type: string
+        - name: page
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            default: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            maximum: 50
+            default: 20
+            type: number
+        - name: branchId
+          required: false
+          in: query
+          description: Restrict lookup to one branch
+          schema:
+            format: uuid
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActiveLookupResponseDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Search active warehouses for admin lookups
+      tags:
+        - Admin Organization
   /api/v1/admin/iam/users:
     get:
       operationId: listAdminUsers
@@ -169,6 +288,62 @@ paths:
       security:
         - bearer: []
       summary: List stable permission codes
+      tags:
+        - Admin IAM
+  /api/v1/admin/iam/roles/active:
+    get:
+      operationId: searchActiveAdminRoles
+      parameters:
+        - name: search
+          required: false
+          in: query
+          description: Search by business code or display label
+          schema:
+            maxLength: 100
+            type: string
+        - name: page
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            default: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            maximum: 50
+            default: 20
+            type: number
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActiveLookupResponseDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Search active roles for admin assignment lookups
       tags:
         - Admin IAM
   /api/v1/admin/iam/users/{userId}/role-assignments:
@@ -634,11 +809,28 @@ components:
       bearerFormat: JWT
       type: http
   schemas:
+    DatabaseHealthDto:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        status:
+          type: string
+          enum:
+            - up
+            - down
+            - disabled
+      required:
+        - enabled
+        - status
     HealthResponseDto:
       type: object
       properties:
         status:
           type: string
+          enum:
+            - ok
+            - degraded
           example: ok
         service:
           type: string
@@ -649,11 +841,14 @@ components:
         timestamp:
           type: string
           format: date-time
+        database:
+          $ref: "#/components/schemas/DatabaseHealthDto"
       required:
         - status
         - service
         - version
         - timestamp
+        - database
     SystemModuleDto:
       type: object
       properties:
@@ -817,6 +1012,103 @@ components:
       required:
         - items
         - total
+    ActiveLookupOptionDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          example: CN-HCM-01
+        label:
+          type: string
+          example: Chi nhánh Hồ Chí Minh
+      required:
+        - id
+        - code
+        - label
+    ActiveLookupMetaDto:
+      type: object
+      properties:
+        page:
+          type: number
+          example: 1
+        limit:
+          type: number
+          example: 20
+        total:
+          type: number
+          example: 1
+        hasMore:
+          type: boolean
+          example: false
+      required:
+        - page
+        - limit
+        - total
+        - hasMore
+    ActiveLookupResponseDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActiveLookupOptionDto"
+        meta:
+          $ref: "#/components/schemas/ActiveLookupMetaDto"
+      required:
+        - items
+        - meta
+    ErrorDetailDto:
+      type: object
+      properties:
+        field:
+          type: string
+          example: name
+        code:
+          type: string
+          example: INVALID_VALUE
+        message:
+          type: string
+          example: name should not be empty
+      required:
+        - code
+        - message
+    ErrorResponseDto:
+      type: object
+      properties:
+        statusCode:
+          type: number
+          example: 400
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: Request validation failed
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorDetailDto"
+        path:
+          type: string
+          example: /api/v1/catalog/products
+        method:
+          type: string
+          example: POST
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+      required:
+        - statusCode
+        - code
+        - message
+        - path
+        - method
+        - timestamp
     CreateWarehouseInputDto:
       type: object
       properties:
@@ -863,34 +1155,6 @@ components:
       required:
         - branch
         - warehouse
-    ErrorResponseDto:
-      type: object
-      properties:
-        statusCode:
-          type: number
-          example: 400
-        code:
-          type: string
-          example: VALIDATION_ERROR
-        message:
-          type: string
-          example: Request validation failed
-        details:
-          type: object
-        path:
-          type: string
-          example: /api/v1/catalog/products
-        timestamp:
-          type: string
-          format: date-time
-        requestId:
-          type: string
-      required:
-        - statusCode
-        - code
-        - message
-        - path
-        - timestamp
     UserRoleAssignmentDto:
       type: object
       properties:

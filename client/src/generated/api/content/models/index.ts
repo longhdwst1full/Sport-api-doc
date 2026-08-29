@@ -9,5 +9,5 @@
 export * from './contentPostDto';
 export * from './contentPostDtoPostType';
 export * from './contentPostListDto';
+export * from './errorDetailDto';
 export * from './errorResponseDto';
-export * from './errorResponseDtoDetails';

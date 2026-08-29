@@ -8,6 +8,7 @@ import { Logger as PinoLogger } from 'nestjs-pino';
 
 import { AppModule } from '../app.module';
 import { HttpExceptionFilter } from '../common/filters/http-exception.filter';
+import { createValidationException } from '../common/exceptions/validation-exception.factory';
 
 interface CreateApplicationOptions {
   logger: boolean;
@@ -47,7 +48,12 @@ export async function createApplication(
     credentials: true,
   });
   app.useGlobalPipes(
-    new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      exceptionFactory: createValidationException,
+    }),
   );
   app.useGlobalFilters(new HttpExceptionFilter());
 

@@ -6,16 +6,20 @@
  * OpenAPI spec version: 1.0.0
  */
 
+export * from './activeLookupMetaDto';
+export * from './activeLookupOptionDto';
+export * from './activeLookupResponseDto';
 export * from './assignUserRoleDto';
 export * from './assignUserRoleDtoScopeType';
 export * from './createRoleDto';
+export * from './errorDetailDto';
 export * from './errorResponseDto';
-export * from './errorResponseDtoDetails';
 export * from './permissionDto';
 export * from './permissionListDto';
 export * from './roleDto';
 export * from './roleDtoStatus';
 export * from './roleListDto';
+export * from './searchActiveAdminRolesParams';
 export * from './userDto';
 export * from './userDtoStatus';
 export * from './userDtoUserType';

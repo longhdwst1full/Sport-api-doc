@@ -22,12 +22,14 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ActiveLookupResponseDto,
   AssignUserRoleDto,
   CreateRoleDto,
   ErrorResponseDto,
   PermissionListDto,
   RoleDto,
   RoleListDto,
+  SearchActiveAdminRolesParams,
   UserListDto,
   UserRoleAssignmentDto,
 } from './models';
@@ -422,6 +424,136 @@ export function useListAdminPermissions<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getListAdminPermissionsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+/**
+ * @summary Search active roles for admin assignment lookups
+ */
+export const searchActiveAdminRoles = (
+  params?: SearchActiveAdminRolesParams,
+  signal?: AbortSignal,
+) => {
+  return apiFetcher<ActiveLookupResponseDto>({
+    url: `/api/v1/admin/iam/roles/active`,
+    method: 'GET',
+    params,
+    signal,
+  });
+};
+
+export const getSearchActiveAdminRolesQueryKey = (params?: SearchActiveAdminRolesParams) => {
+  return [`/api/v1/admin/iam/roles/active`, ...(params ? [params] : [])] as const;
+};
+
+export const getSearchActiveAdminRolesQueryOptions = <
+  TData = Awaited<ReturnType<typeof searchActiveAdminRoles>>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+>(
+  params?: SearchActiveAdminRolesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchActiveAdminRoles>>, TError, TData>
+    >;
+  },
+) => {
+  const { query: queryOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getSearchActiveAdminRolesQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof searchActiveAdminRoles>>> = ({ signal }) =>
+    searchActiveAdminRoles(params, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof searchActiveAdminRoles>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type SearchActiveAdminRolesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof searchActiveAdminRoles>>
+>;
+export type SearchActiveAdminRolesQueryError = ErrorType<
+  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+>;
+
+export function useSearchActiveAdminRoles<
+  TData = Awaited<ReturnType<typeof searchActiveAdminRoles>>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+>(
+  params: undefined | SearchActiveAdminRolesParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchActiveAdminRoles>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchActiveAdminRoles>>,
+          TError,
+          Awaited<ReturnType<typeof searchActiveAdminRoles>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchActiveAdminRoles<
+  TData = Awaited<ReturnType<typeof searchActiveAdminRoles>>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+>(
+  params?: SearchActiveAdminRolesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchActiveAdminRoles>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchActiveAdminRoles>>,
+          TError,
+          Awaited<ReturnType<typeof searchActiveAdminRoles>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchActiveAdminRoles<
+  TData = Awaited<ReturnType<typeof searchActiveAdminRoles>>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+>(
+  params?: SearchActiveAdminRolesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchActiveAdminRoles>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Search active roles for admin assignment lookups
+ */
+
+export function useSearchActiveAdminRoles<
+  TData = Awaited<ReturnType<typeof searchActiveAdminRoles>>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+>(
+  params?: SearchActiveAdminRolesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchActiveAdminRoles>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getSearchActiveAdminRolesQueryOptions(params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

@@ -8,8 +8,8 @@
 
 export * from './createMediaUploadDto';
 export * from './createMediaUploadDtoContentType';
+export * from './errorDetailDto';
 export * from './errorResponseDto';
-export * from './errorResponseDtoDetails';
 export * from './finalizeMediaUploadDto';
 export * from './mediaAssetDto';
 export * from './mediaAssetDtoProvider';

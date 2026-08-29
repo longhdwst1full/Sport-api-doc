@@ -22,10 +22,13 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ActiveLookupResponseDto,
   BranchListDto,
   BranchWithWarehouseDto,
   CreateBranchDto,
   ErrorResponseDto,
+  SearchActiveAdminBranchesParams,
+  SearchActiveAdminWarehousesParams,
   WarehouseListDto,
 } from './models';
 
@@ -327,6 +330,270 @@ export function useListAdminWarehouses<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getListAdminWarehousesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+/**
+ * @summary Search active branches for admin lookups
+ */
+export const searchActiveAdminBranches = (
+  params?: SearchActiveAdminBranchesParams,
+  signal?: AbortSignal,
+) => {
+  return apiFetcher<ActiveLookupResponseDto>({
+    url: `/api/v1/admin/organization/branches/active`,
+    method: 'GET',
+    params,
+    signal,
+  });
+};
+
+export const getSearchActiveAdminBranchesQueryKey = (params?: SearchActiveAdminBranchesParams) => {
+  return [`/api/v1/admin/organization/branches/active`, ...(params ? [params] : [])] as const;
+};
+
+export const getSearchActiveAdminBranchesQueryOptions = <
+  TData = Awaited<ReturnType<typeof searchActiveAdminBranches>>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+>(
+  params?: SearchActiveAdminBranchesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchActiveAdminBranches>>, TError, TData>
+    >;
+  },
+) => {
+  const { query: queryOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getSearchActiveAdminBranchesQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof searchActiveAdminBranches>>> = ({
+    signal,
+  }) => searchActiveAdminBranches(params, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof searchActiveAdminBranches>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type SearchActiveAdminBranchesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof searchActiveAdminBranches>>
+>;
+export type SearchActiveAdminBranchesQueryError = ErrorType<
+  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+>;
+
+export function useSearchActiveAdminBranches<
+  TData = Awaited<ReturnType<typeof searchActiveAdminBranches>>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+>(
+  params: undefined | SearchActiveAdminBranchesParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchActiveAdminBranches>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchActiveAdminBranches>>,
+          TError,
+          Awaited<ReturnType<typeof searchActiveAdminBranches>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchActiveAdminBranches<
+  TData = Awaited<ReturnType<typeof searchActiveAdminBranches>>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+>(
+  params?: SearchActiveAdminBranchesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchActiveAdminBranches>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchActiveAdminBranches>>,
+          TError,
+          Awaited<ReturnType<typeof searchActiveAdminBranches>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchActiveAdminBranches<
+  TData = Awaited<ReturnType<typeof searchActiveAdminBranches>>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+>(
+  params?: SearchActiveAdminBranchesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchActiveAdminBranches>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Search active branches for admin lookups
+ */
+
+export function useSearchActiveAdminBranches<
+  TData = Awaited<ReturnType<typeof searchActiveAdminBranches>>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+>(
+  params?: SearchActiveAdminBranchesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchActiveAdminBranches>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getSearchActiveAdminBranchesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+/**
+ * @summary Search active warehouses for admin lookups
+ */
+export const searchActiveAdminWarehouses = (
+  params?: SearchActiveAdminWarehousesParams,
+  signal?: AbortSignal,
+) => {
+  return apiFetcher<ActiveLookupResponseDto>({
+    url: `/api/v1/admin/organization/warehouses/active`,
+    method: 'GET',
+    params,
+    signal,
+  });
+};
+
+export const getSearchActiveAdminWarehousesQueryKey = (
+  params?: SearchActiveAdminWarehousesParams,
+) => {
+  return [`/api/v1/admin/organization/warehouses/active`, ...(params ? [params] : [])] as const;
+};
+
+export const getSearchActiveAdminWarehousesQueryOptions = <
+  TData = Awaited<ReturnType<typeof searchActiveAdminWarehouses>>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+>(
+  params?: SearchActiveAdminWarehousesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchActiveAdminWarehouses>>, TError, TData>
+    >;
+  },
+) => {
+  const { query: queryOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getSearchActiveAdminWarehousesQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof searchActiveAdminWarehouses>>> = ({
+    signal,
+  }) => searchActiveAdminWarehouses(params, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof searchActiveAdminWarehouses>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type SearchActiveAdminWarehousesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof searchActiveAdminWarehouses>>
+>;
+export type SearchActiveAdminWarehousesQueryError = ErrorType<
+  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+>;
+
+export function useSearchActiveAdminWarehouses<
+  TData = Awaited<ReturnType<typeof searchActiveAdminWarehouses>>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+>(
+  params: undefined | SearchActiveAdminWarehousesParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchActiveAdminWarehouses>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchActiveAdminWarehouses>>,
+          TError,
+          Awaited<ReturnType<typeof searchActiveAdminWarehouses>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchActiveAdminWarehouses<
+  TData = Awaited<ReturnType<typeof searchActiveAdminWarehouses>>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+>(
+  params?: SearchActiveAdminWarehousesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchActiveAdminWarehouses>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchActiveAdminWarehouses>>,
+          TError,
+          Awaited<ReturnType<typeof searchActiveAdminWarehouses>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchActiveAdminWarehouses<
+  TData = Awaited<ReturnType<typeof searchActiveAdminWarehouses>>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+>(
+  params?: SearchActiveAdminWarehousesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchActiveAdminWarehouses>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Search active warehouses for admin lookups
+ */
+
+export function useSearchActiveAdminWarehouses<
+  TData = Awaited<ReturnType<typeof searchActiveAdminWarehouses>>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+>(
+  params?: SearchActiveAdminWarehousesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchActiveAdminWarehouses>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getSearchActiveAdminWarehousesQueryOptions(params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

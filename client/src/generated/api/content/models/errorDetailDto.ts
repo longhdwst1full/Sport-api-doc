@@ -6,4 +6,8 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type ErrorResponseDtoDetails = { [key: string]: unknown };
+export interface ErrorDetailDto {
+  field?: string;
+  code: string;
+  message: string;
+}

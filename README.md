@@ -19,11 +19,23 @@ yarn contracts:generate
 yarn dev
 ```
 
+Khởi tạo PostgreSQL/Redis local và chạy migration/seed lặp lại an toàn:
+
+```bash
+yarn db:local:up
+yarn db:local:migrate
+yarn db:local:seed
+```
+
+Local infrastructure mặc định dùng PostgreSQL `55432` và Redis `56379` để không
+xung đột với các service khác trong workspace. Có thể override bằng
+`DCTD_POSTGRES_PORT` và `DCTD_REDIS_PORT`.
+
 OpenAPI is served at `http://localhost:4000/openapi.json`; Swagger UI is at `http://localhost:4000/docs`.
 
 The storefront exposes its PWA diagnostics/reset screen at `http://localhost:3000/pwa`. API, checkout, account and payment data are never service-worker cached.
 
-The API registers all 74 reviewed V1 models across 19 bounded contexts. Catalog, basic Inventory, CMS Content and Review moderation are runnable in-memory vertical slices; persistence migrations remain deliberately separate and must follow the DBML delivery waves before production use.
+The API registers all 74 reviewed V1 models across 19 bounded contexts. Migration Wave 1 now covers Organization, IAM and append-only Audit; current Organization/IAM services still use their in-memory adapters until the Sprint 1 PostgreSQL adapter switch is completed. Catalog, basic Inventory, CMS Content and Review moderation remain runnable in-memory vertical slices.
 
 Each application owns an independent agent context:
 

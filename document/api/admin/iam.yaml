@@ -90,6 +90,62 @@ paths:
       summary: List stable permission codes
       tags:
         - Admin IAM
+  /api/v1/admin/iam/roles/active:
+    get:
+      operationId: searchActiveAdminRoles
+      parameters:
+        - name: search
+          required: false
+          in: query
+          description: Search by business code or display label
+          schema:
+            maxLength: 100
+            type: string
+        - name: page
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            default: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            maximum: 50
+            default: 20
+            type: number
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActiveLookupResponseDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Search active roles for admin assignment lookups
+      tags:
+        - Admin IAM
   /api/v1/admin/iam/users/{userId}/role-assignments:
     post:
       operationId: assignAdminUserRole
@@ -232,10 +288,15 @@ components:
           type: string
           example: Request validation failed
         details:
-          type: object
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorDetailDto"
         path:
           type: string
           example: /api/v1/catalog/products
+        method:
+          type: string
+          example: POST
         timestamp:
           type: string
           format: date-time
@@ -246,6 +307,7 @@ components:
         - code
         - message
         - path
+        - method
         - timestamp
     PermissionListDto:
       type: object
@@ -259,6 +321,18 @@ components:
       required:
         - items
         - total
+    ActiveLookupResponseDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActiveLookupOptionDto"
+        meta:
+          $ref: "#/components/schemas/ActiveLookupMetaDto"
+      required:
+        - items
+        - meta
     AssignUserRoleDto:
       type: object
       properties:
@@ -361,6 +435,21 @@ components:
         - status
         - permissionVersion
         - assignments
+    ErrorDetailDto:
+      type: object
+      properties:
+        field:
+          type: string
+          example: name
+        code:
+          type: string
+          example: INVALID_VALUE
+        message:
+          type: string
+          example: name should not be empty
+      required:
+        - code
+        - message
     PermissionDto:
       type: object
       properties:
@@ -381,6 +470,42 @@ components:
         - module
         - action
         - sensitive
+    ActiveLookupOptionDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          example: CN-HCM-01
+        label:
+          type: string
+          example: Chi nhánh Hồ Chí Minh
+      required:
+        - id
+        - code
+        - label
+    ActiveLookupMetaDto:
+      type: object
+      properties:
+        page:
+          type: number
+          example: 1
+        limit:
+          type: number
+          example: 20
+        total:
+          type: number
+          example: 1
+        hasMore:
+          type: boolean
+          example: false
+      required:
+        - page
+        - limit
+        - total
+        - hasMore
   securitySchemes:
     bearer:
       scheme: bearer

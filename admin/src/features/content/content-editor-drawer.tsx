@@ -12,6 +12,7 @@ import {
   type CreateContentPostDtoPostType as PostType,
 } from '@/generated/api/content/models/createContentPostDtoPostType';
 import { ImageUploadField } from '@/features/media/image-upload-field';
+import { getApiErrorMessage } from '@/lib/api/error';
 import 'ckeditor5/ckeditor5.css';
 
 const licenseKey = import.meta.env.VITE_CKEDITOR_LICENSE_KEY;
@@ -39,7 +40,10 @@ export function ContentEditorDrawer({ open, onClose }: { open: boolean; onClose:
         setBody('');
         onClose();
       },
-      onError: () => void message.error('Không thể tạo bài viết. Vui lòng kiểm tra lại.'),
+      onError: (error) =>
+        void message.error(
+          getApiErrorMessage(error, 'Không thể tạo bài viết. Vui lòng kiểm tra lại.'),
+        ),
     },
   });
 

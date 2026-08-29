@@ -8,5 +8,205 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// Models are introduced wave-by-wave from document/09-v1-model.dbml.
-// Do not generate all reviewed tables into one migration.
+// Wave 1: Organization + IAM + append-only audit foundation.
+// Catalog/Pricing models are added in the next Sprint 1 migration after this
+// dependency wave is verified from an empty PostgreSQL database.
+
+model Branch {
+  id          String   @id @db.Uuid
+  code        String   @unique @db.VarChar(32)
+  name        String   @db.VarChar(255)
+  status      String   @default("ACTIVE") @db.VarChar(24)
+  phone       String?  @db.VarChar(32)
+  email       String?  @db.VarChar(255)
+  addressJson Json     @map("address_json") @db.JsonB
+  timezone    String   @default("Asia/Ho_Chi_Minh") @db.VarChar(64)
+  version     BigInt   @default(0)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy   String?  @map("created_by") @db.Uuid
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy   String?  @map("updated_by") @db.Uuid
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  warehouses     Warehouse[]
+  roleAssignments UserRoleAssignment[]
+
+  @@map("branches")
+}
+
+model Warehouse {
+  id        String   @id @db.Uuid
+  branchId  String   @unique @map("branch_id") @db.Uuid
+  code      String   @unique @db.VarChar(32)
+  name      String   @db.VarChar(255)
+  status    String   @default("ACTIVE") @db.VarChar(24)
+  isPrimary Boolean  @default(true) @map("is_primary")
+  version   BigInt   @default(0)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?  @map("created_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?  @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  branch          Branch               @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  roleAssignments UserRoleAssignment[]
+
+  @@map("warehouses")
+}
+
+model User {
+  id                String   @id @db.Uuid
+  userType          String   @map("user_type") @db.VarChar(24)
+  email             String?  @db.VarChar(255)
+  normalizedEmail   String?  @map("normalized_email") @db.VarChar(255)
+  phone             String?  @db.VarChar(32)
+  normalizedPhone   String?  @map("normalized_phone") @db.VarChar(32)
+  passwordHash      String?  @map("password_hash") @db.VarChar(255)
+  displayName       String   @map("display_name") @db.VarChar(255)
+  status            String   @default("ACTIVE") @db.VarChar(24)
+  emailVerifiedAt   DateTime? @map("email_verified_at") @db.Timestamptz(6)
+  phoneVerifiedAt   DateTime? @map("phone_verified_at") @db.Timestamptz(6)
+  permissionVersion BigInt   @default(0) @map("permission_version")
+  lastLoginAt       DateTime? @map("last_login_at") @db.Timestamptz(6)
+  version           BigInt   @default(0)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt         DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  sessions               AuthSession[]
+  roleAssignments        UserRoleAssignment[] @relation("AssignedUser")
+  assignedRoleAssignments UserRoleAssignment[] @relation("AssignmentActor")
+  permissionGrants       RolePermission[]     @relation("PermissionGrantActor")
+  auditLogs              AuditLog[]
+
+  @@map("users")
+}
+
+model AuthSession {
+  id                String   @id @db.Uuid
+  userId            String   @map("user_id") @db.Uuid
+  refreshTokenHash  String   @unique @map("refresh_token_hash") @db.VarChar(255)
+  rotatedFromId     String?  @map("rotated_from_id") @db.Uuid
+  deviceId          String?  @map("device_id") @db.VarChar(128)
+  deviceInfo        Json?    @map("device_info") @db.JsonB
+  ipHash            String?  @map("ip_hash") @db.VarChar(128)
+  userAgentHash     String?  @map("user_agent_hash") @db.VarChar(128)
+  expiresAt         DateTime @map("expires_at") @db.Timestamptz(6)
+  lastUsedAt        DateTime? @map("last_used_at") @db.Timestamptz(6)
+  revokedAt         DateTime? @map("revoked_at") @db.Timestamptz(6)
+  revokeReason      String?  @map("revoke_reason") @db.VarChar(255)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rotatedFrom AuthSession?  @relation("SessionRotation", fields: [rotatedFromId], references: [id], onDelete: SetNull)
+  rotations   AuthSession[] @relation("SessionRotation")
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("auth_sessions")
+}
+
+model Role {
+  id          String   @id @db.Uuid
+  code        String   @unique @db.VarChar(100)
+  name        String   @db.VarChar(255)
+  description String?
+  status      String   @default("ACTIVE") @db.VarChar(24)
+  isSystem    Boolean  @default(false) @map("is_system")
+  version     BigInt   @default(0)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy   String?  @map("created_by") @db.Uuid
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy   String?  @map("updated_by") @db.Uuid
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  permissions RolePermission[]
+  assignments UserRoleAssignment[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @db.Uuid
+  code        String   @unique @db.VarChar(150)
+  module      String   @db.VarChar(64)
+  action      String   @db.VarChar(64)
+  description String?
+  isSensitive Boolean  @default(false) @map("is_sensitive")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String   @map("role_id") @db.Uuid
+  permissionId String   @map("permission_id") @db.Uuid
+  grantedBy    String?  @map("granted_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  grantActor User?      @relation("PermissionGrantActor", fields: [grantedBy], references: [id], onDelete: SetNull)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+  @@index([grantedBy])
+  @@map("role_permissions")
+}
+
+model UserRoleAssignment {
+  id          String   @id @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  roleId      String   @map("role_id") @db.Uuid
+  scopeType   String   @map("scope_type") @db.VarChar(24)
+  branchId    String?  @map("branch_id") @db.Uuid
+  warehouseId String?  @map("warehouse_id") @db.Uuid
+  validFrom   DateTime @default(now()) @map("valid_from") @db.Timestamptz(6)
+  validTo     DateTime? @map("valid_to") @db.Timestamptz(6)
+  status      String   @default("ACTIVE") @db.VarChar(24)
+  assignedBy  String   @map("assigned_by") @db.Uuid
+  version     BigInt   @default(0)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user       User       @relation("AssignedUser", fields: [userId], references: [id], onDelete: Restrict)
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  branch     Branch?    @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  warehouse  Warehouse? @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  assignActor User      @relation("AssignmentActor", fields: [assignedBy], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([roleId])
+  @@index([branchId])
+  @@index([warehouseId])
+  @@index([assignedBy])
+  @@index([status, validTo])
+  @@map("user_role_assignments")
+}
+
+model AuditLog {
+  id            String   @id @db.Uuid
+  requestId     String   @map("request_id") @db.VarChar(100)
+  sequenceNo    Int      @map("sequence_no")
+  actorType     String   @map("actor_type") @db.VarChar(24)
+  actorUserId   String?  @map("actor_user_id") @db.Uuid
+  action        String   @db.VarChar(150)
+  entityType    String   @map("entity_type") @db.VarChar(100)
+  entityId      String?  @map("entity_id") @db.Uuid
+  beforeJson    Json?    @map("before_json") @db.JsonB
+  afterJson     Json?    @map("after_json") @db.JsonB
+  reason        String?
+  ipHash        String?  @map("ip_hash") @db.VarChar(128)
+  userAgentHash String?  @map("user_agent_hash") @db.VarChar(128)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  actor User? @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@unique([requestId, sequenceNo])
+  @@index([actorUserId, createdAt])
+  @@index([action, createdAt])
+  @@index([entityType, entityId, createdAt])
+  @@map("audit_logs")
+}

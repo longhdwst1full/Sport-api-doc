@@ -7,6 +7,11 @@ import {
 } from '@nestjs/common';
 import { OrganizationService } from '../organization/organization.service';
 import {
+  ActiveLookupResponseDto,
+  ActiveSearchQueryDto,
+  buildActiveLookupResponse,
+} from '../../common/pagination/active-search.dto';
+import {
   AssignUserRoleDto,
   CreateRoleDto,
   PermissionListDto,
@@ -39,6 +44,16 @@ export class IamService {
   listPermissions(): PermissionListDto {
     const items = PERMISSION_CATALOG.map((permission) => ({ ...permission }));
     return { items, total: items.length };
+  }
+
+  searchActiveRoles(query: ActiveSearchQueryDto): ActiveLookupResponseDto {
+    return buildActiveLookupResponse(
+      this.iam
+        .listRoles()
+        .filter((role) => role.status === 'ACTIVE')
+        .map((role) => ({ id: role.id, code: role.code, label: role.name })),
+      query,
+    );
   }
 
   createRole(input: CreateRoleDto): RoleDto {

@@ -84,6 +84,7 @@ export function OrganizationPage() {
       {hasError && (
         <div className="mb-4">
           <QueryErrorAlert
+            error={branchesQuery.error ?? warehousesQuery.error}
             retry={() => void Promise.all([branchesQuery.refetch(), warehousesQuery.refetch()])}
           />
         </div>

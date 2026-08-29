@@ -5,7 +5,7 @@ import {
   TeamOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { Alert, Avatar, Space, Table, Tabs, Tag, Typography } from 'antd';
+import { Alert, Avatar, Button, Space, Table, Tabs, Tag, Typography } from 'antd';
 import { useCan } from '@/core/auth/permissions';
 import { QueryErrorAlert } from '@/foundation/feedback/query-error-alert';
 import { ManagementPage, StatusTag } from '@/foundation/management';
@@ -14,7 +14,8 @@ import {
   useListAdminRoles,
   useListAdminUsers,
 } from '@/generated/api/iam/iam';
-import type { UserDtoStatus, UserRoleAssignmentDto } from '@/generated/api/iam/models';
+import type { UserDto, UserDtoStatus, UserRoleAssignmentDto } from '@/generated/api/iam/models';
+import { RoleAssignmentDrawer } from './role-assignment-drawer';
 
 const userStatuses: Record<UserDtoStatus, { color: string; label: string }> = {
   ACTIVE: { color: 'green', label: 'Hoạt động' },
@@ -24,7 +25,9 @@ const userStatuses: Record<UserDtoStatus, { color: string; label: string }> = {
 
 export function AccessPage() {
   const [activeTab, setActiveTab] = useState('users');
+  const [assignmentUser, setAssignmentUser] = useState<UserDto>();
   const canViewRoles = useCan('iam.role.view');
+  const canAssignRoles = useCan('iam.assignment.manage');
   const usersQuery = useListAdminUsers();
   const rolesQuery = useListAdminRoles({ query: { enabled: canViewRoles } });
   const permissionsQuery = useListAdminPermissions({ query: { enabled: canViewRoles } });
@@ -77,6 +80,7 @@ export function AccessPage() {
       {hasError && (
         <div className="mb-4">
           <QueryErrorAlert
+            error={usersQuery.error ?? rolesQuery.error ?? permissionsQuery.error}
             retry={() =>
               void Promise.all([
                 usersQuery.refetch(),
@@ -152,6 +156,21 @@ export function AccessPage() {
                       <StatusTag status={value} presentations={userStatuses} />
                     ),
                   },
+                  ...(canAssignRoles
+                    ? [
+                        {
+                          title: 'Thao tác',
+                          key: 'actions',
+                          width: 130,
+                          fixed: 'right' as const,
+                          render: (_: unknown, user: UserDto) => (
+                            <Button type="link" onClick={() => setAssignmentUser(user)}>
+                              Gán vai trò
+                            </Button>
+                          ),
+                        },
+                      ]
+                    : []),
                 ]}
               />
             ),
@@ -214,6 +233,11 @@ export function AccessPage() {
               ]
             : []),
         ]}
+      />
+      <RoleAssignmentDrawer
+        user={assignmentUser}
+        open={Boolean(assignmentUser)}
+        onClose={() => setAssignmentUser(undefined)}
       />
     </ManagementPage>
   );

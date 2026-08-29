@@ -8,6 +8,7 @@ import {
   useCreateAdminProduct,
 } from '@/generated/api/catalog/catalog';
 import { ImageUploadField } from '@/features/media/image-upload-field';
+import { getApiErrorMessage } from '@/lib/api/error';
 
 type ProductFormValues = {
   name: string;
@@ -77,7 +78,10 @@ export function ProductFormDrawer({ open, onClose }: { open: boolean; onClose: (
         reset(defaultValues);
         onClose();
       },
-      onError: () => void message.error('Không thể tạo sản phẩm. Vui lòng kiểm tra lại dữ liệu.'),
+      onError: (error) =>
+        void message.error(
+          getApiErrorMessage(error, 'Không thể tạo sản phẩm. Vui lòng kiểm tra lại dữ liệu.'),
+        ),
     },
   });
 
