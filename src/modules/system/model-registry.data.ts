@@ -21,13 +21,13 @@ export const BUSINESS_MODEL_REGISTRY: BusinessModuleDefinition[] = [
   {
     key: 'organization',
     name: 'Tổ chức & chi nhánh',
-    status: 'SCAFFOLDED',
+    status: 'ACTIVE',
     models: [model('branches', 'P0'), model('warehouses', 'P0')],
   },
   {
     key: 'iam',
     name: 'Tài khoản, vai trò & audit',
-    status: 'SCAFFOLDED',
+    status: 'ACTIVE',
     models: [
       model('users', 'P0'),
       model('auth_sessions', 'P0'),
