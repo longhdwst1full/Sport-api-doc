@@ -1,10 +1,15 @@
 import { Module, RequestMethod } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 import { randomUUID } from 'node:crypto';
 
+import { PermissionGuard } from './common/guards/permission.guard';
+import appConfig from './config/app.config';
+import databaseConfig from './config/database.config';
+import { validateEnvironment } from './config/env.validation';
+import { PrismaModule } from './database/prisma.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { ApprovalModule } from './modules/approval/approval.module';
 import { CartModule } from './modules/cart/cart.module';
@@ -26,41 +31,53 @@ import { ReturnModule } from './modules/return/return.module';
 import { ReviewModule } from './modules/review/review.module';
 import { ShippingModule } from './modules/shipping/shipping.module';
 import { SystemModule } from './modules/system/system.module';
-import { PermissionGuard } from './platform/auth/permission.guard';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, cache: true }),
-    LoggerModule.forRoot({
-      forRoutes: [{ path: '{*path}', method: RequestMethod.ALL }],
-      pinoHttp: {
-        level: process.env.LOG_LEVEL ?? 'info',
-        genReqId: (request, response) => {
-          const incoming = request.headers['x-request-id'];
-          const requestId =
-            typeof incoming === 'string' && incoming.trim() ? incoming : randomUUID();
-          response.setHeader('x-request-id', requestId);
-          return requestId;
-        },
-        redact: {
-          paths: [
-            'req.headers.authorization',
-            'req.headers.cookie',
-            'res.headers.set-cookie',
-            'req.body.password',
-            'req.body.refreshToken',
-          ],
-          censor: '[REDACTED]',
-        },
-      },
+    ConfigModule.forRoot({
+      isGlobal: true,
+      cache: true,
+      envFilePath: ['.env.local', '.env'],
+      load: [appConfig, databaseConfig],
+      validate: validateEnvironment,
     }),
-    ThrottlerModule.forRoot([
-      {
-        name: 'default',
-        ttl: Number(process.env.RATE_LIMIT_TTL_MS ?? 60_000),
-        limit: Number(process.env.RATE_LIMIT_MAX ?? 120),
-      },
-    ]),
+    LoggerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        forRoutes: [{ path: '{*path}', method: RequestMethod.ALL }],
+        pinoHttp: {
+          level: config.get<string>('app.logLevel') ?? 'info',
+          genReqId: (request, response) => {
+            const incoming = request.headers['x-request-id'];
+            const requestId =
+              typeof incoming === 'string' && incoming.trim() ? incoming : randomUUID();
+            response.setHeader('x-request-id', requestId);
+            return requestId;
+          },
+          redact: {
+            paths: [
+              'req.headers.authorization',
+              'req.headers.cookie',
+              'res.headers.set-cookie',
+              'req.body.password',
+              'req.body.refreshToken',
+            ],
+            censor: '[REDACTED]',
+          },
+        },
+      }),
+    }),
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => [
+        {
+          name: 'default',
+          ttl: config.get<number>('app.rateLimit.ttlMs') ?? 60_000,
+          limit: config.get<number>('app.rateLimit.max') ?? 120,
+        },
+      ],
+    }),
+    PrismaModule,
     HealthModule,
     SystemModule,
     OrganizationModule,

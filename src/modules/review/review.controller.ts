@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Patch } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { RequirePermissions } from '../../platform/auth/require-permissions.decorator';
+import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { ModerateReviewDto, ProductReviewDto, ProductReviewListDto } from './review.dto';
 import { ReviewService } from './review.service';
 

@@ -1,8 +1,8 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { ErrorResponseDto } from '../../../platform/http/error-response.dto';
+import { ErrorResponseDto } from '../../../../common/exceptions/error-response.dto';
 import { ListProductsQueryDto, ProductDetailDto, ProductListResponseDto } from '../dto/product.dto';
-import { ProductsService } from '../products.service';
+import { ProductsService } from '../services/products.service';
 
 @ApiTags('Storefront Catalog')
 @Controller('catalog/products')

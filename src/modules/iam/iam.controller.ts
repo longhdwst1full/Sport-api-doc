@@ -9,8 +9,8 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { RequirePermissions } from '../../platform/auth/require-permissions.decorator';
-import { ErrorResponseDto } from '../../platform/http/error-response.dto';
+import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
+import { ErrorResponseDto } from '../../common/exceptions/error-response.dto';
 import {
   AssignUserRoleDto,
   CreateRoleDto,

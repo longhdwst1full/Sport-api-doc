@@ -6,7 +6,7 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { RequirePermissions } from '../../../platform/auth/require-permissions.decorator';
+import { RequirePermissions } from '../../../../common/decorators/require-permissions.decorator';
 import {
   CreateProductDto,
   ListProductsQueryDto,
@@ -14,7 +14,7 @@ import {
   ProductListResponseDto,
   UpdateProductDto,
 } from '../dto/product.dto';
-import { ProductsService } from '../products.service';
+import { ProductsService } from '../services/products.service';
 
 @ApiTags('Admin Products')
 @ApiBearerAuth()

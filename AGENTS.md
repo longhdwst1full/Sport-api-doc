@@ -5,7 +5,7 @@ Scope: `api/` only. Do not load storefront rendering/PWA rules or admin UI rules
 ## Stack and boundaries
 
 - NestJS modular monolith with Swagger/OpenAPI, class-validator and Jest.
-- Bounded contexts live under `src/modules`; platform HTTP/auth concerns live under `src/platform`.
+- Bounded contexts live under `src/modules`; reusable guards/decorators/filters/exceptions live under `src/common`; typed configuration lives under `src/config`; Prisma lifecycle lives under `src/database`; third-party ports/adapters live under `src/integrations`.
 - Controllers map HTTP, application services execute use cases, domain policy owns transitions, and persistence adapters remain replaceable.
 - Catalog, Inventory, CMS and Reviews are active in-memory vertical slices; other registered modules are intentionally scaffolded until their delivery wave.
 - The API owns authorization, validation, idempotency and audit requirements.
@@ -27,6 +27,7 @@ Run from the repository root:
 ```bash
 yarn workspace @dctd/api lint
 yarn workspace @dctd/api test
+yarn workspace @dctd/api prisma:validate
 yarn workspace @dctd/api openapi:generate
 yarn workspace @dctd/api build
 ```

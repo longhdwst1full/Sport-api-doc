@@ -6,7 +6,7 @@ import {
   ProductDetailDto,
   ProductListResponseDto,
   UpdateProductDto,
-} from './dto/product.dto';
+} from '../dto/product.dto';
 
 @Injectable()
 export class ProductsService {

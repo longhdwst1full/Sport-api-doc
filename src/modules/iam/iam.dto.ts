@@ -1,3 +1,4 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   ArrayMaxSize,
   ArrayUnique,
@@ -10,17 +11,7 @@ import {
   Matches,
   MaxLength,
 } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-
-export type UserStatus = 'ACTIVE' | 'INVITED' | 'LOCKED';
-export type RoleStatus = 'ACTIVE' | 'INACTIVE';
-
-export enum ScopeType {
-  GLOBAL = 'GLOBAL',
-  BRANCH = 'BRANCH',
-  WAREHOUSE = 'WAREHOUSE',
-  OWN = 'OWN',
-}
+import { RoleStatus, ScopeType, UserStatus } from './iam.types';
 
 export class PermissionDto {
   @ApiProperty({ example: 'org.branch.view' }) code: string;

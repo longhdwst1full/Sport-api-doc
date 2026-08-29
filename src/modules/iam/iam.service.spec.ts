@@ -1,11 +1,19 @@
 import { BadRequestException } from '@nestjs/common';
+import { InMemoryOrganizationRepository } from '../organization/in-memory-organization.repository';
 import { OrganizationService } from '../organization/organization.service';
-import { ScopeType } from './iam.dto';
+import { InMemoryIamRepository } from './in-memory-iam.repository';
 import { IamService } from './iam.service';
+import { ScopeType } from './iam.types';
 
 describe('IamService', () => {
+  const createService = () => {
+    const organization = new OrganizationService(new InMemoryOrganizationRepository());
+    const service = new IamService(new InMemoryIamRepository(), organization);
+    return { organization, service };
+  };
+
   it('rejects unknown permission codes when creating a role', () => {
-    const service = new IamService(new OrganizationService());
+    const { service } = createService();
     expect(() =>
       service.createRole({
         code: 'INVALID_ROLE',
@@ -16,8 +24,7 @@ describe('IamService', () => {
   });
 
   it('validates branch scope and increments permission version', () => {
-    const organization = new OrganizationService();
-    const service = new IamService(organization);
+    const { organization, service } = createService();
     const user = service.listUsers().items.find((item) => item.permissionVersion === 0);
     const branch = organization.listBranches().items[0];
     expect(user).toBeDefined();
@@ -35,8 +42,7 @@ describe('IamService', () => {
   });
 
   it('fails closed when a scope carries the wrong identifiers', () => {
-    const organization = new OrganizationService();
-    const service = new IamService(organization);
+    const { organization, service } = createService();
     const user = service.listUsers().items[0];
     const branch = organization.listBranches().items[0];
 

@@ -2,8 +2,7 @@ import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
-
-import { PERMISSIONS_KEY } from './require-permissions.decorator';
+import { PERMISSIONS_KEY } from '../decorators/require-permissions.decorator';
 
 @Injectable()
 export class PermissionGuard implements CanActivate {
@@ -18,12 +17,11 @@ export class PermissionGuard implements CanActivate {
       context.getClass(),
     ]);
     if (!required?.length) return true;
-    if (this.config.get('AUTH_BYPASS') === 'true') return true;
+    if (this.config.get<boolean>('app.authBypass')) return true;
 
     const request = context.switchToHttp().getRequest<Request>();
-    const raw = request.header('x-permissions') ?? '';
     const granted = new Set(
-      raw
+      (request.header('x-permissions') ?? '')
         .split(',')
         .map((code) => code.trim())
         .filter(Boolean),

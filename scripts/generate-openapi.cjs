@@ -1,22 +1,14 @@
-const { mkdir, writeFile } = require('node:fs/promises');
-const { resolve } = require('node:path');
-
-const {
-  buildOpenApiDocument,
-  createApplication,
-} = require('../dist/platform/app.factory');
+const { buildOpenApiDocument, createApplication } = require('../dist/platform/app.factory');
+const { writeOpenApiArtifacts } = require('../dist/platform/openapi/openapi-artifact.writer');
 
 async function generate() {
   process.env.AUTH_BYPASS = 'true';
   const app = await createApplication({ logger: false, swagger: false });
-  const document = buildOpenApiDocument(app);
-  const directory = resolve(process.cwd(), 'openapi');
-  await mkdir(directory, { recursive: true });
-  await writeFile(
-    resolve(directory, 'openapi.json'),
-    `${JSON.stringify(document, null, 2)}\n`,
-  );
-  await app.close();
+  try {
+    await writeOpenApiArtifacts(buildOpenApiDocument(app), process.cwd());
+  } finally {
+    await app.close();
+  }
 }
 
 generate().catch((error) => {

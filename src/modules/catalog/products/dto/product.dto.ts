@@ -1,4 +1,5 @@
 import { Type } from 'class-transformer';
+import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import {
   IsArray,
   IsBoolean,
@@ -11,7 +12,6 @@ import {
   Max,
   Min,
 } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 
 export class ProductSummaryDto {
   @ApiProperty({ format: 'uuid' }) id: string;
