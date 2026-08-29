@@ -28,5 +28,6 @@ export default defineConfig({
   inventory: createDomainConfig('inventory'),
   content: createDomainConfig('content'),
   reviews: createDomainConfig('reviews'),
+  media: createDomainConfig('media'),
   system: createDomainConfig('system'),
 });

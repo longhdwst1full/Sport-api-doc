@@ -15,6 +15,7 @@ const CONTRACT_SLICES: ContractSlice[] = [
   { relativePath: 'admin/inventory.yaml', tags: ['Admin Inventory'] },
   { relativePath: 'admin/content.yaml', tags: ['Admin Content'] },
   { relativePath: 'admin/reviews.yaml', tags: ['Admin Reviews'] },
+  { relativePath: 'admin/media.yaml', tags: ['Admin Media'] },
   { relativePath: 'admin/system.yaml', tags: ['Admin System'] },
   { relativePath: 'storefront/catalog.yaml', tags: ['Storefront Catalog'] },
   { relativePath: 'storefront/content.yaml', tags: ['Storefront Content'] },

@@ -67,6 +67,25 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   REDIS_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  CLOUDINARY_CLOUD_NAME?: string;
+
+  @IsOptional()
+  @IsString()
+  CLOUDINARY_API_KEY?: string;
+
+  @IsOptional()
+  @IsString()
+  CLOUDINARY_API_SECRET?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^[a-zA-Z0-9_-]+(?:\/[a-zA-Z0-9_-]+)*$/, {
+    message: 'CLOUDINARY_FOLDER must be a relative provider folder',
+  })
+  CLOUDINARY_FOLDER?: string;
 }
 
 export function validateEnvironment(config: Record<string, unknown>): Record<string, unknown> {

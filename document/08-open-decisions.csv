@@ -25,7 +25,7 @@ D23,Primary keys,UUIDv7 app-generated và business code riêng,Sortability/distr
 D24,Search,V1 PostgreSQL FTS/trigram; chỉ thêm OpenSearch khi đo thấy cần,Giảm vận hành hạ tầng,Tech,2,PROPOSED
 D25,Serial và IMEI,V1 không quản lý từng đơn vị; chỉ quản lý số lượng theo SKU/kho,Giảm phạm vi kho và thao tác scan; xem xét lại ở V2,Product+Ops,3,DECIDED
 D26,Procurement,V1 chưa có supplier purchase order goods receipt; nhập tồn qua adjustment có loại và chứng từ tham chiếu,Ưu tiên hoàn thiện luồng bán và tồn cơ bản; procurement để V2,Product+Ops,3,DECIDED
-D27,Media provider,Thiết kế provider-agnostic; chọn Cloudinary hoặc ImageKit sau khi chốt quota/chi phí/CDN,Không khóa domain vào một nhà cung cấp nhưng deployment cần adapter cụ thể,Product+Tech,2,PROPOSED
+D27,Media provider,Chọn Cloudinary cho V1 qua adapter object-storage provider-agnostic; upload trực tiếp bằng chữ ký ngắn hạn và finalize xác minh asset,Không khóa domain vào nhà cung cấp nhưng deployment V1 có adapter cụ thể và secret chỉ nằm ở API,Product+Tech,2,DECIDED
 D28,Review comment depth,V1 chỉ một cấp phản hồi dưới review,Giảm moderation và truy vấn cây comment,Product,7,DECIDED
 D29,CMS scope,V1 có page post content category tag và post-product relation; chưa có comment bài viết,Đủ giới thiệu tin tức hướng dẫn SEO mà không biến thành social platform,Product+Marketing,7,DECIDED
 D30,Payment frequency,Một order chỉ thanh toán đủ một lần; thiếu thừa hoặc lặp chuyển NEED_REVIEW,Đơn giản hóa đối soát và không hỗ trợ split payment,Finance+Product,5,DECIDED

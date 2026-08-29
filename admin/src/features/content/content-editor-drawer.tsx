@@ -11,6 +11,7 @@ import {
   CreateContentPostDtoPostType,
   type CreateContentPostDtoPostType as PostType,
 } from '@/generated/api/content/models/createContentPostDtoPostType';
+import { ImageUploadField } from '@/features/media/image-upload-field';
 import 'ckeditor5/ckeditor5.css';
 
 const licenseKey = import.meta.env.VITE_CKEDITOR_LICENSE_KEY;
@@ -115,8 +116,8 @@ export function ContentEditorDrawer({ open, onClose }: { open: boolean; onClose:
               onChange={(event) => setExcerpt(event.target.value)}
             />
           </Form.Item>
-          <Form.Item label="URL ảnh bìa" required>
-            <Input value={coverUrl} onChange={(event) => setCoverUrl(event.target.value)} />
+          <Form.Item label="Ảnh bìa" required>
+            <ImageUploadField value={coverUrl} onChange={setCoverUrl} />
           </Form.Item>
           <Form.Item label="Slug sản phẩm liên quan" extra="Phân tách bằng dấu phẩy">
             <Input

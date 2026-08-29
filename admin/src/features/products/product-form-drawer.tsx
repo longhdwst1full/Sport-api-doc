@@ -7,6 +7,7 @@ import {
   getListAdminProductsQueryKey,
   useCreateAdminProduct,
 } from '@/generated/api/catalog/catalog';
+import { ImageUploadField } from '@/features/media/image-upload-field';
 
 type ProductFormValues = {
   name: string;
@@ -142,7 +143,20 @@ export function ProductFormDrawer({ open, onClose }: { open: boolean; onClose: (
             </Form.Item>
           )}
         />
-        {textField('imageUrl', 'URL ảnh')}
+        <Controller
+          name="imageUrl"
+          control={control}
+          render={({ field }) => (
+            <Form.Item
+              label="Ảnh sản phẩm"
+              required
+              validateStatus={errors.imageUrl ? 'error' : undefined}
+              help={errors.imageUrl?.message}
+            >
+              <ImageUploadField value={field.value} onChange={field.onChange} />
+            </Form.Item>
+          )}
+        />
         <div className="grid gap-4 sm:grid-cols-2">
           <Controller
             name="price"

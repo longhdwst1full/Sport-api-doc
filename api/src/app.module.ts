@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 
 import { PermissionGuard } from './common/guards/permission.guard';
 import appConfig from './config/app.config';
+import cloudinaryConfig from './config/cloudinary.config';
 import databaseConfig from './config/database.config';
 import { validateEnvironment } from './config/env.validation';
 import { PrismaModule } from './database/prisma.module';
@@ -38,7 +39,7 @@ import { SystemModule } from './modules/system/system.module';
       isGlobal: true,
       cache: true,
       envFilePath: ['.env.local', '.env'],
-      load: [appConfig, databaseConfig],
+      load: [appConfig, databaseConfig, cloudinaryConfig],
       validate: validateEnvironment,
     }),
     LoggerModule.forRootAsync({
