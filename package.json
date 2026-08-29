@@ -11,7 +11,7 @@
   "scripts": {
     "dev": "concurrently -n api,client,admin -c blue,green,magenta \"yarn workspace @dctd/api start:dev\" \"yarn workspace @dctd/client dev\" \"yarn workspace @dctd/admin dev\"",
     "contracts:generate": "yarn workspace @dctd/api openapi:generate && yarn workspace @dctd/client generate:api && yarn workspace @dctd/admin generate:api",
-    "contracts:check": "yarn contracts:generate && git diff --exit-code -- api/openapi client/src/generated admin/src/generated",
+    "contracts:check": "yarn contracts:generate && git diff --exit-code -- api/openapi document/api client/src/generated admin/src/generated",
     "build": "yarn contracts:generate && yarn workspace @dctd/api build && yarn workspace @dctd/client build && yarn workspace @dctd/admin build",
     "test": "yarn workspace @dctd/api test && yarn workspace @dctd/client test && yarn workspace @dctd/admin test",
     "lint": "yarn workspace @dctd/api lint && yarn workspace @dctd/client lint && yarn workspace @dctd/admin lint",

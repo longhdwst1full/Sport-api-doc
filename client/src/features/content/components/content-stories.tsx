@@ -3,18 +3,18 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowUpRight } from 'lucide-react';
-import { useListPublishedPosts } from '@/generated/api/storefront-content/storefront-content';
+import { useContentStories } from '../hooks/use-content-stories';
 
 export function ContentStories() {
-  const query = useListPublishedPosts();
-  if (query.isPending) return <div className="h-72 animate-pulse rounded-[32px] bg-white" />;
-  if (query.isError)
+  const { stories, isPending, isError } = useContentStories();
+  if (isPending) return <div className="h-72 animate-pulse rounded-[32px] bg-white" />;
+  if (isError)
     return <div className="rounded-[32px] bg-red-50 p-8 text-red-700">Không thể tải bài viết.</div>;
-  if (!query.data?.items.length) return null;
+  if (!stories.length) return null;
 
   return (
     <div className="grid gap-6 md:grid-cols-2">
-      {query.data.items.map((post) => (
+      {stories.map((post) => (
         <article
           key={post.id}
           className="group grid overflow-hidden rounded-[32px] bg-white md:grid-cols-[.9fr_1.1fr]"
@@ -31,7 +31,7 @@ export function ContentStories() {
           <div className="flex flex-col justify-between p-7">
             <div>
               <p className="text-xs font-bold uppercase tracking-[.18em] text-brand-600">
-                {post.postType.replaceAll('_', ' ')}
+                {post.typeLabel}
               </p>
               <h3 className="mt-3 text-2xl font-extrabold">{post.title}</h3>
               <p className="mt-3 leading-7 text-stone-600">{post.excerpt}</p>

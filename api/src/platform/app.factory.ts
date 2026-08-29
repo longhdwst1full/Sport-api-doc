@@ -1,12 +1,13 @@
 import compression from 'compression';
 import helmet from 'helmet';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, OpenAPIObject, SwaggerModule } from '@nestjs/swagger';
 import { Logger as PinoLogger } from 'nestjs-pino';
 
 import { AppModule } from '../app.module';
-import { HttpExceptionFilter } from './http/http-exception.filter';
+import { HttpExceptionFilter } from '../common/filters/http-exception.filter';
 
 interface CreateApplicationOptions {
   logger: boolean;
@@ -36,14 +37,13 @@ export async function createApplication(
   });
 
   if (options.logger) app.useLogger(app.get(PinoLogger));
+  const config = app.get(ConfigService);
 
   app.setGlobalPrefix('api/v1');
   app.use(helmet({ contentSecurityPolicy: false }));
   app.use(compression());
   app.enableCors({
-    origin: (process.env.CORS_ORIGINS ?? 'http://localhost:3000,http://localhost:5173')
-      .split(',')
-      .map((origin) => origin.trim()),
+    origin: config.get<string[]>('app.corsOrigins') ?? [],
     credentials: true,
   });
   app.useGlobalPipes(

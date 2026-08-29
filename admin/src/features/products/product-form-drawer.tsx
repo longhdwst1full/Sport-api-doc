@@ -6,7 +6,7 @@ import * as yup from 'yup';
 import {
   getListAdminProductsQueryKey,
   useCreateAdminProduct,
-} from '@/generated/api/admin-products/admin-products';
+} from '@/generated/api/catalog/catalog';
 
 type ProductFormValues = {
   name: string;

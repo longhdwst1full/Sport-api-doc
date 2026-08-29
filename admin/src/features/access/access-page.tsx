@@ -13,8 +13,8 @@ import {
   useListAdminPermissions,
   useListAdminRoles,
   useListAdminUsers,
-} from '@/generated/api/admin-iam/admin-iam';
-import type { UserDtoStatus, UserRoleAssignmentDto } from '@/generated/api/models';
+} from '@/generated/api/iam/iam';
+import type { UserDtoStatus, UserRoleAssignmentDto } from '@/generated/api/iam/models';
 
 const userStatuses: Record<UserDtoStatus, { color: string; label: string }> = {
   ACTIVE: { color: 'green', label: 'Hoạt động' },

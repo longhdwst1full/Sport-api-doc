@@ -4,7 +4,7 @@ import { Avatar, Button, Card, Input, Space, Table, Tag, Typography } from 'antd
 import { useState } from 'react';
 import { useDebounce } from 'use-debounce';
 import { PermissionGate } from '@/core/auth/permissions';
-import { useListAdminProducts } from '@/generated/api/admin-products/admin-products';
+import { useListAdminProducts } from '@/generated/api/catalog/catalog';
 import { ProductFormDrawer } from './product-form-drawer';
 
 const money = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' });

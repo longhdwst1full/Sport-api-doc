@@ -7,7 +7,7 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { RequirePermissions } from '../../platform/auth/require-permissions.decorator';
+import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import {
   CreateStockAdjustmentDto,
   InventoryBalanceListDto,

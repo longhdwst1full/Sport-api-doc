@@ -1,0 +1,159 @@
+# Generated from NestJS decorators. Do not edit by hand.
+openapi: 3.0.0
+info:
+  title: DCTD-UTC Commerce API
+  description: Contract for storefront and admin applications
+  version: 1.0.0
+  contact: {}
+servers:
+  - url: http://localhost:4000
+    description: Local
+paths:
+  /api/v1/admin/inventory/balances:
+    get:
+      operationId: listInventoryBalances
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryBalanceListDto"
+      security:
+        - bearer: []
+      summary: List warehouse balances
+      tags:
+        - Admin Inventory
+  /api/v1/admin/inventory/adjustments:
+    post:
+      operationId: createStockAdjustment
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateStockAdjustmentDto"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockAdjustmentResultDto"
+      security:
+        - bearer: []
+      summary: Post a basic stock adjustment
+      tags:
+        - Admin Inventory
+components:
+  schemas:
+    InventoryBalanceListDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/InventoryBalanceDto"
+        total:
+          type: number
+      required:
+        - items
+        - total
+    CreateStockAdjustmentDto:
+      type: object
+      properties:
+        warehouseCode:
+          type: string
+          example: WH-HCM-01
+        reason:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/StockAdjustmentItemInputDto"
+      required:
+        - warehouseCode
+        - reason
+        - items
+    StockAdjustmentResultDto:
+      type: object
+      properties:
+        adjustmentNo:
+          type: string
+        status:
+          type: string
+          enum:
+            - POSTED
+        reason:
+          type: string
+        balances:
+          type: array
+          items:
+            $ref: "#/components/schemas/InventoryBalanceDto"
+        postedAt:
+          type: string
+          format: date-time
+      required:
+        - adjustmentNo
+        - status
+        - reason
+        - balances
+        - postedAt
+    InventoryBalanceDto:
+      type: object
+      properties:
+        id:
+          type: string
+        warehouseCode:
+          type: string
+        sku:
+          type: string
+        productName:
+          type: string
+        onHand:
+          type: number
+        reserved:
+          type: number
+        available:
+          type: number
+        reorderPoint:
+          type: number
+        status:
+          type: string
+          enum:
+            - IN_STOCK
+            - LOW_STOCK
+            - OUT_OF_STOCK
+      required:
+        - id
+        - warehouseCode
+        - sku
+        - productName
+        - onHand
+        - reserved
+        - available
+        - reorderPoint
+        - status
+    StockAdjustmentItemInputDto:
+      type: object
+      properties:
+        sku:
+          type: string
+        quantityDelta:
+          type: number
+          example: 5
+      required:
+        - sku
+        - quantityDelta
+  securitySchemes:
+    bearer:
+      scheme: bearer
+      bearerFormat: JWT
+      type: http

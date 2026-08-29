@@ -5,7 +5,7 @@ Phạm vi: `api/`, Organization, IAM và platform foundation.
 
 ## 1. Kết luận nhanh
 
-Backend hiện là NestJS modular monolith có OpenAPI, validation, permission guard và ranh giới module tương đối rõ. Catalog, Inventory, CMS và Review đã có vertical slice in-memory. Organization và IAM trước Sprint 1 mới chỉ là module rỗng.
+Backend hiện là NestJS modular monolith có OpenAPI, validation, permission guard và ranh giới module tương đối rõ. Catalog, Inventory, CMS và Review đã có vertical slice in-memory. Organization và IAM đã được refactor thành feature module NestJS gọn: controller/service/DTO/types, kèm repository adapter khi cần thay persistence.
 
 Nền hiện tại phù hợp để phát triển tiếp, nhưng chưa được xem là production-ready vì chưa có PostgreSQL adapter/migration, verified identity, durable audit, idempotency store, outbox và integration test trên database thật.
 
@@ -15,7 +15,8 @@ Không tìm thấy một repository riêng tên `dctc-service` hoặc `dctd-serv
 
 - `dctd-utc/api`: nguồn backend chính cần tiếp tục.
 - `identity-service`: tham khảo repository port, role/permission mapping, cache invalidation và audit/version.
-- `customer-service`: tham khảo module/application/infrastructure boundary.
+- `customer-service`: chỉ tham khảo ownership, transaction và repository boundary; không sao chép package Java nhiều tầng.
+- `Nest_Ecommerce`: tham khảo cách tổ chức Nest theo feature `module/controller/service`, config, Prisma, queue và filter; không sao chép microservice/Kafka/gRPC hoặc service quá lớn khi V1 chưa cần.
 - `stonehub-bff`: tham khảo logging, request context và vận hành service; không copy domain tài chính.
 - `saletools-ulrp-presentation`: chỉ tham khảo flow/UI, không phải backend commerce source.
 
@@ -23,7 +24,7 @@ Phần có thể tận dụng nhanh ở mức pattern:
 
 - Role là bundle permission; user nhận role thông qua assignment có data scope.
 - Permission code là mã nghiệp vụ ổn định, không suy ra từ URL.
-- Application service đứng giữa controller và repository/adapter.
+- Service nghiệp vụ đứng giữa controller và repository/adapter, nhưng vẫn được giữ gần feature thay vì chia mỗi endpoint thành một command/query class.
 - `permission_version` tăng sau khi assignment thay đổi để chuẩn bị invalidation cache.
 - Request ID, structured log và che token/PII trong log.
 
@@ -42,14 +43,14 @@ Phần không copy nguyên trạng:
 - Controller active có operation ID, Swagger DTO và class-validator.
 - Permission guard dùng stable business code và API là nguồn quyết định cuối.
 - In-memory inventory đã minh họa idempotency và invariant không thấp hơn reserved.
-- OpenAPI là contract producer cho client/admin generate SDK.
+- OpenAPI JSON và YAML được sinh từ cùng NestJS document; YAML domain là input trực tiếp cho client/admin generate SDK.
 
 ### Khoảng trống cần xử lý
 
 | Mức | Khoảng trống                                      | Hướng xử lý                                                               |
 | --- | ------------------------------------------------- | ------------------------------------------------------------------------- |
 | P0  | `x-permissions` và `AUTH_BYPASS` chỉ là scaffold  | JWT/session verified identity và deny-by-default trước staging production |
-| P0  | Chưa có persistence adapter/migration             | Chốt D19, D20, D22, D23 rồi triển khai PostgreSQL theo wave               |
+| P0  | Có Prisma foundation nhưng chưa có adapter/migration nghiệp vụ | Chốt D19, D20, D22, D23 rồi triển khai PostgreSQL theo wave        |
 | P0  | Chưa có durable audit/outbox/idempotency          | Bổ sung sau khi transaction boundary và schema được duyệt                 |
 | P0  | Chưa có integration/e2e PostgreSQL                | Tạo test environment và migration smoke test                              |
 | P1  | Error code hiện còn suy từ HTTP status            | Chuẩn hóa domain error code theo use case                                 |
@@ -87,7 +88,7 @@ Mục tiêu: kích hoạt Organization + IAM ở mức contract/application/doma
 
 - `nestjs-pino`, `pino`, `pino-http`: structured request log, request ID và redaction các header/body nhạy cảm.
 - `@nestjs/throttler`: global rate limit mặc định 120 request/60 giây, cấu hình qua environment.
-- Không cài TypeORM/Prisma trong sprint này vì persistence decisions chưa được chốt.
+- Prisma 6.19 đã được chọn ở D33 và có module/service lifecycle; chưa sinh model hoặc migration nghiệp vụ khi các quyết định dữ liệu còn mở.
 
 ## 6. Checklist Sprint 1
 
@@ -121,12 +122,14 @@ Mục tiêu: kích hoạt Organization + IAM ở mức contract/application/doma
 ### Quality gate
 
 - [x] API lint.
-- [x] API Jest: 11/11 test pass.
+- [x] API Jest: 12/12 test pass, gồm contract-slice reachability.
 - [x] OpenAPI generate và kiểm tra 8 operation trên 6 path Sprint 1.
 - [x] API production build.
 - [x] HTTP smoke: list branch, list role và create branch + warehouse trả 2xx.
-- [x] Admin generated SDK, lint, 6/6 test và production build.
-- [x] GitNexus detect changes: 23 files, 56 symbols, 12 execution flows; mức rủi ro tổng thể `HIGH` do thay đổi các điểm trung tâm `AdminLayout`, `AppRoutes` và `createApplication`.
+- [x] Admin generated SDK theo domain, lint, 6/6 test và production build.
+- [x] Storefront generated SDK theo domain, lint, 3/3 test và production build.
+- [x] GitNexus re-index: 2.543 nodes, 3.941 edges, 91 clusters và 63 flows.
+- [x] GitNexus detect changes: 155 files, 387 symbols, 20 execution flows; mức rủi ro tổng thể `CRITICAL` vì worktree hiện gồm cả contract generator/generated SDK/frontend flow trước đó và NestJS foundation mới. OpenAPI compatibility check vẫn giữ nguyên 24 operation/42 schema; bắt buộc tách/review theo nhóm file trước khi merge.
 
 ## 7. Không nằm trong Sprint 1
 
@@ -134,12 +137,12 @@ Mục tiêu: kích hoạt Organization + IAM ở mức contract/application/doma
 - PostgreSQL entities/migrations và Redis permission cache.
 - Audit log bền vững, outbox và approval workflow.
 - Customer, order, payment và inventory transaction thật.
-- Nối admin Organization/IAM sang generated SDK; thực hiện sau khi contract Sprint 1 ổn định.
+- PostgreSQL adapter và optimistic concurrency cho các API update.
 
 ## 8. Điều kiện bắt đầu Sprint 2
 
 1. Chốt D19 retention, D20 RPO/RTO, D22 soft delete và D23 UUID strategy.
-2. Chọn ORM/query layer và migration convention.
+2. Áp dụng Prisma convention đã chốt ở D33; review raw SQL bổ sung cho constraint/index PostgreSQL không biểu diễn đủ bằng schema.
 3. Dựng PostgreSQL integration test trong CI.
-4. Thay in-memory Organization/IAM bằng repository port + PostgreSQL adapter mà không đổi API contract.
-5. Generate admin SDK và thay fixture ở hai màn `/organization`, `/access`.
+4. Thay in-memory Organization/IAM bằng PostgreSQL adapter qua repository port hiện có mà không đổi API contract.
+5. Thêm PostgreSQL integration/concurrency tests trước khi công bố production-ready.

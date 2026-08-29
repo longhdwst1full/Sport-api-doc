@@ -5,7 +5,7 @@ description: Integrate DCTD admin screens with the NestJS OpenAPI contract throu
 
 # Admin API integration
 
-The backend contract must already exist in `api/openapi/openapi.json`.
+The backend contract must already exist in `document/api/openapi-v1.yaml` and be generated from the same NestJS document as `api/openapi/openapi.json`.
 
 1. From the repository root, run `yarn workspace @dctd/admin generate:api`.
 2. Inspect only changed `Admin *` operation modules/models for names, nullability, pagination, permissions and error responses.

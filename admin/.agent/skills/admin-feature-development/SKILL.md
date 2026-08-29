@@ -8,9 +8,9 @@ description: Build or change a DCTD admin feature, including routes, permission-
 Read the relevant admin rules first, especially directory structure, routing, UI ownership and permissions.
 
 1. Locate the current route/flow with the navigation skill when unfamiliar, then identify the generated DTO/query/mutation and reviewed view/action permission codes.
-2. Create or extend `src/features/<feature>`; keep routing and navigation declarations in their application-level configuration files.
+2. Create or extend `src/features/<feature>` following the preferred flow `route -> thin page -> feature hook/mapping -> generated SDK or workflow state -> foundation UI`; keep routing and navigation declarations in their application-level configuration files.
 3. Implement loading, empty, error and forbidden behavior before considering the happy path complete.
-4. For lists, use server pagination/sort/filter, debounce text input and preserve AbortSignal cancellation. For forms, use React Hook Form/Yup as the state/validation owner, isolate DTO mapping and render server errors.
+4. For lists, use server pagination/sort/filter, debounce text input and preserve AbortSignal cancellation. For forms, use React Hook Form/Yup as the state/validation owner, isolate DTO mapping and render server errors. Do not call Axios from pages/components or duplicate TanStack Query response data into Redux.
 5. Represent business transitions as named actions with confirmation, not direct status field edits.
 6. Keep editors/charts/large-list code route-scoped or dynamically imported. Add tests for mapping, permissions and mutation outcomes; run the local quality gate.
 

@@ -15,7 +15,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { useListSystemModules } from '@/generated/api/admin-system/admin-system';
+import { useListSystemModules } from '@/generated/api/system/system';
 import { SystemModuleList } from './components/system-module-list';
 
 export function DashboardPage() {

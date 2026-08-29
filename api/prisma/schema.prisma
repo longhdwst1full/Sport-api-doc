@@ -1,0 +1,12 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Models are introduced wave-by-wave from document/09-v1-model.dbml.
+// Do not generate all reviewed tables into one migration.

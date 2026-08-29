@@ -2,7 +2,7 @@ import { PlusOutlined } from '@ant-design/icons';
 import { Avatar, Button, Card, Skeleton, Table, Tag, Typography } from 'antd';
 import { lazy, Suspense, useState } from 'react';
 import { PermissionGate } from '@/core/auth/permissions';
-import { useListAdminPosts } from '@/generated/api/admin-content/admin-content';
+import { useListAdminPosts } from '@/generated/api/content/content';
 
 const ContentEditorDrawer = lazy(() =>
   import('./content-editor-drawer').then((module) => ({ default: module.ContentEditorDrawer })),

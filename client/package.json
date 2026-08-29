@@ -8,7 +8,7 @@
     "start": "next start -p 3000",
     "lint": "tsc --noEmit",
     "test": "vitest run --pool=threads",
-    "generate:api": "orval --config orval.config.ts"
+    "generate:api": "node scripts/clean-generated-api.cjs && orval --config orval.config.ts"
   },
   "dependencies": {
     "@reduxjs/toolkit": "2.12.0",

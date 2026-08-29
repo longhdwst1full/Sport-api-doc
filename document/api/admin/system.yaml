@@ -1,0 +1,82 @@
+# Generated from NestJS decorators. Do not edit by hand.
+openapi: 3.0.0
+info:
+  title: DCTD-UTC Commerce API
+  description: Contract for storefront and admin applications
+  version: 1.0.0
+  contact: {}
+servers:
+  - url: http://localhost:4000
+    description: Local
+paths:
+  /api/v1/admin/system/modules:
+    get:
+      operationId: listSystemModules
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemModuleListDto"
+      security:
+        - bearer: []
+      summary: List V1 business modules and models
+      tags:
+        - Admin System
+components:
+  schemas:
+    SystemModuleListDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SystemModuleDto"
+        totalModels:
+          type: number
+          example: 74
+        p0Models:
+          type: number
+          example: 43
+        p1Models:
+          type: number
+          example: 31
+      required:
+        - items
+        - totalModels
+        - p0Models
+        - p1Models
+    SystemModuleDto:
+      type: object
+      properties:
+        key:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - SCAFFOLDED
+        tables:
+          type: array
+          items:
+            type: string
+        p0Count:
+          type: number
+        p1Count:
+          type: number
+      required:
+        - key
+        - name
+        - status
+        - tables
+        - p0Count
+        - p1Count
+  securitySchemes:
+    bearer:
+      scheme: bearer
+      bearerFormat: JWT
+      type: http

@@ -1,0 +1,266 @@
+# Generated from NestJS decorators. Do not edit by hand.
+openapi: 3.0.0
+info:
+  title: DCTD-UTC Commerce API
+  description: Contract for storefront and admin applications
+  version: 1.0.0
+  contact: {}
+servers:
+  - url: http://localhost:4000
+    description: Local
+paths:
+  /api/v1/admin/organization/branches:
+    get:
+      operationId: listAdminBranches
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BranchListDto"
+      security:
+        - bearer: []
+      summary: List sales branches
+      tags:
+        - Admin Organization
+    post:
+      operationId: createAdminBranchWithWarehouse
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBranchDto"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BranchWithWarehouseDto"
+        "409":
+          description: Branch or warehouse code already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Create a branch with its single V1 warehouse
+      tags:
+        - Admin Organization
+  /api/v1/admin/organization/warehouses:
+    get:
+      operationId: listAdminWarehouses
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WarehouseListDto"
+      security:
+        - bearer: []
+      summary: List branch warehouses
+      tags:
+        - Admin Organization
+components:
+  schemas:
+    BranchListDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BranchDto"
+        total:
+          type: number
+          example: 2
+      required:
+        - items
+        - total
+    CreateBranchDto:
+      type: object
+      properties:
+        code:
+          type: string
+          example: CN-DN-01
+        name:
+          type: string
+          example: Chi nhánh Đà Nẵng
+        phone:
+          type: string
+          example: 0236 7300 8899
+        email:
+          type: string
+          example: danang@dctd.vn
+        address:
+          $ref: "#/components/schemas/AddressDto"
+        warehouse:
+          $ref: "#/components/schemas/CreateWarehouseInputDto"
+      required:
+        - code
+        - name
+        - address
+        - warehouse
+    BranchWithWarehouseDto:
+      type: object
+      properties:
+        branch:
+          $ref: "#/components/schemas/BranchDto"
+        warehouse:
+          $ref: "#/components/schemas/WarehouseDto"
+      required:
+        - branch
+        - warehouse
+    ErrorResponseDto:
+      type: object
+      properties:
+        statusCode:
+          type: number
+          example: 400
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: Request validation failed
+        details:
+          type: object
+        path:
+          type: string
+          example: /api/v1/catalog/products
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+      required:
+        - statusCode
+        - code
+        - message
+        - path
+        - timestamp
+    WarehouseListDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/WarehouseDto"
+        total:
+          type: number
+          example: 2
+      required:
+        - items
+        - total
+    BranchDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          example: CN-HCM-01
+        name:
+          type: string
+          example: Chi nhánh Hồ Chí Minh
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+        phone:
+          type: string
+          example: 028 7300 8899
+        email:
+          type: string
+          example: hcm@dctd.vn
+        address:
+          $ref: "#/components/schemas/AddressDto"
+        timezone:
+          type: string
+          example: Asia/Ho_Chi_Minh
+        version:
+          type: number
+          example: 0
+      required:
+        - id
+        - code
+        - name
+        - status
+        - address
+        - timezone
+        - version
+    AddressDto:
+      type: object
+      properties:
+        addressLine:
+          type: string
+          example: 123 Nguyễn Văn Linh
+        district:
+          type: string
+          example: Quận 7
+        province:
+          type: string
+          example: TP. Hồ Chí Minh
+      required:
+        - addressLine
+        - district
+        - province
+    CreateWarehouseInputDto:
+      type: object
+      properties:
+        code:
+          type: string
+          example: KHO-DN-01
+        name:
+          type: string
+          example: Kho bán hàng Đà Nẵng
+      required:
+        - code
+        - name
+    WarehouseDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        branchId:
+          type: string
+          format: uuid
+        code:
+          type: string
+          example: KHO-HCM-01
+        name:
+          type: string
+          example: Kho bán hàng Hồ Chí Minh
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+        isPrimary:
+          type: boolean
+          example: true
+        version:
+          type: number
+          example: 0
+      required:
+        - id
+        - branchId
+        - code
+        - name
+        - status
+        - isPrimary
+        - version
+  securitySchemes:
+    bearer:
+      scheme: bearer
+      bearerFormat: JWT
+      type: http

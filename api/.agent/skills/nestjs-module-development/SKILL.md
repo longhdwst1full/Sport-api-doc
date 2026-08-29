@@ -9,8 +9,8 @@ Read the relevant API rules first.
 
 1. Locate the current flow with the navigation skill when unfamiliar. Identify the owning bounded context, delivery wave and whether the module is active or scaffolded.
 2. Define validated request DTOs, concrete response DTOs, stable operation IDs, Swagger responses and permission metadata.
-3. Keep the controller thin. Put orchestration in an application service and invariants/transitions in named domain behavior.
-4. Do not expose empty generic CRUD for scaffolded modules. When persistence is in scope, depend on repositories through owning-module ports; never reach into another module's adapter.
+3. Keep the controller thin. Put orchestration in a feature service and invariants/transitions in named behavior. Keep a small module flat; add `controllers/dto/services/repositories/enums` only when each folder has real ownership.
+4. For a large domain, add a nested Nest module such as `catalog/products` rather than growing one domain service. Do not expose empty generic CRUD. When persistence is in scope, depend on repositories through owning-module ports; never reach into another module's adapter or inject Prisma directly into controllers.
 5. Add unit tests for success, validation/invariant failure, permission/transition behavior and idempotency where relevant.
 6. State whether behavior remains in-memory or is persisted, then run API lint, tests, OpenAPI export and build.
 

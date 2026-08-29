@@ -9,7 +9,7 @@
     "preview": "vite preview --port 5173",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "test": "vitest run --pool=threads",
-    "generate:api": "orval --config orval.config.ts"
+    "generate:api": "node scripts/clean-generated-api.cjs && orval --config orval.config.ts"
   },
   "dependencies": {
     "@ant-design/icons": "^6.0.0",

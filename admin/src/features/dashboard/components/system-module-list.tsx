@@ -1,6 +1,6 @@
 import { Tag } from 'antd';
 import { List, type RowComponentProps } from 'react-window';
-import type { SystemModuleDto } from '@/generated/api/models/systemModuleDto';
+import type { SystemModuleDto } from '@/generated/api/system/models/systemModuleDto';
 
 type ModuleRowProps = { items: SystemModuleDto[] };
 

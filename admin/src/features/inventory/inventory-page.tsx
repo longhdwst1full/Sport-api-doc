@@ -1,6 +1,6 @@
 import { ReloadOutlined } from '@ant-design/icons';
 import { Button, Card, Progress, Table, Tag, Typography } from 'antd';
-import { useListInventoryBalances } from '@/generated/api/admin-inventory/admin-inventory';
+import { useListInventoryBalances } from '@/generated/api/inventory/inventory';
 
 const status = {
   IN_STOCK: { color: 'green', label: 'Còn hàng' },

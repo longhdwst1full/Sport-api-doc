@@ -1,0 +1,396 @@
+# Generated from NestJS decorators. Do not edit by hand.
+openapi: 3.0.0
+info:
+  title: DCTD-UTC Commerce API
+  description: Contract for storefront and admin applications
+  version: 1.0.0
+  contact: {}
+servers:
+  - url: http://localhost:4000
+    description: Local
+paths:
+  /api/v1/admin/products:
+    get:
+      operationId: listAdminProducts
+      parameters:
+        - name: page
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            default: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 12
+            type: number
+        - name: search
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: category
+          required: false
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductListResponseDto"
+      security:
+        - bearer: []
+      summary: List products for admin
+      tags:
+        - Admin Products
+    post:
+      operationId: createAdminProduct
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProductDto"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetailDto"
+      security:
+        - bearer: []
+      summary: Create product
+      tags:
+        - Admin Products
+  /api/v1/admin/products/{id}:
+    patch:
+      operationId: updateAdminProduct
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProductDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetailDto"
+      security:
+        - bearer: []
+      summary: Update product
+      tags:
+        - Admin Products
+components:
+  schemas:
+    ProductListResponseDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductSummaryDto"
+        meta:
+          $ref: "#/components/schemas/ProductListMetaDto"
+      required:
+        - items
+        - meta
+    CreateProductDto:
+      type: object
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        sku:
+          type: string
+        brand:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+          minimum: 0
+        imageUrl:
+          type: string
+          format: uri
+        availableQuantity:
+          type: number
+          minimum: 0
+        tags:
+          type: array
+          items:
+            type: string
+        published:
+          type: boolean
+          default: true
+      required:
+        - name
+        - slug
+        - sku
+        - brand
+        - category
+        - description
+        - price
+        - imageUrl
+        - availableQuantity
+    ProductDetailDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: Máy chạy bộ DCTD Pro X1
+        slug:
+          type: string
+          example: may-chay-bo-dctd-pro-x1
+        brand:
+          type: string
+          example: DCTD
+        category:
+          type: string
+          example: Máy chạy bộ
+        price:
+          type: number
+          example: 18990000
+        currency:
+          type: string
+          example: VND
+        imageUrl:
+          type: string
+          format: uri
+        rating:
+          type: number
+          example: 4.8
+        reviewCount:
+          type: number
+          example: 124
+        available:
+          type: boolean
+          example: true
+        tags:
+          example:
+            - Bán chạy
+            - Giao nhanh
+          type: array
+          items:
+            type: string
+        description:
+          type: string
+        sku:
+          type: string
+          example: SKU-RUN-X1
+        availableQuantity:
+          type: number
+          example: 12
+        gallery:
+          type: array
+          items:
+            type: string
+        variants:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductVariantDto"
+        bundle:
+          $ref: "#/components/schemas/ProductBundleDto"
+      required:
+        - id
+        - name
+        - slug
+        - brand
+        - category
+        - price
+        - currency
+        - imageUrl
+        - rating
+        - reviewCount
+        - available
+        - tags
+        - description
+        - sku
+        - availableQuantity
+        - gallery
+        - variants
+    UpdateProductDto:
+      type: object
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        sku:
+          type: string
+        brand:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+          minimum: 0
+        imageUrl:
+          type: string
+          format: uri
+        availableQuantity:
+          type: number
+          minimum: 0
+        tags:
+          type: array
+          items:
+            type: string
+        published:
+          type: boolean
+          default: true
+    ProductSummaryDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: Máy chạy bộ DCTD Pro X1
+        slug:
+          type: string
+          example: may-chay-bo-dctd-pro-x1
+        brand:
+          type: string
+          example: DCTD
+        category:
+          type: string
+          example: Máy chạy bộ
+        price:
+          type: number
+          example: 18990000
+        currency:
+          type: string
+          example: VND
+        imageUrl:
+          type: string
+          format: uri
+        rating:
+          type: number
+          example: 4.8
+        reviewCount:
+          type: number
+          example: 124
+        available:
+          type: boolean
+          example: true
+        tags:
+          example:
+            - Bán chạy
+            - Giao nhanh
+          type: array
+          items:
+            type: string
+      required:
+        - id
+        - name
+        - slug
+        - brand
+        - category
+        - price
+        - currency
+        - imageUrl
+        - rating
+        - reviewCount
+        - available
+        - tags
+    ProductListMetaDto:
+      type: object
+      properties:
+        page:
+          type: number
+          example: 1
+        limit:
+          type: number
+          example: 12
+        total:
+          type: number
+          example: 2
+        totalPages:
+          type: number
+          example: 1
+      required:
+        - page
+        - limit
+        - total
+        - totalPages
+    ProductVariantDto:
+      type: object
+      properties:
+        id:
+          type: string
+        sku:
+          type: string
+        name:
+          type: string
+        price:
+          type: number
+        availableQuantity:
+          type: number
+        attributes:
+          type: object
+      required:
+        - id
+        - sku
+        - name
+        - price
+        - availableQuantity
+        - attributes
+    ProductBundleDto:
+      type: object
+      properties:
+        bundleType:
+          type: string
+          enum:
+            - FIXED
+        components:
+          type: array
+          items:
+            $ref: "#/components/schemas/BundleComponentDto"
+      required:
+        - bundleType
+        - components
+    BundleComponentDto:
+      type: object
+      properties:
+        componentSku:
+          type: string
+        componentName:
+          type: string
+        quantity:
+          type: number
+          minimum: 1
+      required:
+        - componentSku
+        - componentName
+        - quantity
+  securitySchemes:
+    bearer:
+      scheme: bearer
+      bearerFormat: JWT
+      type: http

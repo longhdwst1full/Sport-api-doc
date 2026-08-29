@@ -31,3 +31,5 @@ D29,CMS scope,V1 có page post content category tag và post-product relation; c
 D30,Payment frequency,Một order chỉ thanh toán đủ một lần; thiếu thừa hoặc lặp chuyển NEED_REVIEW,Đơn giản hóa đối soát và không hỗ trợ split payment,Finance+Product,5,DECIDED
 D31,Delivery failure,Hàng giao thất bại về đúng warehouse xuất; bắt buộc reason và inspection trước restock,Bảo toàn lịch sử và không nhập lại hàng hỏng vào sellable stock,Ops,5,DECIDED
 D32,Combo,V1 combo ảo cố định không nested; reserve/ship component; return nguyên combo,Đủ bán bộ sản phẩm nhưng giữ tồn chính xác,Product+Ops,4,DECIDED
+D33,ORM và migration,Prisma 6.19 cho client và migration; dùng SQL migration bổ sung cho CHECK partial index trigger hoặc locking đặc thù PostgreSQL,Chốt database foundation nhưng chưa khóa schema khi D19 D20 D22 D23 còn mở,Tech,0,DECIDED
+D34,COD trong V1,Đã có provider boundary nhưng chưa kích hoạt endpoint; cần chốt state machine COD trước khi cho phép ship khi payment chưa success,Tránh mâu thuẫn rule ship sau payment success và đối soát một lần,Product+Finance+Ops,4,PROPOSED

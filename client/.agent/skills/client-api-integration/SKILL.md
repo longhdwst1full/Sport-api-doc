@@ -5,7 +5,7 @@ description: Integrate the DCTD storefront with public NestJS operations through
 
 # Storefront API integration
 
-The backend contract must already exist in `api/openapi/openapi.json`.
+The backend contract must already exist in `document/api/openapi-v1.yaml` and be generated from the same NestJS document as `api/openapi/openapi.json`.
 
 1. Run `yarn workspace @dctd/client generate:api` from the repository root.
 2. Confirm the operation has a `Storefront *` tag and inspect nullability, cache relevance, auth behavior and error responses.

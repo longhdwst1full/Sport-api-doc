@@ -1,5 +1,5 @@
 import { Card, Rate, Table, Tag, Typography } from 'antd';
-import { useListAdminReviews } from '@/generated/api/admin-reviews/admin-reviews';
+import { useListAdminReviews } from '@/generated/api/reviews/reviews';
 
 export function ReviewsPage() {
   const query = useListAdminReviews();

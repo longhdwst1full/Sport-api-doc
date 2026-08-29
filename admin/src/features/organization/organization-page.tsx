@@ -6,8 +6,8 @@ import { ManagementPage, StatusTag } from '@/foundation/management';
 import {
   useListAdminBranches,
   useListAdminWarehouses,
-} from '@/generated/api/admin-organization/admin-organization';
-import type { BranchDtoStatus } from '@/generated/api/models';
+} from '@/generated/api/organization/organization';
+import type { BranchDtoStatus } from '@/generated/api/organization/models';
 
 interface BranchWarehouseRow {
   branchId: string;

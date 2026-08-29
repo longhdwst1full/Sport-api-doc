@@ -1,0 +1,388 @@
+# Generated from NestJS decorators. Do not edit by hand.
+openapi: 3.0.0
+info:
+  title: DCTD-UTC Commerce API
+  description: Contract for storefront and admin applications
+  version: 1.0.0
+  contact: {}
+servers:
+  - url: http://localhost:4000
+    description: Local
+paths:
+  /api/v1/admin/iam/users:
+    get:
+      operationId: listAdminUsers
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserListDto"
+      security:
+        - bearer: []
+      summary: List staff users with role scopes
+      tags:
+        - Admin IAM
+  /api/v1/admin/iam/roles:
+    get:
+      operationId: listAdminRoles
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoleListDto"
+      security:
+        - bearer: []
+      summary: List IAM roles
+      tags:
+        - Admin IAM
+    post:
+      operationId: createAdminRole
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRoleDto"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoleDto"
+        "400":
+          description: One or more permission codes are unknown
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: Role code already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Create a role from known permissions
+      tags:
+        - Admin IAM
+  /api/v1/admin/iam/permissions:
+    get:
+      operationId: listAdminPermissions
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PermissionListDto"
+      security:
+        - bearer: []
+      summary: List stable permission codes
+      tags:
+        - Admin IAM
+  /api/v1/admin/iam/users/{userId}/role-assignments:
+    post:
+      operationId: assignAdminUserRole
+      parameters:
+        - name: userId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignUserRoleDto"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserRoleAssignmentDto"
+        "400":
+          description: Scope identifiers do not match the scope type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: User or role not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: The same assignment already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Assign a role with a validated data scope
+      tags:
+        - Admin IAM
+components:
+  schemas:
+    UserListDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserDto"
+        total:
+          type: number
+      required:
+        - items
+        - total
+    RoleListDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoleDto"
+        total:
+          type: number
+      required:
+        - items
+        - total
+    CreateRoleDto:
+      type: object
+      properties:
+        code:
+          type: string
+          example: CONTENT_EDITOR
+        name:
+          type: string
+          example: Content Editor
+        description:
+          type: string
+        permissionCodes:
+          example:
+            - cms.content.view
+            - cms.content.manage
+          type: array
+          items:
+            type: string
+      required:
+        - code
+        - name
+        - permissionCodes
+    RoleDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          example: BRANCH_MANAGER
+        name:
+          type: string
+          example: Branch Manager
+        description:
+          type: string
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+        system:
+          type: boolean
+        permissionCodes:
+          type: array
+          items:
+            type: string
+        version:
+          type: number
+          example: 0
+      required:
+        - id
+        - code
+        - name
+        - status
+        - system
+        - permissionCodes
+        - version
+    ErrorResponseDto:
+      type: object
+      properties:
+        statusCode:
+          type: number
+          example: 400
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: Request validation failed
+        details:
+          type: object
+        path:
+          type: string
+          example: /api/v1/catalog/products
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+      required:
+        - statusCode
+        - code
+        - message
+        - path
+        - timestamp
+    PermissionListDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PermissionDto"
+        total:
+          type: number
+      required:
+        - items
+        - total
+    AssignUserRoleDto:
+      type: object
+      properties:
+        roleCode:
+          type: string
+          example: BRANCH_MANAGER
+        scopeType:
+          type: string
+          enum:
+            - GLOBAL
+            - BRANCH
+            - WAREHOUSE
+            - OWN
+        branchId:
+          type: string
+          format: uuid
+        warehouseId:
+          type: string
+          format: uuid
+      required:
+        - roleCode
+        - scopeType
+    UserRoleAssignmentDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        roleId:
+          type: string
+          format: uuid
+        roleCode:
+          type: string
+        scopeType:
+          type: string
+          enum:
+            - GLOBAL
+            - BRANCH
+            - WAREHOUSE
+            - OWN
+        branchId:
+          type: string
+          format: uuid
+        warehouseId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+            - ACTIVE
+        validFrom:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - roleId
+        - roleCode
+        - scopeType
+        - status
+        - validFrom
+    UserDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+          example: Long Hoàng
+        maskedEmail:
+          type: string
+          example: lo***@dctd.vn
+        userType:
+          type: string
+          enum:
+            - STAFF
+            - SYSTEM
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INVITED
+            - LOCKED
+        permissionVersion:
+          type: number
+          example: 1
+        assignments:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserRoleAssignmentDto"
+      required:
+        - id
+        - displayName
+        - maskedEmail
+        - userType
+        - status
+        - permissionVersion
+        - assignments
+    PermissionDto:
+      type: object
+      properties:
+        code:
+          type: string
+          example: org.branch.view
+        module:
+          type: string
+          example: Organization
+        action:
+          type: string
+          example: view
+        sensitive:
+          type: boolean
+          example: false
+      required:
+        - code
+        - module
+        - action
+        - sensitive
+  securitySchemes:
+    bearer:
+      scheme: bearer
+      bearerFormat: JWT
+      type: http

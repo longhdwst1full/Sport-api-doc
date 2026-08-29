@@ -1,19 +1,18 @@
 import { ConflictException } from '@nestjs/common';
+import { InMemoryOrganizationRepository } from './in-memory-organization.repository';
 import { OrganizationService } from './organization.service';
 
 describe('OrganizationService', () => {
+  const input = {
+    code: 'CN-DN-01',
+    name: 'Chi nhánh Đà Nẵng',
+    address: { addressLine: '12 Bạch Đằng', district: 'Hải Châu', province: 'Đà Nẵng' },
+    warehouse: { code: 'KHO-DN-01', name: 'Kho bán hàng Đà Nẵng' },
+  };
+
   it('creates one branch and exactly one primary warehouse', () => {
-    const service = new OrganizationService();
-    const result = service.createBranch({
-      code: 'CN-DN-01',
-      name: 'Chi nhánh Đà Nẵng',
-      address: {
-        addressLine: '12 Bạch Đằng',
-        district: 'Hải Châu',
-        province: 'Đà Nẵng',
-      },
-      warehouse: { code: 'KHO-DN-01', name: 'Kho bán hàng Đà Nẵng' },
-    });
+    const service = new OrganizationService(new InMemoryOrganizationRepository());
+    const result = service.createBranch(input);
 
     expect(result.warehouse.branchId).toBe(result.branch.id);
     expect(result.warehouse.isPrimary).toBe(true);
@@ -23,15 +22,8 @@ describe('OrganizationService', () => {
   });
 
   it('rejects duplicate branch and warehouse business codes', () => {
-    const service = new OrganizationService();
-    const input = {
-      code: 'CN-DN-01',
-      name: 'Chi nhánh Đà Nẵng',
-      address: { addressLine: '12 Bạch Đằng', district: 'Hải Châu', province: 'Đà Nẵng' },
-      warehouse: { code: 'KHO-DN-01', name: 'Kho bán hàng Đà Nẵng' },
-    };
+    const service = new OrganizationService(new InMemoryOrganizationRepository());
     service.createBranch(input);
-
     expect(() => service.createBranch(input)).toThrow(ConflictException);
   });
 });

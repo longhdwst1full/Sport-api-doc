@@ -6,11 +6,11 @@ import { useState } from 'react';
 import {
   getListAdminPostsQueryKey,
   useCreateAdminPost,
-} from '@/generated/api/admin-content/admin-content';
+} from '@/generated/api/content/content';
 import {
   CreateContentPostDtoPostType,
   type CreateContentPostDtoPostType as PostType,
-} from '@/generated/api/models/createContentPostDtoPostType';
+} from '@/generated/api/content/models/createContentPostDtoPostType';
 import 'ckeditor5/ckeditor5.css';
 
 const licenseKey = import.meta.env.VITE_CKEDITOR_LICENSE_KEY;
