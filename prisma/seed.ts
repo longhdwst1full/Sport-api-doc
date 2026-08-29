@@ -1,5 +1,6 @@
 import { Prisma, PrismaClient } from '@prisma/client';
-import { PERMISSION_CATALOG } from '../src/modules/iam/iam.permissions';
+import { v7 as uuidv7 } from 'uuid';
+import { PERMISSION_CATALOG, V1_ROLE_PERMISSIONS } from '../src/modules/iam/iam.permissions';
 
 const prisma = new PrismaClient();
 
@@ -7,15 +8,11 @@ const ids = {
   branch: '00000000-0000-7000-8000-000000000001',
   warehouse: '00000000-0000-7000-8000-000000000002',
   bootstrapUser: '00000000-0000-7000-8000-000000000010',
-  superAdminRole: '00000000-0000-7000-8000-000000000020',
-  catalogManagerRole: '00000000-0000-7000-8000-000000000021',
-  pricingManagerRole: '00000000-0000-7000-8000-000000000022',
-  superAdminAssignment: '00000000-0000-7000-8000-000000000030',
+  ownerRole: '00000000-0000-7000-8000-000000000120',
+  branchManagerRole: '00000000-0000-7000-8000-000000000121',
+  staffRole: '00000000-0000-7000-8000-000000000122',
+  ownerAssignment: '00000000-0000-7000-8000-000000000130',
 } as const;
-
-function permissionId(index: number): string {
-  return `00000000-0000-7000-9000-${String(index + 1).padStart(12, '0')}`;
-}
 
 async function seed(transaction: Prisma.TransactionClient): Promise<void> {
   await transaction.branch.upsert({
@@ -61,7 +58,7 @@ async function seed(transaction: Prisma.TransactionClient): Promise<void> {
     },
   });
 
-  for (const [index, permission] of PERMISSION_CATALOG.entries()) {
+  for (const permission of PERMISSION_CATALOG) {
     await transaction.permission.upsert({
       where: { code: permission.code },
       update: {
@@ -70,7 +67,7 @@ async function seed(transaction: Prisma.TransactionClient): Promise<void> {
         isSensitive: permission.sensitive,
       },
       create: {
-        id: permissionId(index),
+        id: uuidv7(),
         code: permission.code,
         module: permission.module,
         action: permission.action,
@@ -79,28 +76,44 @@ async function seed(transaction: Prisma.TransactionClient): Promise<void> {
     });
   }
 
+  const retiredRoleCodes = ['SUPER_ADMIN', 'CATALOG_MANAGER', 'PRICING_MANAGER'];
+  const retiredRoles = await transaction.role.findMany({
+    where: { code: { in: retiredRoleCodes } },
+    select: { id: true },
+  });
+  if (retiredRoles.length > 0) {
+    const now = new Date();
+    await transaction.userRoleAssignment.updateMany({
+      where: {
+        roleId: { in: retiredRoles.map(({ id }) => id) },
+        status: 'ACTIVE',
+      },
+      data: { status: 'REVOKED', validTo: now },
+    });
+    await transaction.role.updateMany({
+      where: { id: { in: retiredRoles.map(({ id }) => id) } },
+      data: { status: 'INACTIVE' },
+    });
+  }
+
   const roleSeeds = [
     {
-      id: ids.superAdminRole,
-      code: 'SUPER_ADMIN',
-      name: 'Super Admin',
-      permissionCodes: PERMISSION_CATALOG.map(({ code }) => code),
+      id: ids.ownerRole,
+      code: 'OWNER',
+      name: 'Chủ cửa hàng',
+      permissionCodes: V1_ROLE_PERMISSIONS.OWNER,
     },
     {
-      id: ids.catalogManagerRole,
-      code: 'CATALOG_MANAGER',
-      name: 'Catalog Manager',
-      permissionCodes: PERMISSION_CATALOG.filter(({ code }) =>
-        code.startsWith('catalog.'),
-      ).map(({ code }) => code),
+      id: ids.branchManagerRole,
+      code: 'BRANCH_MANAGER',
+      name: 'Quản lý chi nhánh',
+      permissionCodes: V1_ROLE_PERMISSIONS.BRANCH_MANAGER,
     },
     {
-      id: ids.pricingManagerRole,
-      code: 'PRICING_MANAGER',
-      name: 'Pricing Manager',
-      permissionCodes: PERMISSION_CATALOG.filter(({ code }) =>
-        code.startsWith('catalog.price.'),
-      ).map(({ code }) => code),
+      id: ids.staffRole,
+      code: 'STAFF',
+      name: 'Nhân viên',
+      permissionCodes: V1_ROLE_PERMISSIONS.STAFF,
     },
   ];
 
@@ -120,19 +133,26 @@ async function seed(transaction: Prisma.TransactionClient): Promise<void> {
       where: { code: { in: roleSeed.permissionCodes } },
       select: { id: true },
     });
+    const permissionIds = permissions.map(({ id }) => id);
+    await transaction.rolePermission.deleteMany({
+      where: {
+        roleId: role.id,
+        permissionId: { notIn: permissionIds },
+      },
+    });
     await transaction.rolePermission.createMany({
-      data: permissions.map(({ id }) => ({ roleId: role.id, permissionId: id })),
+      data: permissionIds.map((permissionId) => ({ roleId: role.id, permissionId })),
       skipDuplicates: true,
     });
   }
 
-  const superAdminRole = await transaction.role.findUniqueOrThrow({
-    where: { code: 'SUPER_ADMIN' },
+  const ownerRole = await transaction.role.findUniqueOrThrow({
+    where: { code: 'OWNER' },
   });
   const assignment = await transaction.userRoleAssignment.findFirst({
     where: {
       userId: ids.bootstrapUser,
-      roleId: superAdminRole.id,
+      roleId: ownerRole.id,
       scopeType: 'GLOBAL',
       status: 'ACTIVE',
     },
@@ -140,9 +160,9 @@ async function seed(transaction: Prisma.TransactionClient): Promise<void> {
   if (!assignment) {
     await transaction.userRoleAssignment.create({
       data: {
-        id: ids.superAdminAssignment,
+        id: ids.ownerAssignment,
         userId: ids.bootstrapUser,
-        roleId: superAdminRole.id,
+        roleId: ownerRole.id,
         scopeType: 'GLOBAL',
         assignedBy: ids.bootstrapUser,
       },
@@ -151,7 +171,7 @@ async function seed(transaction: Prisma.TransactionClient): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  await prisma.$transaction(seed);
+  await prisma.$transaction(seed, { maxWait: 10_000, timeout: 120_000 });
 }
 
 void main().finally(async () => prisma.$disconnect());

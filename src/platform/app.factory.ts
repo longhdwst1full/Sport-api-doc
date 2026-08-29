@@ -44,7 +44,7 @@ export async function createApplication(
   app.use(helmet({ contentSecurityPolicy: false }));
   app.use(compression());
   app.enableCors({
-    origin: config.get<string[]>('app.corsOrigins') ?? [],
+    origin: corsOrigins.includes('*') ? true : corsOrigins,
     credentials: true,
   });
   app.useGlobalPipes(

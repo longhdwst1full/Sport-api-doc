@@ -1,17 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
-  ArrayMaxSize,
-  ArrayUnique,
-  IsArray,
   IsEnum,
-  IsNotEmpty,
   IsOptional,
-  IsString,
   IsUUID,
-  Matches,
-  MaxLength,
 } from 'class-validator';
-import { RoleStatus, ScopeType, UserStatus } from './iam.types';
+import { RoleStatus, ScopeType, SystemRoleCode, UserStatus } from './iam.types';
 
 export class PermissionDto {
   @ApiProperty({ example: 'org.branch.view' }) code: string;
@@ -38,7 +31,6 @@ export class UserRoleAssignmentDto {
   @ApiProperty() roleCode: string;
   @ApiProperty({ enum: ScopeType }) scopeType: ScopeType;
   @ApiPropertyOptional({ format: 'uuid' }) branchId?: string;
-  @ApiPropertyOptional({ format: 'uuid' }) warehouseId?: string;
   @ApiProperty({ enum: ['ACTIVE'] }) status: 'ACTIVE';
   @ApiProperty({ format: 'date-time' }) validFrom: string;
 }
@@ -68,38 +60,10 @@ export class PermissionListDto {
   @ApiProperty() total: number;
 }
 
-export class CreateRoleDto {
-  @ApiProperty({ example: 'CONTENT_EDITOR' })
-  @IsString()
-  @Matches(/^[A-Z0-9_]+$/)
-  @MaxLength(100)
-  code: string;
-
-  @ApiProperty({ example: 'Content Editor' })
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(255)
-  name: string;
-
-  @ApiPropertyOptional()
-  @IsString()
-  @MaxLength(500)
-  @IsOptional()
-  description?: string;
-
-  @ApiProperty({ type: [String], example: ['cms.content.view', 'cms.content.manage'] })
-  @IsArray()
-  @ArrayUnique()
-  @ArrayMaxSize(100)
-  @IsString({ each: true })
-  permissionCodes: string[];
-}
-
 export class AssignUserRoleDto {
-  @ApiProperty({ example: 'BRANCH_MANAGER' })
-  @IsString()
-  @IsNotEmpty()
-  roleCode: string;
+  @ApiProperty({ enum: SystemRoleCode, example: SystemRoleCode.BRANCH_MANAGER })
+  @IsEnum(SystemRoleCode)
+  roleCode: SystemRoleCode;
 
   @ApiProperty({ enum: ScopeType })
   @IsEnum(ScopeType)
@@ -109,9 +73,4 @@ export class AssignUserRoleDto {
   @IsUUID()
   @IsOptional()
   branchId?: string;
-
-  @ApiPropertyOptional({ format: 'uuid' })
-  @IsUUID()
-  @IsOptional()
-  warehouseId?: string;
 }

@@ -389,61 +389,6 @@
         "tags": [
           "Admin IAM"
         ]
-      },
-      "post": {
-        "operationId": "createAdminRole",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateRoleDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RoleDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "One or more permission codes are unknown",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Role code already exists",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Create a role from known permissions",
-        "tags": [
-          "Admin IAM"
-        ]
       }
     },
     "/api/v1/admin/iam/permissions": {
@@ -638,6 +583,373 @@
         ]
       }
     },
+    "/api/v1/admin/auth/login": {
+      "post": {
+        "operationId": "loginAdmin",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenPairDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials"
+          }
+        },
+        "summary": "Authenticate an admin user",
+        "tags": [
+          "Admin Auth"
+        ]
+      }
+    },
+    "/api/v1/admin/auth/refresh": {
+      "post": {
+        "operationId": "refreshAdminToken",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenPairDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid, expired, or reused refresh token"
+          }
+        },
+        "summary": "Rotate a refresh token",
+        "tags": [
+          "Admin Auth"
+        ]
+      }
+    },
+    "/api/v1/admin/auth/logout": {
+      "post": {
+        "operationId": "logoutAdmin",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Revoke a refresh token",
+        "tags": [
+          "Admin Auth"
+        ]
+      }
+    },
+    "/api/v1/admin/auth/me": {
+      "get": {
+        "operationId": "getAdminCurrentUser",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentUserDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get verified user context",
+        "tags": [
+          "Admin Auth"
+        ]
+      }
+    },
+    "/api/v1/admin/catalog/brands": {
+      "get": {
+        "operationId": "listAdminBrands",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandListDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "",
+        "tags": [
+          "Admin Catalog"
+        ]
+      },
+      "post": {
+        "operationId": "createAdminBrand",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBrandDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "",
+        "tags": [
+          "Admin Catalog"
+        ]
+      }
+    },
+    "/api/v1/admin/catalog/brands/active": {
+      "get": {
+        "operationId": "searchActiveAdminBrands",
+        "parameters": [
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Search by business code or display label",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActiveLookupResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "",
+        "tags": [
+          "Admin Catalog"
+        ]
+      }
+    },
+    "/api/v1/admin/catalog/categories": {
+      "get": {
+        "operationId": "listAdminCategories",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryListDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "",
+        "tags": [
+          "Admin Catalog"
+        ]
+      },
+      "post": {
+        "operationId": "createAdminCategory",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCategoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "",
+        "tags": [
+          "Admin Catalog"
+        ]
+      }
+    },
+    "/api/v1/admin/catalog/categories/active": {
+      "get": {
+        "operationId": "searchActiveAdminCategories",
+        "parameters": [
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Search by business code or display label",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActiveLookupResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "",
+        "tags": [
+          "Admin Catalog"
+        ]
+      }
+    },
     "/api/v1/catalog/products": {
       "get": {
         "operationId": "listCatalogProducts",
@@ -677,6 +989,19 @@
             "in": "query",
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "DRAFT",
+                "PUBLISHED",
+                "ARCHIVED"
+              ]
             }
           }
         ],
@@ -779,6 +1104,19 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "DRAFT",
+                "PUBLISHED",
+                "ARCHIVED"
+              ]
+            }
           }
         ],
         "responses": {
@@ -839,6 +1177,42 @@
         ]
       }
     },
+    "/api/v1/admin/products/{slug}": {
+      "get": {
+        "operationId": "getAdminProduct",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get product detail for admin",
+        "tags": [
+          "Admin Products"
+        ]
+      }
+    },
     "/api/v1/admin/products/{id}": {
       "patch": {
         "operationId": "updateAdminProduct",
@@ -880,6 +1254,190 @@
           }
         ],
         "summary": "Update product",
+        "tags": [
+          "Admin Products"
+        ]
+      }
+    },
+    "/api/v1/admin/products/{id}/variants": {
+      "post": {
+        "operationId": "createAdminProductVariant",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateVariantDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a sellable SKU variant",
+        "tags": [
+          "Admin Products"
+        ]
+      }
+    },
+    "/api/v1/admin/products/variants/{variantId}/prices": {
+      "post": {
+        "operationId": "createAdminProductPrice",
+        "parameters": [
+          {
+            "name": "variantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePriceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a global VAT-included price window",
+        "tags": [
+          "Admin Products"
+        ]
+      }
+    },
+    "/api/v1/admin/products/{id}/publish": {
+      "post": {
+        "operationId": "publishAdminProduct",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeProductStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Publish a complete draft product",
+        "tags": [
+          "Admin Products"
+        ]
+      }
+    },
+    "/api/v1/admin/products/{id}/bundle": {
+      "post": {
+        "operationId": "createAdminProductBundle",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBundleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a fixed non-nested virtual combo",
         "tags": [
           "Admin Products"
         ]
@@ -1824,16 +2382,10 @@
             "type": "string",
             "enum": [
               "GLOBAL",
-              "BRANCH",
-              "WAREHOUSE",
-              "OWN"
+              "BRANCH"
             ]
           },
           "branchId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "warehouseId": {
             "type": "string",
             "format": "uuid"
           },
@@ -2039,58 +2591,26 @@
           "total"
         ]
       },
-      "CreateRoleDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "example": "CONTENT_EDITOR"
-          },
-          "name": {
-            "type": "string",
-            "example": "Content Editor"
-          },
-          "description": {
-            "type": "string"
-          },
-          "permissionCodes": {
-            "example": [
-              "cms.content.view",
-              "cms.content.manage"
-            ],
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "required": [
-          "code",
-          "name",
-          "permissionCodes"
-        ]
-      },
       "AssignUserRoleDto": {
         "type": "object",
         "properties": {
           "roleCode": {
             "type": "string",
+            "enum": [
+              "OWNER",
+              "BRANCH_MANAGER",
+              "STAFF"
+            ],
             "example": "BRANCH_MANAGER"
           },
           "scopeType": {
             "type": "string",
             "enum": [
               "GLOBAL",
-              "BRANCH",
-              "WAREHOUSE",
-              "OWN"
+              "BRANCH"
             ]
           },
           "branchId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "warehouseId": {
             "type": "string",
             "format": "uuid"
           }
@@ -2100,6 +2620,285 @@
           "scopeType"
         ]
       },
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "owner@example.com"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "minLength": 8
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "TokenPairDto": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "refreshToken": {
+            "type": "string"
+          },
+          "tokenType": {
+            "type": "string",
+            "example": "Bearer"
+          },
+          "expiresIn": {
+            "type": "number",
+            "example": 900
+          }
+        },
+        "required": [
+          "accessToken",
+          "refreshToken",
+          "tokenType",
+          "expiresIn"
+        ]
+      },
+      "RefreshTokenDto": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "refreshToken"
+        ]
+      },
+      "AuthScopeDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "GLOBAL",
+              "BRANCH"
+            ]
+          },
+          "branchId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "CurrentUserDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuthScopeDto"
+            }
+          }
+        },
+        "required": [
+          "userId",
+          "displayName",
+          "permissions",
+          "scopes"
+        ]
+      },
+      "BrandDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "INACTIVE"
+            ]
+          },
+          "version": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "slug",
+          "status",
+          "version"
+        ]
+      },
+      "BrandListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BrandDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ]
+      },
+      "CreateBrandDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "logoAssetId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "slug"
+        ]
+      },
+      "CategoryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "depth": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "INACTIVE"
+            ]
+          },
+          "version": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "slug",
+          "path",
+          "depth",
+          "status",
+          "version"
+        ]
+      },
+      "CategoryListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CategoryDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ]
+      },
+      "CreateCategoryDto": {
+        "type": "object",
+        "properties": {
+          "parentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "imageAssetId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "slug"
+        ]
+      },
       "ProductSummaryDto": {
         "type": "object",
         "properties": {
@@ -2107,25 +2906,37 @@
             "type": "string",
             "format": "uuid"
           },
+          "productNo": {
+            "type": "string"
+          },
           "name": {
-            "type": "string",
-            "example": "Máy chạy bộ DCTD Pro X1"
+            "type": "string"
           },
           "slug": {
-            "type": "string",
-            "example": "may-chay-bo-dctd-pro-x1"
+            "type": "string"
           },
           "brand": {
-            "type": "string",
-            "example": "DCTD"
+            "type": "string"
           },
-          "category": {
-            "type": "string",
-            "example": "Máy chạy bộ"
+          "primaryCategory": {
+            "type": "string"
           },
-          "price": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "PUBLISHED",
+              "ARCHIVED"
+            ]
+          },
+          "version": {
             "type": "number",
-            "example": 18990000
+            "example": 0
+          },
+          "minPrice": {
+            "type": "string",
+            "example": "18990000.00",
+            "nullable": true
           },
           "currency": {
             "type": "string",
@@ -2133,44 +2944,18 @@
           },
           "imageUrl": {
             "type": "string",
-            "format": "uri"
-          },
-          "rating": {
-            "type": "number",
-            "example": 4.8
-          },
-          "reviewCount": {
-            "type": "number",
-            "example": 124
-          },
-          "available": {
-            "type": "boolean",
-            "example": true
-          },
-          "tags": {
-            "example": [
-              "Bán chạy",
-              "Giao nhanh"
-            ],
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "format": "uri",
+            "nullable": true
           }
         },
         "required": [
           "id",
+          "productNo",
           "name",
           "slug",
-          "brand",
-          "category",
-          "price",
-          "currency",
-          "imageUrl",
-          "rating",
-          "reviewCount",
-          "available",
-          "tags"
+          "status",
+          "version",
+          "currency"
         ]
       },
       "ProductListMetaDto": {
@@ -2222,36 +3007,50 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "format": "uuid"
           },
           "sku": {
+            "type": "string"
+          },
+          "barcode": {
             "type": "string"
           },
           "name": {
             "type": "string"
           },
-          "price": {
-            "type": "number"
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "INACTIVE"
+            ]
           },
-          "availableQuantity": {
-            "type": "number"
+          "version": {
+            "type": "number",
+            "example": 0
           },
-          "attributes": {
-            "type": "object"
+          "effectivePrice": {
+            "type": "string",
+            "example": "18990000.00",
+            "nullable": true
           }
         },
         "required": [
           "id",
           "sku",
           "name",
-          "price",
-          "availableQuantity",
-          "attributes"
+          "status",
+          "version"
         ]
       },
       "BundleComponentDto": {
         "type": "object",
         "properties": {
+          "componentVariantId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "componentSku": {
             "type": "string"
           },
@@ -2264,6 +3063,7 @@
           }
         },
         "required": [
+          "componentVariantId",
           "componentSku",
           "componentName",
           "quantity"
@@ -2275,7 +3075,7 @@
           "bundleType": {
             "type": "string",
             "enum": [
-              "FIXED"
+              "FIXED_VIRTUAL"
             ]
           },
           "components": {
@@ -2297,25 +3097,37 @@
             "type": "string",
             "format": "uuid"
           },
+          "productNo": {
+            "type": "string"
+          },
           "name": {
-            "type": "string",
-            "example": "Máy chạy bộ DCTD Pro X1"
+            "type": "string"
           },
           "slug": {
-            "type": "string",
-            "example": "may-chay-bo-dctd-pro-x1"
+            "type": "string"
           },
           "brand": {
-            "type": "string",
-            "example": "DCTD"
+            "type": "string"
           },
-          "category": {
-            "type": "string",
-            "example": "Máy chạy bộ"
+          "primaryCategory": {
+            "type": "string"
           },
-          "price": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "PUBLISHED",
+              "ARCHIVED"
+            ]
+          },
+          "version": {
             "type": "number",
-            "example": 18990000
+            "example": 0
+          },
+          "minPrice": {
+            "type": "string",
+            "example": "18990000.00",
+            "nullable": true
           },
           "currency": {
             "type": "string",
@@ -2323,51 +3135,26 @@
           },
           "imageUrl": {
             "type": "string",
-            "format": "uri"
+            "format": "uri",
+            "nullable": true
           },
-          "rating": {
-            "type": "number",
-            "example": 4.8
-          },
-          "reviewCount": {
-            "type": "number",
-            "example": 124
-          },
-          "available": {
-            "type": "boolean",
-            "example": true
-          },
-          "tags": {
-            "example": [
-              "Bán chạy",
-              "Giao nhanh"
-            ],
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+          "shortDescription": {
+            "type": "string"
           },
           "description": {
             "type": "string"
-          },
-          "sku": {
-            "type": "string",
-            "example": "SKU-RUN-X1"
-          },
-          "availableQuantity": {
-            "type": "number",
-            "example": 12
-          },
-          "gallery": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
           },
           "variants": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ProductVariantDto"
+            }
+          },
+          "categoryIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
             }
           },
           "bundle": {
@@ -2376,124 +3163,199 @@
         },
         "required": [
           "id",
+          "productNo",
           "name",
           "slug",
-          "brand",
-          "category",
-          "price",
+          "status",
+          "version",
           "currency",
-          "imageUrl",
-          "rating",
-          "reviewCount",
-          "available",
-          "tags",
-          "description",
-          "sku",
-          "availableQuantity",
-          "gallery",
-          "variants"
+          "variants",
+          "categoryIds"
         ]
       },
       "CreateProductDto": {
         "type": "object",
         "properties": {
+          "productNo": {
+            "type": "string"
+          },
           "name": {
             "type": "string"
           },
           "slug": {
             "type": "string"
           },
-          "sku": {
-            "type": "string"
+          "brandId": {
+            "type": "string",
+            "format": "uuid"
           },
-          "brand": {
-            "type": "string"
-          },
-          "category": {
+          "shortDescription": {
             "type": "string"
           },
           "description": {
             "type": "string"
           },
-          "price": {
-            "type": "number",
-            "minimum": 0
-          },
-          "imageUrl": {
-            "type": "string",
-            "format": "uri"
-          },
-          "availableQuantity": {
-            "type": "number",
-            "minimum": 0
-          },
-          "tags": {
+          "categoryIds": {
             "type": "array",
             "items": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           },
-          "published": {
-            "type": "boolean",
-            "default": true
+          "primaryCategoryId": {
+            "type": "string",
+            "format": "uuid"
           }
         },
         "required": [
+          "productNo",
           "name",
           "slug",
-          "sku",
-          "brand",
-          "category",
-          "description",
-          "price",
-          "imageUrl",
-          "availableQuantity"
+          "categoryIds",
+          "primaryCategoryId"
         ]
       },
       "UpdateProductDto": {
         "type": "object",
         "properties": {
+          "productNo": {
+            "type": "string"
+          },
           "name": {
             "type": "string"
           },
           "slug": {
             "type": "string"
           },
-          "sku": {
-            "type": "string"
+          "brandId": {
+            "type": "string",
+            "format": "uuid"
           },
-          "brand": {
-            "type": "string"
-          },
-          "category": {
+          "shortDescription": {
             "type": "string"
           },
           "description": {
             "type": "string"
           },
-          "price": {
-            "type": "number",
-            "minimum": 0
-          },
-          "imageUrl": {
-            "type": "string",
-            "format": "uri"
-          },
-          "availableQuantity": {
-            "type": "number",
-            "minimum": 0
-          },
-          "tags": {
+          "categoryIds": {
             "type": "array",
             "items": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           },
-          "published": {
-            "type": "boolean",
-            "default": true
+          "primaryCategoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expectedVersion": {
+            "type": "number",
+            "minimum": 0
           }
-        }
+        },
+        "required": [
+          "expectedVersion"
+        ]
+      },
+      "CreateVariantDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string"
+          },
+          "barcode": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "weightGrams": {
+            "type": "object",
+            "default": 0
+          },
+          "lengthMm": {
+            "type": "number"
+          },
+          "widthMm": {
+            "type": "number"
+          },
+          "heightMm": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "sku",
+          "name"
+        ]
+      },
+      "CreatePriceDto": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "string",
+            "example": "18990000.00"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "amount",
+          "startsAt"
+        ]
+      },
+      "ChangeProductStatusDto": {
+        "type": "object",
+        "properties": {
+          "expectedVersion": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ]
+      },
+      "CreateBundleItemDto": {
+        "type": "object",
+        "properties": {
+          "componentVariantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "componentVariantId",
+          "quantity"
+        ]
+      },
+      "CreateBundleDto": {
+        "type": "object",
+        "properties": {
+          "bundleVariantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateBundleItemDto"
+            }
+          }
+        },
+        "required": [
+          "bundleVariantId",
+          "items"
+        ]
       },
       "InventoryBalanceDto": {
         "type": "object",

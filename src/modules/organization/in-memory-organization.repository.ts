@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { OrganizationRepository } from './organization.repository';
 import { Branch, BranchWithWarehouse, Warehouse } from './organization.types';
+import { MutationContext } from '../../common/request/request-context';
 
 @Injectable()
 export class InMemoryOrganizationRepository extends OrganizationRepository {
@@ -60,36 +61,41 @@ export class InMemoryOrganizationRepository extends OrganizationRepository {
     },
   ];
 
-  listBranches(): Branch[] {
-    return this.branches.map((branch) => ({ ...branch, address: { ...branch.address } }));
+  listBranches(): Promise<Branch[]> {
+    return Promise.resolve(this.branches.map((branch) => ({ ...branch, address: { ...branch.address } })));
   }
 
-  listWarehouses(): Warehouse[] {
-    return this.warehouses.map((warehouse) => ({ ...warehouse }));
+  listWarehouses(): Promise<Warehouse[]> {
+    return Promise.resolve(this.warehouses.map((warehouse) => ({ ...warehouse })));
   }
 
-  hasBranchCode(code: string): boolean {
-    return this.branches.some((branch) => branch.code === code);
+  hasBranchCode(code: string): Promise<boolean> {
+    return Promise.resolve(this.branches.some((branch) => branch.code === code));
   }
 
-  hasWarehouseCode(code: string): boolean {
-    return this.warehouses.some((warehouse) => warehouse.code === code);
+  hasWarehouseCode(code: string): Promise<boolean> {
+    return Promise.resolve(this.warehouses.some((warehouse) => warehouse.code === code));
   }
 
-  hasActiveBranch(id: string): boolean {
-    return this.branches.some((branch) => branch.id === id && branch.status === 'ACTIVE');
+  hasActiveBranch(id: string): Promise<boolean> {
+    return Promise.resolve(this.branches.some((branch) => branch.id === id && branch.status === 'ACTIVE'));
   }
 
-  hasActiveWarehouse(id: string): boolean {
-    return this.warehouses.some((warehouse) => warehouse.id === id && warehouse.status === 'ACTIVE');
+  hasActiveWarehouse(id: string): Promise<boolean> {
+    return Promise.resolve(this.warehouses.some((warehouse) => warehouse.id === id && warehouse.status === 'ACTIVE'));
   }
 
-  saveBranchWithWarehouse(branch: Branch, warehouse: Warehouse): BranchWithWarehouse {
+  saveBranchWithWarehouse(
+    branch: Branch,
+    warehouse: Warehouse,
+    context: MutationContext,
+  ): Promise<BranchWithWarehouse> {
     this.branches.push({ ...branch, address: { ...branch.address } });
     this.warehouses.push({ ...warehouse });
-    return {
+    void context;
+    return Promise.resolve({
       branch: { ...branch, address: { ...branch.address } },
       warehouse: { ...warehouse },
-    };
+    });
   }
 }
