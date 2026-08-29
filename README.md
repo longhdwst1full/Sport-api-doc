@@ -33,6 +33,8 @@ Each application owns an independent agent context:
 
 The root `AGENTS.md` only routes monorepo and contract orchestration; it is not a shared application rule set. Root `_features`, `_plans`, `_prompts` and `_templates` remain project planning assets, not executable application skills. The local rule sets are adapted from the useful patterns in the workspace references; finance-specific plans and framework-incompatible Java/Quarkus implementation details were intentionally not copied.
 
+The source-by-source frontend architecture review and inheritance decisions are documented in `document/12-frontend-base-source-review.md`.
+
 ## Non-negotiable contract rule
 
 Backend DTO/controller first, then OpenAPI export, then Orval generation. Frontends never hand-write API DTOs or endpoint URLs.

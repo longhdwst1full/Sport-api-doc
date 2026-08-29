@@ -2,7 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
-import { PwaRegistration } from '@/components/pwa-registration';
+import { PwaRegistration } from '@/pwa/pwa-registration';
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { NAVIGATION_ITEMS } from '@/app/navigation/navigation.config';
 import { usePermissions } from '@/core/auth/permissions';
+import { PageContainer } from '@/foundation/layout/page-container';
 
 const { Content, Header, Sider } = Layout;
 
@@ -69,7 +70,9 @@ export function AdminLayout() {
           </div>
         </Header>
         <Content className="bg-slate-50 p-5 lg:p-8">
-          <Outlet />
+          <PageContainer>
+            <Outlet />
+          </PageContainer>
         </Content>
       </Layout>
     </Layout>

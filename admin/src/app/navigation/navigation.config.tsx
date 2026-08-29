@@ -31,7 +31,12 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
     permission: 'inventory.stock.view',
   },
   { path: '/orders', label: 'Đơn hàng', icon: <ShoppingCartOutlined />, permission: 'order.view' },
-  { path: '/customers', label: 'Khách hàng', icon: <TeamOutlined /> },
+  {
+    path: '/customers',
+    label: 'Khách hàng',
+    icon: <TeamOutlined />,
+    permission: 'customer.view',
+  },
   { path: '/reviews', label: 'Đánh giá', icon: <CommentOutlined />, permission: 'review.moderate' },
   {
     path: '/content',
