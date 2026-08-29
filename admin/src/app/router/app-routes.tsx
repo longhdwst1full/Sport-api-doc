@@ -1,30 +1,51 @@
-import { lazy } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
-import { AdminLayout } from '@/layouts/admin-layout';
-import { PermissionRoute } from '@/core/auth/permission-route';
+import { lazy } from "react";
+import { Navigate, Route, Routes } from "react-router-dom";
+import { AdminLayout } from "@/layouts/admin-layout";
+import { PermissionRoute } from "@/core/auth/permission-route";
 
 const DashboardPage = lazy(() =>
-  import('@/features/dashboard/dashboard-page').then((module) => ({
+  import("@/features/dashboard/dashboard-page").then((module) => ({
     default: module.DashboardPage,
   })),
 );
 const ProductsPage = lazy(() =>
-  import('@/features/products/products-page').then((module) => ({ default: module.ProductsPage })),
+  import("@/features/products/products-page").then((module) => ({
+    default: module.ProductsPage,
+  })),
 );
 const InventoryPage = lazy(() =>
-  import('@/features/inventory/inventory-page').then((module) => ({
+  import("@/features/inventory/inventory-page").then((module) => ({
     default: module.InventoryPage,
   })),
 );
 const ContentPage = lazy(() =>
-  import('@/features/content/content-page').then((module) => ({ default: module.ContentPage })),
+  import("@/features/content/content-page").then((module) => ({
+    default: module.ContentPage,
+  })),
 );
 const ReviewsPage = lazy(() =>
-  import('@/features/reviews/reviews-page').then((module) => ({ default: module.ReviewsPage })),
+  import("@/features/reviews/reviews-page").then((module) => ({
+    default: module.ReviewsPage,
+  })),
 );
-const ModulePlaceholderPage = lazy(() =>
-  import('@/features/shared/module-placeholder-page').then((module) => ({
-    default: module.ModulePlaceholderPage,
+const OrdersPage = lazy(() =>
+  import("@/features/orders/orders-page").then((module) => ({
+    default: module.OrdersPage,
+  })),
+);
+const CustomersPage = lazy(() =>
+  import("@/features/customers/customers-page").then((module) => ({
+    default: module.CustomersPage,
+  })),
+);
+const OrganizationPage = lazy(() =>
+  import("@/features/organization/organization-page").then((module) => ({
+    default: module.OrganizationPage,
+  })),
+);
+const AccessPage = lazy(() =>
+  import("@/features/access/access-page").then((module) => ({
+    default: module.AccessPage,
   })),
 );
 
@@ -76,7 +97,7 @@ export function AppRoutes() {
           path="orders"
           element={
             <PermissionRoute permission="order.view">
-              <ModulePlaceholderPage moduleKey="order" title="Đơn hàng" />
+              <OrdersPage />
             </PermissionRoute>
           }
         />
@@ -84,7 +105,23 @@ export function AppRoutes() {
           path="customers"
           element={
             <PermissionRoute permission="customer.view">
-              <ModulePlaceholderPage moduleKey="customer" title="Khách hàng" />
+              <CustomersPage />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="organization"
+          element={
+            <PermissionRoute permission="organization.view">
+              <OrganizationPage />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="access"
+          element={
+            <PermissionRoute permission="iam.user.view">
+              <AccessPage />
             </PermissionRoute>
           }
         />
