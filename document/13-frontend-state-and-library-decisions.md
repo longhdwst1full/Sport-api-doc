@@ -17,7 +17,7 @@
 ## Applied V1 examples
 
 - Admin layout collapse state is in Redux; Saga persists the preference.
-- Storefront cart is in Redux; Saga persists only product ID, name, price and quantity. No PII or payment data is stored.
+- Storefront cart is in Redux; Saga persists only product ID, name, display-price snapshot and quantity. No PII or payment data is stored, and checkout must revalidate price/stock online.
 - Product creation uses React Hook Form/Yup and the generated `useCreateAdminProduct` mutation.
 - Product search uses a 350 ms debounce.
 - Dashboard uses Recharts and a virtualized module list.

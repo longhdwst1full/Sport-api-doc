@@ -6,3 +6,4 @@
 - Treat HTTP 4xx as final business/user outcomes, never offline retry candidates.
 - Network interruption and HTTP rejection are different UI states.
 - Product availability and price shown from cache must be labeled stale where purchase decisions could be affected; final validation happens online before order creation.
+- A locally persisted cart is not an accepted order or reservation. Stored name/price are display snapshots only; checkout reloads authoritative product, combo, price and stock data.

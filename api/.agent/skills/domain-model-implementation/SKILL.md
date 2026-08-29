@@ -5,12 +5,12 @@ description: Implement or review DCTD commerce aggregates, state transitions, re
 
 # Domain model implementation
 
-1. Read the reviewed DBML/table catalog and the owning module's current behavior.
-2. Write the invariant and allowed transition matrix before persistence code. Include actor/scope, concurrency and audit consequences.
-3. Keep domain policy independent of NestJS HTTP DTOs and ORM entities where practical.
-4. Implement repository ports and transactional adapters inside the owning bounded context.
-5. For commands, decide the idempotency scope and payload fingerprint. For stock/order/payment/return writes, decide the lock or optimistic concurrency strategy.
+1. Read `document/09-v1-model.dbml`, `document/04-table-catalog.csv`, the relevant state-machine rules and owning module behavior.
+2. Check `document/08-open-decisions.csv`: `DECIDED` items are constraints; `PROPOSED` items require explicit confirmation before they become irreversible schema behavior.
+3. Write the invariant and allowed transition matrix before persistence code. Include actor/scope, concurrency and audit consequences.
+4. Keep domain policy independent of NestJS HTTP DTOs and ORM entities where practical; replace demo arrays/Maps through owning repository ports.
+5. Implement transactional adapters inside the owning bounded context. Decide idempotency scope/payload fingerprint and lock/optimistic-concurrency strategy for contested commands.
 6. Add unit tests for every transition branch and PostgreSQL integration tests for constraints/transactions introduced.
-7. Update DBML/catalog/model registry together if the table model changes.
+7. Update DBML, table catalog and model registry together if the table model changes; regenerate the review workbook instead of editing it as schema truth.
 
 Do not introduce the finance maker-checker lifecycle unless the specific commerce use case has been designated high risk.
