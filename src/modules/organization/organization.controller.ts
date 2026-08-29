@@ -1,14 +1,22 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
   ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { ErrorResponseDto } from '../../common/exceptions/error-response.dto';
+import {
+  ActiveLookupResponseDto,
+  ActiveSearchQueryDto,
+  ActiveWarehouseSearchQueryDto,
+} from '../../common/pagination/active-search.dto';
 import {
   BranchListDto,
   BranchWithWarehouseDto,
@@ -37,6 +45,36 @@ export class OrganizationController {
   @ApiOkResponse({ type: WarehouseListDto })
   listWarehouses(): WarehouseListDto {
     return this.organization.listWarehouses();
+  }
+
+  @Get('branches/active')
+  @RequirePermissions('org.branch.view')
+  @ApiOperation({
+    operationId: 'searchActiveAdminBranches',
+    summary: 'Search active branches for admin lookups',
+  })
+  @ApiOkResponse({ type: ActiveLookupResponseDto })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiUnauthorizedResponse({ type: ErrorResponseDto })
+  @ApiForbiddenResponse({ type: ErrorResponseDto })
+  searchActiveBranches(@Query() query: ActiveSearchQueryDto): ActiveLookupResponseDto {
+    return this.organization.searchActiveBranches(query);
+  }
+
+  @Get('warehouses/active')
+  @RequirePermissions('org.warehouse.view')
+  @ApiOperation({
+    operationId: 'searchActiveAdminWarehouses',
+    summary: 'Search active warehouses for admin lookups',
+  })
+  @ApiOkResponse({ type: ActiveLookupResponseDto })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiUnauthorizedResponse({ type: ErrorResponseDto })
+  @ApiForbiddenResponse({ type: ErrorResponseDto })
+  searchActiveWarehouses(
+    @Query() query: ActiveWarehouseSearchQueryDto,
+  ): ActiveLookupResponseDto {
+    return this.organization.searchActiveWarehouses(query);
   }
 
   @Post('branches')

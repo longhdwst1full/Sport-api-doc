@@ -8,9 +8,12 @@
     "start:dev": "nest start --watch",
     "prisma:generate": "node scripts/run-prisma.cjs generate",
     "prisma:validate": "node scripts/run-prisma.cjs validate",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:seed": "tsx --env-file-if-exists=.env.local prisma/seed.ts",
     "openapi:generate": "yarn build && node scripts/generate-openapi.cjs",
     "lint": "eslint \"{src,scripts,test}/**/*.ts\"",
     "test": "jest",
+    "test:integration": "jest --config test/jest-integration.json --runInBand",
     "test:watch": "jest --watch",
     "test:e2e": "jest --config test/jest-e2e.json"
   },
@@ -31,7 +34,8 @@
     "pino": "^10.3.1",
     "pino-http": "^11.0.0",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2"
+    "rxjs": "^7.8.2",
+    "uuid": "11.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.35.0",

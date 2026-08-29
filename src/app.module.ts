@@ -13,6 +13,7 @@ import { validateEnvironment } from './config/env.validation';
 import { PrismaModule } from './database/prisma.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { ApprovalModule } from './modules/approval/approval.module';
+import { AuditModule } from './modules/audit/audit.module';
 import { CartModule } from './modules/cart/cart.module';
 import { CmsModule } from './modules/cms/cms.module';
 import { CustomerModule } from './modules/customer/customer.module';
@@ -84,6 +85,7 @@ import { SystemModule } from './modules/system/system.module';
     OrganizationModule,
     IamModule,
     ApprovalModule,
+    AuditModule,
     CustomerModule,
     CatalogModule,
     InventoryModule,

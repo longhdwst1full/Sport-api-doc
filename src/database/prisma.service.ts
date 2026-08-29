@@ -18,4 +18,18 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnAppli
   async onApplicationShutdown(): Promise<void> {
     if (this.connectOnBoot) await this.$disconnect();
   }
+
+  isEnabled(): boolean {
+    return this.connectOnBoot;
+  }
+
+  async getConnectionStatus(): Promise<'disabled' | 'up' | 'down'> {
+    if (!this.connectOnBoot) return 'disabled';
+    try {
+      await this.$queryRaw`SELECT 1`;
+      return 'up';
+    } catch {
+      return 'down';
+    }
+  }
 }

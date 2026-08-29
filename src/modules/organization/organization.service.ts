@@ -1,6 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { ConflictException, Injectable } from '@nestjs/common';
 import {
+  ActiveLookupResponseDto,
+  ActiveSearchQueryDto,
+  ActiveWarehouseSearchQueryDto,
+  buildActiveLookupResponse,
+} from '../../common/pagination/active-search.dto';
+import {
   BranchListDto,
   BranchWithWarehouseDto,
   CreateBranchDto,
@@ -20,6 +26,34 @@ export class OrganizationService {
   listWarehouses(): WarehouseListDto {
     const items = this.organizations.listWarehouses();
     return { items, total: items.length };
+  }
+
+  searchActiveBranches(query: ActiveSearchQueryDto): ActiveLookupResponseDto {
+    return buildActiveLookupResponse(
+      this.organizations
+        .listBranches()
+        .filter((branch) => branch.status === 'ACTIVE')
+        .map((branch) => ({ id: branch.id, code: branch.code, label: branch.name })),
+      query,
+    );
+  }
+
+  searchActiveWarehouses(query: ActiveWarehouseSearchQueryDto): ActiveLookupResponseDto {
+    return buildActiveLookupResponse(
+      this.organizations
+        .listWarehouses()
+        .filter(
+          (warehouse) =>
+            warehouse.status === 'ACTIVE' &&
+            (!query.branchId || warehouse.branchId === query.branchId),
+        )
+        .map((warehouse) => ({
+          id: warehouse.id,
+          code: warehouse.code,
+          label: warehouse.name,
+        })),
+      query,
+    );
   }
 
   createBranch(input: CreateBranchDto): BranchWithWarehouseDto {

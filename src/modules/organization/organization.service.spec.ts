@@ -26,4 +26,19 @@ describe('OrganizationService', () => {
     service.createBranch(input);
     expect(() => service.createBranch(input)).toThrow(ConflictException);
   });
+
+  it('serves active branch and warehouse lookups with backend search', () => {
+    const service = new OrganizationService(new InMemoryOrganizationRepository());
+    const branchResult = service.searchActiveBranches({ search: 'hcm', page: 1, limit: 20 });
+    const warehouseResult = service.searchActiveWarehouses({
+      search: 'kho',
+      page: 1,
+      limit: 20,
+      branchId: branchResult.items[0]?.id,
+    });
+
+    expect(branchResult.items).toHaveLength(1);
+    expect(warehouseResult.items).toHaveLength(1);
+    expect(warehouseResult.meta.hasMore).toBe(false);
+  });
 });

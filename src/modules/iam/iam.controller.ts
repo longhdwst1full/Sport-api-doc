@@ -1,16 +1,22 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { ErrorResponseDto } from '../../common/exceptions/error-response.dto';
+import {
+  ActiveLookupResponseDto,
+  ActiveSearchQueryDto,
+} from '../../common/pagination/active-search.dto';
 import {
   AssignUserRoleDto,
   CreateRoleDto,
@@ -50,6 +56,20 @@ export class IamController {
   @ApiOkResponse({ type: PermissionListDto })
   listPermissions(): PermissionListDto {
     return this.iam.listPermissions();
+  }
+
+  @Get('roles/active')
+  @RequirePermissions('iam.role.view')
+  @ApiOperation({
+    operationId: 'searchActiveAdminRoles',
+    summary: 'Search active roles for admin assignment lookups',
+  })
+  @ApiOkResponse({ type: ActiveLookupResponseDto })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiUnauthorizedResponse({ type: ErrorResponseDto })
+  @ApiForbiddenResponse({ type: ErrorResponseDto })
+  searchActiveRoles(@Query() query: ActiveSearchQueryDto): ActiveLookupResponseDto {
+    return this.iam.searchActiveRoles(query);
   }
 
   @Post('roles')

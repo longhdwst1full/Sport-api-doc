@@ -54,4 +54,14 @@ describe('IamService', () => {
       }),
     ).toThrow(BadRequestException);
   });
+
+  it('returns only active roles through the server-side lookup contract', () => {
+    const { service } = createService();
+    const result = service.searchActiveRoles({ search: 'super', page: 1, limit: 20 });
+
+    expect(result.items).toEqual([
+      expect.objectContaining({ code: 'SUPER_ADMIN', label: 'Super Admin' }),
+    ]);
+    expect(result.meta).toEqual({ page: 1, limit: 20, total: 1, hasMore: false });
+  });
 });
