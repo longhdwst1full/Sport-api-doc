@@ -1,6 +1,0 @@
----
-description: DCTD-UTC workspace invariants
-alwaysApply: true
----
-
-Read `AGENTS.md` and applicable files in `.agent/rules/` before changing code. Use Yarn only. Internal API changes must follow NestJS DTO/controller -> OpenAPI -> Orval generation; never hand-write internal endpoint DTOs or edit generated SDK files.

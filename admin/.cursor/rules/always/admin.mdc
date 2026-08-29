@@ -1,0 +1,6 @@
+---
+alwaysApply: true
+description: DCTD admin project routing
+---
+
+For files under `admin/`, read `admin/AGENTS.md` and use only `admin/.agent/rules` and `admin/.agent/skills`. Do not apply storefront PWA or NestJS implementation rules to admin code.

@@ -1,0 +1,6 @@
+---
+alwaysApply: true
+description: DCTD storefront project routing
+---
+
+For files under `client/`, read `client/AGENTS.md` and use only `client/.agent/rules` and `client/.agent/skills`. Do not apply Ant Design admin rules or NestJS implementation rules to storefront code.

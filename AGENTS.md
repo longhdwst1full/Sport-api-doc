@@ -1,45 +1,35 @@
-# DCTD-UTC engineering rules
+# DCTD-UTC workspace instructions
 
-## Contract-first flow
+This file governs only monorepo orchestration. Application engineering rules are intentionally not shared.
 
-1. Implement or change the NestJS controller and DTO in `api`.
-2. Run `yarn workspace @dctd/api openapi:generate`.
-3. Run `yarn workspace @dctd/client generate:api` and `yarn workspace @dctd/admin generate:api`.
-4. Frontend code imports request functions, React Query hooks and DTOs only from `src/generated/api`.
+## Scope routing
 
-Never hand-write endpoint URLs, request/response DTO duplicates, or edit generated files. Infrastructure mutators may add base URL, credentials, request ID and normalized errors; they must not contain business DTOs.
+- Work under `admin/`: read `admin/AGENTS.md`, then only `admin/.agent/rules` and `admin/.agent/skills`.
+- Work under `client/`: read `client/AGENTS.md`, then only `client/.agent/rules` and `client/.agent/skills`.
+- Work under `api/`: read `api/AGENTS.md`, then only `api/.agent/rules` and `api/.agent/skills`.
+- Never apply a sibling application's skill or UI/backend rule merely because the repository is a Yarn workspace.
 
-## Backend
+## Cross-application contract orchestration
 
-- Every public endpoint must have Swagger decorators and concrete response DTOs.
-- Permission codes are stable business codes, never route-derived.
-- Mutating endpoints require validation, permission metadata and idempotency where relevant.
-- Controllers stay thin; business rules belong in application services.
-- Do not expose persistence entities as API responses.
+The API owns the HTTP contract. For a contract change:
 
-## Frontend
+1. Complete and verify the change under `api/` using its local instructions.
+2. Export `api/openapi/openapi.json`.
+3. Generate the client SDK under `client/` using the client's local API-integration skill.
+4. Generate the admin SDK under `admin/` using the admin's local API-integration skill.
 
-- `client` is Next.js storefront/PWA-oriented UI with Tailwind.
-- `admin` is React/Vite with Ant Design and Tailwind utilities.
-- Ant Design controls complex admin interaction; Tailwind owns layout and small visual utilities. Avoid styling the same property from both systems.
-- Permission gates improve UX only. The API remains the authorization boundary.
-- Do not import one app's source from another app. Shared contracts come from OpenAPI generation.
+Generated SDKs are separate application artifacts. Neither frontend imports source code from the API or from the other frontend.
 
-## Generated code
+## Workspace operations
 
-Generated API folders are disposable. Regenerate instead of patching them. CI must fail when a backend contract change leaves generated SDKs stale.
-
-## Task routing
-
-- API/DTO/SDK work: read `.agents/skills/api-layer/SKILL.md`.
-- Storefront offline, installability or service-worker work: read `.agents/skills/pwa-development/SKILL.md`.
-- Verification or pre-commit work: read `.agents/skills/code-quality/SKILL.md`.
-- Apply the focused rules in `.agent/rules/`; do not import business-specific securities rules into commerce modules.
+- Use Yarn 1 only and retain the single root `yarn.lock`.
+- Root commands may orchestrate workspaces but do not override an application's local quality gates.
+- Do not commit generated build output, caches, `node_modules`, secrets or local environment files.
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **dctd-utc** (669 symbols, 964 relationships, 12 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **dctd-utc** (694 symbols, 988 relationships, 12 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > Index stale? Run `node .gitnexus/run.cjs analyze` from the project root — it auto-selects an available runner. No `.gitnexus/run.cjs` yet? `npx gitnexus analyze` (npm 11 crash → `npm i -g gitnexus`; #1939).
 
