@@ -43,9 +43,8 @@ export async function createApplication(
   app.setGlobalPrefix('api/v1');
   app.use(helmet({ contentSecurityPolicy: false }));
   app.use(compression());
-  const corsOrigins = config.get<string[]>('app.corsOrigins') ?? [];
   app.enableCors({
-    origin: corsOrigins.includes('*') ? true : corsOrigins,
+    origin: config.get<string[]>('app.corsOrigins') ?? [],
     credentials: true,
   });
   app.useGlobalPipes(
