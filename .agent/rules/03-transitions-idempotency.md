@@ -7,3 +7,4 @@
 - Payment V1 is one successful payment per order. VAT is already included in customer-facing payable prices.
 - Failed shipment stock returns to the same branch warehouse with a required reason.
 - Partial line returns are allowed; fixed combos are returned as a complete sellable combo.
+- The current Inventory `Map` demonstrates replay semantics only within one process. It is not durable idempotency and must not be presented as safe across restarts/replicas.

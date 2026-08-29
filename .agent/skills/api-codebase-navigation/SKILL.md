@@ -5,10 +5,11 @@ description: Explore DCTD API bounded contexts, trace NestJS execution flows, fi
 
 # API codebase navigation
 
-1. Check GitNexus index freshness and query the business use case to find controller-to-domain execution flows.
-2. Inspect symbol context for callers, callees and process membership. Run upstream impact before editing an existing symbol; report direct dependents, flows and risk.
-3. Use `rg --files` for file discovery and `rg` for exact DTO, permission, table, error code or operation ID names.
-4. Trace controller, application service, domain policy, repository port and persistence adapter as separate responsibilities.
-5. After changes, run focused tests, API lint/test/OpenAPI/build and GitNexus change detection.
+1. Run `yarn gitnexus status`, then query the use case with `yarn gitnexus query --repo dctd-utc "<concept>"`.
+2. Use `yarn gitnexus context --repo dctd-utc --file <path> <symbol>` to inspect controller/service/platform flow without ambiguity.
+3. Before changing an existing symbol, run `yarn gitnexus impact --repo dctd-utc --direction upstream --file <path> <symbol>` and report direct dependants, affected flows and risk.
+4. Use `rg --files api/src api/scripts` for discovery and `rg -n` for an exact DTO, permission, table, error code or operation ID.
+5. Trace controller, application service, domain policy, repository port and adapter separately; identify whether the slice is active in-memory or only scaffolded.
+6. After changes, run focused tests, the API quality gate, then `yarn gitnexus detect-changes --repo dctd-utc --scope all` and verify Git staging was not altered.
 
 Do not edit generated frontend SDKs or apply frontend rules while using this skill.

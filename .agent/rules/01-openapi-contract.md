@@ -5,5 +5,6 @@
 - List responses expose explicit data and pagination metadata; never return an undocumented raw object.
 - Persistence entities are mapped to contract DTOs.
 - Export with `yarn workspace @dctd/api openapi:generate` and inspect `openapi/openapi.json`.
+- The package script is the canonical export path; do not invoke or repair generated JSON through an ad-hoc script path.
 - A breaking schema, meaning, required-field or operation change requires an explicit version/migration decision.
 - The API export is producer output. Frontend SDK generation belongs to each frontend's local workflow.

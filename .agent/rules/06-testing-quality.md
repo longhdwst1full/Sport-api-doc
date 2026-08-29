@@ -6,3 +6,5 @@
 - Every idempotent command tests replay and key/payload conflict. Inventory tests cover reserved/on-hand safety and concurrent intent.
 - Assert stable error codes and structured details; avoid brittle assertions on prose messages.
 - Required checks are API lint, Jest tests, OpenAPI generation and production build.
+- The current Jest suite exercises in-memory services. `test:e2e` is not an achieved gate until its missing test configuration/suite and a real PostgreSQL test environment are added.
+- Report separately what is verified by unit, HTTP contract, PostgreSQL integration, concurrency and production-like tests.
