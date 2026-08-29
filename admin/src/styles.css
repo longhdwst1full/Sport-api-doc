@@ -12,8 +12,12 @@ body {
   box-sizing: border-box;
 }
 
-.ck-editor__editable_inline {
+.dctd-rich-text-editor .ck-editor__editable_inline {
   min-height: 320px;
+}
+
+.dctd-rich-text-editor[data-editor-state='read-only'] .ck-editor__editable_inline {
+  background: #f8fafc;
 }
 
 .dctd-side-menu .ant-menu-item-selected {

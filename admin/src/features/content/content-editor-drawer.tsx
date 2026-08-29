@@ -1,7 +1,5 @@
-import { CKEditor } from '@ckeditor/ckeditor5-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Alert, App, Button, Drawer, Form, Input, Select } from 'antd';
-import { Bold, ClassicEditor, Essentials, Heading, Italic, Link, List, Paragraph } from 'ckeditor5';
+import { App, Button, Drawer, Form, Input, Select } from 'antd';
 import { useState } from 'react';
 import {
   getListAdminPostsQueryKey,
@@ -12,10 +10,13 @@ import {
   type CreateContentPostDtoPostType as PostType,
 } from '@/generated/api/content/models/createContentPostDtoPostType';
 import { ImageUploadField } from '@/features/media/image-upload-field';
+import { RichTextEditor } from '@/foundation/inputs/rich-text-editor';
 import { getApiErrorMessage } from '@/lib/api/error';
-import 'ckeditor5/ckeditor5.css';
+import { uploadImage } from '@/lib/media/upload-image';
 
-const licenseKey = import.meta.env.VITE_CKEDITOR_LICENSE_KEY;
+const uploadRichTextImage = async (file: File, signal: AbortSignal) =>
+  (await uploadImage(file, signal)).secureUrl;
+const richTextEditorConfigured = Boolean(import.meta.env.VITE_CKEDITOR_LICENSE_KEY?.trim());
 
 export function ContentEditorDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { message } = App.useApp();
@@ -78,7 +79,7 @@ export function ContentEditorDrawer({ open, onClose }: { open: boolean; onClose:
       extra={
         <Button
           type="primary"
-          disabled={!licenseKey}
+          disabled={!richTextEditorConfigured}
           loading={createPost.isPending}
           onClick={submit}
         >
@@ -86,74 +87,50 @@ export function ContentEditorDrawer({ open, onClose }: { open: boolean; onClose:
         </Button>
       }
     >
-      {!licenseKey ? (
-        <Alert
-          showIcon
-          type="warning"
-          message="Chưa cấu hình giấy phép CKEditor 5"
-          description="Thêm VITE_CKEDITOR_LICENSE_KEY vào môi trường admin. Không dùng khóa GPL nếu sản phẩm không phát hành theo GPL."
-        />
-      ) : (
-        <Form layout="vertical">
-          <Form.Item label="Tiêu đề" required>
-            <Input value={title} onChange={(event) => setTitle(event.target.value)} />
+      <Form layout="vertical">
+        <Form.Item label="Tiêu đề" required>
+          <Input value={title} onChange={(event) => setTitle(event.target.value)} />
+        </Form.Item>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Form.Item label="Slug" required>
+            <Input value={slug} onChange={(event) => setSlug(event.target.value)} />
           </Form.Item>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Form.Item label="Slug" required>
-              <Input value={slug} onChange={(event) => setSlug(event.target.value)} />
-            </Form.Item>
-            <Form.Item label="Loại bài viết" required>
-              <Select
-                value={postType}
-                onChange={setPostType}
-                options={Object.values(CreateContentPostDtoPostType).map((value) => ({
-                  value,
-                  label: value.replaceAll('_', ' '),
-                }))}
-              />
-            </Form.Item>
-          </div>
-          <Form.Item label="Mô tả ngắn" required>
-            <Input.TextArea
-              rows={2}
-              value={excerpt}
-              onChange={(event) => setExcerpt(event.target.value)}
+          <Form.Item label="Loại bài viết" required>
+            <Select
+              value={postType}
+              onChange={setPostType}
+              options={Object.values(CreateContentPostDtoPostType).map((value) => ({
+                value,
+                label: value.replaceAll('_', ' '),
+              }))}
             />
           </Form.Item>
-          <Form.Item label="Ảnh bìa" required>
-            <ImageUploadField value={coverUrl} onChange={setCoverUrl} />
-          </Form.Item>
-          <Form.Item label="Slug sản phẩm liên quan" extra="Phân tách bằng dấu phẩy">
-            <Input
-              value={relatedProducts}
-              onChange={(event) => setRelatedProducts(event.target.value)}
-            />
-          </Form.Item>
-          <Form.Item label="Nội dung" required>
-            <CKEditor
-              editor={ClassicEditor}
-              data={body}
-              config={{
-                licenseKey,
-                plugins: [Essentials, Paragraph, Heading, Bold, Italic, Link, List],
-                toolbar: [
-                  'undo',
-                  'redo',
-                  '|',
-                  'heading',
-                  '|',
-                  'bold',
-                  'italic',
-                  'link',
-                  'bulletedList',
-                  'numberedList',
-                ],
-              }}
-              onChange={(_, editor) => setBody(editor.getData())}
-            />
-          </Form.Item>
-        </Form>
-      )}
+        </div>
+        <Form.Item label="Mô tả ngắn" required>
+          <Input.TextArea
+            rows={2}
+            value={excerpt}
+            onChange={(event) => setExcerpt(event.target.value)}
+          />
+        </Form.Item>
+        <Form.Item label="Ảnh bìa" required>
+          <ImageUploadField value={coverUrl} onChange={setCoverUrl} />
+        </Form.Item>
+        <Form.Item label="Slug sản phẩm liên quan" extra="Phân tách bằng dấu phẩy">
+          <Input
+            value={relatedProducts}
+            onChange={(event) => setRelatedProducts(event.target.value)}
+          />
+        </Form.Item>
+        <Form.Item label="Nội dung" required>
+          <RichTextEditor
+            value={body}
+            onChange={setBody}
+            uploadImage={uploadRichTextImage}
+            placeholder="Soạn nội dung bài viết..."
+          />
+        </Form.Item>
+      </Form>
     </Drawer>
   );
 }

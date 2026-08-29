@@ -11,7 +11,12 @@ import {
   useSearchActiveAdminBrands,
   useSearchActiveAdminCategories,
 } from '@/generated/api/catalog/catalog';
+import { RichTextEditor } from '@/foundation/inputs/rich-text-editor';
 import { getApiErrorMessage } from '@/lib/api/error';
+import { uploadImage } from '@/lib/media/upload-image';
+
+const uploadRichTextImage = async (file: File, signal: AbortSignal) =>
+  (await uploadImage(file, signal)).secureUrl;
 
 interface ProductFormValues {
   productNo: string;
@@ -149,7 +154,18 @@ export function ProductFormDrawer({
           <Controller name="shortDescription" control={form.control} render={({ field }) => <Input {...field} />} />
         </Form.Item>
         <Form.Item label="Mô tả chi tiết">
-          <Controller name="description" control={form.control} render={({ field }) => <Input.TextArea {...field} rows={6} />} />
+          <Controller
+            name="description"
+            control={form.control}
+            render={({ field }) => (
+              <RichTextEditor
+                value={field.value}
+                onChange={field.onChange}
+                uploadImage={uploadRichTextImage}
+                placeholder="Nhập mô tả, thông số và hướng dẫn sử dụng sản phẩm..."
+              />
+            )}
+          />
         </Form.Item>
       </Form>
     </Drawer>

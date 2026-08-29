@@ -1,7 +1,7 @@
 import { UploadOutlined } from '@ant-design/icons';
 import { App, Button, Image, Input, Space, Upload } from 'antd';
 import { useState } from 'react';
-import { uploadImage } from './upload-image';
+import { uploadImage } from '@/lib/media/upload-image';
 
 interface ImageUploadFieldProps {
   value: string;
