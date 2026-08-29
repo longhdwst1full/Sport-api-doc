@@ -78,6 +78,13 @@ model User {
   assignedRoleAssignments UserRoleAssignment[] @relation("AssignmentActor")
   permissionGrants       RolePermission[]     @relation("PermissionGrantActor")
   auditLogs              AuditLog[]
+  uploadedMedia          MediaAsset[]         @relation("MediaUploader")
+  createdProducts        Product[]            @relation("ProductCreator")
+  updatedProducts        Product[]            @relation("ProductUpdater")
+  createdBundles         ProductBundle[]      @relation("BundleCreator")
+  updatedBundles         ProductBundle[]      @relation("BundleUpdater")
+  createdPrices          ProductPrice[]       @relation("PriceCreator")
+  updatedPrices          ProductPrice[]       @relation("PriceUpdater")
 
   @@map("users")
 }
@@ -86,7 +93,7 @@ model AuthSession {
   id                String   @id @db.Uuid
   userId            String   @map("user_id") @db.Uuid
   refreshTokenHash  String   @unique @map("refresh_token_hash") @db.VarChar(255)
-  rotatedFromId     String?  @map("rotated_from_id") @db.Uuid
+  rotatedFromId     String?  @unique @map("rotated_from_id") @db.Uuid
   deviceId          String?  @map("device_id") @db.VarChar(128)
   deviceInfo        Json?    @map("device_info") @db.JsonB
   ipHash            String?  @map("ip_hash") @db.VarChar(128)
@@ -202,11 +209,250 @@ model AuditLog {
   userAgentHash String?  @map("user_agent_hash") @db.VarChar(128)
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  actor User? @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  actor User? @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
 
   @@unique([requestId, sequenceNo])
   @@index([actorUserId, createdAt])
   @@index([action, createdAt])
   @@index([entityType, entityId, createdAt])
   @@map("audit_logs")
+}
+
+model MediaAsset {
+  id                String    @id @db.Uuid
+  provider          String    @db.VarChar(32)
+  providerAssetId   String    @map("provider_asset_id") @db.VarChar(255)
+  publicId          String    @map("public_id") @db.VarChar(500)
+  resourceType      String    @default("IMAGE") @map("resource_type") @db.VarChar(24)
+  secureUrl         String    @map("secure_url")
+  thumbnailUrl      String?   @map("thumbnail_url")
+  format            String?   @db.VarChar(32)
+  mimeType          String?   @map("mime_type") @db.VarChar(100)
+  width             Int?
+  height            Int?
+  sizeBytes         BigInt?   @map("size_bytes")
+  checksum          String?   @db.VarChar(128)
+  folder            String?   @db.VarChar(255)
+  altText           String?   @map("alt_text") @db.VarChar(500)
+  metadataJson      Json?     @map("metadata_json") @db.JsonB
+  status            String    @default("ACTIVE") @db.VarChar(24)
+  uploadedBy        String?   @map("uploaded_by") @db.Uuid
+  providerCreatedAt DateTime? @map("provider_created_at") @db.Timestamptz(6)
+  deletedAt         DateTime? @map("deleted_at") @db.Timestamptz(6)
+  version           BigInt    @default(0)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  uploader       User?          @relation("MediaUploader", fields: [uploadedBy], references: [id], onDelete: SetNull)
+  brandLogos     Brand[]        @relation("BrandLogo")
+  categoryImages Category[]     @relation("CategoryImage")
+  productMedia   ProductMedia[]
+
+  @@unique([provider, providerAssetId])
+  @@index([uploadedBy])
+  @@index([status, createdAt])
+  @@map("media_assets")
+}
+
+model Brand {
+  id          String    @id @db.Uuid
+  code        String    @unique @db.VarChar(32)
+  name        String    @db.VarChar(255)
+  slug        String    @unique @db.VarChar(255)
+  description String?
+  logoAssetId String?   @map("logo_asset_id") @db.Uuid
+  status      String    @default("ACTIVE") @db.VarChar(24)
+  seoJson     Json?     @map("seo_json") @db.JsonB
+  version     BigInt    @default(0)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  logoAsset MediaAsset? @relation("BrandLogo", fields: [logoAssetId], references: [id], onDelete: SetNull)
+  products  Product[]
+
+  @@index([logoAssetId])
+  @@index([status, name])
+  @@map("brands")
+}
+
+model Category {
+  id           String    @id @db.Uuid
+  parentId     String?   @map("parent_id") @db.Uuid
+  code         String    @unique @db.VarChar(32)
+  name         String    @db.VarChar(255)
+  slug         String    @unique @db.VarChar(255)
+  path         String    @db.VarChar(1000)
+  depth        Int       @default(0)
+  description  String?
+  imageAssetId String?   @map("image_asset_id") @db.Uuid
+  sortOrder    Int       @default(0) @map("sort_order")
+  status       String    @default("ACTIVE") @db.VarChar(24)
+  seoJson      Json?     @map("seo_json") @db.JsonB
+  version      BigInt    @default(0)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  parent     Category?         @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children   Category[]        @relation("CategoryTree")
+  imageAsset MediaAsset?       @relation("CategoryImage", fields: [imageAssetId], references: [id], onDelete: SetNull)
+  products   ProductCategory[]
+
+  @@index([parentId, sortOrder])
+  @@index([imageAssetId])
+  @@index([status, name])
+  @@map("categories")
+}
+
+model Product {
+  id               String    @id @db.Uuid
+  brandId          String?   @map("brand_id") @db.Uuid
+  productNo        String    @unique @map("product_no") @db.VarChar(32)
+  name             String    @db.VarChar(255)
+  slug             String    @unique @db.VarChar(255)
+  shortDescription String?   @map("short_description")
+  description      String?
+  status           String    @default("DRAFT") @db.VarChar(24)
+  publishedAt      DateTime? @map("published_at") @db.Timestamptz(6)
+  seoJson          Json?     @map("seo_json") @db.JsonB
+  version          BigInt    @default(0)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy        String?   @map("created_by") @db.Uuid
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy        String?   @map("updated_by") @db.Uuid
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  brand      Brand?            @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  creator    User?             @relation("ProductCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  updater    User?             @relation("ProductUpdater", fields: [updatedBy], references: [id], onDelete: Restrict)
+  categories ProductCategory[]
+  variants   ProductVariant[]
+  media      ProductMedia[]
+
+  @@index([brandId])
+  @@index([status, publishedAt])
+  @@index([name])
+  @@map("products")
+}
+
+model ProductCategory {
+  productId  String  @map("product_id") @db.Uuid
+  categoryId String  @map("category_id") @db.Uuid
+  isPrimary  Boolean @default(false) @map("is_primary")
+  sortOrder  Int     @default(0) @map("sort_order")
+
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@id([productId, categoryId])
+  @@index([categoryId])
+  @@map("product_categories")
+}
+
+model ProductVariant {
+  id          String    @id @db.Uuid
+  productId   String    @map("product_id") @db.Uuid
+  sku         String    @unique @db.VarChar(64)
+  barcode     String?   @db.VarChar(64)
+  name        String    @db.VarChar(255)
+  weightGrams Int       @default(0) @map("weight_grams")
+  lengthMm    Int?      @map("length_mm")
+  widthMm     Int?      @map("width_mm")
+  heightMm    Int?      @map("height_mm")
+  status      String    @default("ACTIVE") @db.VarChar(24)
+  version     BigInt    @default(0)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  product          Product        @relation(fields: [productId], references: [id], onDelete: Restrict)
+  media            ProductMedia[]
+  bundleDefinition ProductBundle? @relation("BundleVariant")
+  bundleComponents BundleItem[]   @relation("BundleComponent")
+  prices           ProductPrice[]
+
+  @@index([productId, status])
+  @@map("product_variants")
+}
+
+model ProductBundle {
+  id              String   @id @db.Uuid
+  bundleVariantId String   @unique @map("bundle_variant_id") @db.Uuid
+  bundleType      String   @default("FIXED_VIRTUAL") @map("bundle_type") @db.VarChar(24)
+  status          String   @default("ACTIVE") @db.VarChar(24)
+  version         BigInt   @default(0)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy       String   @map("created_by") @db.Uuid
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy       String   @map("updated_by") @db.Uuid
+
+  bundleVariant ProductVariant @relation("BundleVariant", fields: [bundleVariantId], references: [id], onDelete: Restrict)
+  creator       User           @relation("BundleCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  updater       User           @relation("BundleUpdater", fields: [updatedBy], references: [id], onDelete: Restrict)
+  items         BundleItem[]
+
+  @@map("product_bundles")
+}
+
+model BundleItem {
+  id                 String @id @db.Uuid
+  productBundleId    String @map("product_bundle_id") @db.Uuid
+  componentVariantId String @map("component_variant_id") @db.Uuid
+  quantity           Int
+  sortOrder          Int    @default(0) @map("sort_order")
+
+  productBundle    ProductBundle  @relation(fields: [productBundleId], references: [id], onDelete: Cascade)
+  componentVariant ProductVariant @relation("BundleComponent", fields: [componentVariantId], references: [id], onDelete: Restrict)
+
+  @@unique([productBundleId, componentVariantId])
+  @@index([componentVariantId])
+  @@map("bundle_items")
+}
+
+model ProductMedia {
+  id           String    @id @db.Uuid
+  productId    String    @map("product_id") @db.Uuid
+  variantId    String?   @map("variant_id") @db.Uuid
+  mediaAssetId String    @map("media_asset_id") @db.Uuid
+  mediaType    String    @default("IMAGE") @map("media_type") @db.VarChar(24)
+  altText      String?   @map("alt_text") @db.VarChar(500)
+  sortOrder    Int       @default(0) @map("sort_order")
+  isPrimary    Boolean   @default(false) @map("is_primary")
+  status       String    @default("ACTIVE") @db.VarChar(24)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  product    Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant    ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  mediaAsset MediaAsset      @relation(fields: [mediaAssetId], references: [id], onDelete: Restrict)
+
+  @@index([productId, sortOrder])
+  @@index([variantId, sortOrder])
+  @@index([mediaAssetId])
+  @@map("product_media")
+}
+
+model ProductPrice {
+  id               String    @id @db.Uuid
+  productVariantId String    @map("product_variant_id") @db.Uuid
+  priceType        String    @default("REGULAR") @map("price_type") @db.VarChar(24)
+  channel          String    @default("ONLINE") @db.VarChar(24)
+  currencyCode     String    @default("VND") @map("currency_code") @db.Char(3)
+  amount           Decimal   @db.Decimal(19, 2)
+  startsAt         DateTime  @map("starts_at") @db.Timestamptz(6)
+  endsAt           DateTime? @map("ends_at") @db.Timestamptz(6)
+  status           String    @default("SCHEDULED") @db.VarChar(24)
+  version          BigInt    @default(0)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy        String    @map("created_by") @db.Uuid
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy        String    @map("updated_by") @db.Uuid
+
+  productVariant ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Restrict)
+  creator        User           @relation("PriceCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  updater        User           @relation("PriceUpdater", fields: [updatedBy], references: [id], onDelete: Restrict)
+
+  @@index([productVariantId, status, startsAt])
+  @@map("product_prices")
 }

@@ -17,6 +17,7 @@ Scope: `api/` only. Do not load storefront rendering/PWA rules or admin UI rules
 - New/changed NestJS module or endpoint: read `.agent/skills/nestjs-module-development/SKILL.md`.
 - OpenAPI export or contract change: read `.agent/skills/api-contract-generation/SKILL.md`.
 - Model, aggregate, transition, transaction or persistence work: read `.agent/skills/domain-model-implementation/SKILL.md`.
+- Any database, persistence, API contract, permission, scope or error-contract change: read `.agent/skills/db-api-document-traceability/SKILL.md` and update the annotated workbook before handoff.
 - Review/handoff: read `.agent/skills/api-quality-review/SKILL.md`.
 - Apply all relevant files in `.agent/rules/`; these rules are local to API.
 

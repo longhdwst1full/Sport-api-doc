@@ -5,6 +5,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  MinLength,
   Matches,
   Max,
   Min,
@@ -36,6 +37,20 @@ class EnvironmentVariables {
   @Transform(toBoolean)
   @IsBoolean()
   AUTH_BYPASS = false;
+
+  @IsString()
+  @MinLength(32)
+  JWT_ACCESS_SECRET = 'development-only-change-this-jwt-secret';
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(60)
+  JWT_ACCESS_TTL_SECONDS = 900;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(300)
+  JWT_REFRESH_TTL_SECONDS = 2_592_000;
 
   @IsString()
   LOG_LEVEL = 'info';

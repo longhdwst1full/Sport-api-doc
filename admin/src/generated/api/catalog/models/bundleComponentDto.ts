@@ -7,6 +7,7 @@
  */
 
 export interface BundleComponentDto {
+  componentVariantId: string;
   componentSku: string;
   componentName: string;
   /** @minimum 1 */

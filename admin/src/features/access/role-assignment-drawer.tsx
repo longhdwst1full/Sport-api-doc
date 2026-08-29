@@ -11,12 +11,12 @@ import {
   useSearchActiveAdminRoles,
 } from '@/generated/api/iam/iam';
 import {
+  AssignUserRoleDtoRoleCode,
   AssignUserRoleDtoScopeType,
   type UserDto,
 } from '@/generated/api/iam/models';
 import {
   useSearchActiveAdminBranches,
-  useSearchActiveAdminWarehouses,
 } from '@/generated/api/organization/organization';
 import { getApiErrorMessage, getApiFieldErrors } from '@/lib/api/error';
 import {
@@ -31,7 +31,10 @@ interface RoleAssignmentDrawerProps {
 }
 
 const schema: yup.ObjectSchema<AssignmentFormValues> = yup.object({
-  roleCode: yup.string().required('Vui lòng chọn vai trò'),
+  roleCode: yup
+    .mixed<AssignmentFormValues['roleCode']>()
+    .oneOf(Object.values(AssignUserRoleDtoRoleCode))
+    .required('Vui lòng chọn vai trò'),
   scopeType: yup
     .mixed<AssignUserRoleDtoScopeType>()
     .oneOf(Object.values(AssignUserRoleDtoScopeType))
@@ -41,18 +44,11 @@ const schema: yup.ObjectSchema<AssignmentFormValues> = yup.object({
     then: (value) => value.required('Vui lòng chọn chi nhánh'),
     otherwise: (value) => value.optional(),
   }),
-  warehouseId: yup.string().when('scopeType', {
-    is: AssignUserRoleDtoScopeType.WAREHOUSE,
-    then: (value) => value.required('Vui lòng chọn kho'),
-    otherwise: (value) => value.optional(),
-  }),
 });
 
 const scopeOptions = [
   { value: AssignUserRoleDtoScopeType.GLOBAL, label: 'Toàn hệ thống' },
   { value: AssignUserRoleDtoScopeType.BRANCH, label: 'Theo chi nhánh' },
-  { value: AssignUserRoleDtoScopeType.WAREHOUSE, label: 'Theo kho' },
-  { value: AssignUserRoleDtoScopeType.OWN, label: 'Dữ liệu sở hữu' },
 ];
 
 export function RoleAssignmentDrawer({ user, open, onClose }: RoleAssignmentDrawerProps) {
@@ -60,15 +56,14 @@ export function RoleAssignmentDrawer({ user, open, onClose }: RoleAssignmentDraw
   const queryClient = useQueryClient();
   const [roleSearch, setRoleSearch] = useState('');
   const [branchSearch, setBranchSearch] = useState('');
-  const [warehouseSearch, setWarehouseSearch] = useState('');
   const [debouncedRoleSearch] = useDebounce(roleSearch.trim(), 300);
   const [debouncedBranchSearch] = useDebounce(branchSearch.trim(), 300);
-  const [debouncedWarehouseSearch] = useDebounce(warehouseSearch.trim(), 300);
   const {
     control,
     handleSubmit,
     reset,
     setError,
+    setValue,
     watch,
     formState: { errors },
   } = useForm<AssignmentFormValues>({
@@ -76,6 +71,7 @@ export function RoleAssignmentDrawer({ user, open, onClose }: RoleAssignmentDraw
     defaultValues: { roleCode: '', scopeType: AssignUserRoleDtoScopeType.BRANCH },
   });
   const scopeType = watch('scopeType');
+  const roleCode = watch('roleCode');
   const rolesQuery = useSearchActiveAdminRoles(
     { search: debouncedRoleSearch || undefined, page: 1, limit: 20 },
     { query: { enabled: open } },
@@ -83,10 +79,6 @@ export function RoleAssignmentDrawer({ user, open, onClose }: RoleAssignmentDraw
   const branchesQuery = useSearchActiveAdminBranches(
     { search: debouncedBranchSearch || undefined, page: 1, limit: 20 },
     { query: { enabled: open && scopeType === AssignUserRoleDtoScopeType.BRANCH } },
-  );
-  const warehousesQuery = useSearchActiveAdminWarehouses(
-    { search: debouncedWarehouseSearch || undefined, page: 1, limit: 20 },
-    { query: { enabled: open && scopeType === AssignUserRoleDtoScopeType.WAREHOUSE } },
   );
   const assignment = useAssignAdminUserRole({
     mutation: {
@@ -113,9 +105,18 @@ export function RoleAssignmentDrawer({ user, open, onClose }: RoleAssignmentDraw
       reset();
       setRoleSearch('');
       setBranchSearch('');
-      setWarehouseSearch('');
     }
   }, [open, reset]);
+
+  useEffect(() => {
+    if (!roleCode) return;
+    setValue(
+      'scopeType',
+      roleCode === AssignUserRoleDtoRoleCode.OWNER
+        ? AssignUserRoleDtoScopeType.GLOBAL
+        : AssignUserRoleDtoScopeType.BRANCH,
+    );
+  }, [roleCode, setValue]);
 
   const submit = handleSubmit((values) => {
     if (!user) return;
@@ -176,7 +177,7 @@ export function RoleAssignmentDrawer({ user, open, onClose }: RoleAssignmentDraw
           <Controller
             name="scopeType"
             control={control}
-            render={({ field }) => <Select {...field} options={scopeOptions} />}
+            render={({ field }) => <Select {...field} options={scopeOptions} disabled={Boolean(roleCode)} />}
           />
         </Form.Item>
 
@@ -201,33 +202,6 @@ export function RoleAssignmentDrawer({ user, open, onClose }: RoleAssignmentDraw
                     label: `${item.code} — ${item.label}`,
                   }))}
                   placeholder="Tìm chi nhánh active"
-                />
-              )}
-            />
-          </Form.Item>
-        )}
-
-        {scopeType === AssignUserRoleDtoScopeType.WAREHOUSE && (
-          <Form.Item
-            label="Kho đang hoạt động"
-            validateStatus={errors.warehouseId ? 'error' : undefined}
-            help={errors.warehouseId?.message}
-          >
-            <Controller
-              name="warehouseId"
-              control={control}
-              render={({ field }) => (
-                <Select
-                  {...field}
-                  showSearch
-                  filterOption={false}
-                  onSearch={setWarehouseSearch}
-                  loading={warehousesQuery.isFetching}
-                  options={(warehousesQuery.data?.items ?? []).map((item) => ({
-                    value: item.id,
-                    label: `${item.code} — ${item.label}`,
-                  }))}
-                  placeholder="Tìm kho active"
                 />
               )}
             />

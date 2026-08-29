@@ -11,5 +11,5 @@ export type ProductBundleDtoBundleType =
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const ProductBundleDtoBundleType = {
-  FIXED: 'FIXED',
+  FIXED_VIRTUAL: 'FIXED_VIRTUAL',
 } as const;

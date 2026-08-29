@@ -2,6 +2,11 @@ import { lazy } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AdminLayout } from '@/layouts/admin-layout';
 import { PermissionRoute } from '@/core/auth/permission-route';
+import { AuthenticatedRoute } from '@/core/auth/authenticated-route';
+
+const LoginPage = lazy(() =>
+  import('@/features/auth/login-page').then((module) => ({ default: module.LoginPage })),
+);
 
 const DashboardPage = lazy(() =>
   import('@/features/dashboard/dashboard-page').then((module) => ({
@@ -52,7 +57,14 @@ const AccessPage = lazy(() =>
 export function AppRoutes() {
   return (
     <Routes>
-      <Route element={<AdminLayout />}>
+      <Route path="login" element={<LoginPage />} />
+      <Route
+        element={
+          <AuthenticatedRoute>
+            <AdminLayout />
+          </AuthenticatedRoute>
+        }
+      >
         <Route
           index
           element={

@@ -6,4 +6,8 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type ProductVariantDtoAttributes = { [key: string]: unknown };
+export interface ActiveLookupOptionDto {
+  id: string;
+  code: string;
+  label: string;
+}

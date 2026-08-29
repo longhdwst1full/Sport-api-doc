@@ -6,9 +6,6 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface CreateRoleDto {
-  code: string;
-  name: string;
-  description?: string;
-  permissionCodes: string[];
+export interface RefreshTokenDto {
+  refreshToken: string;
 }

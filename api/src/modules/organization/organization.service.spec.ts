@@ -3,6 +3,7 @@ import { InMemoryOrganizationRepository } from './in-memory-organization.reposit
 import { OrganizationService } from './organization.service';
 
 describe('OrganizationService', () => {
+  const context = { requestId: 'unit-request', actorUserId: 'unit-actor' };
   const input = {
     code: 'CN-DN-01',
     name: 'Chi nhánh Đà Nẵng',
@@ -10,27 +11,27 @@ describe('OrganizationService', () => {
     warehouse: { code: 'KHO-DN-01', name: 'Kho bán hàng Đà Nẵng' },
   };
 
-  it('creates one branch and exactly one primary warehouse', () => {
+  it('creates one branch and exactly one primary warehouse', async () => {
     const service = new OrganizationService(new InMemoryOrganizationRepository());
-    const result = service.createBranch(input);
+    const result = await service.createBranch(input, context);
 
     expect(result.warehouse.branchId).toBe(result.branch.id);
     expect(result.warehouse.isPrimary).toBe(true);
     expect(
-      service.listWarehouses().items.filter((item) => item.branchId === result.branch.id),
+      (await service.listWarehouses()).items.filter((item) => item.branchId === result.branch.id),
     ).toHaveLength(1);
   });
 
-  it('rejects duplicate branch and warehouse business codes', () => {
+  it('rejects duplicate branch and warehouse business codes', async () => {
     const service = new OrganizationService(new InMemoryOrganizationRepository());
-    service.createBranch(input);
-    expect(() => service.createBranch(input)).toThrow(ConflictException);
+    await service.createBranch(input, context);
+    await expect(service.createBranch(input, context)).rejects.toThrow(ConflictException);
   });
 
-  it('serves active branch and warehouse lookups with backend search', () => {
+  it('serves active branch and warehouse lookups with backend search', async () => {
     const service = new OrganizationService(new InMemoryOrganizationRepository());
-    const branchResult = service.searchActiveBranches({ search: 'hcm', page: 1, limit: 20 });
-    const warehouseResult = service.searchActiveWarehouses({
+    const branchResult = await service.searchActiveBranches({ search: 'hcm', page: 1, limit: 20 });
+    const warehouseResult = await service.searchActiveWarehouses({
       search: 'kho',
       page: 1,
       limit: 20,

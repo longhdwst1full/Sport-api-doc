@@ -1,0 +1,176 @@
+{
+  "version": 1,
+  "changes": [
+    {
+      "id": "DB-20260829-AUTH-ROTATION",
+      "date": "2026-08-29",
+      "scope": "DATABASE+API",
+      "summary": "Refresh token rotation dùng liên kết rotated_from_id duy nhất; access token được kiểm tra session và permissionVersion từ PostgreSQL.",
+      "sources": [
+        "migration:20260829160000_auth_refresh_rotation_guard",
+        "OpenAPI:adminLogin/adminRefreshToken/adminLogout/getAdminCurrentUser"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "auth_sessions" },
+          "columns": ["Unique / CHECK", "Các cột chính"],
+          "set": { "Unique / CHECK": "refresh_token_hash UQ; rotated_from_id UQ" }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "auth_sessions", "Tên cột": "rotated_from_id" },
+          "columns": ["Unique", "Ý nghĩa / trạng thái cho phép"],
+          "set": {
+            "Unique": "YES",
+            "Ý nghĩa / trạng thái cho phép": "Một session nguồn chỉ được rotate thành công một lần"
+          }
+        }
+      ]
+    },
+    {
+      "id": "DB-20260829-AUDIT-HARDENING",
+      "date": "2026-08-29",
+      "scope": "DATABASE",
+      "summary": "Audit log append-only cho UPDATE/DELETE/TRUNCATE; actor USER bắt buộc có actor_user_id và lịch sử actor dùng FK RESTRICT.",
+      "sources": [
+        "migration:20260829170000_audit_log_hardening",
+        "test:database-foundation.integration-spec.ts"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "audit_logs" },
+          "columns": ["Khóa ngoại quan trọng", "Unique / CHECK", "Retention"],
+          "set": {
+            "Khóa ngoại quan trọng": "actor_user_id->users RESTRICT",
+            "Unique / CHECK": "request+sequence UQ; actor consistency CHECK; reject UPDATE/DELETE/TRUNCATE",
+            "Retention": "10 years proposed; no physical delete"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "audit_logs", "Tên cột": "actor_type" },
+          "columns": ["Cho phép NULL", "Ý nghĩa / trạng thái cho phép"],
+          "set": {
+            "Cho phép NULL": "NO",
+            "Ý nghĩa / trạng thái cho phép": "USER|SYSTEM|GUEST; USER bắt buộc actor_user_id"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "audit_logs", "Tên cột": "actor_user_id" },
+          "columns": ["Cho phép NULL", "Ý nghĩa / trạng thái cho phép"],
+          "set": {
+            "Cho phép NULL": "YES",
+            "Ý nghĩa / trạng thái cho phép": "FK RESTRICT; SYSTEM/GUEST phải null"
+          }
+        }
+      ]
+    },
+    {
+      "id": "DB-20260829-CATALOG-WAVE2",
+      "date": "2026-08-29",
+      "scope": "DATABASE+API",
+      "summary": "Catalog Wave 2 được persist: media, brand, category tree, SPU, SKU, product media, global VAT-included price và fixed combo; bổ sung constraint overlap/primary/ownership/no-nesting.",
+      "sources": [
+        "migration:20260829180000_catalog_pricing_wave_2",
+        "migration:20260829181000_fix_bundle_trigger_functions",
+        "OpenAPI:createAdminProduct/createAdminProductVariant/createAdminProductPrice/publishAdminProduct/createAdminProductBundle"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": ["media_assets", "brands", "categories", "products", "product_categories", "product_variants", "product_media", "product_prices", "product_bundles", "bundle_items"] },
+          "columns": ["Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính"]
+        },
+        {
+          "sheet": "Relationships",
+          "match": { "Bảng con": ["brands", "categories", "products", "product_categories", "product_variants", "product_media", "product_prices", "product_bundles", "bundle_items"] },
+          "columns": ["Bảng con", "Cột FK", "Bảng cha", "Cột PK", "ON DELETE"]
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "product_variants" },
+          "columns": ["Các cột chính"],
+          "set": {
+            "Các cột chính": "sku,barcode,name,weight_grams,length_mm,width_mm,height_mm,status,version"
+          }
+        }
+      ]
+    },
+    {
+      "id": "API-20260829-RBAC-V1",
+      "date": "2026-08-29",
+      "scope": "API+RBAC",
+      "summary": "API/UI V1 chỉ expose OWNER GLOBAL và BRANCH_MANAGER/STAFF BRANCH; database giữ WAREHOUSE/OWN dormant cho tương lai. Branch Manager chỉ gán STAFF trong branch được cấp.",
+      "sources": [
+        "OpenAPI:listAdminUsers/searchActiveAdminRoles/assignAdminUserRole",
+        "document:05-rbac-permissions.csv",
+        "test:iam.service.spec.ts"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "user_role_assignments" },
+          "columns": ["Ý nghĩa", "Khóa ngoại quan trọng", "Unique / CHECK"],
+          "set": {
+            "Ý nghĩa": "API V1 GLOBAL/BRANCH; DB giữ WAREHOUSE/OWN dormant",
+            "Unique / CHECK": "active assignment partial UQ theo scope; scope shape CHECK"
+          }
+        },
+        {
+          "sheet": "RBAC Permissions",
+          "match": { "Permission code": "iam.user.view" },
+          "columns": ["Allowed scopes", "Default roles", "Ghi chú"],
+          "set": {
+            "Allowed scopes": "GLOBAL;BRANCH",
+            "Default roles": "OWNER; BRANCH_MANAGER",
+            "Ghi chú": "Branch Manager chỉ thấy nhân sự có assignment trong branch của mình; che PII theo field policy"
+          }
+        },
+        {
+          "sheet": "RBAC Permissions",
+          "match": { "Permission code": "iam.user.manage" },
+          "columns": ["Allowed scopes", "Default roles", "Ghi chú"],
+          "set": {
+            "Allowed scopes": "GLOBAL;BRANCH",
+            "Default roles": "OWNER; BRANCH_MANAGER",
+            "Ghi chú": "Branch Manager chỉ quản lý STAFF trong branch; không khóa hoặc revoke OWNER cuối cùng"
+          }
+        },
+        {
+          "sheet": "RBAC Permissions",
+          "match": { "Permission code": "iam.role.view" },
+          "columns": ["Allowed scopes", "Default roles", "Ghi chú"],
+          "set": {
+            "Allowed scopes": "GLOBAL;BRANCH",
+            "Default roles": "OWNER; BRANCH_MANAGER",
+            "Ghi chú": "Branch Manager lookup chỉ nhận role STAFF"
+          }
+        },
+        {
+          "sheet": "RBAC Permissions",
+          "match": { "Permission code": "iam.assignment.manage" },
+          "columns": ["Allowed scopes", "Default roles", "Ghi chú"],
+          "set": {
+            "Allowed scopes": "GLOBAL;BRANCH",
+            "Default roles": "OWNER; BRANCH_MANAGER",
+            "Ghi chú": "OWNER gán role hợp lệ; Branch Manager chỉ gán STAFF vào branch được cấp"
+          }
+        }
+      ]
+    },
+    {
+      "id": "API-20260829-ERROR-CONTRACT-V1",
+      "date": "2026-08-29",
+      "scope": "API",
+      "summary": "Admin/storefront API dùng prefix /api/v1 và một error envelope thống nhất có code, details, requestId, path, method và timestamp.",
+      "sources": [
+        "OpenAPI:document/api/openapi-v1.yaml",
+        "document:19-admin-api-v1-contract-integration.md"
+      ],
+      "targets": []
+    }
+  ]
+}

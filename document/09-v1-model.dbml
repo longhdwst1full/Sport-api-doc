@@ -63,7 +63,7 @@ Table auth_sessions {
   id uuid [pk]
   user_id uuid [not null]
   refresh_token_hash varchar(255) [not null, unique]
-  rotated_from_id uuid
+  rotated_from_id uuid [unique]
   device_id varchar(128)
   device_info jsonb
   ip_hash varchar(128)
@@ -73,7 +73,7 @@ Table auth_sessions {
   revoked_at timestamptz
   revoke_reason varchar(255)
   created_at timestamptz [not null]
-  Note: '[P0] Refresh-token rotation; không lưu raw token.'
+  Note: '[P0] Refresh-token rotation; rotated_from_id unique để một session chỉ rotate một lần; không lưu raw token.'
 }
 
 Table roles {
@@ -127,15 +127,15 @@ Table user_role_assignments {
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
   indexes { (user_id, role_id, scope_type, branch_id, warehouse_id) [unique] }
-  Note: '[P0] CHECK scope: GLOBAL/OWN không có scope FK; BRANCH chỉ branch; WAREHOUSE chỉ warehouse.'
+  Note: '[P0] DB giữ GLOBAL|BRANCH|WAREHOUSE|OWN để mở rộng; API/UI V1 chỉ expose GLOBAL cho OWNER và BRANCH cho BRANCH_MANAGER/STAFF.'
 }
 
 Table audit_logs {
   id uuid [pk]
   request_id varchar(100) [not null]
   sequence_no int [not null]
-  actor_type varchar(24) [not null]
-  actor_user_id uuid
+  actor_type varchar(24) [not null, note: 'USER|SYSTEM|GUEST; USER bắt buộc actor_user_id']
+  actor_user_id uuid [note: 'FK RESTRICT; SYSTEM/GUEST phải null']
   action varchar(150) [not null]
   entity_type varchar(100) [not null]
   entity_id uuid
@@ -146,7 +146,7 @@ Table audit_logs {
   user_agent_hash varchar(128)
   created_at timestamptz [not null]
   indexes { (request_id, sequence_no) [unique] }
-  Note: '[P0] Append-only; entity_id là polymorphic nên không tạo FK.'
+  Note: '[P0] Append-only UPDATE/DELETE/TRUNCATE; actor consistency CHECK; entity_id polymorphic nên không tạo FK.'
 }
 
 Table approval_requests {

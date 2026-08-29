@@ -2,12 +2,12 @@ id,module,table_name,priority,purpose,primary_key,important_foreign_keys,unique_
 T01,Organization,branches,P0,Chi nhánh bán hàng,id,,code UQ,"code,name,status,address_json,phone,timezone,version",soft-delete master
 T02,Organization,warehouses,P0,Kho vật lý,id,branch_id->branches,code UQ; branch_id UQ,"code,branch_id,name,status,version",soft-delete master
 T03,IAM,users,P0,Tài khoản customer/staff,id,,normalized email/phone partial UQ,"type,email,phone,password_hash,status,permission_version,last_login_at,version",anonymize not hard-delete
-T04,IAM,auth_sessions,P0,Refresh session/device,id,user_id->users,refresh_token_hash UQ,"device_info,ip_hash,expires_at,revoked_at,rotated_from_id",purge after expiry window
+T04,IAM,auth_sessions,P0,Refresh session/device,id,user_id->users,refresh_token_hash UQ; rotated_from_id UQ,"device_info,ip_hash,expires_at,revoked_at,rotated_from_id",purge after expiry window
 T05,IAM,roles,P0,Vai trò,id,,code UQ,"code,name,description,status,is_system,version",soft-delete master
 T06,IAM,permissions,P0,Quyền nghiệp vụ,id,,code UQ,"code,module,action,description,is_sensitive",never reuse code
 T07,IAM,role_permissions,P0,Role-permission,role_id+permission_id,role_id->roles; permission_id->permissions,composite PK,"role_id,permission_id,granted_by,created_at",while role retained
-T08,IAM,user_role_assignments,P0,Gán role có scope,id,user_id->users; role_id->roles; branch_id->branches; warehouse_id->warehouses,assignment tuple UQ; scope CHECK,"scope_type,valid_from,valid_to,status,version",audit + expire not delete
-T09,IAM,audit_logs,P0,Audit append-only,id,actor_user_id->users,request+sequence UQ,"action,entity_type,entity_id,before_json,after_json,reason,ip_hash,created_at",10 years proposed
+T08,IAM,user_role_assignments,P0,Gán role; API V1 GLOBAL/BRANCH và DB giữ WAREHOUSE/OWN dormant,id,user_id->users; role_id->roles; branch_id->branches; warehouse_id->warehouses,active assignment partial UQ theo scope; scope shape CHECK,"scope_type,branch_id,warehouse_id,valid_from,valid_to,status,version",audit + expire not delete
+T09,IAM,audit_logs,P0,Audit append-only,id,actor_user_id->users RESTRICT,request+sequence UQ; actor consistency CHECK; reject UPDATE/DELETE/TRUNCATE,"actor_type,actor_user_id,action,entity_type,entity_id,before_json,after_json,reason,ip_hash,created_at",10 years proposed; no physical delete
 T10,Approval,approval_requests,P1,Maker-checker generic,id,maker_id/approver_id->users,business key UQ,"type,entity_type,entity_id,proposed_payload,status,expires_at,execution_status,version",10 years for finance/stock
 T11,Customer,customers,P0,Hồ sơ khách,id,user_id->users,user_id partial UQ,"customer_no,name,email,phone,status,marketing_consent,version",anonymize rules
 T12,Customer,customer_addresses,P0,Sổ địa chỉ,id,customer_id->customers,one default per type partial UQ,"type,recipient,phone,address_line,ward,district,province_code,postal_code,is_default",soft-delete
@@ -15,7 +15,7 @@ T13,Catalog,brands,P0,Nhãn hiệu,id,logo_asset_id->media_assets,code UQ; slug 
 T14,Catalog,categories,P0,Danh mục cây,id,parent_id->categories; image_asset_id->media_assets,slug UQ; no cycle,"code,name,slug,parent_id,path,image_asset_id,sort_order,status,version",soft-delete
 T15,Catalog,products,P0,SPU,id,brand_id->brands,slug UQ; product_no UQ,"name,slug,brand_id,short_description,description,status,published_at,seo_json,version",archive not delete after order
 T16,Catalog,product_categories,P0,Product-category,product_id+category_id,product_id->products; category_id->categories,composite PK,"is_primary,sort_order",while product retained
-T17,Catalog,product_variants,P0,SKU bán được,id,product_id->products,sku UQ; barcode partial UQ,"sku,barcode,name,weight_grams,dimensions_json,status,version",archive after transaction
+T17,Catalog,product_variants,P0,SKU bán được,id,product_id->products,sku UQ; barcode partial UQ,"sku,barcode,name,weight_grams,length_mm,width_mm,height_mm,status,version",archive after transaction
 T18,Catalog,product_media,P0,Ảnh/video,id,product_id->products; variant_id->product_variants; media_asset_id->media_assets,one primary per target partial UQ,"media_asset_id,media_type,alt_text,sort_order,is_primary,status",soft-delete
 T19,Catalog,attributes,P1,Định nghĩa thuộc tính,id,,code UQ,"code,name,data_type,is_variant_axis,status,sort_order",soft-delete
 T20,Catalog,attribute_values,P1,Giá trị thuộc tính,id,attribute_id->attributes,attribute+code UQ,"code,label,color_hex,sort_order,status",soft-delete

@@ -1,204 +1,156 @@
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useQueryClient } from '@tanstack/react-query';
-import { App, Button, Drawer, Form, Input, InputNumber, Switch } from 'antd';
+import { App, Button, Drawer, Form, Input, Select } from 'antd';
+import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
+import { useDebounce } from 'use-debounce';
 import * as yup from 'yup';
 import {
   getListAdminProductsQueryKey,
   useCreateAdminProduct,
+  useSearchActiveAdminBrands,
+  useSearchActiveAdminCategories,
 } from '@/generated/api/catalog/catalog';
-import { ImageUploadField } from '@/features/media/image-upload-field';
 import { getApiErrorMessage } from '@/lib/api/error';
 
-type ProductFormValues = {
+interface ProductFormValues {
+  productNo: string;
   name: string;
   slug: string;
-  sku: string;
-  brand: string;
-  category: string;
-  description: string;
-  price: number;
-  imageUrl: string;
-  availableQuantity: number;
-  tags: string;
-  published: boolean;
-};
+  brandId?: string;
+  categoryId: string;
+  shortDescription?: string;
+  description?: string;
+}
 
-const productSchema: yup.ObjectSchema<ProductFormValues> = yup.object({
+const schema: yup.ObjectSchema<ProductFormValues> = yup.object({
+  productNo: yup.string().trim().matches(/^[A-Z0-9-]+$/, 'Chỉ dùng chữ hoa, số và dấu gạch ngang').required('Nhập mã sản phẩm'),
   name: yup.string().trim().required('Nhập tên sản phẩm'),
-  slug: yup
-    .string()
-    .trim()
-    .matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug chỉ gồm chữ thường, số và dấu gạch ngang')
-    .required('Nhập slug'),
-  sku: yup.string().trim().required('Nhập SKU'),
-  brand: yup.string().trim().required('Nhập thương hiệu'),
-  category: yup.string().trim().required('Nhập danh mục'),
-  description: yup.string().trim().required('Nhập mô tả'),
-  price: yup.number().typeError('Giá phải là số').min(0, 'Giá không được âm').required(),
-  imageUrl: yup.string().trim().url('URL ảnh chưa hợp lệ').required('Nhập URL ảnh'),
-  availableQuantity: yup
-    .number()
-    .typeError('Tồn kho phải là số')
-    .integer('Tồn kho phải là số nguyên')
-    .min(0, 'Tồn kho không được âm')
-    .required(),
-  tags: yup.string().defined(),
-  published: yup.boolean().defined(),
+  slug: yup.string().trim().matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug không hợp lệ').required('Nhập slug'),
+  brandId: yup.string().uuid('Thương hiệu không hợp lệ').optional(),
+  categoryId: yup.string().uuid('Danh mục không hợp lệ').required('Chọn danh mục chính'),
+  shortDescription: yup.string().trim().optional(),
+  description: yup.string().trim().optional(),
 });
 
-const defaultValues: ProductFormValues = {
-  name: '',
-  slug: '',
-  sku: '',
-  brand: '',
-  category: '',
-  description: '',
-  price: 0,
-  imageUrl: '',
-  availableQuantity: 0,
-  tags: '',
-  published: false,
+const defaults: ProductFormValues = {
+  productNo: '', name: '', slug: '', brandId: undefined, categoryId: '', shortDescription: '', description: '',
 };
 
-export function ProductFormDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function ProductFormDrawer({
+  open,
+  onClose,
+  onCreated,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onCreated?: (slug: string) => void;
+}) {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
-  const {
-    control,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<ProductFormValues>({ resolver: yupResolver(productSchema), defaultValues });
+  const [brandSearch, setBrandSearch] = useState('');
+  const [categorySearch, setCategorySearch] = useState('');
+  const [debouncedBrand] = useDebounce(brandSearch.trim(), 300);
+  const [debouncedCategory] = useDebounce(categorySearch.trim(), 300);
+  const form = useForm<ProductFormValues>({ resolver: yupResolver(schema), defaultValues: defaults });
+  const brands = useSearchActiveAdminBrands(
+    { search: debouncedBrand || undefined, page: 1, limit: 20 },
+    { query: { enabled: open } },
+  );
+  const categories = useSearchActiveAdminCategories(
+    { search: debouncedCategory || undefined, page: 1, limit: 20 },
+    { query: { enabled: open } },
+  );
   const createProduct = useCreateAdminProduct({
     mutation: {
-      onSuccess: async () => {
+      onSuccess: async (product) => {
         await queryClient.invalidateQueries({ queryKey: getListAdminProductsQueryKey() });
-        void message.success('Đã tạo sản phẩm');
-        reset(defaultValues);
+        void message.success('Đã tạo SPU ở trạng thái nháp. Tiếp theo thêm SKU và giá trước khi publish.');
+        form.reset(defaults);
         onClose();
+        onCreated?.(product.slug);
       },
-      onError: (error) =>
-        void message.error(
-          getApiErrorMessage(error, 'Không thể tạo sản phẩm. Vui lòng kiểm tra lại dữ liệu.'),
-        ),
+      onError: (error) => void message.error(getApiErrorMessage(error, 'Không thể tạo sản phẩm.')),
     },
   });
 
-  const submit = handleSubmit((values) => {
+  const submit = form.handleSubmit((values) => {
     createProduct.mutate({
       data: {
-        ...values,
-        tags: values.tags
-          .split(',')
-          .map((tag) => tag.trim())
-          .filter(Boolean),
+        productNo: values.productNo,
+        name: values.name,
+        slug: values.slug,
+        ...(values.brandId ? { brandId: values.brandId } : {}),
+        ...(values.shortDescription ? { shortDescription: values.shortDescription } : {}),
+        ...(values.description ? { description: values.description } : {}),
+        categoryIds: [values.categoryId],
+        primaryCategoryId: values.categoryId,
       },
     });
   });
 
-  const textField = (name: keyof ProductFormValues, label: string, placeholder?: string) => (
-    <Controller
-      name={name}
-      control={control}
-      render={({ field }) => (
-        <Form.Item
-          label={label}
-          validateStatus={errors[name] ? 'error' : undefined}
-          help={errors[name]?.message}
-        >
-          <Input {...field} value={String(field.value)} placeholder={placeholder} />
-        </Form.Item>
-      )}
-    />
+  const textField = (name: 'productNo' | 'name' | 'slug', label: string) => (
+    <Form.Item label={label} validateStatus={form.formState.errors[name] ? 'error' : undefined} help={form.formState.errors[name]?.message}>
+      <Controller name={name} control={form.control} render={({ field }) => <Input {...field} />} />
+    </Form.Item>
   );
 
   return (
     <Drawer
-      title="Thêm sản phẩm"
+      title="Tạo sản phẩm nháp (SPU)"
       width={640}
       open={open}
       onClose={onClose}
       destroyOnHidden
-      extra={
-        <Button type="primary" loading={createProduct.isPending} onClick={() => void submit()}>
-          Lưu sản phẩm
-        </Button>
-      }
+      extra={<Button type="primary" loading={createProduct.isPending} onClick={() => void submit()}>Tạo bản nháp</Button>}
     >
       <Form layout="vertical" onFinish={() => void submit()}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {textField('productNo', 'Mã sản phẩm')}
+          {textField('slug', 'Slug')}
+        </div>
         {textField('name', 'Tên sản phẩm')}
         <div className="grid gap-4 sm:grid-cols-2">
-          {textField('slug', 'Slug', 'ta-tay-cao-su')}
-          {textField('sku', 'SKU', 'DCTD-DB-001')}
-          {textField('brand', 'Thương hiệu')}
-          {textField('category', 'Danh mục')}
+          <Form.Item label="Thương hiệu" validateStatus={form.formState.errors.brandId ? 'error' : undefined} help={form.formState.errors.brandId?.message}>
+            <Controller
+              name="brandId"
+              control={form.control}
+              render={({ field }) => (
+                <Select
+                  {...field}
+                  allowClear
+                  showSearch
+                  filterOption={false}
+                  onSearch={setBrandSearch}
+                  loading={brands.isFetching}
+                  options={(brands.data?.items ?? []).map((item) => ({ value: item.id, label: `${item.code} — ${item.label}` }))}
+                />
+              )}
+            />
+          </Form.Item>
+          <Form.Item label="Danh mục chính" validateStatus={form.formState.errors.categoryId ? 'error' : undefined} help={form.formState.errors.categoryId?.message}>
+            <Controller
+              name="categoryId"
+              control={form.control}
+              render={({ field }) => (
+                <Select
+                  {...field}
+                  showSearch
+                  filterOption={false}
+                  onSearch={setCategorySearch}
+                  loading={categories.isFetching}
+                  options={(categories.data?.items ?? []).map((item) => ({ value: item.id, label: `${item.code} — ${item.label}` }))}
+                />
+              )}
+            />
+          </Form.Item>
         </div>
-        <Controller
-          name="description"
-          control={control}
-          render={({ field }) => (
-            <Form.Item
-              label="Mô tả"
-              validateStatus={errors.description ? 'error' : undefined}
-              help={errors.description?.message}
-            >
-              <Input.TextArea {...field} rows={4} />
-            </Form.Item>
-          )}
-        />
-        <Controller
-          name="imageUrl"
-          control={control}
-          render={({ field }) => (
-            <Form.Item
-              label="Ảnh sản phẩm"
-              required
-              validateStatus={errors.imageUrl ? 'error' : undefined}
-              help={errors.imageUrl?.message}
-            >
-              <ImageUploadField value={field.value} onChange={field.onChange} />
-            </Form.Item>
-          )}
-        />
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Controller
-            name="price"
-            control={control}
-            render={({ field }) => (
-              <Form.Item
-                label="Giá đã gồm VAT"
-                validateStatus={errors.price ? 'error' : undefined}
-                help={errors.price?.message}
-              >
-                <InputNumber {...field} min={0} className="w-full" />
-              </Form.Item>
-            )}
-          />
-          <Controller
-            name="availableQuantity"
-            control={control}
-            render={({ field }) => (
-              <Form.Item
-                label="Tồn khả dụng"
-                validateStatus={errors.availableQuantity ? 'error' : undefined}
-                help={errors.availableQuantity?.message}
-              >
-                <InputNumber {...field} min={0} precision={0} className="w-full" />
-              </Form.Item>
-            )}
-          />
-        </div>
-        {textField('tags', 'Tags', 'home-gym, strength')}
-        <Controller
-          name="published"
-          control={control}
-          render={({ field }) => (
-            <Form.Item label="Xuất bản ngay">
-              <Switch checked={field.value} onChange={field.onChange} />
-            </Form.Item>
-          )}
-        />
+        <Form.Item label="Mô tả ngắn">
+          <Controller name="shortDescription" control={form.control} render={({ field }) => <Input {...field} />} />
+        </Form.Item>
+        <Form.Item label="Mô tả chi tiết">
+          <Controller name="description" control={form.control} render={({ field }) => <Input.TextArea {...field} rows={6} />} />
+        </Form.Item>
       </Form>
     </Drawer>
   );

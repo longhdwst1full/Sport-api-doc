@@ -9,10 +9,10 @@ Mục tiêu: hệ thống web/PWA bán thiết bị tập luyện, dụng cụ v
 - Dữ liệu giao dịch: PostgreSQL. Redis + BullMQ dùng cho cache, job, reservation hết hạn. Ảnh/tệp ở object storage.
 - Một đơn hàng thuộc đúng một chi nhánh và một kho; V1 không tách đơn qua nhiều kho.
 - Giá sản phẩm dùng chung toàn hệ thống; chênh lệch vùng nằm ở phí giao hàng.
-- V1 thanh toán chuyển khoản một lần cho toàn bộ đơn; nhân viên xác nhận hoặc sandbox QR.
+- V1 thanh toán đúng một lần cho toàn bộ đơn bằng tiền mặt hoặc chuyển khoản; giá hiển thị đã gồm VAT.
 - Tồn kho dùng `balance + immutable ledger + reservation`; không trừ kho bằng cách sửa trực tiếp số lượng sản phẩm.
-- RBAC dùng mã quyền nghiệp vụ ổn định và data scope `GLOBAL/BRANCH/WAREHOUSE/OWN`; backend luôn kiểm tra quyền.
-- Các thao tác rủi ro cao có maker-checker: hoàn tiền, điều chỉnh kho lớn, thay đổi giá nhạy cảm và gán quyền.
+- RBAC V1 chỉ có `OWNER`, `BRANCH_MANAGER`, `STAFF`; API/UI hoạt động với scope `GLOBAL/BRANCH` và backend luôn kiểm tra quyền/scope.
+- Maker-checker chỉ áp dụng khi use case rủi ro được duyệt riêng; Catalog/price V1 dùng audit + optimistic locking, không maker-checker.
 - V1 không gồm POS, ca thu ngân, tiền mặt, voucher phức tạp, bảo hành/sửa chữa, CRM automation, B2B quotation và split payment/fulfillment/return.
 
 ## Bộ tài liệu
@@ -27,9 +27,14 @@ Mục tiêu: hệ thống web/PWA bán thiết bị tập luyện, dụng cụ v
 | `06-rules-and-state-machines.md`      | Business rules, state machine và invariant                            |
 | `07-delivery-plan.md`                 | Thứ tự triển khai, Definition of Done và test bắt buộc                |
 | `08-open-decisions.csv`               | Các quyết định cần xác nhận trước khi viết migration                  |
+| `09-v1-model.dbml`                    | Model bảng/cột/FK logic dùng để đối chiếu migration                   |
+| `10-v1-model-relationship-review.md`  | Review quan hệ, ownership, lifecycle và constraint                    |
+| `11-model-change-log.json`            | Nhật ký DB/API dùng để tô đỏ và gắn Note vào workbook                |
 | `14-backend-review-sprint-1.md`       | Đánh giá backend, phạm vi, API và checklist Sprint 1 Organization/IAM |
 | `15-architecture-contract-codegen.md` | Kiến trúc module, contract YAML, codegen theo domain và concurrency   |
 | `16-nestjs-source-structure.md`       | Cấu trúc source NestJS, Prisma foundation, provider/integration base |
+| `20-sprint-1-execution-status.md`     | Trạng thái Sprint 1 hiện tại, evidence, phần còn thiếu và blocker     |
+| `DCTD-UTC-V1-database-model-review.xlsx` | Workbook review có ô đỏ, Excel Note và sheet Change Log           |
 | `api/openapi-v1.yaml`                 | Contract OpenAPI V1 tổng được sinh từ NestJS                          |
 
 ## Cách dùng
@@ -38,6 +43,7 @@ Mục tiêu: hệ thống web/PWA bán thiết bị tập luyện, dụng cụ v
 2. Chốt P0/P1 trong `02-function-catalog.csv`.
 3. Chốt bảng P0 trong `04-table-catalog.csv`, rồi mới sinh ERD và migration.
 4. Mỗi API phải truy ra được permission, data scope, transaction boundary và audit rule tương ứng.
+5. Khi sửa DB/API, cập nhật `11-model-change-log.json` rồi chạy `yarn workspace @dctd/api docs:model:annotate`; không handoff nếu workbook chưa được đánh dấu.
 
 ## Quy ước priority
 

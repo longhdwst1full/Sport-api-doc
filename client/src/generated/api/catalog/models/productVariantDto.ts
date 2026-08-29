@@ -5,13 +5,15 @@
  * Contract for storefront and admin applications
  * OpenAPI spec version: 1.0.0
  */
-import type { ProductVariantDtoAttributes } from './productVariantDtoAttributes';
+import type { ProductVariantDtoStatus } from './productVariantDtoStatus';
 
 export interface ProductVariantDto {
   id: string;
   sku: string;
+  barcode?: string;
   name: string;
-  price: number;
-  availableQuantity: number;
-  attributes: ProductVariantDtoAttributes;
+  status: ProductVariantDtoStatus;
+  version: number;
+  /** @nullable */
+  effectivePrice?: string | null;
 }

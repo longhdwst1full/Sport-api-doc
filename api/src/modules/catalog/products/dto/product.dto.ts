@@ -1,59 +1,64 @@
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import {
+  ArrayNotEmpty,
   IsArray,
-  IsBoolean,
+  IsDateString,
+  IsIn,
   IsInt,
   IsNotEmpty,
-  IsNumber,
+  IsNumberString,
   IsOptional,
   IsString,
-  IsUrl,
+  IsUUID,
+  Matches,
   Max,
+  MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
 
-export class ProductSummaryDto {
-  @ApiProperty({ format: 'uuid' }) id: string;
-  @ApiProperty({ example: 'Máy chạy bộ DCTD Pro X1' }) name: string;
-  @ApiProperty({ example: 'may-chay-bo-dctd-pro-x1' }) slug: string;
-  @ApiProperty({ example: 'DCTD' }) brand: string;
-  @ApiProperty({ example: 'Máy chạy bộ' }) category: string;
-  @ApiProperty({ example: 18990000 }) price: number;
-  @ApiProperty({ example: 'VND' }) currency: string;
-  @ApiProperty({ format: 'uri' }) imageUrl: string;
-  @ApiProperty({ example: 4.8 }) rating: number;
-  @ApiProperty({ example: 124 }) reviewCount: number;
-  @ApiProperty({ example: true }) available: boolean;
-  @ApiProperty({ type: [String], example: ['Bán chạy', 'Giao nhanh'] }) tags: string[];
-}
-
 export class ProductVariantDto {
-  @ApiProperty() id: string;
+  @ApiProperty({ format: 'uuid' }) id: string;
   @ApiProperty() sku: string;
+  @ApiPropertyOptional() barcode?: string;
   @ApiProperty() name: string;
-  @ApiProperty() price: number;
-  @ApiProperty() availableQuantity: number;
-  @ApiProperty({ type: Object }) attributes: Record<string, string>;
+  @ApiProperty({ enum: ['ACTIVE', 'INACTIVE'] }) status: 'ACTIVE' | 'INACTIVE';
+  @ApiProperty({ example: 0 }) version: number;
+  @ApiPropertyOptional({ type: String, example: '18990000.00', nullable: true }) effectivePrice?: string | null;
 }
 
 export class BundleComponentDto {
+  @ApiProperty({ format: 'uuid' }) componentVariantId: string;
   @ApiProperty() componentSku: string;
   @ApiProperty() componentName: string;
   @ApiProperty({ minimum: 1 }) quantity: number;
 }
 
 export class ProductBundleDto {
-  @ApiProperty({ enum: ['FIXED'] }) bundleType: 'FIXED';
+  @ApiProperty({ enum: ['FIXED_VIRTUAL'] }) bundleType: 'FIXED_VIRTUAL';
   @ApiProperty({ type: [BundleComponentDto] }) components: BundleComponentDto[];
 }
 
+export class ProductSummaryDto {
+  @ApiProperty({ format: 'uuid' }) id: string;
+  @ApiProperty() productNo: string;
+  @ApiProperty() name: string;
+  @ApiProperty() slug: string;
+  @ApiPropertyOptional() brand?: string;
+  @ApiPropertyOptional() primaryCategory?: string;
+  @ApiProperty({ enum: ['DRAFT', 'PUBLISHED', 'ARCHIVED'] }) status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+  @ApiProperty({ example: 0 }) version: number;
+  @ApiPropertyOptional({ type: String, example: '18990000.00', nullable: true }) minPrice?: string | null;
+  @ApiProperty({ example: 'VND' }) currency: 'VND';
+  @ApiPropertyOptional({ type: String, format: 'uri', nullable: true }) imageUrl?: string | null;
+}
+
 export class ProductDetailDto extends ProductSummaryDto {
-  @ApiProperty() description: string;
-  @ApiProperty({ example: 'SKU-RUN-X1' }) sku: string;
-  @ApiProperty({ example: 12 }) availableQuantity: number;
-  @ApiProperty({ type: [String] }) gallery: string[];
+  @ApiPropertyOptional() shortDescription?: string;
+  @ApiPropertyOptional() description?: string;
   @ApiProperty({ type: [ProductVariantDto] }) variants: ProductVariantDto[];
+  @ApiProperty({ type: [String], format: 'uuid' }) categoryIds: string[];
   @ApiPropertyOptional({ type: ProductBundleDto }) bundle?: ProductBundleDto;
 }
 
@@ -71,47 +76,65 @@ export class ProductListResponseDto {
 
 export class ListProductsQueryDto {
   @ApiPropertyOptional({ default: 1, minimum: 1 })
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @IsOptional()
-  page: number = 1;
+  @Type(() => Number) @IsInt() @Min(1) @IsOptional() page: number = 1;
 
   @ApiPropertyOptional({ default: 12, minimum: 1, maximum: 100 })
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(100)
-  @IsOptional()
-  limit: number = 12;
+  @Type(() => Number) @IsInt() @Min(1) @Max(100) @IsOptional() limit: number = 12;
 
-  @ApiPropertyOptional()
-  @IsString()
-  @IsOptional()
-  search?: string;
-
-  @ApiPropertyOptional()
-  @IsString()
-  @IsOptional()
-  category?: string;
+  @ApiPropertyOptional() @IsString() @IsOptional() search?: string;
+  @ApiPropertyOptional() @IsString() @IsOptional() category?: string;
+  @ApiPropertyOptional({ enum: ['DRAFT', 'PUBLISHED', 'ARCHIVED'] })
+  @IsIn(['DRAFT', 'PUBLISHED', 'ARCHIVED']) @IsOptional() status?: string;
 }
 
 export class CreateProductDto {
-  @ApiProperty() @IsString() @IsNotEmpty() name: string;
-  @ApiProperty() @IsString() @IsNotEmpty() slug: string;
-  @ApiProperty() @IsString() @IsNotEmpty() sku: string;
-  @ApiProperty() @IsString() @IsNotEmpty() brand: string;
-  @ApiProperty() @IsString() @IsNotEmpty() category: string;
-  @ApiProperty() @IsString() description: string;
-  @ApiProperty({ minimum: 0 }) @IsNumber() @Min(0) price: number;
-  @ApiProperty({ format: 'uri' }) @IsUrl() imageUrl: string;
-  @ApiProperty({ minimum: 0 }) @IsInt() @Min(0) availableQuantity: number;
-  @ApiPropertyOptional({ type: [String] })
-  @IsArray()
-  @IsString({ each: true })
-  @IsOptional()
-  tags?: string[];
-  @ApiPropertyOptional({ default: true }) @IsBoolean() @IsOptional() published?: boolean;
+  @ApiProperty() @IsString() @Matches(/^[A-Z0-9-]+$/) @MaxLength(32) productNo: string;
+  @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(255) name: string;
+  @ApiProperty() @IsString() @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/) @MaxLength(255) slug: string;
+  @ApiPropertyOptional({ format: 'uuid' }) @IsUUID() @IsOptional() brandId?: string;
+  @ApiPropertyOptional() @IsString() @MaxLength(1000) @IsOptional() shortDescription?: string;
+  @ApiPropertyOptional() @IsString() @IsOptional() description?: string;
+  @ApiProperty({ type: [String], format: 'uuid' }) @IsArray() @ArrayNotEmpty() @IsUUID('all', { each: true }) categoryIds: string[];
+  @ApiProperty({ format: 'uuid' }) @IsUUID() primaryCategoryId: string;
 }
 
-export class UpdateProductDto extends PartialType(CreateProductDto) {}
+export class UpdateProductFieldsDto extends PartialType(CreateProductDto) {}
+
+export class UpdateProductDto extends UpdateProductFieldsDto {
+  @ApiProperty({ minimum: 0 }) @IsInt() @Min(0) expectedVersion: number;
+}
+
+export class CreateVariantDto {
+  @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(64) sku: string;
+  @ApiPropertyOptional() @IsString() @MaxLength(64) @IsOptional() barcode?: string;
+  @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(255) name: string;
+  @ApiPropertyOptional({ default: 0 }) @IsInt() @Min(0) @IsOptional() weightGrams = 0;
+  @ApiPropertyOptional() @IsInt() @Min(1) @IsOptional() lengthMm?: number;
+  @ApiPropertyOptional() @IsInt() @Min(1) @IsOptional() widthMm?: number;
+  @ApiPropertyOptional() @IsInt() @Min(1) @IsOptional() heightMm?: number;
+}
+
+export class CreatePriceDto {
+  @ApiProperty({ example: '18990000.00' }) @IsNumberString() amount: string;
+  @ApiProperty({ format: 'date-time' }) @IsDateString() startsAt: string;
+  @ApiPropertyOptional({ format: 'date-time' }) @IsDateString() @IsOptional() endsAt?: string;
+}
+
+export class ChangeProductStatusDto {
+  @ApiProperty({ minimum: 0 }) @IsInt() @Min(0) expectedVersion: number;
+}
+
+export class CreateBundleItemDto {
+  @ApiProperty({ format: 'uuid' }) @IsUUID() componentVariantId: string;
+  @ApiProperty({ minimum: 1 }) @IsInt() @Min(1) quantity: number;
+}
+
+export class CreateBundleDto {
+  @ApiProperty({ format: 'uuid' }) @IsUUID() bundleVariantId: string;
+  @ApiProperty({ type: [CreateBundleItemDto] })
+  @IsArray()
+  @ArrayNotEmpty()
+  @ValidateNested({ each: true })
+  @Type(() => CreateBundleItemDto)
+  items: CreateBundleItemDto[];
+}

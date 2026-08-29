@@ -11,6 +11,7 @@ import {
 } from 'antd';
 import {
   BellOutlined,
+  LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   SearchOutlined,
@@ -22,6 +23,7 @@ import { setSidebarCollapsed, toggleSidebar } from '@/app/store/layout.slice';
 import { usePermissions } from '@/core/auth/permissions';
 import { PageContainer } from '@/foundation/layout/page-container';
 import { NavigationTabs } from '@/layouts/components/navigation-tabs';
+import { useAuth } from '@/core/auth/auth-context';
 
 const { Content, Header, Sider } = Layout;
 
@@ -31,6 +33,7 @@ export function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const permissions = usePermissions();
+  const auth = useAuth();
   const visibleItems = NAVIGATION_ITEMS.filter(
     (item) => !item.permission || permissions.has(item.permission),
   );
@@ -68,11 +71,22 @@ export function AdminLayout() {
               <Button type="text" shape="circle" aria-label="Thông báo" icon={<BellOutlined />} />
             </Badge>
             <Divider type="vertical" className="!mx-1 !h-7" />
-            <Avatar className="bg-admin-500">AD</Avatar>
+            <Avatar className="bg-admin-500">
+              {(auth.currentUser?.displayName ?? 'AD').slice(0, 2).toUpperCase()}
+            </Avatar>
             <div className="hidden xl:block">
-              <Typography.Text strong>Quản trị viên</Typography.Text>
-              <div className="text-xs leading-4 text-slate-500">Toàn hệ thống</div>
+              <Typography.Text strong>{auth.currentUser?.displayName ?? 'Quản trị viên'}</Typography.Text>
+              <div className="text-xs leading-4 text-slate-500">
+                {auth.developmentBypass ? 'DEV bypass' : auth.currentUser?.scopes.map((scope) => scope.type).join(', ')}
+              </div>
             </div>
+            <Button
+              type="text"
+              shape="circle"
+              aria-label="Đăng xuất"
+              icon={<LogoutOutlined />}
+              onClick={() => void auth.signOut()}
+            />
           </div>
         </div>
       </Header>

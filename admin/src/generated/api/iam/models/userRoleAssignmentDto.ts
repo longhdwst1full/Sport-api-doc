@@ -15,7 +15,6 @@ export interface UserRoleAssignmentDto {
   roleCode: string;
   scopeType: UserRoleAssignmentDtoScopeType;
   branchId?: string;
-  warehouseId?: string;
   status: UserRoleAssignmentDtoStatus;
   validFrom: string;
 }

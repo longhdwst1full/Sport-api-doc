@@ -22,6 +22,7 @@ function createDomainConfig(domain: string) {
 }
 
 export default defineConfig({
+  auth: createDomainConfig('auth'),
   organization: createDomainConfig('organization'),
   iam: createDomainConfig('iam'),
   catalog: createDomainConfig('catalog'),

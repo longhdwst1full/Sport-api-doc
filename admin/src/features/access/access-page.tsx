@@ -43,8 +43,8 @@ export function AccessPage() {
     <ManagementPage
       eyebrow="Identity & access"
       title="Người dùng & phân quyền"
-      description="RBAC theo vai trò kết hợp scope chi nhánh/kho; backend luôn là nguồn quyết định quyền cuối cùng."
-      dataNotice="Dữ liệu lấy từ generated Admin IAM SDK. Sprint 1 dùng in-memory adapter để chốt contract và scope validation; chưa phải production identity/persistence."
+      description="RBAC V1 gồm OWNER, BRANCH_MANAGER và STAFF với scope GLOBAL/BRANCH; backend luôn là nguồn quyết định quyền cuối cùng."
+      dataNotice="Dữ liệu lấy từ generated Admin IAM SDK. JWT đã xác minh danh tính và quyền từ PostgreSQL; danh sách IAM đang được chuyển tiếp từ adapter sang persistence."
       metrics={[
         { key: 'users', label: 'Người dùng', value: users.length, icon: <UserOutlined /> },
         {

@@ -41,39 +41,6 @@ paths:
       summary: List IAM roles
       tags:
         - Admin IAM
-    post:
-      operationId: createAdminRole
-      parameters: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateRoleDto"
-      responses:
-        "201":
-          description: ""
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/RoleDto"
-        "400":
-          description: One or more permission codes are unknown
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponseDto"
-        "409":
-          description: Role code already exists
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponseDto"
-      security:
-        - bearer: []
-      summary: Create a role from known permissions
-      tags:
-        - Admin IAM
   /api/v1/admin/iam/permissions:
     get:
       operationId: listAdminPermissions
@@ -217,64 +184,30 @@ components:
       required:
         - items
         - total
-    CreateRoleDto:
+    PermissionListDto:
       type: object
       properties:
-        code:
-          type: string
-          example: CONTENT_EDITOR
-        name:
-          type: string
-          example: Content Editor
-        description:
-          type: string
-        permissionCodes:
-          example:
-            - cms.content.view
-            - cms.content.manage
+        items:
           type: array
           items:
-            type: string
-      required:
-        - code
-        - name
-        - permissionCodes
-    RoleDto:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        code:
-          type: string
-          example: BRANCH_MANAGER
-        name:
-          type: string
-          example: Branch Manager
-        description:
-          type: string
-        status:
-          type: string
-          enum:
-            - ACTIVE
-            - INACTIVE
-        system:
-          type: boolean
-        permissionCodes:
-          type: array
-          items:
-            type: string
-        version:
+            $ref: "#/components/schemas/PermissionDto"
+        total:
           type: number
-          example: 0
       required:
-        - id
-        - code
-        - name
-        - status
-        - system
-        - permissionCodes
-        - version
+        - items
+        - total
+    ActiveLookupResponseDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActiveLookupOptionDto"
+        meta:
+          $ref: "#/components/schemas/ActiveLookupMetaDto"
+      required:
+        - items
+        - meta
     ErrorResponseDto:
       type: object
       properties:
@@ -309,47 +242,22 @@ components:
         - path
         - method
         - timestamp
-    PermissionListDto:
-      type: object
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/PermissionDto"
-        total:
-          type: number
-      required:
-        - items
-        - total
-    ActiveLookupResponseDto:
-      type: object
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/ActiveLookupOptionDto"
-        meta:
-          $ref: "#/components/schemas/ActiveLookupMetaDto"
-      required:
-        - items
-        - meta
     AssignUserRoleDto:
       type: object
       properties:
         roleCode:
           type: string
+          enum:
+            - OWNER
+            - BRANCH_MANAGER
+            - STAFF
           example: BRANCH_MANAGER
         scopeType:
           type: string
           enum:
             - GLOBAL
             - BRANCH
-            - WAREHOUSE
-            - OWN
         branchId:
-          type: string
-          format: uuid
-        warehouseId:
           type: string
           format: uuid
       required:
@@ -374,12 +282,7 @@ components:
           enum:
             - GLOBAL
             - BRANCH
-            - WAREHOUSE
-            - OWN
         branchId:
-          type: string
-          format: uuid
-        warehouseId:
           type: string
           format: uuid
         status:
@@ -435,21 +338,42 @@ components:
         - status
         - permissionVersion
         - assignments
-    ErrorDetailDto:
+    RoleDto:
       type: object
       properties:
-        field:
+        id:
           type: string
-          example: name
+          format: uuid
         code:
           type: string
-          example: INVALID_VALUE
-        message:
+          example: BRANCH_MANAGER
+        name:
           type: string
-          example: name should not be empty
+          example: Branch Manager
+        description:
+          type: string
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+        system:
+          type: boolean
+        permissionCodes:
+          type: array
+          items:
+            type: string
+        version:
+          type: number
+          example: 0
       required:
+        - id
         - code
-        - message
+        - name
+        - status
+        - system
+        - permissionCodes
+        - version
     PermissionDto:
       type: object
       properties:
@@ -506,6 +430,21 @@ components:
         - limit
         - total
         - hasMore
+    ErrorDetailDto:
+      type: object
+      properties:
+        field:
+          type: string
+          example: name
+        code:
+          type: string
+          example: INVALID_VALUE
+        message:
+          type: string
+          example: name should not be empty
+      required:
+        - code
+        - message
   securitySchemes:
     bearer:
       scheme: bearer

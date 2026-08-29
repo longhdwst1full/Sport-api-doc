@@ -3,11 +3,11 @@ org.branch.view,Organization,view,GLOBAL,false,Super Admin; Operations Manager,B
 org.branch.manage,Organization,manage,GLOBAL,true,Super Admin,Thay đổi trạng thái cần audit reason
 org.warehouse.view,Organization,view,GLOBAL;BRANCH;WAREHOUSE,false,Super Admin; Inventory Manager; Warehouse Operator,
 org.warehouse.manage,Organization,manage,GLOBAL;BRANCH,true,Super Admin; Inventory Manager,
-iam.user.view,IAM,view,GLOBAL,true,Super Admin; Security Admin,Che PII theo field policy
-iam.user.manage,IAM,manage,GLOBAL,true,Super Admin; Security Admin,Không tự khóa super admin cuối cùng
-iam.role.view,IAM,view,GLOBAL,false,Super Admin; Security Admin; Auditor,
+iam.user.view,IAM,view,GLOBAL;BRANCH,true,OWNER; BRANCH_MANAGER,Branch Manager chỉ thấy nhân sự có assignment trong branch của mình; che PII theo field policy
+iam.user.manage,IAM,manage,GLOBAL;BRANCH,true,OWNER; BRANCH_MANAGER,Branch Manager chỉ quản lý STAFF trong branch; không khóa hoặc revoke OWNER cuối cùng
+iam.role.view,IAM,view,GLOBAL;BRANCH,false,OWNER; BRANCH_MANAGER,Branch Manager lookup chỉ nhận role STAFF
 iam.role.manage,IAM,manage,GLOBAL,true,Super Admin; Security Admin,Permission cache phải invalidate
-iam.assignment.manage,IAM,manage,GLOBAL,true,Super Admin; Security Admin,Cần approval cho quyền nhạy cảm
+iam.assignment.manage,IAM,manage,GLOBAL;BRANCH,true,OWNER; BRANCH_MANAGER,OWNER gán role hợp lệ; Branch Manager chỉ gán STAFF vào branch được cấp
 iam.audit.view,IAM,view,GLOBAL;BRANCH;WAREHOUSE,true,Super Admin; Auditor,Không cho sửa/xóa
 customer.view,Customer,view,GLOBAL;BRANCH;OWN,true,Customer Service; Order Operator,OWN cho customer portal
 customer.manage,Customer,manage,GLOBAL;BRANCH;OWN,true,Customer Service,Audit PII change

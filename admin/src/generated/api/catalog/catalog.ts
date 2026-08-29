@@ -22,15 +22,630 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ActiveLookupResponseDto,
+  BrandDto,
+  BrandListDto,
+  CategoryDto,
+  CategoryListDto,
+  ChangeProductStatusDto,
+  CreateBrandDto,
+  CreateBundleDto,
+  CreateCategoryDto,
+  CreatePriceDto,
   CreateProductDto,
+  CreateVariantDto,
   ListAdminProductsParams,
   ProductDetailDto,
   ProductListResponseDto,
+  SearchActiveAdminBrandsParams,
+  SearchActiveAdminCategoriesParams,
   UpdateProductDto,
 } from './models';
 
 import { apiFetcher } from '../../../lib/api/fetcher';
 import type { ErrorType, BodyType } from '../../../lib/api/fetcher';
+export const listAdminBrands = (signal?: AbortSignal) => {
+  return apiFetcher<BrandListDto>({ url: `/api/v1/admin/catalog/brands`, method: 'GET', signal });
+};
+
+export const getListAdminBrandsQueryKey = () => {
+  return [`/api/v1/admin/catalog/brands`] as const;
+};
+
+export const getListAdminBrandsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listAdminBrands>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminBrands>>, TError, TData>>;
+}) => {
+  const { query: queryOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListAdminBrandsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminBrands>>> = ({ signal }) =>
+    listAdminBrands(signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listAdminBrands>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListAdminBrandsQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminBrands>>>;
+export type ListAdminBrandsQueryError = ErrorType<unknown>;
+
+export function useListAdminBrands<
+  TData = Awaited<ReturnType<typeof listAdminBrands>>,
+  TError = ErrorType<unknown>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminBrands>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAdminBrands>>,
+          TError,
+          Awaited<ReturnType<typeof listAdminBrands>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListAdminBrands<
+  TData = Awaited<ReturnType<typeof listAdminBrands>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminBrands>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAdminBrands>>,
+          TError,
+          Awaited<ReturnType<typeof listAdminBrands>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListAdminBrands<
+  TData = Awaited<ReturnType<typeof listAdminBrands>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminBrands>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useListAdminBrands<
+  TData = Awaited<ReturnType<typeof listAdminBrands>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminBrands>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListAdminBrandsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const createAdminBrand = (
+  createBrandDto: BodyType<CreateBrandDto>,
+  signal?: AbortSignal,
+) => {
+  return apiFetcher<BrandDto>({
+    url: `/api/v1/admin/catalog/brands`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: createBrandDto,
+    signal,
+  });
+};
+
+export const getCreateAdminBrandMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createAdminBrand>>,
+    TError,
+    { data: BodyType<CreateBrandDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createAdminBrand>>,
+  TError,
+  { data: BodyType<CreateBrandDto> },
+  TContext
+> => {
+  const mutationKey = ['createAdminBrand'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createAdminBrand>>,
+    { data: BodyType<CreateBrandDto> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createAdminBrand(data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateAdminBrandMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createAdminBrand>>
+>;
+export type CreateAdminBrandMutationBody = BodyType<CreateBrandDto>;
+export type CreateAdminBrandMutationError = ErrorType<unknown>;
+
+export const useCreateAdminBrand = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createAdminBrand>>,
+      TError,
+      { data: BodyType<CreateBrandDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createAdminBrand>>,
+  TError,
+  { data: BodyType<CreateBrandDto> },
+  TContext
+> => {
+  const mutationOptions = getCreateAdminBrandMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const searchActiveAdminBrands = (
+  params?: SearchActiveAdminBrandsParams,
+  signal?: AbortSignal,
+) => {
+  return apiFetcher<ActiveLookupResponseDto>({
+    url: `/api/v1/admin/catalog/brands/active`,
+    method: 'GET',
+    params,
+    signal,
+  });
+};
+
+export const getSearchActiveAdminBrandsQueryKey = (params?: SearchActiveAdminBrandsParams) => {
+  return [`/api/v1/admin/catalog/brands/active`, ...(params ? [params] : [])] as const;
+};
+
+export const getSearchActiveAdminBrandsQueryOptions = <
+  TData = Awaited<ReturnType<typeof searchActiveAdminBrands>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: SearchActiveAdminBrandsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchActiveAdminBrands>>, TError, TData>
+    >;
+  },
+) => {
+  const { query: queryOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getSearchActiveAdminBrandsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof searchActiveAdminBrands>>> = ({
+    signal,
+  }) => searchActiveAdminBrands(params, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof searchActiveAdminBrands>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type SearchActiveAdminBrandsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof searchActiveAdminBrands>>
+>;
+export type SearchActiveAdminBrandsQueryError = ErrorType<unknown>;
+
+export function useSearchActiveAdminBrands<
+  TData = Awaited<ReturnType<typeof searchActiveAdminBrands>>,
+  TError = ErrorType<unknown>,
+>(
+  params: undefined | SearchActiveAdminBrandsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchActiveAdminBrands>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchActiveAdminBrands>>,
+          TError,
+          Awaited<ReturnType<typeof searchActiveAdminBrands>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchActiveAdminBrands<
+  TData = Awaited<ReturnType<typeof searchActiveAdminBrands>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: SearchActiveAdminBrandsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchActiveAdminBrands>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchActiveAdminBrands>>,
+          TError,
+          Awaited<ReturnType<typeof searchActiveAdminBrands>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchActiveAdminBrands<
+  TData = Awaited<ReturnType<typeof searchActiveAdminBrands>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: SearchActiveAdminBrandsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchActiveAdminBrands>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useSearchActiveAdminBrands<
+  TData = Awaited<ReturnType<typeof searchActiveAdminBrands>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: SearchActiveAdminBrandsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchActiveAdminBrands>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getSearchActiveAdminBrandsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const listAdminCategories = (signal?: AbortSignal) => {
+  return apiFetcher<CategoryListDto>({
+    url: `/api/v1/admin/catalog/categories`,
+    method: 'GET',
+    signal,
+  });
+};
+
+export const getListAdminCategoriesQueryKey = () => {
+  return [`/api/v1/admin/catalog/categories`] as const;
+};
+
+export const getListAdminCategoriesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listAdminCategories>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminCategories>>, TError, TData>>;
+}) => {
+  const { query: queryOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListAdminCategoriesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminCategories>>> = ({ signal }) =>
+    listAdminCategories(signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listAdminCategories>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListAdminCategoriesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listAdminCategories>>
+>;
+export type ListAdminCategoriesQueryError = ErrorType<unknown>;
+
+export function useListAdminCategories<
+  TData = Awaited<ReturnType<typeof listAdminCategories>>,
+  TError = ErrorType<unknown>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listAdminCategories>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAdminCategories>>,
+          TError,
+          Awaited<ReturnType<typeof listAdminCategories>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListAdminCategories<
+  TData = Awaited<ReturnType<typeof listAdminCategories>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listAdminCategories>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAdminCategories>>,
+          TError,
+          Awaited<ReturnType<typeof listAdminCategories>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListAdminCategories<
+  TData = Awaited<ReturnType<typeof listAdminCategories>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listAdminCategories>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useListAdminCategories<
+  TData = Awaited<ReturnType<typeof listAdminCategories>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listAdminCategories>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListAdminCategoriesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const createAdminCategory = (
+  createCategoryDto: BodyType<CreateCategoryDto>,
+  signal?: AbortSignal,
+) => {
+  return apiFetcher<CategoryDto>({
+    url: `/api/v1/admin/catalog/categories`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: createCategoryDto,
+    signal,
+  });
+};
+
+export const getCreateAdminCategoryMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createAdminCategory>>,
+    TError,
+    { data: BodyType<CreateCategoryDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createAdminCategory>>,
+  TError,
+  { data: BodyType<CreateCategoryDto> },
+  TContext
+> => {
+  const mutationKey = ['createAdminCategory'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createAdminCategory>>,
+    { data: BodyType<CreateCategoryDto> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createAdminCategory(data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateAdminCategoryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createAdminCategory>>
+>;
+export type CreateAdminCategoryMutationBody = BodyType<CreateCategoryDto>;
+export type CreateAdminCategoryMutationError = ErrorType<unknown>;
+
+export const useCreateAdminCategory = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createAdminCategory>>,
+      TError,
+      { data: BodyType<CreateCategoryDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createAdminCategory>>,
+  TError,
+  { data: BodyType<CreateCategoryDto> },
+  TContext
+> => {
+  const mutationOptions = getCreateAdminCategoryMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+export const searchActiveAdminCategories = (
+  params?: SearchActiveAdminCategoriesParams,
+  signal?: AbortSignal,
+) => {
+  return apiFetcher<ActiveLookupResponseDto>({
+    url: `/api/v1/admin/catalog/categories/active`,
+    method: 'GET',
+    params,
+    signal,
+  });
+};
+
+export const getSearchActiveAdminCategoriesQueryKey = (
+  params?: SearchActiveAdminCategoriesParams,
+) => {
+  return [`/api/v1/admin/catalog/categories/active`, ...(params ? [params] : [])] as const;
+};
+
+export const getSearchActiveAdminCategoriesQueryOptions = <
+  TData = Awaited<ReturnType<typeof searchActiveAdminCategories>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: SearchActiveAdminCategoriesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchActiveAdminCategories>>, TError, TData>
+    >;
+  },
+) => {
+  const { query: queryOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getSearchActiveAdminCategoriesQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof searchActiveAdminCategories>>> = ({
+    signal,
+  }) => searchActiveAdminCategories(params, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof searchActiveAdminCategories>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type SearchActiveAdminCategoriesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof searchActiveAdminCategories>>
+>;
+export type SearchActiveAdminCategoriesQueryError = ErrorType<unknown>;
+
+export function useSearchActiveAdminCategories<
+  TData = Awaited<ReturnType<typeof searchActiveAdminCategories>>,
+  TError = ErrorType<unknown>,
+>(
+  params: undefined | SearchActiveAdminCategoriesParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchActiveAdminCategories>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchActiveAdminCategories>>,
+          TError,
+          Awaited<ReturnType<typeof searchActiveAdminCategories>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchActiveAdminCategories<
+  TData = Awaited<ReturnType<typeof searchActiveAdminCategories>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: SearchActiveAdminCategoriesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchActiveAdminCategories>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchActiveAdminCategories>>,
+          TError,
+          Awaited<ReturnType<typeof searchActiveAdminCategories>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchActiveAdminCategories<
+  TData = Awaited<ReturnType<typeof searchActiveAdminCategories>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: SearchActiveAdminCategoriesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchActiveAdminCategories>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useSearchActiveAdminCategories<
+  TData = Awaited<ReturnType<typeof searchActiveAdminCategories>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: SearchActiveAdminCategoriesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchActiveAdminCategories>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getSearchActiveAdminCategoriesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
 /**
  * @summary List products for admin
  */
@@ -228,6 +843,118 @@ export const useCreateAdminProduct = <TError = ErrorType<unknown>, TContext = un
 };
 
 /**
+ * @summary Get product detail for admin
+ */
+export const getAdminProduct = (slug: string, signal?: AbortSignal) => {
+  return apiFetcher<ProductDetailDto>({
+    url: `/api/v1/admin/products/${slug}`,
+    method: 'GET',
+    signal,
+  });
+};
+
+export const getGetAdminProductQueryKey = (slug?: string) => {
+  return [`/api/v1/admin/products/${slug}`] as const;
+};
+
+export const getGetAdminProductQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAdminProduct>>,
+  TError = ErrorType<unknown>,
+>(
+  slug: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminProduct>>, TError, TData>>;
+  },
+) => {
+  const { query: queryOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAdminProductQueryKey(slug);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminProduct>>> = ({ signal }) =>
+    getAdminProduct(slug, signal);
+
+  return { queryKey, queryFn, enabled: !!slug, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminProduct>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetAdminProductQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminProduct>>>;
+export type GetAdminProductQueryError = ErrorType<unknown>;
+
+export function useGetAdminProduct<
+  TData = Awaited<ReturnType<typeof getAdminProduct>>,
+  TError = ErrorType<unknown>,
+>(
+  slug: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminProduct>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAdminProduct>>,
+          TError,
+          Awaited<ReturnType<typeof getAdminProduct>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetAdminProduct<
+  TData = Awaited<ReturnType<typeof getAdminProduct>>,
+  TError = ErrorType<unknown>,
+>(
+  slug: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminProduct>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAdminProduct>>,
+          TError,
+          Awaited<ReturnType<typeof getAdminProduct>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetAdminProduct<
+  TData = Awaited<ReturnType<typeof getAdminProduct>>,
+  TError = ErrorType<unknown>,
+>(
+  slug: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminProduct>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Get product detail for admin
+ */
+
+export function useGetAdminProduct<
+  TData = Awaited<ReturnType<typeof getAdminProduct>>,
+  TError = ErrorType<unknown>,
+>(
+  slug: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminProduct>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetAdminProductQueryOptions(slug, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+/**
  * @summary Update product
  */
 export const updateAdminProduct = (id: string, updateProductDto: BodyType<UpdateProductDto>) => {
@@ -300,6 +1027,334 @@ export const useUpdateAdminProduct = <TError = ErrorType<unknown>, TContext = un
   TContext
 > => {
   const mutationOptions = getUpdateAdminProductMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+/**
+ * @summary Create a sellable SKU variant
+ */
+export const createAdminProductVariant = (
+  id: string,
+  createVariantDto: BodyType<CreateVariantDto>,
+  signal?: AbortSignal,
+) => {
+  return apiFetcher<ProductDetailDto>({
+    url: `/api/v1/admin/products/${id}/variants`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: createVariantDto,
+    signal,
+  });
+};
+
+export const getCreateAdminProductVariantMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createAdminProductVariant>>,
+    TError,
+    { id: string; data: BodyType<CreateVariantDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createAdminProductVariant>>,
+  TError,
+  { id: string; data: BodyType<CreateVariantDto> },
+  TContext
+> => {
+  const mutationKey = ['createAdminProductVariant'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createAdminProductVariant>>,
+    { id: string; data: BodyType<CreateVariantDto> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return createAdminProductVariant(id, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateAdminProductVariantMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createAdminProductVariant>>
+>;
+export type CreateAdminProductVariantMutationBody = BodyType<CreateVariantDto>;
+export type CreateAdminProductVariantMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a sellable SKU variant
+ */
+export const useCreateAdminProductVariant = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createAdminProductVariant>>,
+      TError,
+      { id: string; data: BodyType<CreateVariantDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createAdminProductVariant>>,
+  TError,
+  { id: string; data: BodyType<CreateVariantDto> },
+  TContext
+> => {
+  const mutationOptions = getCreateAdminProductVariantMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+/**
+ * @summary Create a global VAT-included price window
+ */
+export const createAdminProductPrice = (
+  variantId: string,
+  createPriceDto: BodyType<CreatePriceDto>,
+  signal?: AbortSignal,
+) => {
+  return apiFetcher<ProductDetailDto>({
+    url: `/api/v1/admin/products/variants/${variantId}/prices`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: createPriceDto,
+    signal,
+  });
+};
+
+export const getCreateAdminProductPriceMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createAdminProductPrice>>,
+    TError,
+    { variantId: string; data: BodyType<CreatePriceDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createAdminProductPrice>>,
+  TError,
+  { variantId: string; data: BodyType<CreatePriceDto> },
+  TContext
+> => {
+  const mutationKey = ['createAdminProductPrice'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createAdminProductPrice>>,
+    { variantId: string; data: BodyType<CreatePriceDto> }
+  > = (props) => {
+    const { variantId, data } = props ?? {};
+
+    return createAdminProductPrice(variantId, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateAdminProductPriceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createAdminProductPrice>>
+>;
+export type CreateAdminProductPriceMutationBody = BodyType<CreatePriceDto>;
+export type CreateAdminProductPriceMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a global VAT-included price window
+ */
+export const useCreateAdminProductPrice = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createAdminProductPrice>>,
+      TError,
+      { variantId: string; data: BodyType<CreatePriceDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createAdminProductPrice>>,
+  TError,
+  { variantId: string; data: BodyType<CreatePriceDto> },
+  TContext
+> => {
+  const mutationOptions = getCreateAdminProductPriceMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+/**
+ * @summary Publish a complete draft product
+ */
+export const publishAdminProduct = (
+  id: string,
+  changeProductStatusDto: BodyType<ChangeProductStatusDto>,
+  signal?: AbortSignal,
+) => {
+  return apiFetcher<ProductDetailDto>({
+    url: `/api/v1/admin/products/${id}/publish`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: changeProductStatusDto,
+    signal,
+  });
+};
+
+export const getPublishAdminProductMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof publishAdminProduct>>,
+    TError,
+    { id: string; data: BodyType<ChangeProductStatusDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof publishAdminProduct>>,
+  TError,
+  { id: string; data: BodyType<ChangeProductStatusDto> },
+  TContext
+> => {
+  const mutationKey = ['publishAdminProduct'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof publishAdminProduct>>,
+    { id: string; data: BodyType<ChangeProductStatusDto> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return publishAdminProduct(id, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PublishAdminProductMutationResult = NonNullable<
+  Awaited<ReturnType<typeof publishAdminProduct>>
+>;
+export type PublishAdminProductMutationBody = BodyType<ChangeProductStatusDto>;
+export type PublishAdminProductMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Publish a complete draft product
+ */
+export const usePublishAdminProduct = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof publishAdminProduct>>,
+      TError,
+      { id: string; data: BodyType<ChangeProductStatusDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof publishAdminProduct>>,
+  TError,
+  { id: string; data: BodyType<ChangeProductStatusDto> },
+  TContext
+> => {
+  const mutationOptions = getPublishAdminProductMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+/**
+ * @summary Create a fixed non-nested virtual combo
+ */
+export const createAdminProductBundle = (
+  id: string,
+  createBundleDto: BodyType<CreateBundleDto>,
+  signal?: AbortSignal,
+) => {
+  return apiFetcher<ProductDetailDto>({
+    url: `/api/v1/admin/products/${id}/bundle`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: createBundleDto,
+    signal,
+  });
+};
+
+export const getCreateAdminProductBundleMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createAdminProductBundle>>,
+    TError,
+    { id: string; data: BodyType<CreateBundleDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createAdminProductBundle>>,
+  TError,
+  { id: string; data: BodyType<CreateBundleDto> },
+  TContext
+> => {
+  const mutationKey = ['createAdminProductBundle'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createAdminProductBundle>>,
+    { id: string; data: BodyType<CreateBundleDto> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return createAdminProductBundle(id, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateAdminProductBundleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createAdminProductBundle>>
+>;
+export type CreateAdminProductBundleMutationBody = BodyType<CreateBundleDto>;
+export type CreateAdminProductBundleMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a fixed non-nested virtual combo
+ */
+export const useCreateAdminProductBundle = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createAdminProductBundle>>,
+      TError,
+      { id: string; data: BodyType<CreateBundleDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createAdminProductBundle>>,
+  TError,
+  { id: string; data: BodyType<CreateBundleDto> },
+  TContext
+> => {
+  const mutationOptions = getCreateAdminProductBundleMutationOptions(options);
 
   return useMutation(mutationOptions, queryClient);
 };

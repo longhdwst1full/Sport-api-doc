@@ -7,17 +7,14 @@
  */
 
 export interface UpdateProductDto {
+  productNo?: string;
   name?: string;
   slug?: string;
-  sku?: string;
-  brand?: string;
-  category?: string;
+  brandId?: string;
+  shortDescription?: string;
   description?: string;
+  categoryIds?: string[];
+  primaryCategoryId?: string;
   /** @minimum 0 */
-  price?: number;
-  imageUrl?: string;
-  /** @minimum 0 */
-  availableQuantity?: number;
-  tags?: string[];
-  published?: boolean;
+  expectedVersion: number;
 }

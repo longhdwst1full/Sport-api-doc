@@ -5,26 +5,27 @@
  * Contract for storefront and admin applications
  * OpenAPI spec version: 1.0.0
  */
+import type { ProductDetailDtoStatus } from './productDetailDtoStatus';
 import type { ProductVariantDto } from './productVariantDto';
 import type { ProductBundleDto } from './productBundleDto';
 
 export interface ProductDetailDto {
   id: string;
+  productNo: string;
   name: string;
   slug: string;
-  brand: string;
-  category: string;
-  price: number;
+  brand?: string;
+  primaryCategory?: string;
+  status: ProductDetailDtoStatus;
+  version: number;
+  /** @nullable */
+  minPrice?: string | null;
   currency: string;
-  imageUrl: string;
-  rating: number;
-  reviewCount: number;
-  available: boolean;
-  tags: string[];
-  description: string;
-  sku: string;
-  availableQuantity: number;
-  gallery: string[];
+  /** @nullable */
+  imageUrl?: string | null;
+  shortDescription?: string;
+  description?: string;
   variants: ProductVariantDto[];
+  categoryIds: string[];
   bundle?: ProductBundleDto;
 }

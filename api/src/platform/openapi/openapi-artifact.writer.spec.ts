@@ -51,6 +51,13 @@ describe('writeOpenApiArtifacts', () => {
             },
           },
         },
+        '/admin/auth/login': {
+          post: {
+            operationId: 'loginAdmin',
+            tags: ['Admin Auth'],
+            responses: { 200: { description: 'ok' } },
+          },
+        },
       },
       components: {
         schemas: {
@@ -69,11 +76,17 @@ describe('writeOpenApiArtifacts', () => {
       join(temporaryRoot, 'document', 'api', 'admin', 'organization.yaml'),
       'utf8',
     );
+    const authContract = await readFile(
+      join(temporaryRoot, 'document', 'api', 'admin', 'auth.yaml'),
+      'utf8',
+    );
 
     expect(organizationContract).toContain('listAdminBranches');
     expect(organizationContract).toContain('BranchDto:');
     expect(organizationContract).toContain('AddressDto:');
     expect(organizationContract).not.toContain('listAdminRoles');
     expect(organizationContract).not.toContain('RoleDto:');
+    expect(authContract).toContain('loginAdmin');
+    expect(authContract).not.toContain('listAdminBranches');
   });
 });

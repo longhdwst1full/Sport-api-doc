@@ -6,4 +6,10 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type ProductVariantDtoAttributes = { [key: string]: unknown };
+export interface CreateBrandDto {
+  code: string;
+  name: string;
+  slug: string;
+  description?: string;
+  logoAssetId?: string;
+}

@@ -8,6 +8,7 @@ import { hydrateLayout } from '@/app/store/layout.slice';
 import { readPersistedLayout } from '@/app/store/root.saga';
 import { adminStore } from '@/app/store/store';
 import { PermissionProvider } from '@/core/auth/permissions';
+import { AuthProvider } from '@/core/auth/auth-context';
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(createAdminQueryClient);
@@ -22,7 +23,9 @@ export function Providers({ children }: { children: ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <ConfigProvider theme={ADMIN_THEME}>
           <AntApp>
-            <PermissionProvider>{children}</PermissionProvider>
+            <AuthProvider>
+              <PermissionProvider>{children}</PermissionProvider>
+            </AuthProvider>
           </AntApp>
         </ConfigProvider>
       </QueryClientProvider>

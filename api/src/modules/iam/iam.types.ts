@@ -4,8 +4,12 @@ export type RoleStatus = 'ACTIVE' | 'INACTIVE';
 export enum ScopeType {
   GLOBAL = 'GLOBAL',
   BRANCH = 'BRANCH',
-  WAREHOUSE = 'WAREHOUSE',
-  OWN = 'OWN',
+}
+
+export enum SystemRoleCode {
+  OWNER = 'OWNER',
+  BRANCH_MANAGER = 'BRANCH_MANAGER',
+  STAFF = 'STAFF',
 }
 
 export interface Permission {
@@ -33,7 +37,6 @@ export interface UserRoleAssignment {
   roleCode: string;
   scopeType: ScopeType;
   branchId?: string;
-  warehouseId?: string;
   status: 'ACTIVE';
   validFrom: string;
 }
@@ -51,16 +54,8 @@ export interface UserWithAssignments extends User {
   assignments: UserRoleAssignment[];
 }
 
-export interface CreateRoleInput {
-  code: string;
-  name: string;
-  description?: string;
-  permissionCodes: string[];
-}
-
 export interface AssignUserRoleInput {
-  roleCode: string;
+  roleCode: SystemRoleCode;
   scopeType: ScopeType;
   branchId?: string;
-  warehouseId?: string;
 }

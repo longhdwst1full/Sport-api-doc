@@ -1,10 +1,14 @@
 import { ServiceUnavailableException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { v7 as uuidv7 } from 'uuid';
 import { PrismaService } from '../../database/prisma.service';
 import { WriteAuditLogInput, WrittenAuditLog } from './audit.types';
 
 export abstract class AuditWriter {
-  abstract write(input: WriteAuditLogInput): Promise<WrittenAuditLog>;
+  abstract write(
+    input: WriteAuditLogInput,
+    transaction?: Prisma.TransactionClient,
+  ): Promise<WrittenAuditLog>;
 }
 
 export class PrismaAuditWriter extends AuditWriter {
@@ -12,11 +16,14 @@ export class PrismaAuditWriter extends AuditWriter {
     super();
   }
 
-  async write(input: WriteAuditLogInput): Promise<WrittenAuditLog> {
+  async write(
+    input: WriteAuditLogInput,
+    transaction?: Prisma.TransactionClient,
+  ): Promise<WrittenAuditLog> {
     if (!this.prisma.isEnabled()) {
       throw new ServiceUnavailableException('Durable audit storage is not enabled');
     }
-    const result = await this.prisma.auditLog.create({
+    const result = await (transaction ?? this.prisma).auditLog.create({
       data: {
         id: uuidv7(),
         requestId: input.requestId,

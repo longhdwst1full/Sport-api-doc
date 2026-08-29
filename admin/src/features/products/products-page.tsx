@@ -1,4 +1,4 @@
-import { PlusOutlined, ReloadOutlined } from '@ant-design/icons';
+import { EditOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { Avatar, Button, Card, Input, Space, Table, Tag, Typography } from 'antd';
 import { useState } from 'react';
@@ -6,12 +6,14 @@ import { useDebounce } from 'use-debounce';
 import { PermissionGate } from '@/core/auth/permissions';
 import { useListAdminProducts } from '@/generated/api/catalog/catalog';
 import { ProductFormDrawer } from './product-form-drawer';
+import { ProductWorkflowDrawer } from './product-workflow-drawer';
 
 const money = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' });
 
 export function ProductsPage() {
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
+  const [selectedSlug, setSelectedSlug] = useState<string>();
   const [debouncedSearch] = useDebounce(search.trim(), 350);
   const queryClient = useQueryClient();
   const query = useListAdminProducts({
@@ -63,11 +65,13 @@ export function ProductsPage() {
               dataIndex: 'name',
               render: (_, row) => (
                 <Space>
-                  <Avatar shape="square" size={48} src={row.imageUrl} />
+                  <Avatar shape="square" size={48} src={row.imageUrl ?? undefined}>
+                    {row.name.slice(0, 1)}
+                  </Avatar>
                   <div>
                     <strong>{row.name}</strong>
                     <div className="text-xs text-gray-500">
-                      {row.brand} · {row.category}
+                      {row.productNo} · {row.brand ?? 'Chưa có brand'} · {row.primaryCategory ?? 'Chưa có danh mục'}
                     </div>
                   </div>
                 </Space>
@@ -75,21 +79,40 @@ export function ProductsPage() {
             },
             {
               title: 'Giá đã VAT',
-              dataIndex: 'price',
+              dataIndex: 'minPrice',
               align: 'right',
-              render: (value) => <strong>{money.format(value)}</strong>,
+              render: (value: string | null | undefined) => (
+                <strong>{value ? money.format(Number(value)) : 'Chưa có giá'}</strong>
+              ),
             },
             {
-              title: 'Tồn',
-              dataIndex: 'available',
+              title: 'Trạng thái',
+              dataIndex: 'status',
               align: 'center',
-              render: (value) => (value ? <Tag color="green">Còn hàng</Tag> : <Tag>Hết hàng</Tag>),
+              render: (value: string) => (
+                <Tag color={value === 'PUBLISHED' ? 'green' : value === 'DRAFT' ? 'blue' : 'default'}>{value}</Tag>
+              ),
             },
-            { title: 'Đánh giá', dataIndex: 'rating', align: 'center' },
+            { title: 'Version', dataIndex: 'version', align: 'center' },
+            {
+              title: 'Thao tác',
+              key: 'actions',
+              align: 'right',
+              render: (_, row) => (
+                <Button icon={<EditOutlined />} onClick={() => setSelectedSlug(row.slug)}>
+                  Chi tiết
+                </Button>
+              ),
+            },
           ]}
         />
       </Card>
-      <ProductFormDrawer open={createOpen} onClose={() => setCreateOpen(false)} />
+      <ProductFormDrawer
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={setSelectedSlug}
+      />
+      <ProductWorkflowDrawer slug={selectedSlug} onClose={() => setSelectedSlug(undefined)} />
     </div>
   );
 }

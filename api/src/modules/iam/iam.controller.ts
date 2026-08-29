@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, Req } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -14,14 +14,17 @@ import {
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { ErrorResponseDto } from '../../common/exceptions/error-response.dto';
 import {
+  AuthenticatedRequest,
+  getAuthPrincipal,
+  getMutationContext,
+} from '../../common/request/request-context';
+import {
   ActiveLookupResponseDto,
   ActiveSearchQueryDto,
 } from '../../common/pagination/active-search.dto';
 import {
   AssignUserRoleDto,
-  CreateRoleDto,
   PermissionListDto,
-  RoleDto,
   RoleListDto,
   UserListDto,
   UserRoleAssignmentDto,
@@ -38,15 +41,15 @@ export class IamController {
   @RequirePermissions('iam.user.view')
   @ApiOperation({ operationId: 'listAdminUsers', summary: 'List staff users with role scopes' })
   @ApiOkResponse({ type: UserListDto })
-  listUsers(): UserListDto {
-    return this.iam.listUsers();
+  listUsers(@Req() request: AuthenticatedRequest): Promise<UserListDto> {
+    return this.iam.listUsers(getAuthPrincipal(request));
   }
 
   @Get('roles')
   @RequirePermissions('iam.role.view')
   @ApiOperation({ operationId: 'listAdminRoles', summary: 'List IAM roles' })
   @ApiOkResponse({ type: RoleListDto })
-  listRoles(): RoleListDto {
+  listRoles(): Promise<RoleListDto> {
     return this.iam.listRoles();
   }
 
@@ -68,21 +71,11 @@ export class IamController {
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   @ApiUnauthorizedResponse({ type: ErrorResponseDto })
   @ApiForbiddenResponse({ type: ErrorResponseDto })
-  searchActiveRoles(@Query() query: ActiveSearchQueryDto): ActiveLookupResponseDto {
-    return this.iam.searchActiveRoles(query);
-  }
-
-  @Post('roles')
-  @RequirePermissions('iam.role.manage')
-  @ApiOperation({ operationId: 'createAdminRole', summary: 'Create a role from known permissions' })
-  @ApiCreatedResponse({ type: RoleDto })
-  @ApiBadRequestResponse({
-    type: ErrorResponseDto,
-    description: 'One or more permission codes are unknown',
-  })
-  @ApiConflictResponse({ type: ErrorResponseDto, description: 'Role code already exists' })
-  createRole(@Body() input: CreateRoleDto): RoleDto {
-    return this.iam.createRole(input);
+  searchActiveRoles(
+    @Query() query: ActiveSearchQueryDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ActiveLookupResponseDto> {
+    return this.iam.searchActiveRoles(query, getAuthPrincipal(request));
   }
 
   @Post('users/:userId/role-assignments')
@@ -104,7 +97,13 @@ export class IamController {
   assignRole(
     @Param('userId', new ParseUUIDPipe()) userId: string,
     @Body() input: AssignUserRoleDto,
-  ): UserRoleAssignmentDto {
-    return this.iam.assignRole(userId, input);
+    @Req() request: AuthenticatedRequest,
+  ): Promise<UserRoleAssignmentDto> {
+    return this.iam.assignRole(
+      userId,
+      input,
+      getMutationContext(request),
+      getAuthPrincipal(request),
+    );
   }
 }

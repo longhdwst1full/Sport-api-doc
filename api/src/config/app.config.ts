@@ -15,6 +15,12 @@ export default registerAs('app', () => ({
     'http://localhost:5173',
   ]),
   authBypass: process.env.AUTH_BYPASS === 'true',
+  jwt: {
+    accessSecret:
+      process.env.JWT_ACCESS_SECRET ?? 'development-only-change-this-jwt-secret',
+    accessTtlSeconds: Number(process.env.JWT_ACCESS_TTL_SECONDS ?? 900),
+    refreshTtlSeconds: Number(process.env.JWT_REFRESH_TTL_SECONDS ?? 2_592_000),
+  },
   logLevel: process.env.LOG_LEVEL ?? 'info',
   rateLimit: {
     ttlMs: Number(process.env.RATE_LIMIT_TTL_MS ?? 60_000),

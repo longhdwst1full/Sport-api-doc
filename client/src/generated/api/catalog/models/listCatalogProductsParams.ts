@@ -5,6 +5,7 @@
  * Contract for storefront and admin applications
  * OpenAPI spec version: 1.0.0
  */
+import type { ListCatalogProductsStatus } from './listCatalogProductsStatus';
 
 export type ListCatalogProductsParams = {
   /**
@@ -18,4 +19,5 @@ export type ListCatalogProductsParams = {
   limit?: number;
   search?: string;
   category?: string;
+  status?: ListCatalogProductsStatus;
 };

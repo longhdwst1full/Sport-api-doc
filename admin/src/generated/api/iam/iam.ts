@@ -24,10 +24,8 @@ import type {
 import type {
   ActiveLookupResponseDto,
   AssignUserRoleDto,
-  CreateRoleDto,
   ErrorResponseDto,
   PermissionListDto,
-  RoleDto,
   RoleListDto,
   SearchActiveAdminRolesParams,
   UserListDto,
@@ -237,87 +235,6 @@ export function useListAdminRoles<
 
   return query;
 }
-
-/**
- * @summary Create a role from known permissions
- */
-export const createAdminRole = (createRoleDto: BodyType<CreateRoleDto>, signal?: AbortSignal) => {
-  return apiFetcher<RoleDto>({
-    url: `/api/v1/admin/iam/roles`,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    data: createRoleDto,
-    signal,
-  });
-};
-
-export const getCreateAdminRoleMutationOptions = <
-  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof createAdminRole>>,
-    TError,
-    { data: BodyType<CreateRoleDto> },
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof createAdminRole>>,
-  TError,
-  { data: BodyType<CreateRoleDto> },
-  TContext
-> => {
-  const mutationKey = ['createAdminRole'];
-  const { mutation: mutationOptions } = options
-    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof createAdminRole>>,
-    { data: BodyType<CreateRoleDto> }
-  > = (props) => {
-    const { data } = props ?? {};
-
-    return createAdminRole(data);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type CreateAdminRoleMutationResult = NonNullable<
-  Awaited<ReturnType<typeof createAdminRole>>
->;
-export type CreateAdminRoleMutationBody = BodyType<CreateRoleDto>;
-export type CreateAdminRoleMutationError = ErrorType<ErrorResponseDto | ErrorResponseDto>;
-
-/**
- * @summary Create a role from known permissions
- */
-export const useCreateAdminRole = <
-  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof createAdminRole>>,
-      TError,
-      { data: BodyType<CreateRoleDto> },
-      TContext
-    >;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof createAdminRole>>,
-  TError,
-  { data: BodyType<CreateRoleDto> },
-  TContext
-> => {
-  const mutationOptions = getCreateAdminRoleMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
-};
 
 /**
  * @summary List stable permission codes

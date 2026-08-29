@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, type ReactNode } from 'react';
+import { useAuth } from './auth-context';
 
 class PermissionSet extends Set<string> {
   constructor(
@@ -32,9 +33,10 @@ export function createPermissionSet(
 const PermissionContext = createContext<ReadonlySet<string>>(new Set());
 
 export function PermissionProvider({ children }: { children: ReactNode }) {
+  const { currentUser, developmentBypass } = useAuth();
   const permissions = createPermissionSet(
-    import.meta.env.VITE_DEV_PERMISSIONS ?? '',
-    shouldBypassPermissions(import.meta.env.DEV, import.meta.env.VITE_DEV_BYPASS_PERMISSIONS),
+    currentUser?.permissions.join(',') ?? import.meta.env.VITE_DEV_PERMISSIONS ?? '',
+    developmentBypass,
   );
   return <PermissionContext.Provider value={permissions}>{children}</PermissionContext.Provider>;
 }

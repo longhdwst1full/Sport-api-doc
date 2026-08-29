@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Req } from '@nestjs/common';
+import { AuthenticatedRequest, getMutationContext } from '../../common/request/request-context';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -35,7 +36,7 @@ export class OrganizationController {
   @RequirePermissions('org.branch.view')
   @ApiOperation({ operationId: 'listAdminBranches', summary: 'List sales branches' })
   @ApiOkResponse({ type: BranchListDto })
-  listBranches(): BranchListDto {
+  listBranches(): Promise<BranchListDto> {
     return this.organization.listBranches();
   }
 
@@ -43,7 +44,7 @@ export class OrganizationController {
   @RequirePermissions('org.warehouse.view')
   @ApiOperation({ operationId: 'listAdminWarehouses', summary: 'List branch warehouses' })
   @ApiOkResponse({ type: WarehouseListDto })
-  listWarehouses(): WarehouseListDto {
+  listWarehouses(): Promise<WarehouseListDto> {
     return this.organization.listWarehouses();
   }
 
@@ -57,7 +58,7 @@ export class OrganizationController {
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   @ApiUnauthorizedResponse({ type: ErrorResponseDto })
   @ApiForbiddenResponse({ type: ErrorResponseDto })
-  searchActiveBranches(@Query() query: ActiveSearchQueryDto): ActiveLookupResponseDto {
+  searchActiveBranches(@Query() query: ActiveSearchQueryDto): Promise<ActiveLookupResponseDto> {
     return this.organization.searchActiveBranches(query);
   }
 
@@ -73,7 +74,7 @@ export class OrganizationController {
   @ApiForbiddenResponse({ type: ErrorResponseDto })
   searchActiveWarehouses(
     @Query() query: ActiveWarehouseSearchQueryDto,
-  ): ActiveLookupResponseDto {
+  ): Promise<ActiveLookupResponseDto> {
     return this.organization.searchActiveWarehouses(query);
   }
 
@@ -88,7 +89,10 @@ export class OrganizationController {
     type: ErrorResponseDto,
     description: 'Branch or warehouse code already exists',
   })
-  createBranch(@Body() input: CreateBranchDto): BranchWithWarehouseDto {
-    return this.organization.createBranch(input);
+  createBranch(
+    @Body() input: CreateBranchDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<BranchWithWarehouseDto> {
+    return this.organization.createBranch(input, getMutationContext(request));
   }
 }

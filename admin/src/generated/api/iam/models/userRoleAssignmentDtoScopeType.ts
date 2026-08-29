@@ -13,6 +13,4 @@ export type UserRoleAssignmentDtoScopeType =
 export const UserRoleAssignmentDtoScopeType = {
   GLOBAL: 'GLOBAL',
   BRANCH: 'BRANCH',
-  WAREHOUSE: 'WAREHOUSE',
-  OWN: 'OWN',
 } as const;
