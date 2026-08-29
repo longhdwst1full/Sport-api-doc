@@ -1,17 +1,33 @@
 import { select, takeEvery } from 'redux-saga/effects';
-import { toggleSidebar } from './layout.slice';
+import {
+  closeNavigationTab,
+  openNavigationTab,
+  setSidebarCollapsed,
+  toggleSidebar,
+  type LayoutState,
+  type NavigationTab,
+} from './layout.slice';
 import type { RootState } from './store';
 
-const LAYOUT_STORAGE_KEY = 'dctd-admin-layout-v1';
+const LAYOUT_STORAGE_KEY = 'dctd-admin-layout-v2';
 
 function* persistLayout() {
-  const sidebarCollapsed: boolean = yield select(
-    (state: RootState) => state.layout.sidebarCollapsed,
-  );
-  localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify({ sidebarCollapsed }));
+  const layout: LayoutState = yield select((state: RootState) => state.layout);
+  localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(layout));
 }
 
-export function readPersistedLayout(): { sidebarCollapsed: boolean } | undefined {
+function isNavigationTab(value: unknown): value is NavigationTab {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'path' in value &&
+    typeof value.path === 'string' &&
+    'label' in value &&
+    typeof value.label === 'string'
+  );
+}
+
+export function readPersistedLayout(): LayoutState | undefined {
   try {
     const value = localStorage.getItem(LAYOUT_STORAGE_KEY);
     if (!value) return undefined;
@@ -20,9 +36,18 @@ export function readPersistedLayout(): { sidebarCollapsed: boolean } | undefined
       typeof parsed === 'object' &&
       parsed !== null &&
       'sidebarCollapsed' in parsed &&
-      typeof parsed.sidebarCollapsed === 'boolean'
+      typeof parsed.sidebarCollapsed === 'boolean' &&
+      'openTabs' in parsed &&
+      Array.isArray(parsed.openTabs) &&
+      parsed.openTabs.every(isNavigationTab) &&
+      'activePath' in parsed &&
+      (typeof parsed.activePath === 'string' || parsed.activePath === null)
     ) {
-      return { sidebarCollapsed: parsed.sidebarCollapsed };
+      return {
+        sidebarCollapsed: parsed.sidebarCollapsed,
+        openTabs: parsed.openTabs.slice(0, 12),
+        activePath: parsed.activePath,
+      };
     }
   } catch {
     localStorage.removeItem(LAYOUT_STORAGE_KEY);
@@ -31,5 +56,8 @@ export function readPersistedLayout(): { sidebarCollapsed: boolean } | undefined
 }
 
 export function* rootSaga() {
-  yield takeEvery(toggleSidebar.type, persistLayout);
+  yield takeEvery(
+    [toggleSidebar.type, setSidebarCollapsed.type, openNavigationTab.type, closeNavigationTab.type],
+    persistLayout,
+  );
 }

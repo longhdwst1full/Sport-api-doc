@@ -50,6 +50,317 @@
         ]
       }
     },
+    "/api/v1/admin/organization/branches": {
+      "get": {
+        "operationId": "listAdminBranches",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BranchListDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List sales branches",
+        "tags": [
+          "Admin Organization"
+        ]
+      },
+      "post": {
+        "operationId": "createAdminBranchWithWarehouse",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBranchDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BranchWithWarehouseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Branch or warehouse code already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a branch with its single V1 warehouse",
+        "tags": [
+          "Admin Organization"
+        ]
+      }
+    },
+    "/api/v1/admin/organization/warehouses": {
+      "get": {
+        "operationId": "listAdminWarehouses",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WarehouseListDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List branch warehouses",
+        "tags": [
+          "Admin Organization"
+        ]
+      }
+    },
+    "/api/v1/admin/iam/users": {
+      "get": {
+        "operationId": "listAdminUsers",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserListDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List staff users with role scopes",
+        "tags": [
+          "Admin IAM"
+        ]
+      }
+    },
+    "/api/v1/admin/iam/roles": {
+      "get": {
+        "operationId": "listAdminRoles",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleListDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List IAM roles",
+        "tags": [
+          "Admin IAM"
+        ]
+      },
+      "post": {
+        "operationId": "createAdminRole",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRoleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "One or more permission codes are unknown",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Role code already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a role from known permissions",
+        "tags": [
+          "Admin IAM"
+        ]
+      }
+    },
+    "/api/v1/admin/iam/permissions": {
+      "get": {
+        "operationId": "listAdminPermissions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermissionListDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List stable permission codes",
+        "tags": [
+          "Admin IAM"
+        ]
+      }
+    },
+    "/api/v1/admin/iam/users/{userId}/role-assignments": {
+      "post": {
+        "operationId": "assignAdminUserRole",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignUserRoleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserRoleAssignmentDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Scope identifiers do not match the scope type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User or role not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The same assignment already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Assign a role with a validated data scope",
+        "tags": [
+          "Admin IAM"
+        ]
+      }
+    },
     "/api/v1/catalog/products": {
       "get": {
         "operationId": "listCatalogProducts",
@@ -716,6 +1027,564 @@
           "p1Models"
         ]
       },
+      "AddressDto": {
+        "type": "object",
+        "properties": {
+          "addressLine": {
+            "type": "string",
+            "example": "123 Nguyễn Văn Linh"
+          },
+          "district": {
+            "type": "string",
+            "example": "Quận 7"
+          },
+          "province": {
+            "type": "string",
+            "example": "TP. Hồ Chí Minh"
+          }
+        },
+        "required": [
+          "addressLine",
+          "district",
+          "province"
+        ]
+      },
+      "BranchDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "example": "CN-HCM-01"
+          },
+          "name": {
+            "type": "string",
+            "example": "Chi nhánh Hồ Chí Minh"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "INACTIVE"
+            ]
+          },
+          "phone": {
+            "type": "string",
+            "example": "028 7300 8899"
+          },
+          "email": {
+            "type": "string",
+            "example": "hcm@dctd.vn"
+          },
+          "address": {
+            "$ref": "#/components/schemas/AddressDto"
+          },
+          "timezone": {
+            "type": "string",
+            "example": "Asia/Ho_Chi_Minh"
+          },
+          "version": {
+            "type": "number",
+            "example": 0
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "status",
+          "address",
+          "timezone",
+          "version"
+        ]
+      },
+      "BranchListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BranchDto"
+            }
+          },
+          "total": {
+            "type": "number",
+            "example": 2
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ]
+      },
+      "WarehouseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "branchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "example": "KHO-HCM-01"
+          },
+          "name": {
+            "type": "string",
+            "example": "Kho bán hàng Hồ Chí Minh"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "INACTIVE"
+            ]
+          },
+          "isPrimary": {
+            "type": "boolean",
+            "example": true
+          },
+          "version": {
+            "type": "number",
+            "example": 0
+          }
+        },
+        "required": [
+          "id",
+          "branchId",
+          "code",
+          "name",
+          "status",
+          "isPrimary",
+          "version"
+        ]
+      },
+      "WarehouseListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WarehouseDto"
+            }
+          },
+          "total": {
+            "type": "number",
+            "example": 2
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ]
+      },
+      "CreateWarehouseInputDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "KHO-DN-01"
+          },
+          "name": {
+            "type": "string",
+            "example": "Kho bán hàng Đà Nẵng"
+          }
+        },
+        "required": [
+          "code",
+          "name"
+        ]
+      },
+      "CreateBranchDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "CN-DN-01"
+          },
+          "name": {
+            "type": "string",
+            "example": "Chi nhánh Đà Nẵng"
+          },
+          "phone": {
+            "type": "string",
+            "example": "0236 7300 8899"
+          },
+          "email": {
+            "type": "string",
+            "example": "danang@dctd.vn"
+          },
+          "address": {
+            "$ref": "#/components/schemas/AddressDto"
+          },
+          "warehouse": {
+            "$ref": "#/components/schemas/CreateWarehouseInputDto"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "address",
+          "warehouse"
+        ]
+      },
+      "BranchWithWarehouseDto": {
+        "type": "object",
+        "properties": {
+          "branch": {
+            "$ref": "#/components/schemas/BranchDto"
+          },
+          "warehouse": {
+            "$ref": "#/components/schemas/WarehouseDto"
+          }
+        },
+        "required": [
+          "branch",
+          "warehouse"
+        ]
+      },
+      "ErrorResponseDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 400
+          },
+          "code": {
+            "type": "string",
+            "example": "VALIDATION_ERROR"
+          },
+          "message": {
+            "type": "string",
+            "example": "Request validation failed"
+          },
+          "details": {
+            "type": "object"
+          },
+          "path": {
+            "type": "string",
+            "example": "/api/v1/catalog/products"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requestId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "statusCode",
+          "code",
+          "message",
+          "path",
+          "timestamp"
+        ]
+      },
+      "UserRoleAssignmentDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "roleId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "roleCode": {
+            "type": "string"
+          },
+          "scopeType": {
+            "type": "string",
+            "enum": [
+              "GLOBAL",
+              "BRANCH",
+              "WAREHOUSE",
+              "OWN"
+            ]
+          },
+          "branchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE"
+            ]
+          },
+          "validFrom": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "roleId",
+          "roleCode",
+          "scopeType",
+          "status",
+          "validFrom"
+        ]
+      },
+      "UserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string",
+            "example": "Long Hoàng"
+          },
+          "maskedEmail": {
+            "type": "string",
+            "example": "lo***@dctd.vn"
+          },
+          "userType": {
+            "type": "string",
+            "enum": [
+              "STAFF",
+              "SYSTEM"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "INVITED",
+              "LOCKED"
+            ]
+          },
+          "permissionVersion": {
+            "type": "number",
+            "example": 1
+          },
+          "assignments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserRoleAssignmentDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "displayName",
+          "maskedEmail",
+          "userType",
+          "status",
+          "permissionVersion",
+          "assignments"
+        ]
+      },
+      "UserListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ]
+      },
+      "RoleDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "example": "BRANCH_MANAGER"
+          },
+          "name": {
+            "type": "string",
+            "example": "Branch Manager"
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "INACTIVE"
+            ]
+          },
+          "system": {
+            "type": "boolean"
+          },
+          "permissionCodes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "version": {
+            "type": "number",
+            "example": 0
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "status",
+          "system",
+          "permissionCodes",
+          "version"
+        ]
+      },
+      "RoleListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RoleDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ]
+      },
+      "PermissionDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "org.branch.view"
+          },
+          "module": {
+            "type": "string",
+            "example": "Organization"
+          },
+          "action": {
+            "type": "string",
+            "example": "view"
+          },
+          "sensitive": {
+            "type": "boolean",
+            "example": false
+          }
+        },
+        "required": [
+          "code",
+          "module",
+          "action",
+          "sensitive"
+        ]
+      },
+      "PermissionListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PermissionDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ]
+      },
+      "CreateRoleDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "CONTENT_EDITOR"
+          },
+          "name": {
+            "type": "string",
+            "example": "Content Editor"
+          },
+          "description": {
+            "type": "string"
+          },
+          "permissionCodes": {
+            "example": [
+              "cms.content.view",
+              "cms.content.manage"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "permissionCodes"
+        ]
+      },
+      "AssignUserRoleDto": {
+        "type": "object",
+        "properties": {
+          "roleCode": {
+            "type": "string",
+            "example": "BRANCH_MANAGER"
+          },
+          "scopeType": {
+            "type": "string",
+            "enum": [
+              "GLOBAL",
+              "BRANCH",
+              "WAREHOUSE",
+              "OWN"
+            ]
+          },
+          "branchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "roleCode",
+          "scopeType"
+        ]
+      },
       "ProductSummaryDto": {
         "type": "object",
         "properties": {
@@ -1008,44 +1877,6 @@
           "availableQuantity",
           "gallery",
           "variants"
-        ]
-      },
-      "ErrorResponseDto": {
-        "type": "object",
-        "properties": {
-          "statusCode": {
-            "type": "number",
-            "example": 400
-          },
-          "code": {
-            "type": "string",
-            "example": "VALIDATION_ERROR"
-          },
-          "message": {
-            "type": "string",
-            "example": "Request validation failed"
-          },
-          "details": {
-            "type": "object"
-          },
-          "path": {
-            "type": "string",
-            "example": "/api/v1/catalog/products"
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "requestId": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "statusCode",
-          "code",
-          "message",
-          "path",
-          "timestamp"
         ]
       },
       "CreateProductDto": {

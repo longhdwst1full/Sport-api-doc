@@ -8,88 +8,87 @@ import {
   SafetyCertificateOutlined,
   ShoppingCartOutlined,
   TeamOutlined,
-} from "@ant-design/icons";
-import type { ReactNode } from "react";
+} from '@ant-design/icons';
+import type { ReactNode } from 'react';
 
 export interface NavigationItem {
   path: string;
   label: string;
   icon: ReactNode;
-  group: "overview" | "sales" | "catalog" | "experience" | "system";
+  group: 'overview' | 'sales' | 'catalog' | 'experience' | 'system';
   permission?: string;
 }
 
-export const NAVIGATION_GROUP_LABELS: Record<NavigationItem["group"], string> =
-  {
-    overview: "Tổng quan",
-    sales: "Bán hàng",
-    catalog: "Sản phẩm & kho",
-    experience: "Nội dung & trải nghiệm",
-    system: "Hệ thống",
-  };
+export const NAVIGATION_GROUP_LABELS: Record<NavigationItem['group'], string> = {
+  overview: 'Tổng quan',
+  sales: 'Bán hàng',
+  catalog: 'Sản phẩm & kho',
+  experience: 'Nội dung & trải nghiệm',
+  system: 'Hệ thống',
+};
 
 export const NAVIGATION_ITEMS: NavigationItem[] = [
   {
-    path: "/",
-    label: "Bảng điều khiển",
-    group: "overview",
+    path: '/',
+    label: 'Bảng điều khiển',
+    group: 'overview',
     icon: <DashboardOutlined />,
-    permission: "system.module.view",
+    permission: 'system.module.view',
   },
   {
-    path: "/orders",
-    label: "Đơn hàng",
-    group: "sales",
+    path: '/orders',
+    label: 'Đơn hàng',
+    group: 'sales',
     icon: <ShoppingCartOutlined />,
-    permission: "order.view",
+    permission: 'order.view',
   },
   {
-    path: "/customers",
-    label: "Khách hàng",
-    group: "sales",
+    path: '/customers',
+    label: 'Khách hàng',
+    group: 'sales',
     icon: <TeamOutlined />,
-    permission: "customer.view",
+    permission: 'customer.view',
   },
   {
-    path: "/products",
-    label: "Sản phẩm",
-    group: "catalog",
+    path: '/products',
+    label: 'Sản phẩm',
+    group: 'catalog',
     icon: <AppstoreOutlined />,
-    permission: "catalog.product.view",
+    permission: 'catalog.product.view',
   },
   {
-    path: "/inventory",
-    label: "Kho hàng",
-    group: "catalog",
+    path: '/inventory',
+    label: 'Kho hàng',
+    group: 'catalog',
     icon: <InboxOutlined />,
-    permission: "inventory.stock.view",
+    permission: 'inventory.stock.view',
   },
   {
-    path: "/reviews",
-    label: "Đánh giá",
-    group: "experience",
+    path: '/reviews',
+    label: 'Đánh giá',
+    group: 'experience',
     icon: <CommentOutlined />,
-    permission: "review.moderate",
+    permission: 'review.moderate',
   },
   {
-    path: "/content",
-    label: "Nội dung",
-    group: "experience",
+    path: '/content',
+    label: 'Nội dung',
+    group: 'experience',
     icon: <FileTextOutlined />,
-    permission: "content.post.view",
+    permission: 'content.post.view',
   },
   {
-    path: "/organization",
-    label: "Chi nhánh & kho",
-    group: "system",
+    path: '/organization',
+    label: 'Chi nhánh & kho',
+    group: 'system',
     icon: <BankOutlined />,
-    permission: "organization.view",
+    permission: 'org.branch.view',
   },
   {
-    path: "/access",
-    label: "Người dùng & quyền",
-    group: "system",
+    path: '/access',
+    label: 'Người dùng & quyền',
+    group: 'system',
     icon: <SafetyCertificateOutlined />,
-    permission: "iam.user.view",
+    permission: 'iam.user.view',
   },
 ];

@@ -1,50 +1,50 @@
-import { lazy } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
-import { AdminLayout } from "@/layouts/admin-layout";
-import { PermissionRoute } from "@/core/auth/permission-route";
+import { lazy } from 'react';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import { AdminLayout } from '@/layouts/admin-layout';
+import { PermissionRoute } from '@/core/auth/permission-route';
 
 const DashboardPage = lazy(() =>
-  import("@/features/dashboard/dashboard-page").then((module) => ({
+  import('@/features/dashboard/dashboard-page').then((module) => ({
     default: module.DashboardPage,
   })),
 );
 const ProductsPage = lazy(() =>
-  import("@/features/products/products-page").then((module) => ({
+  import('@/features/products/products-page').then((module) => ({
     default: module.ProductsPage,
   })),
 );
 const InventoryPage = lazy(() =>
-  import("@/features/inventory/inventory-page").then((module) => ({
+  import('@/features/inventory/inventory-page').then((module) => ({
     default: module.InventoryPage,
   })),
 );
 const ContentPage = lazy(() =>
-  import("@/features/content/content-page").then((module) => ({
+  import('@/features/content/content-page').then((module) => ({
     default: module.ContentPage,
   })),
 );
 const ReviewsPage = lazy(() =>
-  import("@/features/reviews/reviews-page").then((module) => ({
+  import('@/features/reviews/reviews-page').then((module) => ({
     default: module.ReviewsPage,
   })),
 );
 const OrdersPage = lazy(() =>
-  import("@/features/orders/orders-page").then((module) => ({
+  import('@/features/orders/orders-page').then((module) => ({
     default: module.OrdersPage,
   })),
 );
 const CustomersPage = lazy(() =>
-  import("@/features/customers/customers-page").then((module) => ({
+  import('@/features/customers/customers-page').then((module) => ({
     default: module.CustomersPage,
   })),
 );
 const OrganizationPage = lazy(() =>
-  import("@/features/organization/organization-page").then((module) => ({
+  import('@/features/organization/organization-page').then((module) => ({
     default: module.OrganizationPage,
   })),
 );
 const AccessPage = lazy(() =>
-  import("@/features/access/access-page").then((module) => ({
+  import('@/features/access/access-page').then((module) => ({
     default: module.AccessPage,
   })),
 );
@@ -112,7 +112,7 @@ export function AppRoutes() {
         <Route
           path="organization"
           element={
-            <PermissionRoute permission="organization.view">
+            <PermissionRoute permission="org.branch.view">
               <OrganizationPage />
             </PermissionRoute>
           }

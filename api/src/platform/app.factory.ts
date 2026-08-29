@@ -1,8 +1,9 @@
 import compression from 'compression';
 import helmet from 'helmet';
-import { INestApplication, Logger, ValidationPipe } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, OpenAPIObject, SwaggerModule } from '@nestjs/swagger';
+import { Logger as PinoLogger } from 'nestjs-pino';
 
 import { AppModule } from '../app.module';
 import { HttpExceptionFilter } from './http/http-exception.filter';
@@ -30,8 +31,11 @@ export async function createApplication(
   options: CreateApplicationOptions,
 ): Promise<INestApplication> {
   const app = await NestFactory.create(AppModule, {
-    logger: options.logger ? ['log', 'error', 'warn', 'debug'] : false,
+    bufferLogs: options.logger,
+    logger: options.logger ? undefined : false,
   });
+
+  if (options.logger) app.useLogger(app.get(PinoLogger));
 
   app.setGlobalPrefix('api/v1');
   app.use(helmet({ contentSecurityPolicy: false }));
@@ -56,6 +60,6 @@ export async function createApplication(
   }
 
   await app.init();
-  Logger.log('Application initialized', 'Bootstrap');
+  if (options.logger) app.get(PinoLogger).log('Application initialized', 'Bootstrap');
   return app;
 }

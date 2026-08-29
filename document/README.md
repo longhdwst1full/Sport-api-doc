@@ -17,16 +17,17 @@ Mục tiêu: hệ thống web/PWA bán thiết bị tập luyện, dụng cụ v
 
 ## Bộ tài liệu
 
-| File | Nội dung |
-|---|---|
-| `01-scope-and-source-review.md` | Phạm vi, giả định và kết quả tham khảo source |
-| `02-function-catalog.csv` | Danh mục chức năng V1 theo actor, priority và acceptance |
-| `03-database-v1.md` | Quy ước dữ liệu, quan hệ, transaction và index |
-| `04-table-catalog.csv` | Danh mục bảng V1, khóa, constraint, retention |
-| `05-rbac-permissions.csv` | Mã quyền ổn định và data scope áp dụng |
-| `06-rules-and-state-machines.md` | Business rules, state machine và invariant |
-| `07-delivery-plan.md` | Thứ tự triển khai, Definition of Done và test bắt buộc |
-| `08-open-decisions.csv` | Các quyết định cần xác nhận trước khi viết migration |
+| File                             | Nội dung                                                              |
+| -------------------------------- | --------------------------------------------------------------------- |
+| `01-scope-and-source-review.md`  | Phạm vi, giả định và kết quả tham khảo source                         |
+| `02-function-catalog.csv`        | Danh mục chức năng V1 theo actor, priority và acceptance              |
+| `03-database-v1.md`              | Quy ước dữ liệu, quan hệ, transaction và index                        |
+| `04-table-catalog.csv`           | Danh mục bảng V1, khóa, constraint, retention                         |
+| `05-rbac-permissions.csv`        | Mã quyền ổn định và data scope áp dụng                                |
+| `06-rules-and-state-machines.md` | Business rules, state machine và invariant                            |
+| `07-delivery-plan.md`            | Thứ tự triển khai, Definition of Done và test bắt buộc                |
+| `08-open-decisions.csv`          | Các quyết định cần xác nhận trước khi viết migration                  |
+| `14-backend-review-sprint-1.md`  | Đánh giá backend, phạm vi, API và checklist Sprint 1 Organization/IAM |
 
 ## Cách dùng
 
