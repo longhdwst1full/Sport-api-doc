@@ -9,6 +9,7 @@ Scope: `api/` only. Do not load storefront rendering/PWA rules or admin UI rules
 - Controllers map HTTP, application services execute use cases, domain policy owns transitions, and persistence adapters remain replaceable.
 - Catalog, Inventory, CMS and Reviews are active in-memory vertical slices; other registered modules are intentionally scaffolded until their delivery wave.
 - The API owns authorization, validation, idempotency and audit requirements.
+- Add backend dependencies with `yarn workspace @dctd/api add <package>` (or `--dev`), never at the workspace root.
 
 ## Required routing
 

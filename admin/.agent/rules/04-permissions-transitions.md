@@ -8,3 +8,4 @@
 - High-risk actions show current state, requested action and business consequence before confirmation.
 - Do not import the securities maker-checker workflow globally; approval is enabled only for modules whose business policy requires it.
 - `VITE_DEV_PERMISSIONS` and the `x-permissions` header are local scaffolding only. They are not identity, scope enforcement or a production authorization mechanism.
+- Admin FE defaults to bypassing UI permission gates only when `import.meta.env.DEV` and `VITE_DEV_BYPASS_PERMISSIONS=true` (or unset). Set the flag to `false` to test the explicit `VITE_DEV_PERMISSIONS` list; production always ignores the bypass.

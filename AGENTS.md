@@ -24,12 +24,15 @@ Generated SDKs are separate application artifacts. Neither frontend imports sour
 
 - Use Yarn 1 only and retain the single root `yarn.lock`.
 - Root commands may orchestrate workspaces but do not override an application's local quality gates.
+- Install every application runtime/build/test dependency in its owning workspace with `yarn workspace @dctd/<app> add <package>` (or `--dev`). Do not use root `yarn add -W` for an application dependency.
+- Root `devDependencies` are limited to monorepo orchestration tools used by root scripts. Each app must remain deployable from its own `package.json` plus the root lockfile.
+- Yarn 1 may physically hoist packages into the root `node_modules`; dependency ownership is determined by the app `package.json`, not the install location.
 - Do not commit generated build output, caches, `node_modules`, secrets or local environment files.
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **dctd-utc** (845 symbols, 1232 relationships, 19 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **dctd-utc** (859 symbols, 1262 relationships, 21 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > Index stale? Run `node .gitnexus/run.cjs analyze` from the project root — it auto-selects an available runner. No `.gitnexus/run.cjs` yet? `npx gitnexus analyze` (npm 11 crash → `npm i -g gitnexus`; #1939).
 
