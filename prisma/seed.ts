@@ -151,7 +151,10 @@ async function seed(transaction: Prisma.TransactionClient): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  await prisma.$transaction(seed);
+  await prisma.$transaction(seed, {
+    maxWait: 10_000,
+    timeout: 60_000,
+  });
 }
 
 void main().finally(async () => prisma.$disconnect());
