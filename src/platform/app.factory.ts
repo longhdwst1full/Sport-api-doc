@@ -39,12 +39,15 @@ export async function createApplication(
 
   if (options.logger) app.useLogger(app.get(PinoLogger));
   const config = app.get(ConfigService);
+  const corsOrigins = config.get<string[]>('app.corsOrigins') ?? ['*'];
+  const allowAnyOrigin = corsOrigins.includes('*');
 
   app.setGlobalPrefix('api/v1');
   app.use(helmet({ contentSecurityPolicy: false }));
   app.use(compression());
   app.enableCors({
-    origin: corsOrigins.includes('*') ? true : corsOrigins,
+    // Reflect the request origin for wildcard mode because credentialed CORS cannot emit `*`.
+    origin: allowAnyOrigin ? true : corsOrigins,
     credentials: true,
   });
   app.useGlobalPipes(

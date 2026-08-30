@@ -25,7 +25,6 @@ export class PrismaIamRepository extends IamRepository {
     const rows = await this.prisma.user.findMany({
       where: {
         userType: 'STAFF',
-        deletedAt: null,
         ...(branchIds
           ? { roleAssignments: { some: { status: 'ACTIVE', branchId: { in: branchIds } } } }
           : {}),
@@ -61,7 +60,7 @@ export class PrismaIamRepository extends IamRepository {
 
   async listRoles(): Promise<Role[]> {
     const rows = await this.prisma.role.findMany({
-      where: { status: 'ACTIVE', deletedAt: null },
+      where: { status: 'ACTIVE' },
       include: { permissions: { include: { permission: true } } },
       orderBy: { code: 'asc' },
     });
@@ -84,7 +83,7 @@ export class PrismaIamRepository extends IamRepository {
   async hasUser(id: string): Promise<boolean> {
     return (
       (await this.prisma.user.count({
-        where: { id, userType: 'STAFF', deletedAt: null, status: { not: 'INACTIVE' } },
+        where: { id, userType: 'STAFF', status: { not: 'INACTIVE' } },
       })) > 0
     );
   }

@@ -1,4 +1,15 @@
-import { Body, Controller, Get, Post, Query, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+} from '@nestjs/common';
 import { AuthenticatedRequest, getMutationContext } from '../../common/request/request-context';
 import {
   ApiBadRequestResponse,
@@ -6,6 +17,7 @@ import {
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiForbiddenResponse,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
@@ -21,7 +33,9 @@ import {
 import {
   BranchListDto,
   BranchWithWarehouseDto,
+  ChangeBranchStatusDto,
   CreateBranchDto,
+  UpdateBranchWithWarehouseDto,
   WarehouseListDto,
 } from './organization.dto';
 import { OrganizationService } from './organization.service';
@@ -94,5 +108,68 @@ export class OrganizationController {
     @Req() request: AuthenticatedRequest,
   ): Promise<BranchWithWarehouseDto> {
     return this.organization.createBranch(input, getMutationContext(request));
+  }
+
+  @Patch('branches/:id')
+  @RequirePermissions('org.branch.manage', 'org.warehouse.manage')
+  @ApiOperation({
+    operationId: 'updateAdminBranchWithWarehouse',
+    summary: 'Update a branch and its single V1 warehouse',
+  })
+  @ApiOkResponse({ type: BranchWithWarehouseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  updateBranch(
+    @Param('id') id: string,
+    @Body() input: UpdateBranchWithWarehouseDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<BranchWithWarehouseDto> {
+    return this.organization.updateBranch(id, input, getMutationContext(request));
+  }
+
+  @Post('branches/:id/deactivate')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions('org.branch.manage', 'org.warehouse.manage')
+  @ApiOperation({
+    operationId: 'deactivateAdminBranchWithWarehouse',
+    summary: 'Deactivate a branch and its V1 warehouse atomically',
+  })
+  @ApiOkResponse({ type: BranchWithWarehouseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  deactivateBranch(
+    @Param('id') id: string,
+    @Body() input: ChangeBranchStatusDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<BranchWithWarehouseDto> {
+    return this.organization.changeBranchStatus(
+      id,
+      'INACTIVE',
+      input,
+      getMutationContext(request),
+    );
+  }
+
+  @Post('branches/:id/activate')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions('org.branch.manage', 'org.warehouse.manage')
+  @ApiOperation({
+    operationId: 'activateAdminBranchWithWarehouse',
+    summary: 'Reactivate a branch and its V1 warehouse atomically',
+  })
+  @ApiOkResponse({ type: BranchWithWarehouseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  activateBranch(
+    @Param('id') id: string,
+    @Body() input: ChangeBranchStatusDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<BranchWithWarehouseDto> {
+    return this.organization.changeBranchStatus(
+      id,
+      'ACTIVE',
+      input,
+      getMutationContext(request),
+    );
   }
 }

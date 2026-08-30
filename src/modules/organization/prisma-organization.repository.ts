@@ -4,7 +4,60 @@ import { MutationContext } from '../../common/request/request-context';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditWriter } from '../audit/audit.writer';
 import { OrganizationRepository } from './organization.repository';
-import { Address, Branch, BranchWithWarehouse, Warehouse } from './organization.types';
+import {
+  Address,
+  Branch,
+  BranchWithWarehouse,
+  BranchWithWarehouseUpdate,
+  OrganizationStatus,
+  Warehouse,
+} from './organization.types';
+
+class OrganizationVersionConflictError extends Error {}
+
+function toBranch(row: {
+  id: string;
+  code: string;
+  name: string;
+  status: string;
+  phone: string | null;
+  email: string | null;
+  addressJson: Prisma.JsonValue;
+  timezone: string;
+  version: bigint;
+}): Branch {
+  return {
+    id: row.id,
+    code: row.code,
+    name: row.name,
+    status: row.status as Branch['status'],
+    ...(row.phone ? { phone: row.phone } : {}),
+    ...(row.email ? { email: row.email } : {}),
+    address: row.addressJson as unknown as Address,
+    timezone: row.timezone,
+    version: Number(row.version),
+  };
+}
+
+function toWarehouse(row: {
+  id: string;
+  branchId: string;
+  code: string;
+  name: string;
+  status: string;
+  isPrimary: boolean;
+  version: bigint;
+}): Warehouse {
+  return {
+    id: row.id,
+    branchId: row.branchId,
+    code: row.code,
+    name: row.name,
+    status: row.status as Warehouse['status'],
+    isPrimary: row.isPrimary,
+    version: Number(row.version),
+  };
+}
 
 @Injectable()
 export class PrismaOrganizationRepository extends OrganizationRepository {
@@ -17,36 +70,16 @@ export class PrismaOrganizationRepository extends OrganizationRepository {
 
   async listBranches(): Promise<Branch[]> {
     const rows = await this.prisma.branch.findMany({
-      where: { deletedAt: null },
       orderBy: [{ code: 'asc' }],
     });
-    return rows.map((row) => ({
-      id: row.id,
-      code: row.code,
-      name: row.name,
-      status: row.status as Branch['status'],
-      ...(row.phone ? { phone: row.phone } : {}),
-      ...(row.email ? { email: row.email } : {}),
-      address: row.addressJson as unknown as Address,
-      timezone: row.timezone,
-      version: Number(row.version),
-    }));
+    return rows.map(toBranch);
   }
 
   async listWarehouses(): Promise<Warehouse[]> {
     const rows = await this.prisma.warehouse.findMany({
-      where: { deletedAt: null },
       orderBy: [{ code: 'asc' }],
     });
-    return rows.map((row) => ({
-      id: row.id,
-      branchId: row.branchId,
-      code: row.code,
-      name: row.name,
-      status: row.status as Warehouse['status'],
-      isPrimary: row.isPrimary,
-      version: Number(row.version),
-    }));
+    return rows.map(toWarehouse);
   }
 
   async hasBranchCode(code: string): Promise<boolean> {
@@ -60,7 +93,7 @@ export class PrismaOrganizationRepository extends OrganizationRepository {
   async hasActiveBranch(id: string): Promise<boolean> {
     return (
       (await this.prisma.branch.count({
-        where: { id, status: 'ACTIVE', deletedAt: null },
+        where: { id, status: 'ACTIVE' },
       })) > 0
     );
   }
@@ -68,7 +101,7 @@ export class PrismaOrganizationRepository extends OrganizationRepository {
   async hasActiveWarehouse(id: string): Promise<boolean> {
     return (
       (await this.prisma.warehouse.count({
-        where: { id, status: 'ACTIVE', deletedAt: null },
+        where: { id, status: 'ACTIVE' },
       })) > 0
     );
   }
@@ -120,5 +153,154 @@ export class PrismaOrganizationRepository extends OrganizationRepository {
       );
       return { branch, warehouse };
     });
+  }
+
+  async updateBranchWithWarehouse(
+    branchId: string,
+    input: BranchWithWarehouseUpdate,
+    expectedVersion: number,
+    warehouseExpectedVersion: number,
+    context: MutationContext,
+  ): Promise<BranchWithWarehouse | null> {
+    try {
+      return await this.prisma.$transaction(async (transaction) => {
+        const currentBranch = await transaction.branch.findUnique({ where: { id: branchId } });
+        const currentWarehouse = await transaction.warehouse.findUnique({
+          where: { branchId },
+        });
+        if (
+          !currentBranch ||
+          !currentWarehouse ||
+          currentBranch.version !== BigInt(expectedVersion) ||
+          currentWarehouse.version !== BigInt(warehouseExpectedVersion)
+        ) {
+          throw new OrganizationVersionConflictError();
+        }
+        const branchResult = await transaction.branch.updateMany({
+          where: { id: branchId, version: BigInt(expectedVersion) },
+          data: {
+            name: input.name,
+            phone: input.phone,
+            email: input.email,
+            addressJson: input.address as unknown as Prisma.InputJsonValue,
+            version: { increment: 1 },
+            updatedBy: context.actorUserId,
+          },
+        });
+        const warehouseResult = await transaction.warehouse.updateMany({
+          where: {
+            id: currentWarehouse.id,
+            version: BigInt(warehouseExpectedVersion),
+          },
+          data: {
+            name: input.warehouseName,
+            version: { increment: 1 },
+            updatedBy: context.actorUserId,
+          },
+        });
+        if (branchResult.count !== 1 || warehouseResult.count !== 1) {
+          throw new OrganizationVersionConflictError();
+        }
+        const [updatedBranch, updatedWarehouse] = await Promise.all([
+          transaction.branch.findUniqueOrThrow({ where: { id: branchId } }),
+          transaction.warehouse.findUniqueOrThrow({ where: { id: currentWarehouse.id } }),
+        ]);
+        await this.audit.write(
+          {
+            requestId: context.requestId,
+            sequenceNo: 1,
+            actorType: 'USER',
+            actorUserId: context.actorUserId,
+            action: 'organization.branch.update',
+            entityType: 'BRANCH',
+            entityId: branchId,
+            before: {
+              branchName: currentBranch.name,
+              warehouseName: currentWarehouse.name,
+              branchVersion: Number(currentBranch.version),
+              warehouseVersion: Number(currentWarehouse.version),
+            },
+            after: {
+              branchName: updatedBranch.name,
+              warehouseName: updatedWarehouse.name,
+              branchVersion: Number(updatedBranch.version),
+              warehouseVersion: Number(updatedWarehouse.version),
+            },
+          },
+          transaction,
+        );
+        return { branch: toBranch(updatedBranch), warehouse: toWarehouse(updatedWarehouse) };
+      });
+    } catch (error) {
+      if (error instanceof OrganizationVersionConflictError) return null;
+      throw error;
+    }
+  }
+
+  async changeBranchStatus(
+    branchId: string,
+    status: OrganizationStatus,
+    expectedVersion: number,
+    warehouseExpectedVersion: number,
+    context: MutationContext,
+  ): Promise<BranchWithWarehouse | null> {
+    try {
+      return await this.prisma.$transaction(async (transaction) => {
+        const currentBranch = await transaction.branch.findUnique({ where: { id: branchId } });
+        const currentWarehouse = await transaction.warehouse.findUnique({
+          where: { branchId },
+        });
+        if (
+          !currentBranch ||
+          !currentWarehouse ||
+          currentBranch.version !== BigInt(expectedVersion) ||
+          currentWarehouse.version !== BigInt(warehouseExpectedVersion)
+        ) {
+          throw new OrganizationVersionConflictError();
+        }
+        const branchResult = await transaction.branch.updateMany({
+          where: { id: branchId, version: BigInt(expectedVersion) },
+          data: { status, version: { increment: 1 }, updatedBy: context.actorUserId },
+        });
+        const warehouseResult = await transaction.warehouse.updateMany({
+          where: {
+            id: currentWarehouse.id,
+            version: BigInt(warehouseExpectedVersion),
+          },
+          data: { status, version: { increment: 1 }, updatedBy: context.actorUserId },
+        });
+        if (branchResult.count !== 1 || warehouseResult.count !== 1) {
+          throw new OrganizationVersionConflictError();
+        }
+        const [updatedBranch, updatedWarehouse] = await Promise.all([
+          transaction.branch.findUniqueOrThrow({ where: { id: branchId } }),
+          transaction.warehouse.findUniqueOrThrow({ where: { id: currentWarehouse.id } }),
+        ]);
+        await this.audit.write(
+          {
+            requestId: context.requestId,
+            sequenceNo: 1,
+            actorType: 'USER',
+            actorUserId: context.actorUserId,
+            action:
+              status === 'ACTIVE'
+                ? 'organization.branch.activate'
+                : 'organization.branch.deactivate',
+            entityType: 'BRANCH',
+            entityId: branchId,
+            before: {
+              branchStatus: currentBranch.status,
+              warehouseStatus: currentWarehouse.status,
+            },
+            after: { branchStatus: status, warehouseStatus: status },
+          },
+          transaction,
+        );
+        return { branch: toBranch(updatedBranch), warehouse: toWarehouse(updatedWarehouse) };
+      });
+    } catch (error) {
+      if (error instanceof OrganizationVersionConflictError) return null;
+      throw error;
+    }
   }
 }

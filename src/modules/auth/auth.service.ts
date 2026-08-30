@@ -22,7 +22,7 @@ export class AuthService {
     this.ensureDatabaseEnabled();
     const normalizedEmail = input.email.trim().toLowerCase();
     const user = await this.prisma.user.findFirst({
-      where: { normalizedEmail, deletedAt: null },
+      where: { normalizedEmail },
     });
     if (
       !user?.passwordHash ||
@@ -56,8 +56,7 @@ export class AuthService {
             !session ||
             session.revokedAt ||
             session.expiresAt <= new Date() ||
-            session.user.status !== 'ACTIVE' ||
-            session.user.deletedAt
+            session.user.status !== 'ACTIVE'
           ) {
             throw new UnauthorizedException('Refresh token is invalid or expired');
           }
@@ -132,14 +131,13 @@ export class AuthService {
     if (
       !session ||
       session.user.status !== 'ACTIVE' ||
-      session.user.deletedAt ||
       session.user.permissionVersion.toString() !== payload.pv
     ) {
       throw new UnauthorizedException('Access token is no longer valid');
     }
 
     const activeAssignments = session.user.roleAssignments.filter(
-      ({ role }) => role.status === 'ACTIVE' && !role.deletedAt,
+      ({ role }) => role.status === 'ACTIVE',
     );
     return {
       userId: session.user.id,

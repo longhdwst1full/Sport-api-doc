@@ -1,11 +1,22 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, IsUUID, Matches, MaxLength } from 'class-validator';
+import {
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Matches,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class BrandDto {
   @ApiProperty({ format: 'uuid' }) id: string;
   @ApiProperty() code: string;
   @ApiProperty() name: string;
   @ApiProperty() slug: string;
+  @ApiPropertyOptional() description?: string;
+  @ApiPropertyOptional({ format: 'uuid' }) logoAssetId?: string;
   @ApiProperty({ enum: ['ACTIVE', 'INACTIVE'] }) status: 'ACTIVE' | 'INACTIVE';
   @ApiProperty() version: number;
 }
@@ -23,6 +34,9 @@ export class CategoryDto {
   @ApiProperty() slug: string;
   @ApiProperty() path: string;
   @ApiProperty() depth: number;
+  @ApiPropertyOptional() description?: string;
+  @ApiPropertyOptional({ format: 'uuid' }) imageAssetId?: string;
+  @ApiProperty() sortOrder: number;
   @ApiProperty({ enum: ['ACTIVE', 'INACTIVE'] }) status: 'ACTIVE' | 'INACTIVE';
   @ApiProperty() version: number;
 }
@@ -47,4 +61,36 @@ export class CreateCategoryDto {
   @ApiProperty() @IsString() @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/) @MaxLength(255) slug: string;
   @ApiPropertyOptional() @IsString() @IsOptional() description?: string;
   @ApiPropertyOptional({ format: 'uuid' }) @IsUUID() @IsOptional() imageAssetId?: string;
+  @ApiPropertyOptional({ minimum: 0, default: 0 }) @IsInt() @Min(0) @IsOptional() sortOrder?: number;
+}
+
+export class UpdateBrandDto {
+  @ApiPropertyOptional() @IsString() @IsNotEmpty() @MaxLength(255) @IsOptional() name?: string;
+  @ApiPropertyOptional()
+  @IsString()
+  @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+  @MaxLength(255)
+  @IsOptional()
+  slug?: string;
+  @ApiPropertyOptional() @IsString() @IsOptional() description?: string;
+  @ApiPropertyOptional({ format: 'uuid' }) @IsUUID() @IsOptional() logoAssetId?: string;
+  @ApiProperty({ minimum: 0 }) @IsInt() @Min(0) expectedVersion: number;
+}
+
+export class UpdateCategoryDto {
+  @ApiPropertyOptional() @IsString() @IsNotEmpty() @MaxLength(255) @IsOptional() name?: string;
+  @ApiPropertyOptional()
+  @IsString()
+  @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+  @MaxLength(255)
+  @IsOptional()
+  slug?: string;
+  @ApiPropertyOptional() @IsString() @IsOptional() description?: string;
+  @ApiPropertyOptional({ format: 'uuid' }) @IsUUID() @IsOptional() imageAssetId?: string;
+  @ApiPropertyOptional({ minimum: 0 }) @IsInt() @Min(0) @IsOptional() sortOrder?: number;
+  @ApiProperty({ minimum: 0 }) @IsInt() @Min(0) expectedVersion: number;
+}
+
+export class ChangeMasterStatusDto {
+  @ApiProperty({ minimum: 0 }) @IsInt() @Min(0) expectedVersion: number;
 }

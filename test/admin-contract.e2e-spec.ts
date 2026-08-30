@@ -35,6 +35,7 @@ describe('Admin v1 contract', () => {
     productId: '',
     variantId: '',
   };
+  const organizationFixture = { branchId: '', warehouseId: '' };
 
   beforeAll(async () => {
     const owner = await prisma.role.findUniqueOrThrow({ where: { code: 'OWNER' } });
@@ -93,12 +94,18 @@ describe('Admin v1 contract', () => {
     if (catalogFixture.brandId) {
       await prisma.brand.deleteMany({ where: { id: catalogFixture.brandId } });
     }
+    if (organizationFixture.warehouseId) {
+      await prisma.warehouse.deleteMany({ where: { id: organizationFixture.warehouseId } });
+    }
+    if (organizationFixture.branchId) {
+      await prisma.branch.deleteMany({ where: { id: organizationFixture.branchId } });
+    }
     await prisma.authSession.deleteMany({ where: { userId } });
     await prisma.userRoleAssignment.deleteMany({ where: { userId: { in: [userId, staffUserId] } } });
     await prisma.user.deleteMany({ where: { id: staffUserId } });
     await prisma.user.update({
       where: { id: userId },
-      data: { status: 'INACTIVE', deletedAt: new Date() },
+      data: { status: 'INACTIVE' },
     });
     await prisma.$disconnect();
   });
@@ -186,6 +193,22 @@ describe('Admin v1 contract', () => {
       .send({ code: `BR-${suffix.slice(-8)}`.toUpperCase(), name: 'E2E Brand', slug: `e2e-brand-${suffix}` })
       .expect(201);
     catalogFixture.brandId = (brandResponse.body as { id: string }).id;
+    const updatedBrand = await request(server())
+      .patch(`/api/v1/admin/catalog/brands/${catalogFixture.brandId}`)
+      .set(authorization)
+      .send({ name: 'E2E Brand Updated', expectedVersion: 0 })
+      .expect(200);
+    expect(updatedBrand.body).toMatchObject({ name: 'E2E Brand Updated', version: 1 });
+    await request(server())
+      .post(`/api/v1/admin/catalog/brands/${catalogFixture.brandId}/deactivate`)
+      .set(authorization)
+      .send({ expectedVersion: 1 })
+      .expect(200);
+    await request(server())
+      .post(`/api/v1/admin/catalog/brands/${catalogFixture.brandId}/activate`)
+      .set(authorization)
+      .send({ expectedVersion: 2 })
+      .expect(200);
 
     const categoryResponse = await request(server())
       .post('/api/v1/admin/catalog/categories')
@@ -193,6 +216,12 @@ describe('Admin v1 contract', () => {
       .send({ code: `CAT-${suffix.slice(-8)}`.toUpperCase(), name: 'E2E Category', slug: `e2e-category-${suffix}` })
       .expect(201);
     catalogFixture.categoryId = (categoryResponse.body as { id: string }).id;
+    const updatedCategory = await request(server())
+      .patch(`/api/v1/admin/catalog/categories/${catalogFixture.categoryId}`)
+      .set(authorization)
+      .send({ name: 'E2E Category Updated', expectedVersion: 0 })
+      .expect(200);
+    expect(updatedCategory.body).toMatchObject({ name: 'E2E Category Updated', version: 1 });
 
     const slug = `e2e-product-${suffix}`;
     const productResponse = await request(server())
@@ -246,5 +275,58 @@ describe('Admin v1 contract', () => {
         .send({ name, expectedVersion: 1 });
     const updateResponses = await Promise.all([update('Winner A'), update('Winner B')]);
     expect(updateResponses.map(({ status }) => status).sort()).toEqual([200, 409]);
+  });
+
+  it('creates, updates and changes branch plus warehouse status atomically', async () => {
+    const suffix = uuidv7().replaceAll('-', '').slice(-8).toUpperCase();
+    const authorization = { authorization: `Bearer ${accessToken}` };
+    const created = await request(server())
+      .post('/api/v1/admin/organization/branches')
+      .set(authorization)
+      .send({
+        code: `CN-${suffix}`,
+        name: 'E2E Branch',
+        address: { addressLine: '1 E2E Street', district: 'Hải Châu', province: 'Đà Nẵng' },
+        warehouse: { code: `KHO-${suffix}`, name: 'E2E Warehouse' },
+      })
+      .expect(201);
+    const createdBody = created.body as {
+      branch: { id: string; version: number };
+      warehouse: { id: string; version: number };
+    };
+    organizationFixture.branchId = createdBody.branch.id;
+    organizationFixture.warehouseId = createdBody.warehouse.id;
+
+    const updated = await request(server())
+      .patch(`/api/v1/admin/organization/branches/${organizationFixture.branchId}`)
+      .set(authorization)
+      .send({
+        name: 'E2E Branch Updated',
+        address: { addressLine: '2 E2E Street', district: 'Hải Châu', province: 'Đà Nẵng' },
+        warehouse: { name: 'E2E Warehouse Updated' },
+        expectedVersion: 0,
+        warehouseExpectedVersion: 0,
+      })
+      .expect(200);
+    expect(updated.body).toMatchObject({
+      branch: { name: 'E2E Branch Updated', version: 1 },
+      warehouse: { name: 'E2E Warehouse Updated', version: 1 },
+    });
+
+    const inactive = await request(server())
+      .post(`/api/v1/admin/organization/branches/${organizationFixture.branchId}/deactivate`)
+      .set(authorization)
+      .send({ expectedVersion: 1, warehouseExpectedVersion: 1 })
+      .expect(200);
+    expect(inactive.body).toMatchObject({
+      branch: { status: 'INACTIVE', version: 2 },
+      warehouse: { status: 'INACTIVE', version: 2 },
+    });
+
+    await request(server())
+      .post(`/api/v1/admin/organization/branches/${organizationFixture.branchId}/activate`)
+      .set(authorization)
+      .send({ expectedVersion: 2, warehouseExpectedVersion: 2 })
+      .expect(200);
   });
 });
