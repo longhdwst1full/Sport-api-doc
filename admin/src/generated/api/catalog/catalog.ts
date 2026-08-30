@@ -27,6 +27,7 @@ import type {
   BrandListDto,
   CategoryDto,
   CategoryListDto,
+  ChangeMasterStatusDto,
   ChangeProductStatusDto,
   CreateBrandDto,
   CreateBundleDto,
@@ -34,11 +35,14 @@ import type {
   CreatePriceDto,
   CreateProductDto,
   CreateVariantDto,
+  ErrorResponseDto,
   ListAdminProductsParams,
   ProductDetailDto,
   ProductListResponseDto,
   SearchActiveAdminBrandsParams,
   SearchActiveAdminCategoriesParams,
+  UpdateBrandDto,
+  UpdateCategoryDto,
   UpdateProductDto,
 } from './models';
 
@@ -336,6 +340,256 @@ export function useSearchActiveAdminBrands<
 
   return query;
 }
+
+/**
+ * @summary Update mutable brand fields
+ */
+export const updateAdminBrand = (id: string, updateBrandDto: BodyType<UpdateBrandDto>) => {
+  return apiFetcher<BrandDto>({
+    url: `/api/v1/admin/catalog/brands/${id}`,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    data: updateBrandDto,
+  });
+};
+
+export const getUpdateAdminBrandMutationOptions = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateAdminBrand>>,
+    TError,
+    { id: string; data: BodyType<UpdateBrandDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateAdminBrand>>,
+  TError,
+  { id: string; data: BodyType<UpdateBrandDto> },
+  TContext
+> => {
+  const mutationKey = ['updateAdminBrand'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateAdminBrand>>,
+    { id: string; data: BodyType<UpdateBrandDto> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateAdminBrand(id, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateAdminBrandMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateAdminBrand>>
+>;
+export type UpdateAdminBrandMutationBody = BodyType<UpdateBrandDto>;
+export type UpdateAdminBrandMutationError = ErrorType<ErrorResponseDto | ErrorResponseDto>;
+
+/**
+ * @summary Update mutable brand fields
+ */
+export const useUpdateAdminBrand = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateAdminBrand>>,
+      TError,
+      { id: string; data: BodyType<UpdateBrandDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateAdminBrand>>,
+  TError,
+  { id: string; data: BodyType<UpdateBrandDto> },
+  TContext
+> => {
+  const mutationOptions = getUpdateAdminBrandMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+/**
+ * @summary Deactivate a brand
+ */
+export const deactivateAdminBrand = (
+  id: string,
+  changeMasterStatusDto: BodyType<ChangeMasterStatusDto>,
+  signal?: AbortSignal,
+) => {
+  return apiFetcher<BrandDto>({
+    url: `/api/v1/admin/catalog/brands/${id}/deactivate`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: changeMasterStatusDto,
+    signal,
+  });
+};
+
+export const getDeactivateAdminBrandMutationOptions = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deactivateAdminBrand>>,
+    TError,
+    { id: string; data: BodyType<ChangeMasterStatusDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deactivateAdminBrand>>,
+  TError,
+  { id: string; data: BodyType<ChangeMasterStatusDto> },
+  TContext
+> => {
+  const mutationKey = ['deactivateAdminBrand'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deactivateAdminBrand>>,
+    { id: string; data: BodyType<ChangeMasterStatusDto> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return deactivateAdminBrand(id, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeactivateAdminBrandMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deactivateAdminBrand>>
+>;
+export type DeactivateAdminBrandMutationBody = BodyType<ChangeMasterStatusDto>;
+export type DeactivateAdminBrandMutationError = ErrorType<ErrorResponseDto | ErrorResponseDto>;
+
+/**
+ * @summary Deactivate a brand
+ */
+export const useDeactivateAdminBrand = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deactivateAdminBrand>>,
+      TError,
+      { id: string; data: BodyType<ChangeMasterStatusDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deactivateAdminBrand>>,
+  TError,
+  { id: string; data: BodyType<ChangeMasterStatusDto> },
+  TContext
+> => {
+  const mutationOptions = getDeactivateAdminBrandMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+/**
+ * @summary Reactivate a brand
+ */
+export const activateAdminBrand = (
+  id: string,
+  changeMasterStatusDto: BodyType<ChangeMasterStatusDto>,
+  signal?: AbortSignal,
+) => {
+  return apiFetcher<BrandDto>({
+    url: `/api/v1/admin/catalog/brands/${id}/activate`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: changeMasterStatusDto,
+    signal,
+  });
+};
+
+export const getActivateAdminBrandMutationOptions = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof activateAdminBrand>>,
+    TError,
+    { id: string; data: BodyType<ChangeMasterStatusDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof activateAdminBrand>>,
+  TError,
+  { id: string; data: BodyType<ChangeMasterStatusDto> },
+  TContext
+> => {
+  const mutationKey = ['activateAdminBrand'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof activateAdminBrand>>,
+    { id: string; data: BodyType<ChangeMasterStatusDto> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return activateAdminBrand(id, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ActivateAdminBrandMutationResult = NonNullable<
+  Awaited<ReturnType<typeof activateAdminBrand>>
+>;
+export type ActivateAdminBrandMutationBody = BodyType<ChangeMasterStatusDto>;
+export type ActivateAdminBrandMutationError = ErrorType<ErrorResponseDto | ErrorResponseDto>;
+
+/**
+ * @summary Reactivate a brand
+ */
+export const useActivateAdminBrand = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof activateAdminBrand>>,
+      TError,
+      { id: string; data: BodyType<ChangeMasterStatusDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof activateAdminBrand>>,
+  TError,
+  { id: string; data: BodyType<ChangeMasterStatusDto> },
+  TContext
+> => {
+  const mutationOptions = getActivateAdminBrandMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
 
 export const listAdminCategories = (signal?: AbortSignal) => {
   return apiFetcher<CategoryListDto>({
@@ -645,6 +899,260 @@ export function useSearchActiveAdminCategories<
 
   return query;
 }
+
+/**
+ * @summary Update mutable category fields
+ */
+export const updateAdminCategory = (id: string, updateCategoryDto: BodyType<UpdateCategoryDto>) => {
+  return apiFetcher<CategoryDto>({
+    url: `/api/v1/admin/catalog/categories/${id}`,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    data: updateCategoryDto,
+  });
+};
+
+export const getUpdateAdminCategoryMutationOptions = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateAdminCategory>>,
+    TError,
+    { id: string; data: BodyType<UpdateCategoryDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateAdminCategory>>,
+  TError,
+  { id: string; data: BodyType<UpdateCategoryDto> },
+  TContext
+> => {
+  const mutationKey = ['updateAdminCategory'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateAdminCategory>>,
+    { id: string; data: BodyType<UpdateCategoryDto> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateAdminCategory(id, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateAdminCategoryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateAdminCategory>>
+>;
+export type UpdateAdminCategoryMutationBody = BodyType<UpdateCategoryDto>;
+export type UpdateAdminCategoryMutationError = ErrorType<ErrorResponseDto | ErrorResponseDto>;
+
+/**
+ * @summary Update mutable category fields
+ */
+export const useUpdateAdminCategory = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateAdminCategory>>,
+      TError,
+      { id: string; data: BodyType<UpdateCategoryDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateAdminCategory>>,
+  TError,
+  { id: string; data: BodyType<UpdateCategoryDto> },
+  TContext
+> => {
+  const mutationOptions = getUpdateAdminCategoryMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+/**
+ * @summary Deactivate a leaf category
+ */
+export const deactivateAdminCategory = (
+  id: string,
+  changeMasterStatusDto: BodyType<ChangeMasterStatusDto>,
+  signal?: AbortSignal,
+) => {
+  return apiFetcher<CategoryDto>({
+    url: `/api/v1/admin/catalog/categories/${id}/deactivate`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: changeMasterStatusDto,
+    signal,
+  });
+};
+
+export const getDeactivateAdminCategoryMutationOptions = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deactivateAdminCategory>>,
+    TError,
+    { id: string; data: BodyType<ChangeMasterStatusDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deactivateAdminCategory>>,
+  TError,
+  { id: string; data: BodyType<ChangeMasterStatusDto> },
+  TContext
+> => {
+  const mutationKey = ['deactivateAdminCategory'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deactivateAdminCategory>>,
+    { id: string; data: BodyType<ChangeMasterStatusDto> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return deactivateAdminCategory(id, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeactivateAdminCategoryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deactivateAdminCategory>>
+>;
+export type DeactivateAdminCategoryMutationBody = BodyType<ChangeMasterStatusDto>;
+export type DeactivateAdminCategoryMutationError = ErrorType<
+  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+>;
+
+/**
+ * @summary Deactivate a leaf category
+ */
+export const useDeactivateAdminCategory = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deactivateAdminCategory>>,
+      TError,
+      { id: string; data: BodyType<ChangeMasterStatusDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deactivateAdminCategory>>,
+  TError,
+  { id: string; data: BodyType<ChangeMasterStatusDto> },
+  TContext
+> => {
+  const mutationOptions = getDeactivateAdminCategoryMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+/**
+ * @summary Reactivate a category
+ */
+export const activateAdminCategory = (
+  id: string,
+  changeMasterStatusDto: BodyType<ChangeMasterStatusDto>,
+  signal?: AbortSignal,
+) => {
+  return apiFetcher<CategoryDto>({
+    url: `/api/v1/admin/catalog/categories/${id}/activate`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: changeMasterStatusDto,
+    signal,
+  });
+};
+
+export const getActivateAdminCategoryMutationOptions = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof activateAdminCategory>>,
+    TError,
+    { id: string; data: BodyType<ChangeMasterStatusDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof activateAdminCategory>>,
+  TError,
+  { id: string; data: BodyType<ChangeMasterStatusDto> },
+  TContext
+> => {
+  const mutationKey = ['activateAdminCategory'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof activateAdminCategory>>,
+    { id: string; data: BodyType<ChangeMasterStatusDto> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return activateAdminCategory(id, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ActivateAdminCategoryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof activateAdminCategory>>
+>;
+export type ActivateAdminCategoryMutationBody = BodyType<ChangeMasterStatusDto>;
+export type ActivateAdminCategoryMutationError = ErrorType<
+  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+>;
+
+/**
+ * @summary Reactivate a category
+ */
+export const useActivateAdminCategory = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof activateAdminCategory>>,
+      TError,
+      { id: string; data: BodyType<ChangeMasterStatusDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof activateAdminCategory>>,
+  TError,
+  { id: string; data: BodyType<ChangeMasterStatusDto> },
+  TContext
+> => {
+  const mutationOptions = getActivateAdminCategoryMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
 
 /**
  * @summary List products for admin

@@ -59,6 +59,50 @@ function noteFor(change) {
   ].join('\n');
 }
 
+function getOrCreateRemovedRowsSheet(workbook, sourceWorksheet, sheetName) {
+  const existing = workbook.getWorksheet(sheetName);
+  if (existing) return existing;
+  const worksheet = workbook.addWorksheet(sheetName, { views: [{ state: 'frozen', ySplit: 1 }] });
+  const headers = [];
+  sourceWorksheet.getRow(1).eachCell((cell) => headers.push(displayValue(cell.value)));
+  headers.push('Removed by change');
+  worksheet.addRow(headers);
+  worksheet.getRow(1).font = { color: { argb: 'FFFFFFFF' }, bold: true };
+  worksheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F4E78' } };
+  worksheet.getRow(1).alignment = { vertical: 'middle', wrapText: true };
+  sourceWorksheet.columns.forEach((column, index) => {
+    worksheet.getColumn(index + 1).width = column.width;
+  });
+  worksheet.getColumn(headers.length).width = 28;
+  return worksheet;
+}
+
+function archiveAndRemoveRows(workbook, sourceWorksheet, rows, change, sheetName) {
+  const archiveWorksheet = getOrCreateRemovedRowsSheet(workbook, sourceWorksheet, sheetName);
+  const archiveHeaders = headerMap(archiveWorksheet);
+  for (const row of rows) {
+    const rowValues = [];
+    sourceWorksheet.getRow(1).eachCell((_cell, columnNumber) => {
+      rowValues.push(displayValue(row.getCell(columnNumber).value));
+    });
+    rowValues.push(change.id);
+    const archived = archiveWorksheet.addRow(rowValues);
+    archived.eachCell((cell) => {
+      applyRedStyle(cell);
+      cell.alignment = { vertical: 'top', wrapText: true };
+      cell.note = noteFor(change);
+    });
+  }
+  for (const row of [...rows].sort((left, right) => right.number - left.number)) {
+    sourceWorksheet.spliceRows(row.number, 1);
+  }
+  archiveWorksheet.autoFilter = {
+    from: 'A1',
+    to: `${archiveWorksheet.getColumn(archiveHeaders.size).letter}1`,
+  };
+  return rows.length * archiveHeaders.size;
+}
+
 function markTarget(workbook, change, target) {
   const worksheet = workbook.getWorksheet(target.sheet);
   if (!worksheet) throw new Error(`Missing target sheet "${target.sheet}" for ${change.id}`);
@@ -67,6 +111,17 @@ function markTarget(workbook, change, target) {
   worksheet.eachRow((row, rowNumber) => {
     if (rowNumber > 1 && matchesRow(row, headers, target.match)) rows.push(row);
   });
+  if (rows.length === 0 && target.archiveRemovedRowsTo) {
+    const archiveWorksheet = workbook.getWorksheet(target.archiveRemovedRowsTo);
+    if (archiveWorksheet) {
+      const archiveHeaders = headerMap(archiveWorksheet);
+      const archivedRows = [];
+      archiveWorksheet.eachRow((row, rowNumber) => {
+        if (rowNumber > 1 && matchesRow(row, archiveHeaders, target.match)) archivedRows.push(row);
+      });
+      if (archivedRows.length > 0) return archivedRows.length * archiveHeaders.size;
+    }
+  }
   if (rows.length === 0) {
     throw new Error(`No row matched ${JSON.stringify(target.match)} in "${target.sheet}" for ${change.id}`);
   }
@@ -80,6 +135,18 @@ function markTarget(workbook, change, target) {
   for (const header of Object.keys(updates)) {
     if (!headers.has(header)) throw new Error(`Missing update column "${header}" in "${target.sheet}" for ${change.id}`);
     if (!columns.includes(header)) throw new Error(`Updated column "${header}" must also be listed in columns for ${change.id}`);
+  }
+  if (target.archiveRemovedRowsTo) {
+    if (Object.keys(updates).length > 0) {
+      throw new Error(`Archived row target cannot contain set updates for ${change.id}`);
+    }
+    return archiveAndRemoveRows(
+      workbook,
+      worksheet,
+      rows,
+      change,
+      target.archiveRemovedRowsTo,
+    );
   }
   for (const row of rows) {
     for (const header of columns) {
@@ -113,7 +180,7 @@ function rebuildChangeLog(workbook, changes) {
       scope: change.scope,
       summary: change.summary,
       sources: change.sources.join('\n'),
-      targets: change.targets.map((target) => `${target.sheet}: ${JSON.stringify(target.match)} → ${target.columns === '*' ? '*' : target.columns.join(', ')}`).join('\n') || 'API-only; no table cell',
+      targets: change.targets.map((target) => `${target.sheet}: ${JSON.stringify(target.match)} → ${target.columns === '*' ? '*' : target.columns.join(', ')}${target.archiveRemovedRowsTo ? ` (archived to ${target.archiveRemovedRowsTo})` : ''}`).join('\n') || 'API-only; no table cell',
     });
     row.eachCell((cell) => {
       applyRedStyle(cell);

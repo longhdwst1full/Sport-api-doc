@@ -25,7 +25,12 @@ Khởi tạo PostgreSQL/Redis local và chạy migration/seed lặp lại an to�
 yarn db:local:up
 yarn db:local:migrate
 yarn db:local:seed
+yarn db:local:seed:demo
 ```
+
+`db:local:seed:demo` chạy foundation seed trước, sau đó upsert bộ dữ liệu nhỏ gồm
+3 chi nhánh/kho, 3 thương hiệu, 3 danh mục và 3 sản phẩm/SKU/giá. Lệnh có thể chạy
+lặp và không xóa dữ liệu ngoài các mã demo cố định.
 
 Local infrastructure mặc định dùng PostgreSQL `55432` và Redis `56379` để không
 xung đột với các service khác trong workspace. Có thể override bằng
@@ -35,7 +40,7 @@ OpenAPI is served at `http://localhost:4000/openapi.json`; Swagger UI is at `htt
 
 The storefront exposes its PWA diagnostics/reset screen at `http://localhost:3000/pwa`. API, checkout, account and payment data are never service-worker cached.
 
-The API registers all 74 reviewed V1 models across 19 bounded contexts. Migration Wave 1 now covers Organization, IAM and append-only Audit; current Organization/IAM services still use their in-memory adapters until the Sprint 1 PostgreSQL adapter switch is completed. Catalog, basic Inventory, CMS Content and Review moderation remain runnable in-memory vertical slices.
+The API registers all 74 reviewed V1 models across 19 bounded contexts. Organization, IAM, Audit and Catalog Wave 2 use Prisma/PostgreSQL when `DATABASE_ENABLED=true`. Basic Inventory, CMS Content and Review moderation remain in-memory V1 vertical slices.
 
 Each application owns an independent agent context:
 

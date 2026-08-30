@@ -32,3 +32,11 @@ export interface BranchWithWarehouse {
   branch: Branch;
   warehouse: Warehouse;
 }
+
+export interface BranchWithWarehouseUpdate {
+  name: string;
+  phone?: string;
+  email?: string;
+  address: Address;
+  warehouseName: string;
+}

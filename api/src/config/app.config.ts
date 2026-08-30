@@ -9,12 +9,12 @@ function splitCsv(value: string | undefined, fallback: string[]): string[] {
 }
 
 export default registerAs('app', () => ({
+  environment: process.env.NODE_ENV ?? 'development',
   port: Number(process.env.PORT ?? 4000),
-  corsOrigins: splitCsv(process.env.CORS_ORIGINS, [
-    'http://localhost:3000',
-    'http://localhost:5173',
-  ]),
-  authBypass: process.env.AUTH_BYPASS === 'true',
+  corsOrigins: splitCsv(process.env.CORS_ORIGINS, ['*']),
+  authBypass:
+    (process.env.NODE_ENV ?? 'development') === 'development' &&
+    (process.env.AUTH_BYPASS ?? 'true') === 'true',
   jwt: {
     accessSecret:
       process.env.JWT_ACCESS_SECRET ?? 'development-only-change-this-jwt-secret',

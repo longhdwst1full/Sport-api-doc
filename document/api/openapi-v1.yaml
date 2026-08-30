@@ -209,6 +209,123 @@ paths:
       summary: Search active warehouses for admin lookups
       tags:
         - Admin Organization
+  /api/v1/admin/organization/branches/{id}:
+    patch:
+      operationId: updateAdminBranchWithWarehouse
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBranchWithWarehouseDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BranchWithWarehouseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Update a branch and its single V1 warehouse
+      tags:
+        - Admin Organization
+  /api/v1/admin/organization/branches/{id}/deactivate:
+    post:
+      operationId: deactivateAdminBranchWithWarehouse
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeBranchStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BranchWithWarehouseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Deactivate a branch and its V1 warehouse atomically
+      tags:
+        - Admin Organization
+  /api/v1/admin/organization/branches/{id}/activate:
+    post:
+      operationId: activateAdminBranchWithWarehouse
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeBranchStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BranchWithWarehouseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Reactivate a branch and its V1 warehouse atomically
+      tags:
+        - Admin Organization
   /api/v1/admin/iam/users:
     get:
       operationId: listAdminUsers
@@ -511,6 +628,123 @@ paths:
       summary: ""
       tags:
         - Admin Catalog
+  /api/v1/admin/catalog/brands/{id}:
+    patch:
+      operationId: updateAdminBrand
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBrandDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BrandDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Update mutable brand fields
+      tags:
+        - Admin Catalog
+  /api/v1/admin/catalog/brands/{id}/deactivate:
+    post:
+      operationId: deactivateAdminBrand
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeMasterStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BrandDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Deactivate a brand
+      tags:
+        - Admin Catalog
+  /api/v1/admin/catalog/brands/{id}/activate:
+    post:
+      operationId: activateAdminBrand
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeMasterStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BrandDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Reactivate a brand
+      tags:
+        - Admin Catalog
   /api/v1/admin/catalog/categories:
     get:
       operationId: listAdminCategories
@@ -584,6 +818,135 @@ paths:
       security:
         - bearer: []
       summary: ""
+      tags:
+        - Admin Catalog
+  /api/v1/admin/catalog/categories/{id}:
+    patch:
+      operationId: updateAdminCategory
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCategoryDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Update mutable category fields
+      tags:
+        - Admin Catalog
+  /api/v1/admin/catalog/categories/{id}/deactivate:
+    post:
+      operationId: deactivateAdminCategory
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeMasterStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "422":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Deactivate a leaf category
+      tags:
+        - Admin Catalog
+  /api/v1/admin/catalog/categories/{id}/activate:
+    post:
+      operationId: activateAdminCategory
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeMasterStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "422":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Reactivate a category
       tags:
         - Admin Catalog
   /api/v1/catalog/products:
@@ -1497,6 +1860,54 @@ components:
       required:
         - branch
         - warehouse
+    UpdateWarehouseDto:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Kho bán hàng Đà Nẵng
+      required:
+        - name
+    UpdateBranchWithWarehouseDto:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Chi nhánh Đà Nẵng
+        phone:
+          type: string
+          example: 0236 7300 8899
+        email:
+          type: string
+          example: danang@dctd.vn
+        address:
+          $ref: "#/components/schemas/AddressDto"
+        warehouse:
+          $ref: "#/components/schemas/UpdateWarehouseDto"
+        expectedVersion:
+          type: number
+          minimum: 0
+        warehouseExpectedVersion:
+          type: number
+          minimum: 0
+      required:
+        - name
+        - address
+        - warehouse
+        - expectedVersion
+        - warehouseExpectedVersion
+    ChangeBranchStatusDto:
+      type: object
+      properties:
+        expectedVersion:
+          type: number
+          minimum: 0
+        warehouseExpectedVersion:
+          type: number
+          minimum: 0
+      required:
+        - expectedVersion
+        - warehouseExpectedVersion
     UserRoleAssignmentDto:
       type: object
       properties:
@@ -1769,6 +2180,11 @@ components:
           type: string
         slug:
           type: string
+        description:
+          type: string
+        logoAssetId:
+          type: string
+          format: uuid
         status:
           type: string
           enum:
@@ -1813,6 +2229,31 @@ components:
         - code
         - name
         - slug
+    UpdateBrandDto:
+      type: object
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        logoAssetId:
+          type: string
+          format: uuid
+        expectedVersion:
+          type: number
+          minimum: 0
+      required:
+        - expectedVersion
+    ChangeMasterStatusDto:
+      type: object
+      properties:
+        expectedVersion:
+          type: number
+          minimum: 0
+      required:
+        - expectedVersion
     CategoryDto:
       type: object
       properties:
@@ -1832,6 +2273,13 @@ components:
           type: string
         depth:
           type: number
+        description:
+          type: string
+        imageAssetId:
+          type: string
+          format: uuid
+        sortOrder:
+          type: number
         status:
           type: string
           enum:
@@ -1846,6 +2294,7 @@ components:
         - slug
         - path
         - depth
+        - sortOrder
         - status
         - version
     CategoryListDto:
@@ -1877,10 +2326,34 @@ components:
         imageAssetId:
           type: string
           format: uuid
+        sortOrder:
+          type: number
+          minimum: 0
+          default: 0
       required:
         - code
         - name
         - slug
+    UpdateCategoryDto:
+      type: object
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        imageAssetId:
+          type: string
+          format: uuid
+        sortOrder:
+          type: number
+          minimum: 0
+        expectedVersion:
+          type: number
+          minimum: 0
+      required:
+        - expectedVersion
     ProductSummaryDto:
       type: object
       properties:

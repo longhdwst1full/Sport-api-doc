@@ -39,7 +39,6 @@ export class ProductsService {
     const now = new Date();
     const search = query.search?.trim();
     const where: Prisma.ProductWhereInput = {
-      deletedAt: null,
       ...(storefront ? { status: 'PUBLISHED' } : query.status ? { status: query.status } : {}),
       ...(search
         ? {
@@ -51,14 +50,13 @@ export class ProductsService {
           }
         : {}),
       ...(query.category
-        ? { categories: { some: { category: { slug: query.category, deletedAt: null } } } }
+        ? { categories: { some: { category: { slug: query.category } } } }
         : {}),
       ...(storefront
         ? {
             variants: {
               some: {
                 status: 'ACTIVE',
-                deletedAt: null,
                 prices: { some: effectivePriceWhere(now) },
               },
             },
@@ -92,14 +90,12 @@ export class ProductsService {
     const row = await this.prisma.product.findFirst({
       where: {
         slug,
-        deletedAt: null,
         ...(storefront
           ? {
               status: 'PUBLISHED',
               variants: {
                 some: {
                   status: 'ACTIVE',
-                  deletedAt: null,
                   prices: { some: effectivePriceWhere(now) },
                 },
               },
@@ -173,7 +169,7 @@ export class ProductsService {
       await this.prisma.$transaction(async (transaction) => {
         await this.validateReferences(transaction, fields.brandId, categoryIds);
         const updated = await transaction.product.updateMany({
-          where: { id, deletedAt: null, version: BigInt(expectedVersion), status: { not: 'ARCHIVED' } },
+          where: { id, version: BigInt(expectedVersion), status: { not: 'ARCHIVED' } },
           data: {
             ...fields,
             version: { increment: 1 },
@@ -220,10 +216,10 @@ export class ProductsService {
     const now = new Date();
     return this.prisma.$transaction(async (transaction) => {
       const product = await transaction.product.findFirst({
-        where: { id, deletedAt: null },
+        where: { id },
         include: {
           variants: {
-            where: { status: 'ACTIVE', deletedAt: null },
+            where: { status: 'ACTIVE' },
             include: { prices: { where: effectivePriceWhere(now) } },
           },
         },
@@ -261,7 +257,7 @@ export class ProductsService {
   ): Promise<ProductDetailDto> {
     try {
       await this.prisma.$transaction(async (transaction) => {
-        const product = await transaction.product.findFirst({ where: { id: productId, deletedAt: null, status: { not: 'ARCHIVED' } } });
+        const product = await transaction.product.findFirst({ where: { id: productId, status: { not: 'ARCHIVED' } } });
         if (!product) throw new NotFoundException('Product not found');
         const variantId = uuidv7();
         await transaction.productVariant.create({ data: { id: variantId, productId, ...input } });
@@ -294,7 +290,7 @@ export class ProductsService {
     if (endsAt && endsAt <= startsAt) throw new UnprocessableEntityException('endsAt must be after startsAt');
     try {
       const productId = await this.prisma.$transaction(async (transaction) => {
-        const variant = await transaction.productVariant.findFirst({ where: { id: variantId, deletedAt: null } });
+        const variant = await transaction.productVariant.findFirst({ where: { id: variantId } });
         if (!variant) throw new NotFoundException('Variant not found');
         const priceId = uuidv7();
         await transaction.productPrice.create({
@@ -341,7 +337,7 @@ export class ProductsService {
     try {
       await this.prisma.$transaction(async (transaction) => {
         const bundleVariant = await transaction.productVariant.findFirst({
-          where: { id: input.bundleVariantId, productId, deletedAt: null },
+          where: { id: input.bundleVariantId, productId },
         });
         if (!bundleVariant) throw new UnprocessableEntityException('Bundle variant must belong to product');
         const componentIds = input.items.map(({ componentVariantId }) => componentVariantId);
@@ -349,7 +345,7 @@ export class ProductsService {
           throw new UnprocessableEntityException('Bundle components must be unique');
         }
         const componentCount = await transaction.productVariant.count({
-          where: { id: { in: componentIds }, deletedAt: null, status: 'ACTIVE' },
+          where: { id: { in: componentIds }, status: 'ACTIVE' },
         });
         if (componentCount !== componentIds.length) throw new UnprocessableEntityException('Bundle contains invalid component');
         const bundleId = uuidv7();
@@ -391,7 +387,7 @@ export class ProductsService {
     client: Prisma.TransactionClient | PrismaService = this.prisma,
   ): Promise<ProductDetailDto> {
     const row = await client.product.findFirst({
-      where: { id, deletedAt: null },
+      where: { id },
       include: this.productInclude(new Date()),
     });
     if (!row) throw new NotFoundException('Product not found');
@@ -403,12 +399,11 @@ export class ProductsService {
       brand: true,
       categories: { include: { category: true }, orderBy: { sortOrder: 'asc' as const } },
       media: {
-        where: { status: 'ACTIVE', deletedAt: null },
+        where: { status: 'ACTIVE' },
         include: { mediaAsset: true },
         orderBy: [{ isPrimary: 'desc' as const }, { sortOrder: 'asc' as const }],
       },
       variants: {
-        where: { deletedAt: null },
         include: {
           prices: { where: effectivePriceWhere(now), orderBy: { startsAt: 'desc' as const }, take: 1 },
           bundleDefinition: {
@@ -491,12 +486,12 @@ export class ProductsService {
     categoryIds?: string[],
   ): Promise<void> {
     if (brandId) {
-      const brand = await transaction.brand.count({ where: { id: brandId, status: 'ACTIVE', deletedAt: null } });
+      const brand = await transaction.brand.count({ where: { id: brandId, status: 'ACTIVE' } });
       if (!brand) throw new UnprocessableEntityException('Brand is not active');
     }
     if (categoryIds) {
       const count = await transaction.category.count({
-        where: { id: { in: categoryIds }, status: 'ACTIVE', deletedAt: null },
+        where: { id: { in: categoryIds }, status: 'ACTIVE' },
       });
       if (count !== categoryIds.length) throw new UnprocessableEntityException('Category is not active');
     }

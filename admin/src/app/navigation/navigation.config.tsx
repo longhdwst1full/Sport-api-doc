@@ -7,6 +7,7 @@ import {
   InboxOutlined,
   SafetyCertificateOutlined,
   ShoppingCartOutlined,
+  TagsOutlined,
   TeamOutlined,
 } from '@ant-design/icons';
 import type { ReactNode } from 'react';
@@ -55,6 +56,13 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
     group: 'catalog',
     icon: <AppstoreOutlined />,
     permission: 'catalog.product.view',
+  },
+  {
+    path: '/catalog-masters',
+    label: 'Thương hiệu & danh mục',
+    group: 'catalog',
+    icon: <TagsOutlined />,
+    permission: 'catalog.brand.view',
   },
   {
     path: '/inventory',

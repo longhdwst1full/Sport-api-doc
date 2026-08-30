@@ -16,6 +16,19 @@ function createDomainConfig(domain: string) {
       override: {
         mutator: { path: './src/lib/api/fetcher.ts', name: 'apiFetcher' },
         query: { useQuery: true, useMutation: true, signal: true },
+        ...(domain === 'inventory'
+          ? {
+              operations: {
+                createStockAdjustment: {
+                  requestOptions: true,
+                  mutator: {
+                    path: './src/lib/api/api-fetcher-with-options.ts',
+                    name: 'apiFetcherWithOptions',
+                  },
+                },
+              },
+            }
+          : {}),
       },
     },
   };

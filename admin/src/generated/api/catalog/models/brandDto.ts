@@ -12,6 +12,8 @@ export interface BrandDto {
   code: string;
   name: string;
   slug: string;
+  description?: string;
+  logoAssetId?: string;
   status: BrandDtoStatus;
   version: number;
 }

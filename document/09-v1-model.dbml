@@ -18,8 +18,7 @@ Table branches {
   created_by uuid
   updated_at timestamptz [not null]
   updated_by uuid
-  deleted_at timestamptz
-  Note: '[P0] Chi nhánh bán hàng.'
+  Note: '[P0] Chi nhánh bán hàng; dùng status ACTIVE|INACTIVE, không soft-delete.'
 }
 
 Table warehouses {
@@ -34,8 +33,7 @@ Table warehouses {
   created_by uuid
   updated_at timestamptz [not null]
   updated_by uuid
-  deleted_at timestamptz
-  Note: '[P0] V1 chỉ một warehouse ACTIVE/primary mỗi branch; dùng partial unique index.'
+  Note: '[P0] V1 chỉ một warehouse ACTIVE/primary mỗi branch; dùng status ACTIVE|INACTIVE, không soft-delete.'
 }
 
 Table users {
@@ -55,8 +53,7 @@ Table users {
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
-  deleted_at timestamptz
-  Note: '[P0] Partial unique indexes cho normalized_email/phone khi khác null.'
+  Note: '[P0] Unique indexes cho normalized_email/phone khi khác null; INACTIVE rồi anonymize, không soft-delete.'
 }
 
 Table auth_sessions {
@@ -88,8 +85,7 @@ Table roles {
   created_by uuid
   updated_at timestamptz [not null]
   updated_by uuid
-  deleted_at timestamptz
-  Note: '[P0] Role là bundle quyền; data scope nằm ở assignment.'
+  Note: '[P0] Role là bundle quyền; data scope nằm ở assignment; dùng ACTIVE|INACTIVE.'
 }
 
 Table permissions {
@@ -235,12 +231,11 @@ Table media_assets {
   status varchar(24) [not null, default: 'ACTIVE']
   uploaded_by uuid
   provider_created_at timestamptz
-  deleted_at timestamptz
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
   indexes { (provider, provider_asset_id) [unique] }
-  Note: '[P0] Chỉ lưu metadata/URL provider; không lưu binary. Delete provider qua job sau khi hết usage.'
+  Note: '[P0] Chỉ lưu metadata/URL provider; không lưu binary. Status điều phối provider cleanup; DB row được giữ lại.'
 }
 
 Table media_usages {
@@ -268,8 +263,7 @@ Table brands {
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
-  deleted_at timestamptz
-  Note: '[P0] Master data.'
+  Note: '[P0] Master data; dùng status ACTIVE|INACTIVE.'
 }
 
 Table categories {
@@ -288,8 +282,7 @@ Table categories {
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
-  deleted_at timestamptz
-  Note: '[P0] Cây category; service phải chặn cycle.'
+  Note: '[P0] Cây category; service phải chặn cycle; dùng status ACTIVE|INACTIVE.'
 }
 
 Table products {
@@ -308,8 +301,7 @@ Table products {
   created_by uuid
   updated_at timestamptz [not null]
   updated_by uuid
-  deleted_at timestamptz
-  Note: '[P0] SPU; không chứa price/stock.'
+  Note: '[P0] SPU; không chứa price/stock; ngừng dùng bằng status ARCHIVED.'
 }
 
 Table product_categories {
@@ -335,8 +327,7 @@ Table product_variants {
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
-  deleted_at timestamptz
-  Note: '[P0] Sellable SKU; price/stock đều tham chiếu variant.'
+  Note: '[P0] Sellable SKU; price/stock đều tham chiếu variant; ngừng bán bằng status INACTIVE.'
 }
 
 Table product_bundles {
@@ -373,8 +364,7 @@ Table product_media {
   is_primary boolean [not null, default: false]
   status varchar(24) [not null, default: 'ACTIVE']
   created_at timestamptz [not null]
-  deleted_at timestamptz
-  Note: '[P0] variant_id null nghĩa media cấp product.'
+  Note: '[P0] variant_id null nghĩa media cấp product; ẩn bằng status INACTIVE.'
 }
 
 Table attributes {

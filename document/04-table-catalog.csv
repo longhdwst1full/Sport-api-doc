@@ -1,9 +1,9 @@
 id,module,table_name,priority,purpose,primary_key,important_foreign_keys,unique_or_check,key_columns,retention
-T01,Organization,branches,P0,Chi nhánh bán hàng,id,,code UQ,"code,name,status,address_json,phone,timezone,version",soft-delete master
-T02,Organization,warehouses,P0,Kho vật lý,id,branch_id->branches,code UQ; branch_id UQ,"code,branch_id,name,status,version",soft-delete master
-T03,IAM,users,P0,Tài khoản customer/staff,id,,normalized email/phone partial UQ,"type,email,phone,password_hash,status,permission_version,last_login_at,version",anonymize not hard-delete
+T01,Organization,branches,P0,Chi nhánh bán hàng,id,,code UQ,"code,name,status,address_json,phone,timezone,version",status INACTIVE; retain for FK/audit
+T02,Organization,warehouses,P0,Kho vật lý,id,branch_id->branches,code UQ; branch_id UQ,"code,branch_id,name,status,version",status INACTIVE; retain for FK/audit
+T03,IAM,users,P0,Tài khoản customer/staff,id,,normalized email/phone non-null partial UQ,"type,email,phone,password_hash,status,permission_version,last_login_at,version",status INACTIVE then anonymize; never hard-delete
 T04,IAM,auth_sessions,P0,Refresh session/device,id,user_id->users,refresh_token_hash UQ; rotated_from_id UQ,"device_info,ip_hash,expires_at,revoked_at,rotated_from_id",purge after expiry window
-T05,IAM,roles,P0,Vai trò,id,,code UQ,"code,name,description,status,is_system,version",soft-delete master
+T05,IAM,roles,P0,Vai trò,id,,code UQ,"code,name,description,status,is_system,version",status INACTIVE; retain assignments/audit
 T06,IAM,permissions,P0,Quyền nghiệp vụ,id,,code UQ,"code,module,action,description,is_sensitive",never reuse code
 T07,IAM,role_permissions,P0,Role-permission,role_id+permission_id,role_id->roles; permission_id->permissions,composite PK,"role_id,permission_id,granted_by,created_at",while role retained
 T08,IAM,user_role_assignments,P0,Gán role; API V1 GLOBAL/BRANCH và DB giữ WAREHOUSE/OWN dormant,id,user_id->users; role_id->roles; branch_id->branches; warehouse_id->warehouses,active assignment partial UQ theo scope; scope shape CHECK,"scope_type,branch_id,warehouse_id,valid_from,valid_to,status,version",audit + expire not delete
@@ -11,12 +11,12 @@ T09,IAM,audit_logs,P0,Audit append-only,id,actor_user_id->users RESTRICT,request
 T10,Approval,approval_requests,P1,Maker-checker generic,id,maker_id/approver_id->users,business key UQ,"type,entity_type,entity_id,proposed_payload,status,expires_at,execution_status,version",10 years for finance/stock
 T11,Customer,customers,P0,Hồ sơ khách,id,user_id->users,user_id partial UQ,"customer_no,name,email,phone,status,marketing_consent,version",anonymize rules
 T12,Customer,customer_addresses,P0,Sổ địa chỉ,id,customer_id->customers,one default per type partial UQ,"type,recipient,phone,address_line,ward,district,province_code,postal_code,is_default",soft-delete
-T13,Catalog,brands,P0,Nhãn hiệu,id,logo_asset_id->media_assets,code UQ; slug UQ,"code,name,slug,logo_asset_id,status,seo_json,version",soft-delete
-T14,Catalog,categories,P0,Danh mục cây,id,parent_id->categories; image_asset_id->media_assets,slug UQ; no cycle,"code,name,slug,parent_id,path,image_asset_id,sort_order,status,version",soft-delete
+T13,Catalog,brands,P0,Nhãn hiệu,id,logo_asset_id->media_assets,code UQ; slug UQ,"code,name,slug,logo_asset_id,status,seo_json,version",status INACTIVE; retain references
+T14,Catalog,categories,P0,Danh mục cây,id,parent_id->categories; image_asset_id->media_assets,slug UQ; no cycle,"code,name,slug,parent_id,path,image_asset_id,sort_order,status,version",status INACTIVE; retain tree/references
 T15,Catalog,products,P0,SPU,id,brand_id->brands,slug UQ; product_no UQ,"name,slug,brand_id,short_description,description,status,published_at,seo_json,version",archive not delete after order
 T16,Catalog,product_categories,P0,Product-category,product_id+category_id,product_id->products; category_id->categories,composite PK,"is_primary,sort_order",while product retained
-T17,Catalog,product_variants,P0,SKU bán được,id,product_id->products,sku UQ; barcode partial UQ,"sku,barcode,name,weight_grams,length_mm,width_mm,height_mm,status,version",archive after transaction
-T18,Catalog,product_media,P0,Ảnh/video,id,product_id->products; variant_id->product_variants; media_asset_id->media_assets,one primary per target partial UQ,"media_asset_id,media_type,alt_text,sort_order,is_primary,status",soft-delete
+T17,Catalog,product_variants,P0,SKU bán được,id,product_id->products,sku UQ; barcode non-null partial UQ,"sku,barcode,name,weight_grams,length_mm,width_mm,height_mm,status,version",status INACTIVE; retain transaction references
+T18,Catalog,product_media,P0,Ảnh/video,id,product_id->products; variant_id->product_variants; media_asset_id->media_assets,one ACTIVE primary per target partial UQ,"media_asset_id,media_type,alt_text,sort_order,is_primary,status",status INACTIVE; retain relation history
 T19,Catalog,attributes,P1,Định nghĩa thuộc tính,id,,code UQ,"code,name,data_type,is_variant_axis,status,sort_order",soft-delete
 T20,Catalog,attribute_values,P1,Giá trị thuộc tính,id,attribute_id->attributes,attribute+code UQ,"code,label,color_hex,sort_order,status",soft-delete
 T21,Catalog,product_attribute_values,P1,Thuộc tính cấp product,id,product_id->products; attribute_id->attributes,product+attribute+value/value hash UQ,"attribute_value_id,value_text,value_number",while product retained
@@ -61,7 +61,7 @@ T59,Notification,notifications,P1,Delivery log,id,user_id/customer_id,channel+de
 T60,Platform,idempotency_keys,P0,Chống request trùng,id,user_id->users,actor+endpoint+key UQ,"request_hash,response_status,response_body_redacted,locked_at,expires_at",24-72 hours
 T61,Platform,outbox_events,P0,Transactional outbox,id,,aggregate+event_id UQ,"aggregate_type,aggregate_id,event_type,payload_json,status,attempts,available_at,processed_at,error",30-90 days then archive
 T62,Platform,system_settings,P1,Cấu hình không bí mật,id,,key UQ,"key,value_json,description,is_public,version,updated_by",version history via audit
-T63,Media,media_assets,P0,Metadata ảnh/tệp trên provider,id,uploaded_by->users,provider+provider_asset_id UQ,"provider,provider_asset_id,public_id,secure_url,thumbnail_url,mime_type,width,height,size_bytes,checksum,status,version",soft-delete then provider cleanup
+T63,Media,media_assets,P0,Metadata ảnh/tệp trên provider,id,uploaded_by->users,provider+provider_asset_id UQ,"provider,provider_asset_id,public_id,secure_url,thumbnail_url,mime_type,width,height,size_bytes,checksum,status,version",status lifecycle; provider cleanup; retain DB row
 T64,Media,media_usages,P1,Theo dõi asset nhúng rich content,id,media_asset_id->media_assets,asset+owner+field UQ,"owner_type,owner_id,field_name,sort_order",while owner retained
 T65,Review,product_review_media,P1,Ảnh/video đánh giá,id,product_review_id->product_reviews; media_asset_id->media_assets,review+asset UQ,"sort_order,status,created_at",retain with review
 T66,Review,product_review_comments,P1,Phản hồi đánh giá,id,product_review_id->product_reviews; parent_comment_id->self; author_user_id/moderated_by->users,max one reply level,"author_type,content,status,moderation_reason,version,created_at,deleted_at",retain/moderate

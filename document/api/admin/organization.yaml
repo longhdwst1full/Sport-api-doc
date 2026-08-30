@@ -187,6 +187,123 @@ paths:
       summary: Search active warehouses for admin lookups
       tags:
         - Admin Organization
+  /api/v1/admin/organization/branches/{id}:
+    patch:
+      operationId: updateAdminBranchWithWarehouse
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBranchWithWarehouseDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BranchWithWarehouseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Update a branch and its single V1 warehouse
+      tags:
+        - Admin Organization
+  /api/v1/admin/organization/branches/{id}/deactivate:
+    post:
+      operationId: deactivateAdminBranchWithWarehouse
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeBranchStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BranchWithWarehouseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Deactivate a branch and its V1 warehouse atomically
+      tags:
+        - Admin Organization
+  /api/v1/admin/organization/branches/{id}/activate:
+    post:
+      operationId: activateAdminBranchWithWarehouse
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeBranchStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BranchWithWarehouseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Reactivate a branch and its V1 warehouse atomically
+      tags:
+        - Admin Organization
 components:
   schemas:
     BranchListDto:
@@ -295,6 +412,46 @@ components:
       required:
         - items
         - meta
+    UpdateBranchWithWarehouseDto:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Chi nhánh Đà Nẵng
+        phone:
+          type: string
+          example: 0236 7300 8899
+        email:
+          type: string
+          example: danang@dctd.vn
+        address:
+          $ref: "#/components/schemas/AddressDto"
+        warehouse:
+          $ref: "#/components/schemas/UpdateWarehouseDto"
+        expectedVersion:
+          type: number
+          minimum: 0
+        warehouseExpectedVersion:
+          type: number
+          minimum: 0
+      required:
+        - name
+        - address
+        - warehouse
+        - expectedVersion
+        - warehouseExpectedVersion
+    ChangeBranchStatusDto:
+      type: object
+      properties:
+        expectedVersion:
+          type: number
+          minimum: 0
+        warehouseExpectedVersion:
+          type: number
+          minimum: 0
+      required:
+        - expectedVersion
+        - warehouseExpectedVersion
     BranchDto:
       type: object
       properties:
@@ -447,6 +604,14 @@ components:
         - limit
         - total
         - hasMore
+    UpdateWarehouseDto:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Kho bán hàng Đà Nẵng
+      required:
+        - name
   securitySchemes:
     bearer:
       scheme: bearer

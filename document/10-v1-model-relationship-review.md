@@ -101,6 +101,13 @@ Sơ đồ trên chỉ hiển thị aggregate lõi. File DBML chứa toàn bộ 7
 | `return_requests` | `return_items` | 1 → n | RESTRICT | Mỗi item tham chiếu order item gốc |
 | `approval_requests` | `refunds/stock_adjustments` | 1 → 0..1 mỗi loại | RESTRICT | Approval generic; payload immutable |
 
+Lifecycle P0 sau quyết định D22:
+
+- `branches`, `warehouses`, `users`, `roles`, `media_assets`, `brands`, `categories`, `products`, `product_variants`, `product_media` không dùng `deleted_at`.
+- Bản ghi ngừng sử dụng được giữ lại bằng trạng thái rõ nghĩa: `INACTIVE` cho master/SKU/media relation và `ARCHIVED` cho product.
+- Email, phone và barcode không được tái sử dụng chỉ vì bản ghi chuyển `INACTIVE`; migration dừng để xử lý thủ công nếu dữ liệu soft-delete cũ đang trùng.
+- Audit log lưu actor, thời điểm và lý do của transition; transaction/ledger tiếp tục reverse/cancel, không physical delete.
+
 ## 3. Aggregate ownership
 
 | Aggregate root | Bảng con được ghi cùng transaction | Không được ghi trực tiếp từ module khác |

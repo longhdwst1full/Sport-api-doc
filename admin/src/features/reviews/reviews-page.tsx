@@ -1,8 +1,29 @@
-import { Card, Rate, Table, Tag, Typography } from 'antd';
-import { useListAdminReviews } from '@/generated/api/reviews/reviews';
+import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
+import { useQueryClient } from '@tanstack/react-query';
+import { App, Button, Card, Popconfirm, Rate, Space, Table, Tag, Typography } from 'antd';
+import { PermissionGate } from '@/core/auth/permissions';
+import { QueryErrorAlert } from '@/foundation/feedback/query-error-alert';
+import {
+  getListAdminReviewsQueryKey,
+  useListAdminReviews,
+  useModerateAdminReview,
+} from '@/generated/api/reviews/reviews';
+import { getApiErrorMessage } from '@/lib/api/error';
 
 export function ReviewsPage() {
+  const { message } = App.useApp();
+  const queryClient = useQueryClient();
   const query = useListAdminReviews();
+  const moderate = useModerateAdminReview({
+    mutation: {
+      onSuccess: async () => {
+        await queryClient.invalidateQueries({ queryKey: getListAdminReviewsQueryKey() });
+        void message.success('Đã cập nhật trạng thái đánh giá.');
+      },
+      onError: (error) =>
+        void message.error(getApiErrorMessage(error, 'Không thể kiểm duyệt đánh giá.')),
+    },
+  });
   return (
     <div className="space-y-6">
       <div>
@@ -12,6 +33,11 @@ export function ReviewsPage() {
         </Typography.Title>
       </div>
       <Card>
+        {query.isError && (
+          <div className="mb-4">
+            <QueryErrorAlert error={query.error} retry={() => void query.refetch()} />
+          </div>
+        )}
         <Table
           rowKey="id"
           loading={query.isPending}
@@ -51,6 +77,56 @@ export function ReviewsPage() {
                 >
                   {value}
                 </Tag>
+              ),
+            },
+            {
+              title: 'Kiểm duyệt',
+              key: 'actions',
+              width: 230,
+              align: 'right',
+              render: (_, row) => (
+                <PermissionGate permission="review.moderate">
+                  <Space>
+                    <Popconfirm
+                      title="Duyệt đánh giá này?"
+                      description="Đánh giá sẽ hiển thị trên trang sản phẩm."
+                      disabled={row.status === 'APPROVED'}
+                      onConfirm={() =>
+                        moderate.mutate({ id: row.id, data: { status: 'APPROVED' } })
+                      }
+                    >
+                      <Button
+                        type="primary"
+                        ghost
+                        disabled={row.status === 'APPROVED'}
+                        loading={moderate.isPending && moderate.variables?.id === row.id}
+                        icon={<CheckOutlined />}
+                      >
+                        Duyệt
+                      </Button>
+                    </Popconfirm>
+                    <Popconfirm
+                      title="Từ chối đánh giá này?"
+                      description="Đánh giá sẽ không hiển thị công khai."
+                      disabled={row.status === 'REJECTED'}
+                      onConfirm={() =>
+                        moderate.mutate({
+                          id: row.id,
+                          data: { status: 'REJECTED', reason: 'Không phù hợp chính sách hiển thị' },
+                        })
+                      }
+                    >
+                      <Button
+                        danger
+                        disabled={row.status === 'REJECTED'}
+                        loading={moderate.isPending && moderate.variables?.id === row.id}
+                        icon={<CloseOutlined />}
+                      >
+                        Từ chối
+                      </Button>
+                    </Popconfirm>
+                  </Space>
+                </PermissionGate>
               ),
             },
           ]}

@@ -49,7 +49,7 @@ Phần không copy nguyên trạng:
 
 | Mức | Khoảng trống                                      | Hướng xử lý                                                               |
 | --- | ------------------------------------------------- | ------------------------------------------------------------------------- |
-| P0  | `x-permissions` và `AUTH_BYPASS` chỉ là scaffold  | JWT/session verified identity và deny-by-default trước staging production |
+| P0  | `AUTH_BYPASS` + principal OWNER bootstrap chỉ là scaffold development | JWT/session verified identity và deny-by-default trước staging production |
 | P0  | Có Prisma foundation nhưng chưa có adapter/migration nghiệp vụ | Chốt D19, D20, D22, D23 rồi triển khai PostgreSQL theo wave        |
 | P0  | Chưa có durable audit/outbox/idempotency          | Bổ sung sau khi transaction boundary và schema được duyệt                 |
 | P0  | Chưa có integration/e2e PostgreSQL                | Tạo test environment và migration smoke test                              |
@@ -78,6 +78,9 @@ Mục tiêu: kích hoạt Organization + IAM ở mức contract/application/doma
 | GET    | `/api/v1/admin/organization/branches`               | `org.branch.view`                            |
 | GET    | `/api/v1/admin/organization/warehouses`             | `org.warehouse.view`                         |
 | POST   | `/api/v1/admin/organization/branches`               | `org.branch.manage` + `org.warehouse.manage` |
+| PATCH  | `/api/v1/admin/organization/branches/:id`           | `org.branch.manage` + `org.warehouse.manage` |
+| POST   | `/api/v1/admin/organization/branches/:id/activate`   | `org.branch.manage` + `org.warehouse.manage` |
+| POST   | `/api/v1/admin/organization/branches/:id/deactivate` | `org.branch.manage` + `org.warehouse.manage` |
 | GET    | `/api/v1/admin/iam/users`                           | `iam.user.view`                              |
 | GET    | `/api/v1/admin/iam/roles`                           | `iam.role.view`                              |
 | GET    | `/api/v1/admin/iam/permissions`                     | `iam.role.view`                              |
@@ -107,6 +110,9 @@ Mục tiêu: kích hoạt Organization + IAM ở mức contract/application/doma
 - [x] Create branch + one primary warehouse.
 - [x] Duplicate business code bị conflict.
 - [x] Unit test invariant 1 branch : 1 warehouse.
+- [x] Update và activate/deactivate branch + warehouse atomic, dùng optimistic version và audit.
+- [x] Brand/category CRUD lifecycle persisted; code/parent immutable, không physical delete.
+- [x] Demo seed opt-in có 3 branch/kho, brand, category và product/SKU/price; chạy lặp an toàn.
 - [ ] PostgreSQL unique constraint và transaction integration test sau khi chốt migration.
 
 ### IAM

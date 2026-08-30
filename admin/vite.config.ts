@@ -3,7 +3,9 @@ import { fileURLToPath, URL } from 'node:url';
 
 function vendorChunk(id: string): string | undefined {
   if (!id.includes('node_modules')) return undefined;
-  if (id.includes('ckeditor5')) return 'vendor-editor';
+  if (id.includes('ckeditor4-react') || id.includes('ckeditor4-integrations-common')) {
+    return 'vendor-editor';
+  }
   if (id.includes('@ant-design/icons')) return 'vendor-icons';
   if (id.includes('recharts') || id.includes('d3-') || id.includes('victory-vendor')) {
     return 'vendor-charts';

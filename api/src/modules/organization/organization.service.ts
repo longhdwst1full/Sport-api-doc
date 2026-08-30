@@ -1,4 +1,4 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { v7 as uuidv7 } from 'uuid';
 import { MutationContext } from '../../common/request/request-context';
@@ -11,7 +11,9 @@ import {
 import {
   BranchListDto,
   BranchWithWarehouseDto,
+  ChangeBranchStatusDto,
   CreateBranchDto,
+  UpdateBranchWithWarehouseDto,
   WarehouseListDto,
 } from './organization.dto';
 import { OrganizationRepository } from './organization.repository';
@@ -102,11 +104,65 @@ export class OrganizationService {
     }
   }
 
+  async updateBranch(
+    id: string,
+    input: UpdateBranchWithWarehouseDto,
+    context: MutationContext,
+  ): Promise<BranchWithWarehouseDto> {
+    await this.assertBranchAndWarehouseExist(id);
+    const result = await this.organizations.updateBranchWithWarehouse(
+      id,
+      {
+        name: input.name,
+        phone: input.phone,
+        email: input.email,
+        address: { ...input.address },
+        warehouseName: input.warehouse.name,
+      },
+      input.expectedVersion,
+      input.warehouseExpectedVersion,
+      context,
+    );
+    if (!result) throw new ConflictException('Branch or warehouse version conflict');
+    return result;
+  }
+
+  async changeBranchStatus(
+    id: string,
+    status: BranchWithWarehouseDto['branch']['status'],
+    input: ChangeBranchStatusDto,
+    context: MutationContext,
+  ): Promise<BranchWithWarehouseDto> {
+    await this.assertBranchAndWarehouseExist(id);
+    const result = await this.organizations.changeBranchStatus(
+      id,
+      status,
+      input.expectedVersion,
+      input.warehouseExpectedVersion,
+      context,
+    );
+    if (!result) throw new ConflictException('Branch or warehouse version conflict');
+    return result;
+  }
+
   hasActiveBranch(id: string): Promise<boolean> {
     return this.organizations.hasActiveBranch(id);
   }
 
   hasActiveWarehouse(id: string): Promise<boolean> {
     return this.organizations.hasActiveWarehouse(id);
+  }
+
+  private async assertBranchAndWarehouseExist(id: string): Promise<void> {
+    const [branches, warehouses] = await Promise.all([
+      this.organizations.listBranches(),
+      this.organizations.listWarehouses(),
+    ]);
+    if (!branches.some((branch) => branch.id === id)) {
+      throw new NotFoundException('Branch not found');
+    }
+    if (!warehouses.some((warehouse) => warehouse.branchId === id)) {
+      throw new NotFoundException('Branch warehouse not found');
+    }
   }
 }

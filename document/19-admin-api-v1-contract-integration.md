@@ -1,6 +1,6 @@
 # Admin API v1 contract integration
 
-Ngày cập nhật: 2026-08-29
+Ngày cập nhật: 2026-08-30
 
 ## Nguyên tắc đã áp dụng
 
@@ -16,11 +16,18 @@ Ngày cập nhật: 2026-08-29
 | Mục đích | Method/path v1 | Operation ID | Permission | Consumer Admin |
 | --- | --- | --- | --- | --- |
 | Danh sách branch quản trị | `GET /api/v1/admin/organization/branches` | `listAdminBranches` | `org.branch.view` | Trang Organization |
+| Tạo branch + kho 1:1 | `POST /api/v1/admin/organization/branches` | `createAdminBranchWithWarehouse` | `org.branch.manage` + `org.warehouse.manage` | Organization drawer |
+| Cập nhật branch + kho 1:1 | `PATCH /api/v1/admin/organization/branches/{id}` | `updateAdminBranchWithWarehouse` | `org.branch.manage` + `org.warehouse.manage` | Organization drawer |
+| Bật/tắt branch + kho | `POST .../branches/{id}/activate|deactivate` | `activateAdminBranchWithWarehouse` / `deactivateAdminBranchWithWarehouse` | `org.branch.manage` + `org.warehouse.manage` | Organization table actions |
 | Search branch active | `GET /api/v1/admin/organization/branches/active` | `searchActiveAdminBranches` | `org.branch.view` | Gán role scope BRANCH |
 | Search warehouse active | `GET /api/v1/admin/organization/warehouses/active` | `searchActiveAdminWarehouses` | `org.warehouse.view` | Gán role scope WAREHOUSE |
 | Danh sách role quản trị | `GET /api/v1/admin/iam/roles` | `listAdminRoles` | `iam.role.view` | Tab Role |
 | Search role active | `GET /api/v1/admin/iam/roles/active` | `searchActiveAdminRoles` | `iam.role.view` | Gán role cho user |
 | Gán role | `POST /api/v1/admin/iam/users/{userId}/role-assignments` | `assignAdminUserRole` | `iam.assignment.manage` | Role assignment drawer |
+| CRUD lifecycle brand | `GET/POST/PATCH` + `POST .../{id}/activate|deactivate` | `list/create/update/activate/deactivateAdminBrand` | `catalog.brand.view/manage` | Catalog master page |
+| CRUD lifecycle category | `GET/POST/PATCH` + `POST .../{id}/activate|deactivate` | `list/create/update/activate/deactivateAdminCategory` | `catalog.category.view/manage` | Catalog master page |
+| Điều chỉnh kho | `POST /api/v1/admin/inventory/adjustments` | `createStockAdjustment` | `inventory.stock.adjust` | Inventory drawer; generated request option truyền Idempotency-Key |
+| Kiểm duyệt đánh giá | `PATCH /api/v1/admin/reviews/{id}/moderation` | `moderateAdminReview` | `review.moderate` | Reviews actions |
 
 API `/active` nhận `search`, `page`, `limit`; warehouse nhận thêm `branchId`. Response thống nhất:
 
@@ -62,6 +69,8 @@ Admin dùng `getApiErrorMessage` cho lỗi form/query và `getApiFieldErrors` đ
 - [x] API unit test kiểm tra search/pagination/error normalization.
 - [x] API e2e kiểm tra prefix v1, success, validation error và forbidden error.
 - [x] Admin unit test kiểm tra error parser và scope mapper.
-- [ ] Persisted IAM/Organization adapter — hiện endpoint vẫn dùng in-memory repository.
-- [ ] Verified identity/token — `x-permissions` vẫn chỉ là development scaffold.
+- [x] Persisted IAM/Organization adapter được dùng khi `DATABASE_ENABLED=true`.
+- [x] Brand/category và branch/kho update dùng expected version; activate/deactivate không xóa vật lý.
+- [x] Demo seed chạy lặp hai lần trên PostgreSQL local, không nhân bản dữ liệu.
+- [ ] Verified identity/token — development đang dùng `AUTH_BYPASS=true` và principal OWNER bootstrap; production bắt buộc tắt bypass.
 - [ ] PostgreSQL permission/scope + transaction/audit integration — blocker trước staging.

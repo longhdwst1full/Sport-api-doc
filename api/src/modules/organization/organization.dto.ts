@@ -1,12 +1,14 @@
 import { Type } from 'class-transformer';
 import {
   IsEmail,
+  IsInt,
   IsNotEmpty,
   IsOptional,
   IsPhoneNumber,
   IsString,
   Matches,
   MaxLength,
+  Min,
   ValidateNested,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -114,4 +116,48 @@ export class CreateBranchDto {
 export class BranchWithWarehouseDto {
   @ApiProperty({ type: BranchDto }) branch: BranchDto;
   @ApiProperty({ type: WarehouseDto }) warehouse: WarehouseDto;
+}
+
+export class UpdateWarehouseDto {
+  @ApiProperty({ example: 'Kho bán hàng Đà Nẵng' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(255)
+  name: string;
+}
+
+export class UpdateBranchWithWarehouseDto {
+  @ApiProperty({ example: 'Chi nhánh Đà Nẵng' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(255)
+  name: string;
+
+  @ApiPropertyOptional({ example: '0236 7300 8899' })
+  @IsPhoneNumber('VN')
+  @IsOptional()
+  phone?: string;
+
+  @ApiPropertyOptional({ example: 'danang@dctd.vn' })
+  @IsEmail()
+  @IsOptional()
+  email?: string;
+
+  @ApiProperty({ type: AddressDto })
+  @ValidateNested()
+  @Type(() => AddressDto)
+  address: AddressDto;
+
+  @ApiProperty({ type: UpdateWarehouseDto })
+  @ValidateNested()
+  @Type(() => UpdateWarehouseDto)
+  warehouse: UpdateWarehouseDto;
+
+  @ApiProperty({ minimum: 0 }) @IsInt() @Min(0) expectedVersion: number;
+  @ApiProperty({ minimum: 0 }) @IsInt() @Min(0) warehouseExpectedVersion: number;
+}
+
+export class ChangeBranchStatusDto {
+  @ApiProperty({ minimum: 0 }) @IsInt() @Min(0) expectedVersion: number;
+  @ApiProperty({ minimum: 0 }) @IsInt() @Min(0) warehouseExpectedVersion: number;
 }

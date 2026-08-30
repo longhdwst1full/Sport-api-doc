@@ -28,7 +28,10 @@ import type {
 } from './models';
 
 import { apiFetcher } from '../../../lib/api/fetcher';
-import type { ErrorType, BodyType } from '../../../lib/api/fetcher';
+import type { ErrorType } from '../../../lib/api/fetcher';
+import { apiFetcherWithOptions } from '../../../lib/api/api-fetcher-with-options';
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
 /**
  * @summary List warehouse balances
  */
@@ -150,48 +153,53 @@ export function useListInventoryBalances<
  * @summary Post a basic stock adjustment
  */
 export const createStockAdjustment = (
-  createStockAdjustmentDto: BodyType<CreateStockAdjustmentDto>,
+  createStockAdjustmentDto: CreateStockAdjustmentDto,
+  options?: SecondParameter<typeof apiFetcherWithOptions>,
   signal?: AbortSignal,
 ) => {
-  return apiFetcher<StockAdjustmentResultDto>({
-    url: `/api/v1/admin/inventory/adjustments`,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    data: createStockAdjustmentDto,
-    signal,
-  });
+  return apiFetcherWithOptions<StockAdjustmentResultDto>(
+    {
+      url: `/api/v1/admin/inventory/adjustments`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      data: createStockAdjustmentDto,
+      signal,
+    },
+    options,
+  );
 };
 
 export const getCreateStockAdjustmentMutationOptions = <
-  TError = ErrorType<unknown>,
+  TError = unknown,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof createStockAdjustment>>,
     TError,
-    { data: BodyType<CreateStockAdjustmentDto> },
+    { data: CreateStockAdjustmentDto },
     TContext
   >;
+  request?: SecondParameter<typeof apiFetcherWithOptions>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createStockAdjustment>>,
   TError,
-  { data: BodyType<CreateStockAdjustmentDto> },
+  { data: CreateStockAdjustmentDto },
   TContext
 > => {
   const mutationKey = ['createStockAdjustment'];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createStockAdjustment>>,
-    { data: BodyType<CreateStockAdjustmentDto> }
+    { data: CreateStockAdjustmentDto }
   > = (props) => {
     const { data } = props ?? {};
 
-    return createStockAdjustment(data);
+    return createStockAdjustment(data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -200,26 +208,27 @@ export const getCreateStockAdjustmentMutationOptions = <
 export type CreateStockAdjustmentMutationResult = NonNullable<
   Awaited<ReturnType<typeof createStockAdjustment>>
 >;
-export type CreateStockAdjustmentMutationBody = BodyType<CreateStockAdjustmentDto>;
-export type CreateStockAdjustmentMutationError = ErrorType<unknown>;
+export type CreateStockAdjustmentMutationBody = CreateStockAdjustmentDto;
+export type CreateStockAdjustmentMutationError = unknown;
 
 /**
  * @summary Post a basic stock adjustment
  */
-export const useCreateStockAdjustment = <TError = ErrorType<unknown>, TContext = unknown>(
+export const useCreateStockAdjustment = <TError = unknown, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createStockAdjustment>>,
       TError,
-      { data: BodyType<CreateStockAdjustmentDto> },
+      { data: CreateStockAdjustmentDto },
       TContext
     >;
+    request?: SecondParameter<typeof apiFetcherWithOptions>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<
   Awaited<ReturnType<typeof createStockAdjustment>>,
   TError,
-  { data: BodyType<CreateStockAdjustmentDto> },
+  { data: CreateStockAdjustmentDto },
   TContext
 > => {
   const mutationOptions = getCreateStockAdjustmentMutationOptions(options);

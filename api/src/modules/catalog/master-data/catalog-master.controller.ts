@@ -1,6 +1,27 @@
-import { Body, Controller, Get, Post, Query, Req } from '@nestjs/common';
-import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiConflictResponse,
+  ApiCreatedResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+  ApiUnprocessableEntityResponse,
+} from '@nestjs/swagger';
 import { RequirePermissions } from '../../../common/decorators/require-permissions.decorator';
+import { ErrorResponseDto } from '../../../common/exceptions/error-response.dto';
 import { ActiveLookupResponseDto, ActiveSearchQueryDto } from '../../../common/pagination/active-search.dto';
 import { AuthenticatedRequest, getMutationContext } from '../../../common/request/request-context';
 import {
@@ -8,8 +29,11 @@ import {
   BrandListDto,
   CategoryDto,
   CategoryListDto,
+  ChangeMasterStatusDto,
   CreateBrandDto,
   CreateCategoryDto,
+  UpdateBrandDto,
+  UpdateCategoryDto,
 } from './catalog-master.dto';
 import { CatalogMasterService } from './catalog-master.service';
 
@@ -35,6 +59,50 @@ export class CatalogMasterController {
     return this.catalog.createBrand(input, getMutationContext(request));
   }
 
+  @Patch('brands/:id')
+  @RequirePermissions('catalog.brand.manage')
+  @ApiOperation({ operationId: 'updateAdminBrand', summary: 'Update mutable brand fields' })
+  @ApiOkResponse({ type: BrandDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  updateBrand(
+    @Param('id') id: string,
+    @Body() input: UpdateBrandDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<BrandDto> {
+    return this.catalog.updateBrand(id, input, getMutationContext(request));
+  }
+
+  @Post('brands/:id/deactivate')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions('catalog.brand.manage')
+  @ApiOperation({ operationId: 'deactivateAdminBrand', summary: 'Deactivate a brand' })
+  @ApiOkResponse({ type: BrandDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  deactivateBrand(
+    @Param('id') id: string,
+    @Body() input: ChangeMasterStatusDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<BrandDto> {
+    return this.catalog.changeBrandStatus(id, 'INACTIVE', input, getMutationContext(request));
+  }
+
+  @Post('brands/:id/activate')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions('catalog.brand.manage')
+  @ApiOperation({ operationId: 'activateAdminBrand', summary: 'Reactivate a brand' })
+  @ApiOkResponse({ type: BrandDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  activateBrand(
+    @Param('id') id: string,
+    @Body() input: ChangeMasterStatusDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<BrandDto> {
+    return this.catalog.changeBrandStatus(id, 'ACTIVE', input, getMutationContext(request));
+  }
+
   @Get('categories') @RequirePermissions('catalog.category.view')
   @ApiOperation({ operationId: 'listAdminCategories' }) @ApiOkResponse({ type: CategoryListDto })
   listCategories(): Promise<CategoryListDto> { return this.catalog.listCategories(); }
@@ -49,5 +117,51 @@ export class CatalogMasterController {
   @ApiOperation({ operationId: 'createAdminCategory' }) @ApiCreatedResponse({ type: CategoryDto })
   createCategory(@Body() input: CreateCategoryDto, @Req() request: AuthenticatedRequest): Promise<CategoryDto> {
     return this.catalog.createCategory(input, getMutationContext(request));
+  }
+
+  @Patch('categories/:id')
+  @RequirePermissions('catalog.category.manage')
+  @ApiOperation({ operationId: 'updateAdminCategory', summary: 'Update mutable category fields' })
+  @ApiOkResponse({ type: CategoryDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  updateCategory(
+    @Param('id') id: string,
+    @Body() input: UpdateCategoryDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<CategoryDto> {
+    return this.catalog.updateCategory(id, input, getMutationContext(request));
+  }
+
+  @Post('categories/:id/deactivate')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions('catalog.category.manage')
+  @ApiOperation({ operationId: 'deactivateAdminCategory', summary: 'Deactivate a leaf category' })
+  @ApiOkResponse({ type: CategoryDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  @ApiUnprocessableEntityResponse({ type: ErrorResponseDto })
+  deactivateCategory(
+    @Param('id') id: string,
+    @Body() input: ChangeMasterStatusDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<CategoryDto> {
+    return this.catalog.changeCategoryStatus(id, 'INACTIVE', input, getMutationContext(request));
+  }
+
+  @Post('categories/:id/activate')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions('catalog.category.manage')
+  @ApiOperation({ operationId: 'activateAdminCategory', summary: 'Reactivate a category' })
+  @ApiOkResponse({ type: CategoryDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  @ApiUnprocessableEntityResponse({ type: ErrorResponseDto })
+  activateCategory(
+    @Param('id') id: string,
+    @Body() input: ChangeMasterStatusDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<CategoryDto> {
+    return this.catalog.changeCategoryStatus(id, 'ACTIVE', input, getMutationContext(request));
   }
 }

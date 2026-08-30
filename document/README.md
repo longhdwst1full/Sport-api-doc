@@ -33,6 +33,8 @@ Mục tiêu: hệ thống web/PWA bán thiết bị tập luyện, dụng cụ v
 | `14-backend-review-sprint-1.md`       | Đánh giá backend, phạm vi, API và checklist Sprint 1 Organization/IAM |
 | `15-architecture-contract-codegen.md` | Kiến trúc module, contract YAML, codegen theo domain và concurrency   |
 | `16-nestjs-source-structure.md`       | Cấu trúc source NestJS, Prisma foundation, provider/integration base |
+| `19-admin-api-v1-contract-integration.md` | Mapping API V1, permission và generated admin consumer          |
+| `21-admin-crud-coverage.md`           | Coverage CRUD admin thật, phần fixture/scaffold và demo seed          |
 | `20-sprint-1-execution-status.md`     | Trạng thái Sprint 1 hiện tại, evidence, phần còn thiếu và blocker     |
 | `DCTD-UTC-V1-database-model-review.xlsx` | Workbook review có ô đỏ, Excel Note và sheet Change Log           |
 | `api/openapi-v1.yaml`                 | Contract OpenAPI V1 tổng được sinh từ NestJS                          |

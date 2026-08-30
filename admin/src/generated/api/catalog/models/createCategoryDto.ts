@@ -13,4 +13,6 @@ export interface CreateCategoryDto {
   slug: string;
   description?: string;
   imageAssetId?: string;
+  /** @minimum 0 */
+  sortOrder?: number;
 }

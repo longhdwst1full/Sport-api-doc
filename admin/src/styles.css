@@ -12,11 +12,7 @@ body {
   box-sizing: border-box;
 }
 
-.dctd-rich-text-editor .ck-editor__editable_inline {
-  min-height: 320px;
-}
-
-.dctd-rich-text-editor[data-editor-state='read-only'] .ck-editor__editable_inline {
+.dctd-rich-text-editor[data-editor-state='read-only'] .cke_contents {
   background: #f8fafc;
 }
 

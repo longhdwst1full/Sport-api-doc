@@ -16,7 +16,6 @@ import { uploadImage } from '@/lib/media/upload-image';
 
 const uploadRichTextImage = async (file: File, signal: AbortSignal) =>
   (await uploadImage(file, signal)).secureUrl;
-const richTextEditorConfigured = Boolean(import.meta.env.VITE_CKEDITOR_LICENSE_KEY?.trim());
 
 export function ContentEditorDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { message } = App.useApp();
@@ -79,7 +78,6 @@ export function ContentEditorDrawer({ open, onClose }: { open: boolean; onClose:
       extra={
         <Button
           type="primary"
-          disabled={!richTextEditorConfigured}
           loading={createPost.isPending}
           onClick={submit}
         >

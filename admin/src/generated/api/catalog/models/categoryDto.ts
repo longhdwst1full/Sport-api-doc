@@ -15,6 +15,9 @@ export interface CategoryDto {
   slug: string;
   path: string;
   depth: number;
+  description?: string;
+  imageAssetId?: string;
+  sortOrder: number;
   status: CategoryDtoStatus;
   version: number;
 }

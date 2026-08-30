@@ -25,10 +25,12 @@ import type {
   ActiveLookupResponseDto,
   BranchListDto,
   BranchWithWarehouseDto,
+  ChangeBranchStatusDto,
   CreateBranchDto,
   ErrorResponseDto,
   SearchActiveAdminBranchesParams,
   SearchActiveAdminWarehousesParams,
+  UpdateBranchWithWarehouseDto,
   WarehouseListDto,
 } from './models';
 
@@ -603,3 +605,262 @@ export function useSearchActiveAdminWarehouses<
 
   return query;
 }
+
+/**
+ * @summary Update a branch and its single V1 warehouse
+ */
+export const updateAdminBranchWithWarehouse = (
+  id: string,
+  updateBranchWithWarehouseDto: BodyType<UpdateBranchWithWarehouseDto>,
+) => {
+  return apiFetcher<BranchWithWarehouseDto>({
+    url: `/api/v1/admin/organization/branches/${id}`,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    data: updateBranchWithWarehouseDto,
+  });
+};
+
+export const getUpdateAdminBranchWithWarehouseMutationOptions = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateAdminBranchWithWarehouse>>,
+    TError,
+    { id: string; data: BodyType<UpdateBranchWithWarehouseDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateAdminBranchWithWarehouse>>,
+  TError,
+  { id: string; data: BodyType<UpdateBranchWithWarehouseDto> },
+  TContext
+> => {
+  const mutationKey = ['updateAdminBranchWithWarehouse'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateAdminBranchWithWarehouse>>,
+    { id: string; data: BodyType<UpdateBranchWithWarehouseDto> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateAdminBranchWithWarehouse(id, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateAdminBranchWithWarehouseMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateAdminBranchWithWarehouse>>
+>;
+export type UpdateAdminBranchWithWarehouseMutationBody = BodyType<UpdateBranchWithWarehouseDto>;
+export type UpdateAdminBranchWithWarehouseMutationError = ErrorType<
+  ErrorResponseDto | ErrorResponseDto
+>;
+
+/**
+ * @summary Update a branch and its single V1 warehouse
+ */
+export const useUpdateAdminBranchWithWarehouse = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateAdminBranchWithWarehouse>>,
+      TError,
+      { id: string; data: BodyType<UpdateBranchWithWarehouseDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateAdminBranchWithWarehouse>>,
+  TError,
+  { id: string; data: BodyType<UpdateBranchWithWarehouseDto> },
+  TContext
+> => {
+  const mutationOptions = getUpdateAdminBranchWithWarehouseMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+/**
+ * @summary Deactivate a branch and its V1 warehouse atomically
+ */
+export const deactivateAdminBranchWithWarehouse = (
+  id: string,
+  changeBranchStatusDto: BodyType<ChangeBranchStatusDto>,
+  signal?: AbortSignal,
+) => {
+  return apiFetcher<BranchWithWarehouseDto>({
+    url: `/api/v1/admin/organization/branches/${id}/deactivate`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: changeBranchStatusDto,
+    signal,
+  });
+};
+
+export const getDeactivateAdminBranchWithWarehouseMutationOptions = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deactivateAdminBranchWithWarehouse>>,
+    TError,
+    { id: string; data: BodyType<ChangeBranchStatusDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deactivateAdminBranchWithWarehouse>>,
+  TError,
+  { id: string; data: BodyType<ChangeBranchStatusDto> },
+  TContext
+> => {
+  const mutationKey = ['deactivateAdminBranchWithWarehouse'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deactivateAdminBranchWithWarehouse>>,
+    { id: string; data: BodyType<ChangeBranchStatusDto> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return deactivateAdminBranchWithWarehouse(id, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeactivateAdminBranchWithWarehouseMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deactivateAdminBranchWithWarehouse>>
+>;
+export type DeactivateAdminBranchWithWarehouseMutationBody = BodyType<ChangeBranchStatusDto>;
+export type DeactivateAdminBranchWithWarehouseMutationError = ErrorType<
+  ErrorResponseDto | ErrorResponseDto
+>;
+
+/**
+ * @summary Deactivate a branch and its V1 warehouse atomically
+ */
+export const useDeactivateAdminBranchWithWarehouse = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deactivateAdminBranchWithWarehouse>>,
+      TError,
+      { id: string; data: BodyType<ChangeBranchStatusDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deactivateAdminBranchWithWarehouse>>,
+  TError,
+  { id: string; data: BodyType<ChangeBranchStatusDto> },
+  TContext
+> => {
+  const mutationOptions = getDeactivateAdminBranchWithWarehouseMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+/**
+ * @summary Reactivate a branch and its V1 warehouse atomically
+ */
+export const activateAdminBranchWithWarehouse = (
+  id: string,
+  changeBranchStatusDto: BodyType<ChangeBranchStatusDto>,
+  signal?: AbortSignal,
+) => {
+  return apiFetcher<BranchWithWarehouseDto>({
+    url: `/api/v1/admin/organization/branches/${id}/activate`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: changeBranchStatusDto,
+    signal,
+  });
+};
+
+export const getActivateAdminBranchWithWarehouseMutationOptions = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof activateAdminBranchWithWarehouse>>,
+    TError,
+    { id: string; data: BodyType<ChangeBranchStatusDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof activateAdminBranchWithWarehouse>>,
+  TError,
+  { id: string; data: BodyType<ChangeBranchStatusDto> },
+  TContext
+> => {
+  const mutationKey = ['activateAdminBranchWithWarehouse'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof activateAdminBranchWithWarehouse>>,
+    { id: string; data: BodyType<ChangeBranchStatusDto> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return activateAdminBranchWithWarehouse(id, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ActivateAdminBranchWithWarehouseMutationResult = NonNullable<
+  Awaited<ReturnType<typeof activateAdminBranchWithWarehouse>>
+>;
+export type ActivateAdminBranchWithWarehouseMutationBody = BodyType<ChangeBranchStatusDto>;
+export type ActivateAdminBranchWithWarehouseMutationError = ErrorType<
+  ErrorResponseDto | ErrorResponseDto
+>;
+
+/**
+ * @summary Reactivate a branch and its V1 warehouse atomically
+ */
+export const useActivateAdminBranchWithWarehouse = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof activateAdminBranchWithWarehouse>>,
+      TError,
+      { id: string; data: BodyType<ChangeBranchStatusDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof activateAdminBranchWithWarehouse>>,
+  TError,
+  { id: string; data: BodyType<ChangeBranchStatusDto> },
+  TContext
+> => {
+  const mutationOptions = getActivateAdminBranchWithWarehouseMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};

@@ -6,9 +6,23 @@ import { AUTHENTICATION_REQUIRED_KEY } from '../decorators/require-authenticatio
 import { PERMISSIONS_KEY } from '../decorators/require-permissions.decorator';
 import { AuthService } from '../../modules/auth/auth.service';
 import type { AuthPrincipal } from '../../modules/auth/auth.types';
+import { ScopeType } from '../../modules/iam/iam.types';
 
 interface AuthenticatedRequest extends Request {
   auth?: AuthPrincipal;
+}
+
+const DEVELOPMENT_OWNER_ID = '00000000-0000-7000-8000-000000000010';
+
+function createDevelopmentPrincipal(requiredPermissions: string[]): AuthPrincipal {
+  return {
+    userId: DEVELOPMENT_OWNER_ID,
+    sessionId: 'development-auth-bypass',
+    displayName: 'Development Owner',
+    permissionVersion: 'dev',
+    permissions: requiredPermissions,
+    scopes: [{ type: ScopeType.GLOBAL }],
+  };
 }
 
 @Injectable()
@@ -28,10 +42,16 @@ export class PermissionGuard implements CanActivate {
       AUTHENTICATION_REQUIRED_KEY,
       [context.getHandler(), context.getClass()],
     );
-    if (!required?.length && !authenticationRequired) return true;
-    if (this.config.get<boolean>('app.authBypass')) return true;
-
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
+    if (!required?.length && !authenticationRequired) return true;
+    const developmentBypass =
+      this.config.get<string>('app.environment') === 'development' &&
+      this.config.get<boolean>('app.authBypass') === true;
+    if (developmentBypass) {
+      request.auth = createDevelopmentPrincipal(required ?? []);
+      return true;
+    }
+
     const authorization = request.header('authorization');
     if (!authorization?.startsWith('Bearer ')) {
       throw new UnauthorizedException('Bearer access token is required');

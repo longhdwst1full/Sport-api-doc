@@ -20,7 +20,7 @@ D18,PWA offline,Offline app shell và catalog cache; không offline checkout,Tr�
 D19,Retention giao dịch,10 năm cho order/payment/inventory/audit tài chính,Cần đúng quy định và chi phí lưu trữ,Legal+Finance,0,PROPOSED
 D20,RPO RTO,RPO 15 phút và RTO 4 giờ,Quyết định backup/infra cost,Business+Tech,0,PROPOSED
 D21,Flash sale release,V1 core flash sale phát hành sau luồng bán thường,Giảm rủi ro concurrency khi go-live,Product,7,PROPOSED
-D22,Soft delete,Chỉ master data; ledger/transaction reverse hoặc cancel,Bảo toàn audit và FK,Tech,0,DECIDED
+D22,Deletion lifecycle,10 model P0 implemented không dùng deleted_at; master dùng status INACTIVE/ARCHIVED; ledger/transaction reverse hoặc cancel,Bảo toàn audit/FK và tránh hai nguồn trạng thái; P1 review khi triển khai,Tech,0,DECIDED
 D23,Primary keys,UUIDv7 app-generated và business code riêng,Sortability/distributed generation,Tech,0,DECIDED
 D24,Search,V1 PostgreSQL FTS/trigram; chỉ thêm OpenSearch khi đo thấy cần,Giảm vận hành hạ tầng,Tech,2,PROPOSED
 D25,Serial và IMEI,V1 không quản lý từng đơn vị; chỉ quản lý số lượng theo SKU/kho,Giảm phạm vi kho và thao tác scan; xem xét lại ở V2,Product+Ops,3,DECIDED

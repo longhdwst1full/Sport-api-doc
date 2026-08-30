@@ -1,7 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { OrganizationRepository } from './organization.repository';
-import { Branch, BranchWithWarehouse, Warehouse } from './organization.types';
+import {
+  Branch,
+  BranchWithWarehouse,
+  BranchWithWarehouseUpdate,
+  OrganizationStatus,
+  Warehouse,
+} from './organization.types';
 import { MutationContext } from '../../common/request/request-context';
 
 @Injectable()
@@ -92,6 +98,69 @@ export class InMemoryOrganizationRepository extends OrganizationRepository {
   ): Promise<BranchWithWarehouse> {
     this.branches.push({ ...branch, address: { ...branch.address } });
     this.warehouses.push({ ...warehouse });
+    void context;
+    return Promise.resolve({
+      branch: { ...branch, address: { ...branch.address } },
+      warehouse: { ...warehouse },
+    });
+  }
+
+  updateBranchWithWarehouse(
+    branchId: string,
+    input: BranchWithWarehouseUpdate,
+    expectedVersion: number,
+    warehouseExpectedVersion: number,
+    context: MutationContext,
+  ): Promise<BranchWithWarehouse | null> {
+    const branch = this.branches.find((item) => item.id === branchId);
+    const warehouse = this.warehouses.find((item) => item.branchId === branchId);
+    if (
+      !branch ||
+      !warehouse ||
+      branch.version !== expectedVersion ||
+      warehouse.version !== warehouseExpectedVersion
+    ) {
+      return Promise.resolve(null);
+    }
+    Object.assign(branch, {
+      name: input.name,
+      phone: input.phone,
+      email: input.email,
+      address: { ...input.address },
+      version: branch.version + 1,
+    });
+    Object.assign(warehouse, {
+      name: input.warehouseName,
+      version: warehouse.version + 1,
+    });
+    void context;
+    return Promise.resolve({
+      branch: { ...branch, address: { ...branch.address } },
+      warehouse: { ...warehouse },
+    });
+  }
+
+  changeBranchStatus(
+    branchId: string,
+    status: OrganizationStatus,
+    expectedVersion: number,
+    warehouseExpectedVersion: number,
+    context: MutationContext,
+  ): Promise<BranchWithWarehouse | null> {
+    const branch = this.branches.find((item) => item.id === branchId);
+    const warehouse = this.warehouses.find((item) => item.branchId === branchId);
+    if (
+      !branch ||
+      !warehouse ||
+      branch.version !== expectedVersion ||
+      warehouse.version !== warehouseExpectedVersion
+    ) {
+      return Promise.resolve(null);
+    }
+    branch.status = status;
+    branch.version += 1;
+    warehouse.status = status;
+    warehouse.version += 1;
     void context;
     return Promise.resolve({
       branch: { ...branch, address: { ...branch.address } },

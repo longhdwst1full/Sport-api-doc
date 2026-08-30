@@ -32,11 +32,11 @@ class EnvironmentVariables {
   PORT = 4000;
 
   @IsString()
-  CORS_ORIGINS = 'http://localhost:3000,http://localhost:5173';
+  CORS_ORIGINS = '*';
 
   @Transform(toBoolean)
   @IsBoolean()
-  AUTH_BYPASS = false;
+  AUTH_BYPASS = true;
 
   @IsString()
   @MinLength(32)
@@ -112,6 +112,14 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
   if (errors.length > 0) {
     const messages = errors.flatMap((error) => Object.values(error.constraints ?? {}));
     throw new Error(`Environment validation failed: ${messages.join('; ')}`);
+  }
+  if (environment.NODE_ENV === NodeEnvironment.PRODUCTION) {
+    if (environment.CORS_ORIGINS.split(',').some((origin) => origin.trim() === '*')) {
+      throw new Error('Environment validation failed: CORS_ORIGINS cannot contain * in production');
+    }
+    if (environment.AUTH_BYPASS) {
+      throw new Error('Environment validation failed: AUTH_BYPASS must be false in production');
+    }
   }
   return { ...config, ...environment };
 }

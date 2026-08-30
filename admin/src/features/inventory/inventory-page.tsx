@@ -1,6 +1,10 @@
-import { ReloadOutlined } from '@ant-design/icons';
+import { PlusOutlined, ReloadOutlined } from '@ant-design/icons';
 import { Button, Card, Progress, Table, Tag, Typography } from 'antd';
+import { useState } from 'react';
+import { PermissionGate } from '@/core/auth/permissions';
+import { QueryErrorAlert } from '@/foundation/feedback/query-error-alert';
 import { useListInventoryBalances } from '@/generated/api/inventory/inventory';
+import { StockAdjustmentDrawer } from './stock-adjustment-drawer';
 
 const status = {
   IN_STOCK: { color: 'green', label: 'Còn hàng' },
@@ -9,6 +13,7 @@ const status = {
 } as const;
 
 export function InventoryPage() {
+  const [adjustmentOpen, setAdjustmentOpen] = useState(false);
   const query = useListInventoryBalances();
   return (
     <div className="space-y-6">
@@ -19,11 +24,19 @@ export function InventoryPage() {
             Tồn kho cơ bản
           </Typography.Title>
         </div>
-        <Button icon={<ReloadOutlined />} onClick={() => void query.refetch()}>
-          Làm mới
-        </Button>
+        <div className="flex gap-2">
+          <Button icon={<ReloadOutlined />} onClick={() => void query.refetch()}>Làm mới</Button>
+          <PermissionGate permission="inventory.stock.adjust">
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setAdjustmentOpen(true)}>Điều chỉnh tồn</Button>
+          </PermissionGate>
+        </div>
       </div>
       <Card>
+        {query.isError && (
+          <div className="mb-4">
+            <QueryErrorAlert error={query.error} retry={() => void query.refetch()} />
+          </div>
+        )}
         <Table
           rowKey="id"
           loading={query.isPending}
@@ -68,6 +81,13 @@ export function InventoryPage() {
           ]}
         />
       </Card>
+      {adjustmentOpen && (
+        <StockAdjustmentDrawer
+          open={adjustmentOpen}
+          balances={query.data?.items ?? []}
+          onClose={() => setAdjustmentOpen(false)}
+        />
+      )}
     </div>
   );
 }

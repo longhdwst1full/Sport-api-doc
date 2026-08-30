@@ -171,6 +171,59 @@
         "document:19-admin-api-v1-contract-integration.md"
       ],
       "targets": []
+    },
+    {
+      "id": "API-20260829-DEV-CORS-AUTH-BYPASS",
+      "date": "2026-08-29",
+      "scope": "API+SECURITY-CONFIG",
+      "summary": "Development cho phép mọi CORS origin và bypass permission bằng principal OWNER bootstrap; production fail-fast khi cấu hình wildcard CORS hoặc AUTH_BYPASS=true.",
+      "sources": [
+        "config:CORS_ORIGINS/AUTH_BYPASS",
+        "test:permission.guard.spec.ts",
+        "test:env.validation.spec.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "DB-20260829-REMOVE-DELETED-AT-V1",
+      "date": "2026-08-29",
+      "scope": "DATABASE+API",
+      "summary": "Bỏ deleted_at khỏi 10 model P0 implemented; backfill lifecycle bằng status, thay partial unique index và giữ lịch sử qua audit/FK.",
+      "sources": [
+        "migration:20260829233000_remove_deleted_at_v1",
+        "document:D22",
+        "test:api-unit-and-prisma-validation"
+      ],
+      "targets": [
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": ["branches", "warehouses", "users", "roles", "media_assets", "brands", "categories", "products", "product_variants", "product_media"],
+            "Tên cột": "deleted_at"
+          },
+          "columns": "*",
+          "archiveRemovedRowsTo": "Removed Columns"
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": ["branches", "warehouses", "users", "roles", "media_assets", "brands", "categories", "products", "product_variants", "product_media"] },
+          "columns": ["Unique / CHECK", "Retention"]
+        }
+      ]
+    },
+    {
+      "id": "API-20260830-ADMIN-MASTER-CRUD",
+      "date": "2026-08-30",
+      "scope": "API+ADMIN+SEED",
+      "summary": "Hoàn thiện CRUD lifecycle cho brand/category và branch-one-warehouse: update optimistic version, activate/deactivate có audit; admin dùng generated SDK; bổ sung demo seed idempotent 3 bản ghi mỗi nhóm.",
+      "sources": [
+        "OpenAPI:updateAdminBrand/deactivateAdminBrand/activateAdminBrand/updateAdminCategory/deactivateAdminCategory/activateAdminCategory",
+        "OpenAPI:updateAdminBranchWithWarehouse/deactivateAdminBranchWithWarehouse/activateAdminBranchWithWarehouse",
+        "test:catalog-master.service.spec.ts",
+        "test:organization.service.spec.ts",
+        "script:prisma/seed-demo.ts"
+      ],
+      "targets": []
     }
   ]
 }
