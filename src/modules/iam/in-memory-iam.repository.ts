@@ -2,8 +2,21 @@ import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { V1_ROLE_PERMISSIONS } from './iam.permissions';
 import { IamRepository } from './iam.repository';
-import { Role, ScopeType, User, UserRoleAssignment, UserWithAssignments } from './iam.types';
+import {
+  CreateStaffUserInput,
+  LockStaffUserResult,
+  Role,
+  ScopeType,
+  User,
+  UserRoleAssignment,
+  UserWithAssignments,
+} from './iam.types';
 import { MutationContext } from '../../common/request/request-context';
+
+function maskEmail(email: string): string {
+  const [local = '', domain = ''] = email.split('@');
+  return `${local.slice(0, 2)}***@${domain}`;
+}
 
 @Injectable()
 export class InMemoryIamRepository extends IamRepository {
@@ -11,6 +24,7 @@ export class InMemoryIamRepository extends IamRepository {
   private readonly branchManagerRoleId = randomUUID();
   private readonly staffRoleId = randomUUID();
   private readonly ownerUserId = randomUUID();
+  private readonly normalizedEmails = new Set(['long@dctd.vn', 'nam@dctd.vn']);
 
   private readonly roles: Role[] = [
     {
@@ -87,6 +101,10 @@ export class InMemoryIamRepository extends IamRepository {
     )));
   }
 
+  async findUser(id: string): Promise<UserWithAssignments | undefined> {
+    return (await this.listUsers()).find((user) => user.id === id);
+  }
+
   listRoles(): Promise<Role[]> {
     return Promise.resolve(this.roles.map((role) => ({ ...role, permissionCodes: [...role.permissionCodes] })));
   }
@@ -100,6 +118,10 @@ export class InMemoryIamRepository extends IamRepository {
 
   hasUser(id: string): Promise<boolean> {
     return Promise.resolve(this.users.some((user) => user.id === id));
+  }
+
+  hasActiveEmail(normalizedEmail: string): Promise<boolean> {
+    return Promise.resolve(this.normalizedEmails.has(normalizedEmail));
   }
 
   hasAssignment(
@@ -127,5 +149,67 @@ export class InMemoryIamRepository extends IamRepository {
     user.permissionVersion += 1;
     void context;
     return Promise.resolve({ ...assignment });
+  }
+
+  createStaffUser(
+    input: CreateStaffUserInput,
+    context: MutationContext,
+  ): Promise<UserWithAssignments> {
+    if (this.normalizedEmails.has(input.normalizedEmail)) {
+      throw new Error('User email already exists');
+    }
+    const user: User = {
+      id: input.id,
+      displayName: input.displayName,
+      maskedEmail: maskEmail(input.normalizedEmail),
+      userType: 'STAFF',
+      status: 'ACTIVE',
+      permissionVersion: 1,
+    };
+    const assignment: UserRoleAssignment = {
+      id: input.assignmentId,
+      userId: input.id,
+      roleId: input.role.id,
+      roleCode: input.role.code,
+      scopeType: ScopeType.BRANCH,
+      branchId: input.branchId,
+      status: 'ACTIVE',
+      validFrom: new Date().toISOString(),
+    };
+    this.users.push(user);
+    this.normalizedEmails.add(input.normalizedEmail);
+    this.assignments.push(assignment);
+    void context;
+    return Promise.resolve({ ...user, assignments: [{ ...assignment }] });
+  }
+
+  async lockStaffUser(
+    userId: string,
+    reason: string,
+    context: MutationContext,
+  ): Promise<LockStaffUserResult | undefined> {
+    const user = this.users.find((candidate) => candidate.id === userId);
+    if (!user || user.status !== 'ACTIVE') return undefined;
+    user.status = 'LOCKED';
+    user.permissionVersion += 1;
+    void reason;
+    void context;
+    const result = await this.findUser(userId);
+    if (!result) throw new Error('Locked staff user disappeared');
+    return { user: result, revokedSessionCount: 0 };
+  }
+
+  async unlockStaffUserAndResetPassword(
+    userId: string,
+    passwordHash: string,
+    context: MutationContext,
+  ): Promise<UserWithAssignments | undefined> {
+    const user = this.users.find((candidate) => candidate.id === userId);
+    if (!user || user.status !== 'LOCKED') return undefined;
+    user.status = 'ACTIVE';
+    user.permissionVersion += 1;
+    void passwordHash;
+    void context;
+    return this.findUser(userId);
   }
 }

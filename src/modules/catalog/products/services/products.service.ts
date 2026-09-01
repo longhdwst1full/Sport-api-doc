@@ -250,6 +250,126 @@ export class ProductsService {
     });
   }
 
+  async archiveProduct(
+    id: string,
+    input: ChangeProductStatusDto,
+    context: MutationContext,
+  ): Promise<ProductDetailDto> {
+    return this.changeProductStatus(
+      id,
+      input,
+      context,
+      ['DRAFT', 'PUBLISHED'],
+      'ARCHIVED',
+      'catalog.product.archive',
+    );
+  }
+
+  async reactivateProduct(
+    id: string,
+    input: ChangeProductStatusDto,
+    context: MutationContext,
+  ): Promise<ProductDetailDto> {
+    return this.changeProductStatus(
+      id,
+      input,
+      context,
+      ['ARCHIVED'],
+      'DRAFT',
+      'catalog.product.reactivate',
+    );
+  }
+
+  async archiveVariant(
+    variantId: string,
+    input: ChangeProductStatusDto,
+    context: MutationContext,
+  ): Promise<ProductDetailDto> {
+    return this.prisma.$transaction(async (transaction) => {
+      const variant = await transaction.productVariant.findUnique({
+        where: { id: variantId },
+      });
+      if (!variant) throw new NotFoundException('Variant not found');
+      if (variant.status !== 'ACTIVE') {
+        throw new UnprocessableEntityException('Only ACTIVE variant can be archived');
+      }
+      const activePublishedBundleUsage = await transaction.bundleItem.count({
+        where: {
+          componentVariantId: variantId,
+          productBundle: {
+            status: 'ACTIVE',
+            bundleVariant: { product: { status: 'PUBLISHED' } },
+          },
+        },
+      });
+      if (activePublishedBundleUsage > 0) {
+        throw new UnprocessableEntityException(
+          'Variant is used by an active published combo; archive the combo first',
+        );
+      }
+      const updated = await transaction.productVariant.updateMany({
+        where: { id: variantId, version: BigInt(input.expectedVersion), status: 'ACTIVE' },
+        data: { status: 'INACTIVE', version: { increment: 1 } },
+      });
+      if (updated.count !== 1) throw new ConflictException('Variant version conflict');
+      await this.audit.write(
+        {
+          requestId: context.requestId,
+          sequenceNo: 1,
+          actorType: 'USER',
+          actorUserId: context.actorUserId,
+          action: 'catalog.variant.archive',
+          entityType: 'PRODUCT_VARIANT',
+          entityId: variantId,
+          before: { status: 'ACTIVE', version: input.expectedVersion },
+          after: { status: 'INACTIVE', version: input.expectedVersion + 1 },
+        },
+        transaction,
+      );
+      return this.getById(variant.productId, transaction);
+    });
+  }
+
+  async reactivateVariant(
+    variantId: string,
+    input: ChangeProductStatusDto,
+    context: MutationContext,
+  ): Promise<ProductDetailDto> {
+    return this.prisma.$transaction(async (transaction) => {
+      const variant = await transaction.productVariant.findUnique({
+        where: { id: variantId },
+        include: { product: true },
+      });
+      if (!variant) throw new NotFoundException('Variant not found');
+      if (variant.status !== 'INACTIVE') {
+        throw new UnprocessableEntityException('Only INACTIVE variant can be reactivated');
+      }
+      if (variant.product.status === 'ARCHIVED') {
+        throw new UnprocessableEntityException('Reactivate the product before its variant');
+      }
+      const updated = await transaction.productVariant.updateMany({
+        where: { id: variantId, version: BigInt(input.expectedVersion), status: 'INACTIVE' },
+        data: { status: 'ACTIVE', version: { increment: 1 } },
+      });
+      if (updated.count !== 1) throw new ConflictException('Variant version conflict');
+      await this.audit.write(
+        {
+          requestId: context.requestId,
+          sequenceNo: 1,
+          actorType: 'USER',
+          actorUserId: context.actorUserId,
+          action: 'catalog.variant.reactivate',
+          entityType: 'PRODUCT_VARIANT',
+          entityId: variantId,
+          before: { status: 'INACTIVE', version: input.expectedVersion },
+          after: { status: 'ACTIVE', version: input.expectedVersion + 1 },
+        },
+        transaction,
+      );
+      return this.getById(variant.productId, transaction);
+    });
+  }
+
   async createVariant(
     productId: string,
     input: CreateVariantDto,
@@ -392,6 +512,54 @@ export class ProductsService {
     });
     if (!row) throw new NotFoundException('Product not found');
     return this.toDetail(row);
+  }
+
+  private async changeProductStatus(
+    id: string,
+    input: ChangeProductStatusDto,
+    context: MutationContext,
+    allowedFrom: Array<'DRAFT' | 'PUBLISHED' | 'ARCHIVED'>,
+    targetStatus: 'DRAFT' | 'ARCHIVED',
+    action: string,
+  ): Promise<ProductDetailDto> {
+    return this.prisma.$transaction(async (transaction) => {
+      const product = await transaction.product.findUnique({ where: { id } });
+      if (!product) throw new NotFoundException('Product not found');
+      if (!allowedFrom.includes(product.status as (typeof allowedFrom)[number])) {
+        throw new UnprocessableEntityException(
+          `Product cannot transition from ${product.status} to ${targetStatus}`,
+        );
+      }
+      const updated = await transaction.product.updateMany({
+        where: {
+          id,
+          version: BigInt(input.expectedVersion),
+          status: { in: allowedFrom },
+        },
+        data: {
+          status: targetStatus,
+          ...(targetStatus === 'DRAFT' ? { publishedAt: null } : {}),
+          version: { increment: 1 },
+          updatedBy: context.actorUserId,
+        },
+      });
+      if (updated.count !== 1) throw new ConflictException('Product version conflict');
+      await this.audit.write(
+        {
+          requestId: context.requestId,
+          sequenceNo: 1,
+          actorType: 'USER',
+          actorUserId: context.actorUserId,
+          action,
+          entityType: 'PRODUCT',
+          entityId: id,
+          before: { status: product.status, version: input.expectedVersion },
+          after: { status: targetStatus, version: input.expectedVersion + 1 },
+        },
+        transaction,
+      );
+      return this.getById(id, transaction);
+    });
   }
 
   private productInclude(now: Date) {

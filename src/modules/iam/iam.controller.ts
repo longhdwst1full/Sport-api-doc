@@ -24,8 +24,11 @@ import {
 } from '../../common/pagination/active-search.dto';
 import {
   AssignUserRoleDto,
+  CreateStaffUserDto,
+  LockStaffUserDto,
   PermissionListDto,
   RoleListDto,
+  UserDto,
   UserListDto,
   UserRoleAssignmentDto,
 } from './iam.dto';
@@ -43,6 +46,77 @@ export class IamController {
   @ApiOkResponse({ type: UserListDto })
   listUsers(@Req() request: AuthenticatedRequest): Promise<UserListDto> {
     return this.iam.listUsers(getAuthPrincipal(request));
+  }
+
+  @Post('users')
+  @RequirePermissions('iam.user.manage')
+  @ApiOperation({
+    operationId: 'createAdminStaffUser',
+    summary: 'Create an active staff user with the approved default password and branch role',
+  })
+  @ApiCreatedResponse({ type: UserDto })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiUnauthorizedResponse({ type: ErrorResponseDto })
+  @ApiForbiddenResponse({ type: ErrorResponseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto, description: 'Role or branch not found' })
+  @ApiConflictResponse({ type: ErrorResponseDto, description: 'Email already exists' })
+  createStaffUser(
+    @Body() input: CreateStaffUserDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<UserDto> {
+    return this.iam.createStaffUser(
+      input,
+      getMutationContext(request),
+      getAuthPrincipal(request),
+    );
+  }
+
+  @Post('users/:userId/lock')
+  @RequirePermissions('iam.user.manage')
+  @ApiOperation({
+    operationId: 'lockAdminStaffUser',
+    summary: 'Lock a staff user and revoke every active session',
+  })
+  @ApiOkResponse({ type: UserDto })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiUnauthorizedResponse({ type: ErrorResponseDto })
+  @ApiForbiddenResponse({ type: ErrorResponseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto, description: 'User is no longer ACTIVE' })
+  lockStaffUser(
+    @Param('userId', new ParseUUIDPipe()) userId: string,
+    @Body() input: LockStaffUserDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<UserDto> {
+    return this.iam.lockStaffUser(
+      userId,
+      input,
+      getMutationContext(request),
+      getAuthPrincipal(request),
+    );
+  }
+
+  @Post('users/:userId/unlock')
+  @RequirePermissions('iam.user.manage')
+  @ApiOperation({
+    operationId: 'unlockAdminStaffUser',
+    summary: 'Unlock a staff user and reset the password to the approved default',
+  })
+  @ApiOkResponse({ type: UserDto })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiUnauthorizedResponse({ type: ErrorResponseDto })
+  @ApiForbiddenResponse({ type: ErrorResponseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto, description: 'User is no longer LOCKED' })
+  unlockStaffUser(
+    @Param('userId', new ParseUUIDPipe()) userId: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<UserDto> {
+    return this.iam.unlockStaffUser(
+      userId,
+      getMutationContext(request),
+      getAuthPrincipal(request),
+    );
   }
 
   @Get('roles')
