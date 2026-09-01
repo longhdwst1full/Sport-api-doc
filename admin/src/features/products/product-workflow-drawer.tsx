@@ -7,11 +7,16 @@ import { PermissionGate } from '@/core/auth/permissions';
 import {
   getGetAdminProductQueryKey,
   getListAdminProductsQueryKey,
+  useArchiveAdminProduct,
+  useArchiveAdminProductVariant,
   useCreateAdminProductPrice,
   useCreateAdminProductVariant,
   useGetAdminProduct,
   usePublishAdminProduct,
+  useReactivateAdminProduct,
+  useReactivateAdminProductVariant,
 } from '@/generated/api/catalog/catalog';
+import type { ProductVariantDto } from '@/generated/api/catalog/models';
 import { getApiErrorMessage } from '@/lib/api/error';
 
 interface VariantFormValues {
@@ -97,6 +102,46 @@ export function ProductWorkflowDrawer({ slug, onClose }: { slug?: string; onClos
     },
   });
 
+  const archiveProduct = useArchiveAdminProduct({
+    mutation: {
+      onSuccess: async () => {
+        await refresh();
+        void message.success('Đã archive; sản phẩm không còn hiển thị trên storefront.');
+      },
+      onError: (error) => void message.error(getApiErrorMessage(error, 'Không thể archive sản phẩm.')),
+    },
+  });
+
+  const reactivateProduct = useReactivateAdminProduct({
+    mutation: {
+      onSuccess: async () => {
+        await refresh();
+        void message.success('Đã đưa sản phẩm về DRAFT để kiểm tra trước khi publish lại.');
+      },
+      onError: (error) => void message.error(getApiErrorMessage(error, 'Không thể khôi phục sản phẩm.')),
+    },
+  });
+
+  const archiveVariant = useArchiveAdminProductVariant({
+    mutation: {
+      onSuccess: async () => {
+        await refresh();
+        void message.success('Đã archive SKU.');
+      },
+      onError: (error) => void message.error(getApiErrorMessage(error, 'Không thể archive SKU.')),
+    },
+  });
+
+  const reactivateVariant = useReactivateAdminProductVariant({
+    mutation: {
+      onSuccess: async () => {
+        await refresh();
+        void message.success('Đã kích hoạt lại SKU.');
+      },
+      onError: (error) => void message.error(getApiErrorMessage(error, 'Không thể kích hoạt lại SKU.')),
+    },
+  });
+
   const product = detail.data;
   const canPublish = product?.status === 'DRAFT'
     && product.variants.some((variant) => variant.status === 'ACTIVE' && Boolean(variant.effectivePrice));
@@ -127,6 +172,42 @@ export function ProductWorkflowDrawer({ slug, onClose }: { slug?: string; onClos
     });
   };
 
+  const confirmProductLifecycle = () => {
+    if (!product) return;
+    const isArchived = product.status === 'ARCHIVED';
+    const isCombo = Boolean(product.bundle);
+    Modal.confirm({
+      title: isArchived
+        ? `Khôi phục “${product.name}” về DRAFT?`
+        : `Archive ${isCombo ? 'combo' : 'sản phẩm'} “${product.name}”?`,
+      content: isArchived
+        ? 'Sản phẩm chưa hiển thị lại ngay. Cần kiểm tra SKU, giá và publish lại.'
+        : 'Sản phẩm sẽ ẩn ngay khỏi storefront và chặn giao dịch mới. Đơn hàng lịch sử không bị thay đổi.',
+      okText: isArchived ? 'Khôi phục về DRAFT' : 'Archive',
+      okButtonProps: { danger: !isArchived },
+      cancelText: 'Hủy',
+      onOk: () => isArchived
+        ? reactivateProduct.mutateAsync({ id: product.id, data: { expectedVersion: product.version } })
+        : archiveProduct.mutateAsync({ id: product.id, data: { expectedVersion: product.version } }),
+    });
+  };
+
+  const confirmVariantLifecycle = (variant: ProductVariantDto) => {
+    const isActive = variant.status === 'ACTIVE';
+    Modal.confirm({
+      title: `${isActive ? 'Archive' : 'Kích hoạt lại'} SKU “${variant.sku}”?`,
+      content: isActive
+        ? 'SKU sẽ không còn được bán mới. Nếu SKU đang là thành phần của combo published, backend sẽ từ chối để tránh combo mất thành phần.'
+        : 'SKU chỉ được kích hoạt lại khi Product chưa bị archive.',
+      okText: isActive ? 'Archive SKU' : 'Kích hoạt lại',
+      okButtonProps: { danger: isActive },
+      cancelText: 'Hủy',
+      onOk: () => isActive
+        ? archiveVariant.mutateAsync({ variantId: variant.id, data: { expectedVersion: variant.version } })
+        : reactivateVariant.mutateAsync({ variantId: variant.id, data: { expectedVersion: variant.version } }),
+    });
+  };
+
   return (
     <Drawer title="Hoàn thiện sản phẩm" width={760} open={Boolean(slug)} onClose={onClose} destroyOnHidden>
       {detail.isPending ? <Skeleton active /> : detail.isError ? (
@@ -147,7 +228,16 @@ export function ProductWorkflowDrawer({ slug, onClose }: { slug?: string; onClos
             <Space>
               <Tag color={product.status === 'PUBLISHED' ? 'green' : 'blue'}>{product.status}</Tag>
               <PermissionGate permission="catalog.product.publish">
-                <Button type="primary" disabled={!canPublish} loading={publish.isPending} onClick={confirmPublish}>Publish</Button>
+                {product.status === 'DRAFT' && (
+                  <Button type="primary" disabled={!canPublish} loading={publish.isPending} onClick={confirmPublish}>Publish</Button>
+                )}
+                <Button
+                  danger={product.status !== 'ARCHIVED'}
+                  loading={archiveProduct.isPending || reactivateProduct.isPending}
+                  onClick={confirmProductLifecycle}
+                >
+                  {product.status === 'ARCHIVED' ? 'Khôi phục về DRAFT' : 'Archive'}
+                </Button>
               </PermissionGate>
             </Space>
           </div>
@@ -175,7 +265,25 @@ export function ProductWorkflowDrawer({ slug, onClose }: { slug?: string; onClos
                 { title: 'SKU', dataIndex: 'sku' },
                 { title: 'Tên phiên bản', dataIndex: 'name' },
                 { title: 'Barcode', dataIndex: 'barcode', render: (value?: string) => value ?? '—' },
+                { title: 'Trạng thái', dataIndex: 'status', render: (value: string) => <Tag color={value === 'ACTIVE' ? 'green' : 'default'}>{value}</Tag> },
                 { title: 'Giá đã VAT', dataIndex: 'effectivePrice', align: 'right', render: (value?: string | null) => value ? money.format(Number(value)) : 'Chưa có giá' },
+                {
+                  title: 'Thao tác',
+                  key: 'actions',
+                  align: 'right',
+                  render: (_, variant) => (
+                    <PermissionGate permission="catalog.product.manage">
+                      <Button
+                        type="link"
+                        danger={variant.status === 'ACTIVE'}
+                        loading={archiveVariant.isPending || reactivateVariant.isPending}
+                        onClick={() => confirmVariantLifecycle(variant)}
+                      >
+                        {variant.status === 'ACTIVE' ? 'Archive' : 'Kích hoạt'}
+                      </Button>
+                    </PermissionGate>
+                  ),
+                },
               ]}
             />
           </div>

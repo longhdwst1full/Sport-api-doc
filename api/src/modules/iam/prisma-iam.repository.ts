@@ -4,7 +4,14 @@ import { MutationContext } from '../../common/request/request-context';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditWriter } from '../audit/audit.writer';
 import { IamRepository } from './iam.repository';
-import { Role, ScopeType, UserRoleAssignment, UserWithAssignments } from './iam.types';
+import {
+  CreateStaffUserInput,
+  LockStaffUserResult,
+  Role,
+  ScopeType,
+  UserRoleAssignment,
+  UserWithAssignments,
+} from './iam.types';
 
 function maskEmail(email: string | null): string {
   if (!email) return '';
@@ -58,6 +65,10 @@ export class PrismaIamRepository extends IamRepository {
     }));
   }
 
+  async findUser(id: string): Promise<UserWithAssignments | undefined> {
+    return (await this.listUsers()).find((user) => user.id === id);
+  }
+
   async listRoles(): Promise<Role[]> {
     const rows = await this.prisma.role.findMany({
       where: { status: 'ACTIVE' },
@@ -84,6 +95,14 @@ export class PrismaIamRepository extends IamRepository {
     return (
       (await this.prisma.user.count({
         where: { id, userType: 'STAFF', status: { not: 'INACTIVE' } },
+      })) > 0
+    );
+  }
+
+  async hasActiveEmail(normalizedEmail: string): Promise<boolean> {
+    return (
+      (await this.prisma.user.count({
+        where: { normalizedEmail, status: { not: 'INACTIVE' } },
       })) > 0
     );
   }
@@ -143,5 +162,159 @@ export class PrismaIamRepository extends IamRepository {
       );
       return assignment;
     });
+  }
+
+  async createStaffUser(
+    input: CreateStaffUserInput,
+    context: MutationContext,
+  ): Promise<UserWithAssignments> {
+    return this.prisma.$transaction(async (transaction) => {
+      const user = await transaction.user.create({
+        data: {
+          id: input.id,
+          userType: 'STAFF',
+          email: input.email,
+          normalizedEmail: input.normalizedEmail,
+          passwordHash: input.passwordHash,
+          displayName: input.displayName,
+          status: 'ACTIVE',
+          permissionVersion: 1,
+        },
+      });
+      const assignment = await transaction.userRoleAssignment.create({
+        data: {
+          id: input.assignmentId,
+          userId: input.id,
+          roleId: input.role.id,
+          scopeType: ScopeType.BRANCH,
+          branchId: input.branchId,
+          status: 'ACTIVE',
+          validFrom: new Date(),
+          assignedBy: context.actorUserId,
+        },
+      });
+      const result: UserWithAssignments = {
+        id: user.id,
+        displayName: user.displayName,
+        maskedEmail: maskEmail(user.email),
+        userType: 'STAFF',
+        status: 'ACTIVE',
+        permissionVersion: 1,
+        assignments: [{
+          id: assignment.id,
+          userId: user.id,
+          roleId: input.role.id,
+          roleCode: input.role.code,
+          scopeType: ScopeType.BRANCH,
+          branchId: input.branchId,
+          status: 'ACTIVE',
+          validFrom: assignment.validFrom.toISOString(),
+        }],
+      };
+      await this.audit.write(
+        {
+          requestId: context.requestId,
+          sequenceNo: 1,
+          actorType: 'USER',
+          actorUserId: context.actorUserId,
+          action: 'iam.user.create',
+          entityType: 'USER',
+          entityId: user.id,
+          after: {
+            displayName: result.displayName,
+            maskedEmail: result.maskedEmail,
+            roleCode: input.role.code,
+            branchId: input.branchId,
+          },
+        },
+        transaction,
+      );
+      return result;
+    });
+  }
+
+  async lockStaffUser(
+    userId: string,
+    reason: string,
+    context: MutationContext,
+  ): Promise<LockStaffUserResult | undefined> {
+    const revokedSessionCount = await this.prisma.$transaction(async (transaction) => {
+      const updated = await transaction.user.updateMany({
+        where: { id: userId, userType: 'STAFF', status: 'ACTIVE' },
+        data: {
+          status: 'LOCKED',
+          permissionVersion: { increment: 1 },
+          version: { increment: 1 },
+        },
+      });
+      if (updated.count !== 1) return undefined;
+
+      const revoked = await transaction.authSession.updateMany({
+        where: { userId, revokedAt: null },
+        data: { revokedAt: new Date(), revokeReason: 'ACCOUNT_LOCKED' },
+      });
+      await this.audit.write(
+        {
+          requestId: context.requestId,
+          sequenceNo: 1,
+          actorType: 'USER',
+          actorUserId: context.actorUserId,
+          action: 'iam.user.lock',
+          entityType: 'USER',
+          entityId: userId,
+          before: { status: 'ACTIVE' },
+          after: {
+            status: 'LOCKED',
+            revokedSessionCount: revoked.count,
+          },
+          reason,
+        },
+        transaction,
+      );
+      return revoked.count;
+    });
+    if (revokedSessionCount === undefined) return undefined;
+    const user = await this.findUser(userId);
+    if (!user) throw new Error('Locked staff user disappeared after transaction commit');
+    return { user, revokedSessionCount };
+  }
+
+  async unlockStaffUserAndResetPassword(
+    userId: string,
+    passwordHash: string,
+    context: MutationContext,
+  ): Promise<UserWithAssignments | undefined> {
+    const unlocked = await this.prisma.$transaction(async (transaction) => {
+      const updated = await transaction.user.updateMany({
+        where: { id: userId, userType: 'STAFF', status: 'LOCKED' },
+        data: {
+          status: 'ACTIVE',
+          passwordHash,
+          permissionVersion: { increment: 1 },
+          version: { increment: 1 },
+        },
+      });
+      if (updated.count !== 1) return false;
+
+      await this.audit.write(
+        {
+          requestId: context.requestId,
+          sequenceNo: 1,
+          actorType: 'USER',
+          actorUserId: context.actorUserId,
+          action: 'iam.user.unlock',
+          entityType: 'USER',
+          entityId: userId,
+          before: { status: 'LOCKED' },
+          after: { status: 'ACTIVE', passwordReset: true },
+        },
+        transaction,
+      );
+      return true;
+    });
+    if (!unlocked) return undefined;
+    const user = await this.findUser(userId);
+    if (!user) throw new Error('Unlocked staff user disappeared after transaction commit');
+    return user;
   }
 }

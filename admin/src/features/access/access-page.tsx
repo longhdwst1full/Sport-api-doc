@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   LockOutlined,
+  PlusOutlined,
   SafetyCertificateOutlined,
   TeamOutlined,
   UserOutlined,
@@ -16,6 +17,8 @@ import {
 } from '@/generated/api/iam/iam';
 import type { UserDto, UserDtoStatus, UserRoleAssignmentDto } from '@/generated/api/iam/models';
 import { RoleAssignmentDrawer } from './role-assignment-drawer';
+import { StaffCreationDrawer } from './staff-creation-drawer';
+import { StaffLifecycleModal, type StaffLifecycleAction } from './staff-lifecycle-modal';
 
 const userStatuses: Record<UserDtoStatus, { color: string; label: string }> = {
   ACTIVE: { color: 'green', label: 'Hoạt động' },
@@ -26,8 +29,11 @@ const userStatuses: Record<UserDtoStatus, { color: string; label: string }> = {
 export function AccessPage() {
   const [activeTab, setActiveTab] = useState('users');
   const [assignmentUser, setAssignmentUser] = useState<UserDto>();
+  const [staffCreationOpen, setStaffCreationOpen] = useState(false);
+  const [lifecycle, setLifecycle] = useState<{ action: StaffLifecycleAction; user: UserDto }>();
   const canViewRoles = useCan('iam.role.view');
   const canAssignRoles = useCan('iam.assignment.manage');
+  const canManageUsers = useCan('iam.user.manage');
   const usersQuery = useListAdminUsers();
   const rolesQuery = useListAdminRoles({ query: { enabled: canViewRoles } });
   const permissionsQuery = useListAdminPermissions({ query: { enabled: canViewRoles } });
@@ -70,6 +76,13 @@ export function AccessPage() {
         },
       ]}
     >
+      {canManageUsers && (
+        <div className="mb-4 flex justify-end">
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setStaffCreationOpen(true)}>
+            Tạo nhân viên
+          </Button>
+        </div>
+      )}
       <Alert
         className="mb-5"
         showIcon
@@ -156,18 +169,44 @@ export function AccessPage() {
                       <StatusTag status={value} presentations={userStatuses} />
                     ),
                   },
-                  ...(canAssignRoles
+                  ...(canAssignRoles || canManageUsers
                     ? [
                         {
                           title: 'Thao tác',
                           key: 'actions',
-                          width: 130,
+                          width: 220,
                           fixed: 'right' as const,
-                          render: (_: unknown, user: UserDto) => (
-                            <Button type="link" onClick={() => setAssignmentUser(user)}>
-                              Gán vai trò
-                            </Button>
-                          ),
+                          render: (_: unknown, user: UserDto) => {
+                            const isOwner = user.assignments.some(
+                              ({ roleCode }) => roleCode === 'OWNER',
+                            );
+                            return (
+                              <Space size={0}>
+                                {canAssignRoles && (
+                                  <Button type="link" onClick={() => setAssignmentUser(user)}>
+                                    Gán vai trò
+                                  </Button>
+                                )}
+                                {canManageUsers && !isOwner && user.status === 'ACTIVE' && (
+                                  <Button
+                                    type="link"
+                                    danger
+                                    onClick={() => setLifecycle({ action: 'LOCK', user })}
+                                  >
+                                    Khóa
+                                  </Button>
+                                )}
+                                {canManageUsers && !isOwner && user.status === 'LOCKED' && (
+                                  <Button
+                                    type="link"
+                                    onClick={() => setLifecycle({ action: 'UNLOCK', user })}
+                                  >
+                                    Mở khóa
+                                  </Button>
+                                )}
+                              </Space>
+                            );
+                          },
                         },
                       ]
                     : []),
@@ -238,6 +277,12 @@ export function AccessPage() {
         user={assignmentUser}
         open={Boolean(assignmentUser)}
         onClose={() => setAssignmentUser(undefined)}
+      />
+      <StaffCreationDrawer open={staffCreationOpen} onClose={() => setStaffCreationOpen(false)} />
+      <StaffLifecycleModal
+        action={lifecycle?.action}
+        user={lifecycle?.user}
+        onClose={() => setLifecycle(undefined)}
       />
     </ManagementPage>
   );

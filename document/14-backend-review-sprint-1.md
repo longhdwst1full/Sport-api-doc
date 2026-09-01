@@ -82,6 +82,7 @@ Mục tiêu: kích hoạt Organization + IAM ở mức contract/application/doma
 | POST   | `/api/v1/admin/organization/branches/:id/activate`   | `org.branch.manage` + `org.warehouse.manage` |
 | POST   | `/api/v1/admin/organization/branches/:id/deactivate` | `org.branch.manage` + `org.warehouse.manage` |
 | GET    | `/api/v1/admin/iam/users`                           | `iam.user.view`                              |
+| POST   | `/api/v1/admin/iam/users`                           | `iam.user.manage`                            |
 | GET    | `/api/v1/admin/iam/roles`                           | `iam.role.view`                              |
 | GET    | `/api/v1/admin/iam/permissions`                     | `iam.role.view`                              |
 | POST   | `/api/v1/admin/iam/roles`                           | `iam.role.manage`                            |
@@ -122,6 +123,9 @@ Mục tiêu: kích hoạt Organization + IAM ở mức contract/application/doma
 - [x] Assignment validate scope fail-closed.
 - [x] Duplicate assignment bị conflict.
 - [x] `permissionVersion` tăng khi assignment thay đổi.
+- [x] Tạo staff ACTIVE bằng email + Argon2 default password, đồng thời gán BRANCH_MANAGER/STAFF theo branch và ghi audit trong một transaction.
+- [x] Branch Manager chỉ tạo STAFF trong branch được gán; Owner có thể tạo BRANCH_MANAGER hoặc STAFF.
+- [ ] Lock/unlock staff, revoke session/assignment và bắt buộc đổi mật khẩu lần đầu.
 - [ ] Sensitive permission assignment approval sau khi policy được chốt.
 - [ ] JWT/session, password hashing và refresh rotation chưa thuộc slice này.
 

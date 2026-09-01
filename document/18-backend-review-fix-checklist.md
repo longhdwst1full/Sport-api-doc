@@ -178,11 +178,11 @@ Test assert tổng row tuyệt đối `1/1/1/3/1`; khi thêm fixture hợp lệ 
 - [ ] API không identity/token hợp lệ => 401.
 - [ ] Unknown permission/role => deny server-side.
 - [ ] GLOBAL/BRANCH/WAREHOUSE/OWN data-scope matrix qua API + PostgreSQL.
-- [ ] Cấp/thu hồi role tăng `permission_version` atomic.
-- [ ] Concurrent duplicate assignment chỉ một request thành công.
-- [ ] Không khóa/revoke super admin cuối cùng.
+- [x] Cấp role và lock/unlock tăng `permission_version` atomic.
+- [x] Concurrent duplicate assignment chỉ một request thành công.
+- [x] Không lock/unlock bất kỳ OWNER; Branch Manager chỉ quản lý STAFF trong branch.
 - [ ] Role system không được hard delete.
-- [ ] Role/assignment mutation ghi audit cùng transaction.
+- [x] Create user, role assignment và lock/unlock ghi audit cùng transaction.
 
 ### Catalog Sprint 1
 

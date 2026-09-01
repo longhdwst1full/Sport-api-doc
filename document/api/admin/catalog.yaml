@@ -605,6 +605,114 @@ paths:
       summary: Publish a complete draft product
       tags:
         - Admin Products
+  /api/v1/admin/products/{id}/archive:
+    post:
+      operationId: archiveAdminProduct
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeProductStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetailDto"
+      security:
+        - bearer: []
+      summary: Archive a product or combo and remove it from storefront sales
+      tags:
+        - Admin Products
+  /api/v1/admin/products/{id}/reactivate:
+    post:
+      operationId: reactivateAdminProduct
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeProductStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetailDto"
+      security:
+        - bearer: []
+      summary: Reactivate an archived product or combo as DRAFT for review
+      tags:
+        - Admin Products
+  /api/v1/admin/products/variants/{variantId}/archive:
+    post:
+      operationId: archiveAdminProductVariant
+      parameters:
+        - name: variantId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeProductStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetailDto"
+      security:
+        - bearer: []
+      summary: Archive one sellable SKU variant
+      tags:
+        - Admin Products
+  /api/v1/admin/products/variants/{variantId}/reactivate:
+    post:
+      operationId: reactivateAdminProductVariant
+      parameters:
+        - name: variantId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeProductStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetailDto"
+      security:
+        - bearer: []
+      summary: Reactivate one archived SKU variant
+      tags:
+        - Admin Products
   /api/v1/admin/products/{id}/bundle:
     post:
       operationId: createAdminProductBundle

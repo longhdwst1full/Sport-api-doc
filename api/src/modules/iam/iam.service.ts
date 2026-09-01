@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { hash } from 'argon2';
 import { v7 as uuidv7 } from 'uuid';
 import { MutationContext } from '../../common/request/request-context';
 import { AuthPrincipal } from '../auth/auth.types';
@@ -11,14 +12,19 @@ import {
 } from '../../common/pagination/active-search.dto';
 import {
   AssignUserRoleDto,
+  CreateStaffUserDto,
+  LockStaffUserDto,
   PermissionListDto,
   RoleListDto,
+  UserDto,
   UserListDto,
   UserRoleAssignmentDto,
 } from './iam.dto';
 import { PERMISSION_CATALOG } from './iam.permissions';
 import { IamRepository } from './iam.repository';
 import { ScopeType, SystemRoleCode } from './iam.types';
+
+const DEFAULT_STAFF_PASSWORD = 'Aa@123456';
 
 @Injectable()
 export class IamService {
@@ -98,6 +104,85 @@ export class IamService {
     }
   }
 
+  async createStaffUser(
+    input: CreateStaffUserDto,
+    context: MutationContext,
+    actor: AuthPrincipal,
+  ): Promise<UserDto> {
+    const assignmentInput: AssignUserRoleDto = {
+      roleCode: input.roleCode,
+      scopeType: ScopeType.BRANCH,
+      branchId: input.branchId,
+    };
+    this.authorizeAssignment(actor, assignmentInput);
+    await this.validateScope(assignmentInput);
+    const role = await this.iam.findActiveRoleByCode(input.roleCode);
+    if (!role) throw new NotFoundException('Role not found');
+
+    const normalizedEmail = input.email.trim().toLowerCase();
+    if (await this.iam.hasActiveEmail(normalizedEmail)) {
+      throw new ConflictException('Staff email already exists');
+    }
+    try {
+      return await this.iam.createStaffUser(
+        {
+          id: uuidv7(),
+          displayName: input.displayName.trim(),
+          email: normalizedEmail,
+          normalizedEmail,
+          passwordHash: await hash(DEFAULT_STAFF_PASSWORD),
+          role,
+          branchId: input.branchId,
+          assignmentId: uuidv7(),
+        },
+        context,
+      );
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('Staff email already exists');
+      }
+      throw error;
+    }
+  }
+
+  async lockStaffUser(
+    userId: string,
+    input: LockStaffUserDto,
+    context: MutationContext,
+    actor: AuthPrincipal,
+  ): Promise<UserDto> {
+    const user = await this.requireLifecycleTarget(userId, actor);
+    if (user.status !== 'ACTIVE') {
+      throw new ConflictException('Only an ACTIVE staff user can be locked');
+    }
+    const result = await this.iam.lockStaffUser(userId, input.reason.trim(), context);
+    if (!result) {
+      throw new ConflictException('Staff status changed; reload the user list and try again');
+    }
+    return result.user;
+  }
+
+  async unlockStaffUser(
+    userId: string,
+    context: MutationContext,
+    actor: AuthPrincipal,
+  ): Promise<UserDto> {
+    const user = await this.requireLifecycleTarget(userId, actor);
+    if (user.status !== 'LOCKED') {
+      throw new ConflictException('Only a LOCKED staff user can be unlocked');
+    }
+    const passwordHash = await hash(DEFAULT_STAFF_PASSWORD);
+    const result = await this.iam.unlockStaffUserAndResetPassword(
+      userId,
+      passwordHash,
+      context,
+    );
+    if (!result) {
+      throw new ConflictException('Staff status changed; reload the user list and try again');
+    }
+    return result;
+  }
+
   private hasGlobalScope(actor: AuthPrincipal): boolean {
     return actor.scopes.some(({ type }) => type === ScopeType.GLOBAL);
   }
@@ -122,6 +207,29 @@ export class IamService {
     ) {
       throw new ForbiddenException('Branch manager can assign STAFF only within an assigned branch');
     }
+  }
+
+  private async requireLifecycleTarget(
+    userId: string,
+    actor: AuthPrincipal,
+  ): Promise<UserDto> {
+    const user = await this.iam.findUser(userId);
+    if (!user) throw new NotFoundException('Staff user not found');
+    if (user.assignments.some(({ roleCode }) => roleCode === 'OWNER')) {
+      throw new ForbiddenException('OWNER account cannot be locked or unlocked');
+    }
+    if (this.hasGlobalScope(actor)) return user;
+
+    const branchIds = this.visibleBranchIds(actor) ?? [];
+    const assignments = user.assignments;
+    if (
+      assignments.length === 0
+      || assignments.some(({ roleCode }) => roleCode !== 'STAFF')
+      || assignments.some(({ branchId }) => !branchId || !branchIds.includes(branchId))
+    ) {
+      throw new ForbiddenException('Branch manager can manage STAFF only within an assigned branch');
+    }
+    return user;
   }
 
   private async validateScope(input: AssignUserRoleDto): Promise<void> {

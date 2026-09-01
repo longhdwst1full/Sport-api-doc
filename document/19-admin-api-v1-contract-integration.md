@@ -24,10 +24,13 @@ Ngày cập nhật: 2026-08-30
 | Danh sách role quản trị | `GET /api/v1/admin/iam/roles` | `listAdminRoles` | `iam.role.view` | Tab Role |
 | Search role active | `GET /api/v1/admin/iam/roles/active` | `searchActiveAdminRoles` | `iam.role.view` | Gán role cho user |
 | Gán role | `POST /api/v1/admin/iam/users/{userId}/role-assignments` | `assignAdminUserRole` | `iam.assignment.manage` | Role assignment drawer |
+| Tạo staff và gán branch role | `POST /api/v1/admin/iam/users` | `createAdminStaffUser` | `iam.user.manage` | Staff creation drawer |
 | CRUD lifecycle brand | `GET/POST/PATCH` + `POST .../{id}/activate|deactivate` | `list/create/update/activate/deactivateAdminBrand` | `catalog.brand.view/manage` | Catalog master page |
 | CRUD lifecycle category | `GET/POST/PATCH` + `POST .../{id}/activate|deactivate` | `list/create/update/activate/deactivateAdminCategory` | `catalog.category.view/manage` | Catalog master page |
 | Điều chỉnh kho | `POST /api/v1/admin/inventory/adjustments` | `createStockAdjustment` | `inventory.stock.adjust` | Inventory drawer; generated request option truyền Idempotency-Key |
 | Kiểm duyệt đánh giá | `PATCH /api/v1/admin/reviews/{id}/moderation` | `moderateAdminReview` | `review.moderate` | Reviews actions |
+| Archive/reactivate product hoặc combo | `POST .../products/{id}/archive|reactivate` | `archiveAdminProduct` / `reactivateAdminProduct` | `catalog.product.publish` | Product workflow drawer |
+| Archive/reactivate variant | `POST .../products/variants/{id}/archive|reactivate` | `archiveAdminProductVariant` / `reactivateAdminProductVariant` | `catalog.product.manage` | Product workflow drawer |
 
 API `/active` nhận `search`, `page`, `limit`; warehouse nhận thêm `branchId`. Response thống nhất:
 
@@ -72,5 +75,7 @@ Admin dùng `getApiErrorMessage` cho lỗi form/query và `getApiFieldErrors` đ
 - [x] Persisted IAM/Organization adapter được dùng khi `DATABASE_ENABLED=true`.
 - [x] Brand/category và branch/kho update dùng expected version; activate/deactivate không xóa vật lý.
 - [x] Demo seed chạy lặp hai lần trên PostgreSQL local, không nhân bản dữ liệu.
+- [x] Staff create dùng Argon2 default password, tạo user + assignment + audit atomic; API không trả credential/hash.
+- [x] Product/combo/variant lifecycle dùng named actions và optimistic version; storefront không trả archived/inactive data.
 - [ ] Verified identity/token — development đang dùng `AUTH_BYPASS=true` và principal OWNER bootstrap; production bắt buộc tắt bypass.
 - [ ] PostgreSQL permission/scope + transaction/audit integration — blocker trước staging.

@@ -104,6 +104,64 @@ export class AdminProductsController {
     return this.products.publish(id, input, getMutationContext(request));
   }
 
+  @Post(':id/archive')
+  @HttpCode(200)
+  @RequirePermissions('catalog.product.publish')
+  @ApiOperation({
+    operationId: 'archiveAdminProduct',
+    summary: 'Archive a product or combo and remove it from storefront sales',
+  })
+  @ApiOkResponse({ type: ProductDetailDto })
+  archiveProduct(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() input: ChangeProductStatusDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ProductDetailDto> {
+    return this.products.archiveProduct(id, input, getMutationContext(request));
+  }
+
+  @Post(':id/reactivate')
+  @HttpCode(200)
+  @RequirePermissions('catalog.product.publish')
+  @ApiOperation({
+    operationId: 'reactivateAdminProduct',
+    summary: 'Reactivate an archived product or combo as DRAFT for review',
+  })
+  @ApiOkResponse({ type: ProductDetailDto })
+  reactivateProduct(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() input: ChangeProductStatusDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ProductDetailDto> {
+    return this.products.reactivateProduct(id, input, getMutationContext(request));
+  }
+
+  @Post('variants/:variantId/archive')
+  @HttpCode(200)
+  @RequirePermissions('catalog.product.manage')
+  @ApiOperation({ operationId: 'archiveAdminProductVariant', summary: 'Archive one sellable SKU variant' })
+  @ApiOkResponse({ type: ProductDetailDto })
+  archiveVariant(
+    @Param('variantId', new ParseUUIDPipe()) variantId: string,
+    @Body() input: ChangeProductStatusDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ProductDetailDto> {
+    return this.products.archiveVariant(variantId, input, getMutationContext(request));
+  }
+
+  @Post('variants/:variantId/reactivate')
+  @HttpCode(200)
+  @RequirePermissions('catalog.product.manage')
+  @ApiOperation({ operationId: 'reactivateAdminProductVariant', summary: 'Reactivate one archived SKU variant' })
+  @ApiOkResponse({ type: ProductDetailDto })
+  reactivateVariant(
+    @Param('variantId', new ParseUUIDPipe()) variantId: string,
+    @Body() input: ChangeProductStatusDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ProductDetailDto> {
+    return this.products.reactivateVariant(variantId, input, getMutationContext(request));
+  }
+
   @Post(':id/bundle')
   @RequirePermissions('catalog.product.manage')
   @ApiOperation({ operationId: 'createAdminProductBundle', summary: 'Create a fixed non-nested virtual combo' })

@@ -59,3 +59,19 @@ export interface AssignUserRoleInput {
   scopeType: ScopeType;
   branchId?: string;
 }
+
+export interface CreateStaffUserInput {
+  id: string;
+  displayName: string;
+  email: string;
+  normalizedEmail: string;
+  passwordHash: string;
+  role: Role;
+  branchId: string;
+  assignmentId: string;
+}
+
+export interface LockStaffUserResult {
+  user: UserWithAssignments;
+  revokedSessionCount: number;
+}

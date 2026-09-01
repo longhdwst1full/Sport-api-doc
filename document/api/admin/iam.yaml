@@ -25,6 +25,165 @@ paths:
       summary: List staff users with role scopes
       tags:
         - Admin IAM
+    post:
+      operationId: createAdminStaffUser
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateStaffUserDto"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: Role or branch not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Create an active staff user with the approved default password and branch role
+      tags:
+        - Admin IAM
+  /api/v1/admin/iam/users/{userId}/lock:
+    post:
+      operationId: lockAdminStaffUser
+      parameters:
+        - name: userId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LockStaffUserDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: User is no longer ACTIVE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Lock a staff user and revoke every active session
+      tags:
+        - Admin IAM
+  /api/v1/admin/iam/users/{userId}/unlock:
+    post:
+      operationId: unlockAdminStaffUser
+      parameters:
+        - name: userId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: User is no longer LOCKED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Unlock a staff user and reset the password to the approved default
+      tags:
+        - Admin IAM
   /api/v1/admin/iam/roles:
     get:
       operationId: listAdminRoles
@@ -172,6 +331,112 @@ components:
       required:
         - items
         - total
+    CreateStaffUserDto:
+      type: object
+      properties:
+        displayName:
+          type: string
+          example: Nguyễn Văn An
+          maxLength: 255
+        email:
+          type: string
+          example: an.nguyen@example.com
+          maxLength: 255
+        roleCode:
+          type: string
+          enum:
+            - BRANCH_MANAGER
+            - STAFF
+        branchId:
+          type: string
+          format: uuid
+      required:
+        - displayName
+        - email
+        - roleCode
+        - branchId
+    UserDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+          example: Long Hoàng
+        maskedEmail:
+          type: string
+          example: lo***@dctd.vn
+        userType:
+          type: string
+          enum:
+            - STAFF
+            - SYSTEM
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INVITED
+            - LOCKED
+        permissionVersion:
+          type: number
+          example: 1
+        assignments:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserRoleAssignmentDto"
+      required:
+        - id
+        - displayName
+        - maskedEmail
+        - userType
+        - status
+        - permissionVersion
+        - assignments
+    ErrorResponseDto:
+      type: object
+      properties:
+        statusCode:
+          type: number
+          example: 400
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: Request validation failed
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorDetailDto"
+        path:
+          type: string
+          example: /api/v1/catalog/products
+        method:
+          type: string
+          example: POST
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+      required:
+        - statusCode
+        - code
+        - message
+        - path
+        - method
+        - timestamp
+    LockStaffUserDto:
+      type: object
+      properties:
+        reason:
+          type: string
+          example: Nhân viên đã nghỉ việc
+          minLength: 3
+          maxLength: 255
+      required:
+        - reason
     RoleListDto:
       type: object
       properties:
@@ -208,40 +473,6 @@ components:
       required:
         - items
         - meta
-    ErrorResponseDto:
-      type: object
-      properties:
-        statusCode:
-          type: number
-          example: 400
-        code:
-          type: string
-          example: VALIDATION_ERROR
-        message:
-          type: string
-          example: Request validation failed
-        details:
-          type: array
-          items:
-            $ref: "#/components/schemas/ErrorDetailDto"
-        path:
-          type: string
-          example: /api/v1/catalog/products
-        method:
-          type: string
-          example: POST
-        timestamp:
-          type: string
-          format: date-time
-        requestId:
-          type: string
-      required:
-        - statusCode
-        - code
-        - message
-        - path
-        - method
-        - timestamp
     AssignUserRoleDto:
       type: object
       properties:
@@ -300,44 +531,21 @@ components:
         - scopeType
         - status
         - validFrom
-    UserDto:
+    ErrorDetailDto:
       type: object
       properties:
-        id:
+        field:
           type: string
-          format: uuid
-        displayName:
+          example: name
+        code:
           type: string
-          example: Long Hoàng
-        maskedEmail:
+          example: INVALID_VALUE
+        message:
           type: string
-          example: lo***@dctd.vn
-        userType:
-          type: string
-          enum:
-            - STAFF
-            - SYSTEM
-        status:
-          type: string
-          enum:
-            - ACTIVE
-            - INVITED
-            - LOCKED
-        permissionVersion:
-          type: number
-          example: 1
-        assignments:
-          type: array
-          items:
-            $ref: "#/components/schemas/UserRoleAssignmentDto"
+          example: name should not be empty
       required:
-        - id
-        - displayName
-        - maskedEmail
-        - userType
-        - status
-        - permissionVersion
-        - assignments
+        - code
+        - message
     RoleDto:
       type: object
       properties:
@@ -430,21 +638,6 @@ components:
         - limit
         - total
         - hasMore
-    ErrorDetailDto:
-      type: object
-      properties:
-        field:
-          type: string
-          example: name
-        code:
-          type: string
-          example: INVALID_VALUE
-        message:
-          type: string
-          example: name should not be empty
-      required:
-        - code
-        - message
   securitySchemes:
     bearer:
       scheme: bearer

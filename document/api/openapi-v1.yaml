@@ -342,6 +342,165 @@ paths:
       summary: List staff users with role scopes
       tags:
         - Admin IAM
+    post:
+      operationId: createAdminStaffUser
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateStaffUserDto"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: Role or branch not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Create an active staff user with the approved default password and branch role
+      tags:
+        - Admin IAM
+  /api/v1/admin/iam/users/{userId}/lock:
+    post:
+      operationId: lockAdminStaffUser
+      parameters:
+        - name: userId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LockStaffUserDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: User is no longer ACTIVE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Lock a staff user and revoke every active session
+      tags:
+        - Admin IAM
+  /api/v1/admin/iam/users/{userId}/unlock:
+    post:
+      operationId: unlockAdminStaffUser
+      parameters:
+        - name: userId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: User is no longer LOCKED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Unlock a staff user and reset the password to the approved default
+      tags:
+        - Admin IAM
   /api/v1/admin/iam/roles:
     get:
       operationId: listAdminRoles
@@ -1222,6 +1381,114 @@ paths:
       summary: Publish a complete draft product
       tags:
         - Admin Products
+  /api/v1/admin/products/{id}/archive:
+    post:
+      operationId: archiveAdminProduct
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeProductStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetailDto"
+      security:
+        - bearer: []
+      summary: Archive a product or combo and remove it from storefront sales
+      tags:
+        - Admin Products
+  /api/v1/admin/products/{id}/reactivate:
+    post:
+      operationId: reactivateAdminProduct
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeProductStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetailDto"
+      security:
+        - bearer: []
+      summary: Reactivate an archived product or combo as DRAFT for review
+      tags:
+        - Admin Products
+  /api/v1/admin/products/variants/{variantId}/archive:
+    post:
+      operationId: archiveAdminProductVariant
+      parameters:
+        - name: variantId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeProductStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetailDto"
+      security:
+        - bearer: []
+      summary: Archive one sellable SKU variant
+      tags:
+        - Admin Products
+  /api/v1/admin/products/variants/{variantId}/reactivate:
+    post:
+      operationId: reactivateAdminProductVariant
+      parameters:
+        - name: variantId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeProductStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetailDto"
+      security:
+        - bearer: []
+      summary: Reactivate one archived SKU variant
+      tags:
+        - Admin Products
   /api/v1/admin/products/{id}/bundle:
     post:
       operationId: createAdminProductBundle
@@ -1995,6 +2262,40 @@ components:
       required:
         - items
         - total
+    CreateStaffUserDto:
+      type: object
+      properties:
+        displayName:
+          type: string
+          example: Nguyễn Văn An
+          maxLength: 255
+        email:
+          type: string
+          example: an.nguyen@example.com
+          maxLength: 255
+        roleCode:
+          type: string
+          enum:
+            - BRANCH_MANAGER
+            - STAFF
+        branchId:
+          type: string
+          format: uuid
+      required:
+        - displayName
+        - email
+        - roleCode
+        - branchId
+    LockStaffUserDto:
+      type: object
+      properties:
+        reason:
+          type: string
+          example: Nhân viên đã nghỉ việc
+          minLength: 3
+          maxLength: 255
+      required:
+        - reason
     RoleDto:
       type: object
       properties:

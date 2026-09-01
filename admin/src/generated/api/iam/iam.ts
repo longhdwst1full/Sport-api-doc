@@ -24,10 +24,13 @@ import type {
 import type {
   ActiveLookupResponseDto,
   AssignUserRoleDto,
+  CreateStaffUserDto,
   ErrorResponseDto,
+  LockStaffUserDto,
   PermissionListDto,
   RoleListDto,
   SearchActiveAdminRolesParams,
+  UserDto,
   UserListDto,
   UserRoleAssignmentDto,
 } from './models';
@@ -134,6 +137,272 @@ export function useListAdminUsers<
 
   return query;
 }
+
+/**
+ * @summary Create an active staff user with the approved default password and branch role
+ */
+export const createAdminStaffUser = (
+  createStaffUserDto: BodyType<CreateStaffUserDto>,
+  signal?: AbortSignal,
+) => {
+  return apiFetcher<UserDto>({
+    url: `/api/v1/admin/iam/users`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: createStaffUserDto,
+    signal,
+  });
+};
+
+export const getCreateAdminStaffUserMutationOptions = <
+  TError = ErrorType<
+    ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createAdminStaffUser>>,
+    TError,
+    { data: BodyType<CreateStaffUserDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createAdminStaffUser>>,
+  TError,
+  { data: BodyType<CreateStaffUserDto> },
+  TContext
+> => {
+  const mutationKey = ['createAdminStaffUser'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createAdminStaffUser>>,
+    { data: BodyType<CreateStaffUserDto> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createAdminStaffUser(data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateAdminStaffUserMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createAdminStaffUser>>
+>;
+export type CreateAdminStaffUserMutationBody = BodyType<CreateStaffUserDto>;
+export type CreateAdminStaffUserMutationError = ErrorType<
+  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+>;
+
+/**
+ * @summary Create an active staff user with the approved default password and branch role
+ */
+export const useCreateAdminStaffUser = <
+  TError = ErrorType<
+    ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createAdminStaffUser>>,
+      TError,
+      { data: BodyType<CreateStaffUserDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createAdminStaffUser>>,
+  TError,
+  { data: BodyType<CreateStaffUserDto> },
+  TContext
+> => {
+  const mutationOptions = getCreateAdminStaffUserMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+/**
+ * @summary Lock a staff user and revoke every active session
+ */
+export const lockAdminStaffUser = (
+  userId: string,
+  lockStaffUserDto: BodyType<LockStaffUserDto>,
+  signal?: AbortSignal,
+) => {
+  return apiFetcher<UserDto>({
+    url: `/api/v1/admin/iam/users/${userId}/lock`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: lockStaffUserDto,
+    signal,
+  });
+};
+
+export const getLockAdminStaffUserMutationOptions = <
+  TError = ErrorType<
+    ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof lockAdminStaffUser>>,
+    TError,
+    { userId: string; data: BodyType<LockStaffUserDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof lockAdminStaffUser>>,
+  TError,
+  { userId: string; data: BodyType<LockStaffUserDto> },
+  TContext
+> => {
+  const mutationKey = ['lockAdminStaffUser'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof lockAdminStaffUser>>,
+    { userId: string; data: BodyType<LockStaffUserDto> }
+  > = (props) => {
+    const { userId, data } = props ?? {};
+
+    return lockAdminStaffUser(userId, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type LockAdminStaffUserMutationResult = NonNullable<
+  Awaited<ReturnType<typeof lockAdminStaffUser>>
+>;
+export type LockAdminStaffUserMutationBody = BodyType<LockStaffUserDto>;
+export type LockAdminStaffUserMutationError = ErrorType<
+  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+>;
+
+/**
+ * @summary Lock a staff user and revoke every active session
+ */
+export const useLockAdminStaffUser = <
+  TError = ErrorType<
+    ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof lockAdminStaffUser>>,
+      TError,
+      { userId: string; data: BodyType<LockStaffUserDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof lockAdminStaffUser>>,
+  TError,
+  { userId: string; data: BodyType<LockStaffUserDto> },
+  TContext
+> => {
+  const mutationOptions = getLockAdminStaffUserMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+/**
+ * @summary Unlock a staff user and reset the password to the approved default
+ */
+export const unlockAdminStaffUser = (userId: string, signal?: AbortSignal) => {
+  return apiFetcher<UserDto>({
+    url: `/api/v1/admin/iam/users/${userId}/unlock`,
+    method: 'POST',
+    signal,
+  });
+};
+
+export const getUnlockAdminStaffUserMutationOptions = <
+  TError = ErrorType<
+    ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof unlockAdminStaffUser>>,
+    TError,
+    { userId: string },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof unlockAdminStaffUser>>,
+  TError,
+  { userId: string },
+  TContext
+> => {
+  const mutationKey = ['unlockAdminStaffUser'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof unlockAdminStaffUser>>,
+    { userId: string }
+  > = (props) => {
+    const { userId } = props ?? {};
+
+    return unlockAdminStaffUser(userId);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UnlockAdminStaffUserMutationResult = NonNullable<
+  Awaited<ReturnType<typeof unlockAdminStaffUser>>
+>;
+
+export type UnlockAdminStaffUserMutationError = ErrorType<
+  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+>;
+
+/**
+ * @summary Unlock a staff user and reset the password to the approved default
+ */
+export const useUnlockAdminStaffUser = <
+  TError = ErrorType<
+    ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof unlockAdminStaffUser>>,
+      TError,
+      { userId: string },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof unlockAdminStaffUser>>,
+  TError,
+  { userId: string },
+  TContext
+> => {
+  const mutationOptions = getUnlockAdminStaffUserMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
 
 /**
  * @summary List IAM roles

@@ -46,10 +46,10 @@ Không đưa Cart, Inventory mutation, Order, Payment hoặc Shipping vào Sprin
 
 | ID | Function | DoR/Acceptance chính | Trạng thái |
 | --- | --- | --- | --- |
-| IAM-03 | Staff user lifecycle | Super Admin; invite/lock/unlock/revoke; không khóa super admin cuối | TODO |
-| IAM-04 | Role/permission | Unknown permission deny; stable code; role system không xóa | IN-PROGRESS |
-| IAM-05 | Assignment scope | GLOBAL/BRANCH/WAREHOUSE/OWN đúng FK; duplicate fail; permission version tăng atomic | IN-PROGRESS |
-| IAM-06 | Audit query | Append-only; che dữ liệu nhạy cảm; lọc actor/action/entity/request | IN-PROGRESS |
+| IAM-03 | Staff user lifecycle | OWNER tạo staff; lock/unlock/revoke atomic; không lock/unlock OWNER; Branch Manager chỉ quản lý STAFF cùng branch | DONE-CORE |
+| IAM-04 | Role/permission | Unknown permission deny; stable code; role system không xóa | DONE-CORE; thiếu full permission matrix |
+| IAM-05 | Assignment scope | GLOBAL/BRANCH/WAREHOUSE/OWN đúng FK; duplicate fail; permission version tăng atomic | DONE-CORE; thiếu revoke assignment API |
+| IAM-06 | Audit query | Append-only; che dữ liệu nhạy cảm; lọc actor/action/entity/request | DONE-WRITE; thiếu query API/UI |
 
 Customer registration/login/forgot password (`IAM-01/02`) cần thiết cho V1 nhưng không nằm trên critical path quản trị Catalog; đưa vào Sprint 3 cùng Customer/Guest trừ khi team có thêm capacity độc lập.
 
@@ -57,14 +57,14 @@ Customer registration/login/forgot password (`IAM-01/02`) cần thiết cho V1 n
 
 | ID | Function | DoR/Acceptance chính | Trạng thái |
 | --- | --- | --- | --- |
-| CAT-01 | Brand | code/slug unique; archive master; logo media asset | TODO |
-| CAT-02 | Category tree | chặn cycle; path/depth nhất quán; không xóa khi đang dùng | TODO |
-| CAT-03 | Product SPU | DRAFT → PUBLISHED → ARCHIVED; optimistic version; không có stock/price | TODO |
-| CAT-04 | Variant/SKU | SKU unique; barcode partial unique; archive thay hard delete | TODO |
+| CAT-01 | Brand | code/slug unique; archive master; logo media asset | DONE-CORE; logo workflow còn thiếu |
+| CAT-02 | Category tree | chặn cycle; path/depth nhất quán; không xóa khi đang dùng | DONE-V1-CORE; move subtree P1 |
+| CAT-03 | Product SPU | DRAFT → PUBLISHED → ARCHIVED; optimistic version; không có stock/price | DONE-CORE |
+| CAT-04 | Variant/SKU | SKU unique; barcode partial unique; archive thay hard delete | PARTIAL; thiếu update metadata |
 | CAT-05 | Product media | một primary theo product/variant; asset đã finalize | IN-PROGRESS |
-| CAT-07 | Storefront catalog | chỉ published product + active variant + effective regular price | TODO |
-| CAT-12 | Fixed combo | không nested; component quantity > 0 | TODO |
-| PRI-01 | Effective price | decimal; thời gian không overlap; audit actor; optimistic version | TODO |
+| CAT-07 | Storefront catalog | chỉ published product + active variant + effective regular price | DONE-CORE |
+| CAT-12 | Fixed combo | không nested; component quantity > 0 | DONE-LIFECYCLE-CORE |
+| PRI-01 | Effective price | decimal; thời gian không overlap; audit actor; optimistic version | DONE-CORE; thiếu management lifecycle UI/test |
 
 `CAT-06` dynamic specification/attribute là P1 và chỉ kéo vào khi các P0 trên đạt integration test.
 

@@ -26,6 +26,7 @@ describe('Admin v1 contract', () => {
   const userId = uuidv7();
   const assignmentId = uuidv7();
   const staffUserId = uuidv7();
+  let createdStaffUserId = '';
   const email = `e2e-${userId}@example.invalid`;
   const password = 'Valid-password-123!';
   let accessToken: string;
@@ -101,8 +102,15 @@ describe('Admin v1 contract', () => {
       await prisma.branch.deleteMany({ where: { id: organizationFixture.branchId } });
     }
     await prisma.authSession.deleteMany({ where: { userId } });
-    await prisma.userRoleAssignment.deleteMany({ where: { userId: { in: [userId, staffUserId] } } });
-    await prisma.user.deleteMany({ where: { id: staffUserId } });
+    if (createdStaffUserId) {
+      await prisma.authSession.deleteMany({ where: { userId: createdStaffUserId } });
+    }
+    await prisma.userRoleAssignment.deleteMany({
+      where: { userId: { in: [userId, staffUserId, createdStaffUserId].filter(Boolean) } },
+    });
+    await prisma.user.deleteMany({
+      where: { id: { in: [staffUserId, createdStaffUserId].filter(Boolean) } },
+    });
     await prisma.user.update({
       where: { id: userId },
       data: { status: 'INACTIVE' },
@@ -182,6 +190,80 @@ describe('Admin v1 contract', () => {
         where: { action: 'iam.assignment.create', entityType: 'USER_ROLE_ASSIGNMENT' },
       }),
     ).resolves.toBeGreaterThanOrEqual(1);
+  });
+
+  it('creates an active branch staff account that can login with the approved default password', async () => {
+    const branch = await prisma.branch.findFirstOrThrow({ where: { status: 'ACTIVE' } });
+    const staffEmail = `created-staff-${uuidv7()}@example.invalid`;
+    const created = await request(server())
+      .post('/api/v1/admin/iam/users')
+      .set('authorization', `Bearer ${accessToken}`)
+      .send({
+        displayName: 'E2E Created Staff',
+        email: staffEmail,
+        roleCode: 'STAFF',
+        branchId: branch.id,
+      })
+      .expect(201);
+    createdStaffUserId = (created.body as { id: string }).id;
+    expect(created.body).toMatchObject({
+      displayName: 'E2E Created Staff',
+      status: 'ACTIVE',
+      permissionVersion: 1,
+      assignments: [expect.objectContaining({ roleCode: 'STAFF', branchId: branch.id })],
+    });
+    expect(created.body).not.toHaveProperty('password');
+    expect(created.body).not.toHaveProperty('passwordHash');
+
+    const staffLogin = await request(server())
+      .post('/api/v1/admin/auth/login')
+      .send({ email: staffEmail, password: 'Aa@123456' })
+      .expect(200);
+    const oldAccessToken = (staffLogin.body as { accessToken: string }).accessToken;
+    const oldRefreshToken = (staffLogin.body as { refreshToken: string }).refreshToken;
+
+    const locked = await request(server())
+      .post(`/api/v1/admin/iam/users/${createdStaffUserId}/lock`)
+      .set('authorization', `Bearer ${accessToken}`)
+      .send({ reason: 'E2E lifecycle verification' })
+      .expect(200);
+    expect(locked.body).toMatchObject({ status: 'LOCKED', permissionVersion: 2 });
+    await request(server())
+      .get('/api/v1/admin/iam/users')
+      .set('authorization', `Bearer ${oldAccessToken}`)
+      .expect(401);
+    await request(server())
+      .post('/api/v1/admin/auth/refresh')
+      .send({ refreshToken: oldRefreshToken })
+      .expect(401);
+    await request(server())
+      .post('/api/v1/admin/auth/login')
+      .send({ email: staffEmail, password: 'Aa@123456' })
+      .expect(401);
+    await expect(
+      prisma.authSession.count({
+        where: { userId: createdStaffUserId, revokedAt: null },
+      }),
+    ).resolves.toBe(0);
+
+    const unlocked = await request(server())
+      .post(`/api/v1/admin/iam/users/${createdStaffUserId}/unlock`)
+      .set('authorization', `Bearer ${accessToken}`)
+      .expect(200);
+    expect(unlocked.body).toMatchObject({ status: 'ACTIVE', permissionVersion: 3 });
+    await request(server())
+      .post('/api/v1/admin/auth/login')
+      .send({ email: staffEmail, password: 'Aa@123456' })
+      .expect(200);
+    await expect(
+      prisma.auditLog.count({ where: { action: 'iam.user.create', entityId: createdStaffUserId } }),
+    ).resolves.toBe(1);
+    await expect(
+      prisma.auditLog.count({ where: { action: 'iam.user.lock', entityId: createdStaffUserId } }),
+    ).resolves.toBe(1);
+    await expect(
+      prisma.auditLog.count({ where: { action: 'iam.user.unlock', entityId: createdStaffUserId } }),
+    ).resolves.toBe(1);
   });
 
   it('delivers a published catalog from admin commands to storefront with optimistic locking', async () => {
@@ -275,6 +357,41 @@ describe('Admin v1 contract', () => {
         .send({ name, expectedVersion: 1 });
     const updateResponses = await Promise.all([update('Winner A'), update('Winner B')]);
     expect(updateResponses.map(({ status }) => status).sort()).toEqual([200, 409]);
+
+    await request(server())
+      .post(`/api/v1/admin/products/${catalogFixture.productId}/archive`)
+      .set(authorization)
+      .send({ expectedVersion: 2 })
+      .expect(200)
+      .expect(({ body }) => expect(body).toMatchObject({ status: 'ARCHIVED', version: 3 }));
+    await request(server()).get(`/api/v1/catalog/products/${slug}`).expect(404);
+
+    await request(server())
+      .post(`/api/v1/admin/products/${catalogFixture.productId}/reactivate`)
+      .set(authorization)
+      .send({ expectedVersion: 3 })
+      .expect(200)
+      .expect(({ body }) => expect(body).toMatchObject({ status: 'DRAFT', version: 4 }));
+    await request(server()).get(`/api/v1/catalog/products/${slug}`).expect(404);
+
+    await request(server())
+      .post(`/api/v1/admin/products/${catalogFixture.productId}/publish`)
+      .set(authorization)
+      .send({ expectedVersion: 4 })
+      .expect(200);
+    await request(server())
+      .post(`/api/v1/admin/products/variants/${catalogFixture.variantId}/archive`)
+      .set(authorization)
+      .send({ expectedVersion: 0 })
+      .expect(200);
+    await request(server()).get(`/api/v1/catalog/products/${slug}`).expect(404);
+
+    await request(server())
+      .post(`/api/v1/admin/products/variants/${catalogFixture.variantId}/reactivate`)
+      .set(authorization)
+      .send({ expectedVersion: 1 })
+      .expect(200);
+    await request(server()).get(`/api/v1/catalog/products/${slug}`).expect(200);
   });
 
   it('creates, updates and changes branch plus warehouse status atomically', async () => {

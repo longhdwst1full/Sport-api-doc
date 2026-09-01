@@ -224,6 +224,47 @@
         "script:prisma/seed-demo.ts"
       ],
       "targets": []
+    },
+    {
+      "id": "API-20260830-STAFF-CATALOG-LIFECYCLE",
+      "date": "2026-08-30",
+      "scope": "API+ADMIN+PERSISTENCE-SEMANTICS",
+      "summary": "Chốt staff bootstrap bằng email/default password và bổ sung lifecycle archive/reactivate cho Product, Combo qua Product và Variant; Category move chuyển P1.",
+      "sources": [
+        "decision:D35/D36/D37",
+        "OpenAPI:createAdminStaffUser/archiveAdminProduct/reactivateAdminProduct/archiveAdminProductVariant/reactivateAdminProductVariant",
+        "test:iam.service.spec.ts/products.service.spec.ts/admin-contract.e2e-spec.ts",
+        "admin:staff-creation-drawer.tsx/product-workflow-drawer.tsx"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260901-STAFF-LOCK-UNLOCK",
+      "date": "2026-09-01",
+      "scope": "API+ADMIN+SECURITY",
+      "summary": "Khóa staff chuyển ACTIVE→LOCKED, tăng permissionVersion và revoke toàn bộ session atomic; mở khóa chuyển LOCKED→ACTIVE, reset Argon2 password về Aa@123456 nhưng không phục hồi session cũ. OWNER không được lock/unlock; Branch Manager chỉ quản lý STAFF trong branch được cấp.",
+      "sources": [
+        "OpenAPI:lockAdminStaffUser/unlockAdminStaffUser",
+        "test:iam.service.spec.ts/admin-contract.e2e-spec.ts",
+        "admin:staff-lifecycle-modal.tsx"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": ["users", "auth_sessions", "audit_logs"] },
+          "columns": ["Ý nghĩa", "Các cột chính"]
+        },
+        {
+          "sheet": "RBAC Permissions",
+          "match": { "Permission code": "iam.user.manage" },
+          "columns": ["Allowed scopes", "Default roles", "Ghi chú"],
+          "set": {
+            "Allowed scopes": "GLOBAL;BRANCH",
+            "Default roles": "OWNER; BRANCH_MANAGER",
+            "Ghi chú": "OWNER lock/unlock BRANCH_MANAGER và STAFF, không thao tác OWNER; Branch Manager chỉ lock/unlock STAFF trong branch; lock revoke all sessions, unlock reset default password"
+          }
+        }
+      ]
     }
   ]
 }

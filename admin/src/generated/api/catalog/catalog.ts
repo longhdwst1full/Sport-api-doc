@@ -1786,6 +1786,334 @@ export const usePublishAdminProduct = <TError = ErrorType<unknown>, TContext = u
 };
 
 /**
+ * @summary Archive a product or combo and remove it from storefront sales
+ */
+export const archiveAdminProduct = (
+  id: string,
+  changeProductStatusDto: BodyType<ChangeProductStatusDto>,
+  signal?: AbortSignal,
+) => {
+  return apiFetcher<ProductDetailDto>({
+    url: `/api/v1/admin/products/${id}/archive`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: changeProductStatusDto,
+    signal,
+  });
+};
+
+export const getArchiveAdminProductMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof archiveAdminProduct>>,
+    TError,
+    { id: string; data: BodyType<ChangeProductStatusDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof archiveAdminProduct>>,
+  TError,
+  { id: string; data: BodyType<ChangeProductStatusDto> },
+  TContext
+> => {
+  const mutationKey = ['archiveAdminProduct'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof archiveAdminProduct>>,
+    { id: string; data: BodyType<ChangeProductStatusDto> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return archiveAdminProduct(id, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ArchiveAdminProductMutationResult = NonNullable<
+  Awaited<ReturnType<typeof archiveAdminProduct>>
+>;
+export type ArchiveAdminProductMutationBody = BodyType<ChangeProductStatusDto>;
+export type ArchiveAdminProductMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Archive a product or combo and remove it from storefront sales
+ */
+export const useArchiveAdminProduct = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof archiveAdminProduct>>,
+      TError,
+      { id: string; data: BodyType<ChangeProductStatusDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof archiveAdminProduct>>,
+  TError,
+  { id: string; data: BodyType<ChangeProductStatusDto> },
+  TContext
+> => {
+  const mutationOptions = getArchiveAdminProductMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+/**
+ * @summary Reactivate an archived product or combo as DRAFT for review
+ */
+export const reactivateAdminProduct = (
+  id: string,
+  changeProductStatusDto: BodyType<ChangeProductStatusDto>,
+  signal?: AbortSignal,
+) => {
+  return apiFetcher<ProductDetailDto>({
+    url: `/api/v1/admin/products/${id}/reactivate`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: changeProductStatusDto,
+    signal,
+  });
+};
+
+export const getReactivateAdminProductMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof reactivateAdminProduct>>,
+    TError,
+    { id: string; data: BodyType<ChangeProductStatusDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof reactivateAdminProduct>>,
+  TError,
+  { id: string; data: BodyType<ChangeProductStatusDto> },
+  TContext
+> => {
+  const mutationKey = ['reactivateAdminProduct'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof reactivateAdminProduct>>,
+    { id: string; data: BodyType<ChangeProductStatusDto> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return reactivateAdminProduct(id, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReactivateAdminProductMutationResult = NonNullable<
+  Awaited<ReturnType<typeof reactivateAdminProduct>>
+>;
+export type ReactivateAdminProductMutationBody = BodyType<ChangeProductStatusDto>;
+export type ReactivateAdminProductMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Reactivate an archived product or combo as DRAFT for review
+ */
+export const useReactivateAdminProduct = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof reactivateAdminProduct>>,
+      TError,
+      { id: string; data: BodyType<ChangeProductStatusDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof reactivateAdminProduct>>,
+  TError,
+  { id: string; data: BodyType<ChangeProductStatusDto> },
+  TContext
+> => {
+  const mutationOptions = getReactivateAdminProductMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+/**
+ * @summary Archive one sellable SKU variant
+ */
+export const archiveAdminProductVariant = (
+  variantId: string,
+  changeProductStatusDto: BodyType<ChangeProductStatusDto>,
+  signal?: AbortSignal,
+) => {
+  return apiFetcher<ProductDetailDto>({
+    url: `/api/v1/admin/products/variants/${variantId}/archive`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: changeProductStatusDto,
+    signal,
+  });
+};
+
+export const getArchiveAdminProductVariantMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof archiveAdminProductVariant>>,
+    TError,
+    { variantId: string; data: BodyType<ChangeProductStatusDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof archiveAdminProductVariant>>,
+  TError,
+  { variantId: string; data: BodyType<ChangeProductStatusDto> },
+  TContext
+> => {
+  const mutationKey = ['archiveAdminProductVariant'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof archiveAdminProductVariant>>,
+    { variantId: string; data: BodyType<ChangeProductStatusDto> }
+  > = (props) => {
+    const { variantId, data } = props ?? {};
+
+    return archiveAdminProductVariant(variantId, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ArchiveAdminProductVariantMutationResult = NonNullable<
+  Awaited<ReturnType<typeof archiveAdminProductVariant>>
+>;
+export type ArchiveAdminProductVariantMutationBody = BodyType<ChangeProductStatusDto>;
+export type ArchiveAdminProductVariantMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Archive one sellable SKU variant
+ */
+export const useArchiveAdminProductVariant = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof archiveAdminProductVariant>>,
+      TError,
+      { variantId: string; data: BodyType<ChangeProductStatusDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof archiveAdminProductVariant>>,
+  TError,
+  { variantId: string; data: BodyType<ChangeProductStatusDto> },
+  TContext
+> => {
+  const mutationOptions = getArchiveAdminProductVariantMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+/**
+ * @summary Reactivate one archived SKU variant
+ */
+export const reactivateAdminProductVariant = (
+  variantId: string,
+  changeProductStatusDto: BodyType<ChangeProductStatusDto>,
+  signal?: AbortSignal,
+) => {
+  return apiFetcher<ProductDetailDto>({
+    url: `/api/v1/admin/products/variants/${variantId}/reactivate`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: changeProductStatusDto,
+    signal,
+  });
+};
+
+export const getReactivateAdminProductVariantMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof reactivateAdminProductVariant>>,
+    TError,
+    { variantId: string; data: BodyType<ChangeProductStatusDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof reactivateAdminProductVariant>>,
+  TError,
+  { variantId: string; data: BodyType<ChangeProductStatusDto> },
+  TContext
+> => {
+  const mutationKey = ['reactivateAdminProductVariant'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof reactivateAdminProductVariant>>,
+    { variantId: string; data: BodyType<ChangeProductStatusDto> }
+  > = (props) => {
+    const { variantId, data } = props ?? {};
+
+    return reactivateAdminProductVariant(variantId, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReactivateAdminProductVariantMutationResult = NonNullable<
+  Awaited<ReturnType<typeof reactivateAdminProductVariant>>
+>;
+export type ReactivateAdminProductVariantMutationBody = BodyType<ChangeProductStatusDto>;
+export type ReactivateAdminProductVariantMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Reactivate one archived SKU variant
+ */
+export const useReactivateAdminProductVariant = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof reactivateAdminProductVariant>>,
+      TError,
+      { variantId: string; data: BodyType<ChangeProductStatusDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof reactivateAdminProductVariant>>,
+  TError,
+  { variantId: string; data: BodyType<ChangeProductStatusDto> },
+  TContext
+> => {
+  const mutationOptions = getReactivateAdminProductVariantMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+/**
  * @summary Create a fixed non-nested virtual combo
  */
 export const createAdminProductBundle = (
