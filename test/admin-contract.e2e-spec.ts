@@ -74,7 +74,7 @@ describe('Admin v1 contract', () => {
     app = await createApplication({ logger: false, swagger: false });
     const login = await request(server())
       .post('/api/v1/admin/auth/login')
-      .send({ email, password })
+      .send({ identifier: email, password })
       .expect(200);
     accessToken = (login.body as { accessToken: string }).accessToken;
   });
@@ -217,7 +217,7 @@ describe('Admin v1 contract', () => {
 
     const staffLogin = await request(server())
       .post('/api/v1/admin/auth/login')
-      .send({ email: staffEmail, password: 'Aa@123456' })
+      .send({ identifier: staffEmail, password: 'Aa@123456' })
       .expect(200);
     const oldAccessToken = (staffLogin.body as { accessToken: string }).accessToken;
     const oldRefreshToken = (staffLogin.body as { refreshToken: string }).refreshToken;
@@ -238,7 +238,7 @@ describe('Admin v1 contract', () => {
       .expect(401);
     await request(server())
       .post('/api/v1/admin/auth/login')
-      .send({ email: staffEmail, password: 'Aa@123456' })
+      .send({ identifier: staffEmail, password: 'Aa@123456' })
       .expect(401);
     await expect(
       prisma.authSession.count({
@@ -253,7 +253,7 @@ describe('Admin v1 contract', () => {
     expect(unlocked.body).toMatchObject({ status: 'ACTIVE', permissionVersion: 3 });
     await request(server())
       .post('/api/v1/admin/auth/login')
-      .send({ email: staffEmail, password: 'Aa@123456' })
+      .send({ identifier: staffEmail, password: 'Aa@123456' })
       .expect(200);
     await expect(
       prisma.auditLog.count({ where: { action: 'iam.user.create', entityId: createdStaffUserId } }),

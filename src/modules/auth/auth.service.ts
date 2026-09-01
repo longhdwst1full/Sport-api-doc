@@ -1,14 +1,26 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Prisma, User } from '@prisma/client';
-import { verify } from 'argon2';
+import { hash, verify } from 'argon2';
 import { v7 as uuidv7 } from 'uuid';
 import { PrismaService } from '../../database/prisma.service';
+import { AuditWriter } from '../audit/audit.writer';
 import { ScopeType } from '../iam/iam.types';
-import { LoginDto, TokenPairDto } from './auth.dto';
+import { LoginDto, RegisterCustomerDto, TokenPairDto } from './auth.dto';
 import { AccessTokenPayload, AuthPrincipal } from './auth.types';
+import {
+  InvalidVietnamesePhoneNumberError,
+  normalizeVietnamesePhone,
+} from './phone-normalization';
+
+type LoginUserType = 'CUSTOMER' | 'STAFF';
 
 @Injectable()
 export class AuthService {
@@ -16,20 +28,26 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
+    private readonly audit: AuditWriter,
   ) {}
 
-  async login(input: LoginDto): Promise<TokenPairDto> {
+  async login(input: LoginDto, userType: LoginUserType = 'STAFF'): Promise<TokenPairDto> {
     this.ensureDatabaseEnabled();
-    const normalizedEmail = input.email.trim().toLowerCase();
+    const identity = this.normalizeLoginIdentifier(input.identifier);
     const user = await this.prisma.user.findFirst({
-      where: { normalizedEmail },
+      where: {
+        userType,
+        ...(identity.type === 'EMAIL'
+          ? { normalizedEmail: identity.value }
+          : { normalizedPhone: identity.value }),
+      },
     });
     if (
       !user?.passwordHash ||
       user.status !== 'ACTIVE' ||
       !(await verify(user.passwordHash, input.password))
     ) {
-      throw new UnauthorizedException('Email or password is incorrect');
+      throw new UnauthorizedException('Email/phone or password is incorrect');
     }
 
     return this.prisma.$transaction(async (transaction) => {
@@ -40,6 +58,68 @@ export class AuthService {
       });
       return pair;
     });
+  }
+
+  async registerCustomer(
+    input: RegisterCustomerDto,
+    requestId: string,
+  ): Promise<TokenPairDto> {
+    this.ensureDatabaseEnabled();
+    const normalizedEmail = input.email?.trim().toLowerCase() || undefined;
+    const normalizedPhone = input.phone
+      ? this.normalizeRegistrationPhone(input.phone)
+      : undefined;
+    if (!normalizedEmail && !normalizedPhone) {
+      throw new BadRequestException({
+        code: 'VALIDATION_ERROR',
+        message: 'Email or phone is required',
+        details: [{ field: 'email', code: 'IDENTITY_REQUIRED', message: 'Provide email or phone' }],
+      });
+    }
+
+    const userId = uuidv7();
+    const passwordHash = await hash(input.password);
+    try {
+      return await this.prisma.$transaction(async (transaction) => {
+        const user = await transaction.user.create({
+          data: {
+            id: userId,
+            userType: 'CUSTOMER',
+            email: normalizedEmail,
+            normalizedEmail,
+            phone: normalizedPhone,
+            normalizedPhone,
+            passwordHash,
+            displayName: input.displayName.trim(),
+            status: 'ACTIVE',
+          },
+        });
+        await this.audit.write(
+          {
+            requestId,
+            sequenceNo: 1,
+            actorType: 'GUEST',
+            action: 'auth.customer.register',
+            entityType: 'USER',
+            entityId: user.id,
+            after: {
+              userType: 'CUSTOMER',
+              status: 'ACTIVE',
+              hasEmail: Boolean(normalizedEmail),
+              hasPhone: Boolean(normalizedPhone),
+              verificationRequired: false,
+            },
+          },
+          transaction,
+        );
+        return this.createSession(transaction, user);
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('Email or phone is already registered');
+      }
+      throw error;
+    }
   }
 
   async refresh(rawRefreshToken: string): Promise<TokenPairDto> {
@@ -185,6 +265,37 @@ export class AuthService {
 
   private hashRefreshToken(token: string): string {
     return createHash('sha256').update(token).digest('hex');
+  }
+
+  private normalizeLoginIdentifier(identifier: string): {
+    type: 'EMAIL' | 'PHONE';
+    value: string;
+  } {
+    const value = identifier.trim();
+    if (value.includes('@')) return { type: 'EMAIL', value: value.toLowerCase() };
+    try {
+      return { type: 'PHONE', value: normalizeVietnamesePhone(value) };
+    } catch (error) {
+      if (error instanceof InvalidVietnamesePhoneNumberError) {
+        throw new UnauthorizedException('Email/phone or password is incorrect');
+      }
+      throw error;
+    }
+  }
+
+  private normalizeRegistrationPhone(phone: string): string {
+    try {
+      return normalizeVietnamesePhone(phone);
+    } catch (error) {
+      if (error instanceof InvalidVietnamesePhoneNumberError) {
+        throw new BadRequestException({
+          code: 'VALIDATION_ERROR',
+          message: 'Phone number is invalid',
+          details: [{ field: 'phone', code: 'INVALID_PHONE', message: 'Vietnamese phone number is invalid' }],
+        });
+      }
+      throw error;
+    }
   }
 
   private ensureDatabaseEnabled(): void {

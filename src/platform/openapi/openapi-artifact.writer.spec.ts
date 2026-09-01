@@ -89,4 +89,36 @@ describe('writeOpenApiArtifacts', () => {
     expect(authContract).toContain('loginAdmin');
     expect(authContract).not.toContain('listAdminBranches');
   });
+
+  it('writes Storefront Auth operations to an isolated consumer contract', async () => {
+    const document: OpenAPIObject = {
+      openapi: '3.0.0',
+      info: { title: 'Test', version: '1.0.0' },
+      paths: {
+        '/auth/register': {
+          post: {
+            operationId: 'registerCustomer',
+            tags: ['Storefront Auth'],
+            responses: { 201: { description: 'created' } },
+          },
+        },
+        '/admin/auth/login': {
+          post: {
+            operationId: 'loginAdmin',
+            tags: ['Admin Auth'],
+            responses: { 200: { description: 'ok' } },
+          },
+        },
+      },
+    };
+
+    await writeOpenApiArtifacts(document, join(temporaryRoot, 'api'));
+    const storefrontAuthContract = await readFile(
+      join(temporaryRoot, 'document', 'api', 'storefront', 'auth.yaml'),
+      'utf8',
+    );
+
+    expect(storefrontAuthContract).toContain('registerCustomer');
+    expect(storefrontAuthContract).not.toContain('loginAdmin');
+  });
 });
