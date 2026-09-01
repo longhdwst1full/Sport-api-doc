@@ -1,7 +1,7 @@
 id,module,channel,actor,priority,function,main_rule,acceptance_summary
 ORG-01,Organization,Admin,Super Admin,P0,Quản lý chi nhánh,Mã chi nhánh duy nhất và không xóa khi đã có giao dịch,Tạo sửa khóa/mở và lọc được theo trạng thái
 ORG-02,Organization,Admin,Super Admin,P0,Quản lý kho,Mỗi branch đúng một warehouse; branch phải có warehouse trước khi active,Không thể chuyển branch của warehouse đã có ledger
-IAM-01,IAM,Storefront,Customer/Guest,P0,Đăng ký đăng nhập đăng xuất,Email hoặc số điện thoại được chuẩn hóa và xác minh theo cấu hình,Token rotation và revoke session hoạt động
+IAM-01,IAM,Storefront,Customer/Guest,P0,Đăng ký đăng nhập đăng xuất,"Public register chỉ tạo CUSTOMER; email lowercase; SĐT Việt Nam validate và lưu E.164; V1 tạm bỏ verification","Đăng ký ACTIVE ngay; login bằng email hoặc phone; token rotation và revoke session hoạt động"
 IAM-02,IAM,Storefront,Customer,P0,Quên và đổi mật khẩu,OTP/token một lần có expiry,Không lộ tài khoản tồn tại qua response
 IAM-03,IAM,Admin,Super Admin,P0,Quản lý user nội bộ,Không tự khóa super admin cuối cùng,Tạo khóa/mở và thu hồi session
 IAM-04,IAM,Admin,Security Admin,P0,Quản lý role và permission,Permission code ổn định không sinh từ URL,Backend deny khi thiếu quyền

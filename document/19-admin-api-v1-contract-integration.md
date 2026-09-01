@@ -1,6 +1,6 @@
-# Admin API v1 contract integration
+# Admin và Storefront API v1 contract integration
 
-Ngày cập nhật: 2026-08-30
+Ngày cập nhật: 2026-09-01
 
 ## Nguyên tắc đã áp dụng
 
@@ -31,6 +31,10 @@ Ngày cập nhật: 2026-08-30
 | Kiểm duyệt đánh giá | `PATCH /api/v1/admin/reviews/{id}/moderation` | `moderateAdminReview` | `review.moderate` | Reviews actions |
 | Archive/reactivate product hoặc combo | `POST .../products/{id}/archive|reactivate` | `archiveAdminProduct` / `reactivateAdminProduct` | `catalog.product.publish` | Product workflow drawer |
 | Archive/reactivate variant | `POST .../products/variants/{id}/archive|reactivate` | `archiveAdminProductVariant` / `reactivateAdminProductVariant` | `catalog.product.manage` | Product workflow drawer |
+| Customer register | `POST /api/v1/auth/register` | `registerCustomer` | Public + rate limit | Storefront `/register` |
+| Customer login email/phone | `POST /api/v1/auth/login` | `loginCustomer` | Public + rate limit | Storefront `/login` |
+| Customer refresh/logout/me | `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me` | `refreshCustomerToken`, `logoutCustomer`, `getCustomerCurrentUser` | Token/session | Generated Storefront Auth SDK |
+| Staff login email/phone | `POST /api/v1/admin/auth/login` | `loginAdmin` | Public + rate limit; chỉ userType STAFF | Admin Login |
 
 API `/active` nhận `search`, `page`, `limit`; warehouse nhận thêm `branchId`. Response thống nhất:
 
@@ -77,5 +81,9 @@ Admin dùng `getApiErrorMessage` cho lỗi form/query và `getApiFieldErrors` đ
 - [x] Demo seed chạy lặp hai lần trên PostgreSQL local, không nhân bản dữ liệu.
 - [x] Staff create dùng Argon2 default password, tạo user + assignment + audit atomic; API không trả credential/hash.
 - [x] Product/combo/variant lifecycle dùng named actions và optimistic version; storefront không trả archived/inactive data.
+- [x] Storefront Auth contract được tách theo tag `Storefront Auth`; Client Orval sinh SDK riêng từ `document/api/storefront/auth.yaml`.
+- [x] Register chỉ tạo CUSTOMER ACTIVE; login customer/admin tách theo userType và dùng chung identifier email/phone.
+- [x] SĐT Việt Nam được validate bằng metadata đầy đủ và lưu E.164; unique constraint PostgreSQL xử lý đăng ký đồng thời.
+- [~] Client lưu token trong sessionStorage sau login/register; chưa sửa shared fetcher HIGH-risk để auto attach/refresh protected API.
 - [ ] Verified identity/token — development đang dùng `AUTH_BYPASS=true` và principal OWNER bootstrap; production bắt buộc tắt bypass.
 - [ ] PostgreSQL permission/scope + transaction/audit integration — blocker trước staging.

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Dumbbell, Menu, ShoppingBag } from 'lucide-react';
+import { Dumbbell, Menu, ShoppingBag, UserRound } from 'lucide-react';
 import { useAppSelector } from '@/app/store/hooks';
 
 export function SiteHeader() {
@@ -26,6 +26,13 @@ export function SiteHeader() {
         <Link href="/#about">Giới thiệu</Link>
       </nav>
       <div className="flex items-center gap-2">
+        <Link
+          href="/login"
+          className="hidden items-center gap-2 rounded-full border border-ink/15 px-4 py-3 text-sm font-bold md:flex"
+        >
+          <UserRound className="size-5" />
+          Tài khoản
+        </Link>
         <button
           className="relative hidden rounded-full border border-ink/15 p-3 md:grid"
           aria-label={`Mở giỏ hàng, ${cartQuantity} sản phẩm`}

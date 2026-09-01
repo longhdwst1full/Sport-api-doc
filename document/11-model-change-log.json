@@ -265,6 +265,42 @@
           }
         }
       ]
+    },
+    {
+      "id": "API-20260901-CUSTOMER-IDENTITY-V1",
+      "date": "2026-09-01",
+      "scope": "API+STOREFRONT+PERSISTENCE-SEMANTICS",
+      "summary": "Public register chỉ tạo CUSTOMER ACTIVE và tạm bỏ verification; yêu cầu email hoặc SĐT; login customer/staff nhận identifier email/phone; email lowercase và SĐT Việt Nam validate metadata đầy đủ rồi lưu E.164. User + GUEST audit + session được tạo atomic.",
+      "sources": [
+        "decision:D38",
+        "OpenAPI:registerCustomer/loginCustomer/refreshCustomerToken/logoutCustomer/getCustomerCurrentUser/loginAdmin",
+        "test:phone-normalization.spec.ts/customer-auth.e2e-spec.ts",
+        "client:customer-register-page.tsx/customer-login-page.tsx"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": ["users", "auth_sessions", "audit_logs"] },
+          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính"]
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "users", "Tên cột": "normalized_email" },
+          "columns": ["Ý nghĩa / trạng thái cho phép"],
+          "set": { "Ý nghĩa / trạng thái cho phép": "Email trim + lowercase; login identifier; unique khi khác null" }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "users", "Tên cột": "normalized_phone" },
+          "columns": ["Ý nghĩa / trạng thái cho phép"],
+          "set": { "Ý nghĩa / trạng thái cho phép": "SĐT Việt Nam được validate bằng metadata đầy đủ và lưu E.164; login identifier; unique khi khác null" }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "users", "Tên cột": ["status", "email_verified_at", "phone_verified_at"] },
+          "columns": ["Ý nghĩa / trạng thái cho phép"]
+        }
+      ]
     }
   ]
 }

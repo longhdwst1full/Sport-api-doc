@@ -40,9 +40,9 @@ Table users {
   id uuid [pk]
   user_type varchar(24) [not null, note: 'CUSTOMER|STAFF|SYSTEM']
   email varchar(255)
-  normalized_email varchar(255)
+  normalized_email varchar(255) [note: 'lowercase trimmed; login identifier email']
   phone varchar(32)
-  normalized_phone varchar(32)
+  normalized_phone varchar(32) [note: 'Vietnam V1 validated then stored E.164, e.g. +84912345678; login identifier phone']
   password_hash varchar(255)
   display_name varchar(255) [not null]
   status varchar(24) [not null, default: 'ACTIVE']
@@ -53,7 +53,7 @@ Table users {
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
-  Note: '[P0] Unique indexes cho normalized_email/phone khi khác null; INACTIVE rồi anonymize, không soft-delete.'
+  Note: '[P0] Public register chỉ tạo CUSTOMER ACTIVE và yêu cầu email hoặc phone; V1 tạm chưa verification. Unique indexes cho normalized_email/phone khi khác null; INACTIVE rồi anonymize, không soft-delete.'
 }
 
 Table auth_sessions {

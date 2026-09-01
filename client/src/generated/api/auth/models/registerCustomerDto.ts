@@ -6,12 +6,16 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface LoginDto {
+export interface RegisterCustomerDto {
+  /** @maxLength 255 */
+  displayName: string;
+  /** @maxLength 255 */
+  email?: string;
   /**
-   * Email or Vietnamese phone number
-   * @maxLength 255
+   * Vietnamese phone; stored in E.164 format
+   * @maxLength 32
    */
-  identifier: string;
+  phone?: string;
   /**
    * @minLength 8
    * @maxLength 128

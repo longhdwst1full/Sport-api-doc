@@ -26,7 +26,7 @@ import type { CurrentUserDto, LoginDto, RefreshTokenDto, TokenPairDto } from './
 import { apiFetcher } from '../../../lib/api/fetcher';
 import type { ErrorType, BodyType } from '../../../lib/api/fetcher';
 /**
- * @summary Authenticate an admin user
+ * @summary Authenticate staff by email or phone
  */
 export const loginAdmin = (loginDto: BodyType<LoginDto>, signal?: AbortSignal) => {
   return apiFetcher<TokenPairDto>({
@@ -78,7 +78,7 @@ export type LoginAdminMutationBody = BodyType<LoginDto>;
 export type LoginAdminMutationError = ErrorType<void>;
 
 /**
- * @summary Authenticate an admin user
+ * @summary Authenticate staff by email or phone
  */
 export const useLoginAdmin = <TError = ErrorType<void>, TContext = unknown>(
   options?: {

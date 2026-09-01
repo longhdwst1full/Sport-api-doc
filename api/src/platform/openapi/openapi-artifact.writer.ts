@@ -19,6 +19,7 @@ const CONTRACT_SLICES: ContractSlice[] = [
   { relativePath: 'admin/media.yaml', tags: ['Admin Media'] },
   { relativePath: 'admin/system.yaml', tags: ['Admin System'] },
   { relativePath: 'storefront/catalog.yaml', tags: ['Storefront Catalog'] },
+  { relativePath: 'storefront/auth.yaml', tags: ['Storefront Auth'] },
   { relativePath: 'storefront/content.yaml', tags: ['Storefront Content'] },
   { relativePath: 'storefront/reviews.yaml', tags: ['Storefront Reviews'] },
 ];

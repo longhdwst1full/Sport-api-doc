@@ -1,5 +1,15 @@
 # Business rules và state machine V1
 
+## 0. Customer identity V1
+
+- Public registration chỉ tạo `users.user_type=CUSTOMER`; staff vẫn do Admin tạo.
+- Registration yêu cầu ít nhất normalized email hoặc normalized Vietnamese phone.
+- Email được trim/lowercase. SĐT dạng `09…`, `+849…`, `849…`, `00849…` được validate bằng full numbering metadata và lưu E.164.
+- V1 development tạo CUSTOMER `ACTIVE` ngay; `email_verified_at` và `phone_verified_at` để null. Phải bổ sung verification trước staging/production cho recovery và thao tác nhạy cảm.
+- Login nhận một `identifier` email/phone và bắt buộc đúng `user_type`, tránh CUSTOMER đăng nhập qua Admin hoặc STAFF qua Storefront.
+- Duplicate đồng thời dựa vào PostgreSQL unique index normalized email/phone và trả conflict.
+- Tạo user, GUEST audit và initial session atomic; Argon2 hash và phone parsing chạy ngoài transaction.
+
 ## 1. Invariant không được phá
 
 1. `available = on_hand - reserved >= 0`; không có đường code nào sửa tồn mà không tạo movement hoặc reservation transition.

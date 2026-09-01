@@ -1,5 +1,5 @@
 import { yupResolver } from '@hookform/resolvers/yup';
-import { LockOutlined, MailOutlined } from '@ant-design/icons';
+import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { App, Button, Card, Form, Input, Typography } from 'antd';
 import { Controller, useForm } from 'react-hook-form';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
@@ -11,7 +11,7 @@ import { useAuth } from '@/core/auth/auth-context';
 import { getApiErrorMessage } from '@/lib/api/error';
 
 const schema: yup.ObjectSchema<LoginDto> = yup.object({
-  email: yup.string().email('Email không hợp lệ').required('Vui lòng nhập email'),
+  identifier: yup.string().trim().required('Vui lòng nhập email hoặc số điện thoại').max(255),
   password: yup.string().min(8, 'Mật khẩu tối thiểu 8 ký tự').required('Vui lòng nhập mật khẩu'),
 });
 
@@ -22,7 +22,7 @@ export function LoginPage() {
   const location = useLocation();
   const form = useForm<LoginDto>({
     resolver: yupResolver(schema),
-    defaultValues: { email: '', password: '' },
+    defaultValues: { identifier: '', password: '' },
   });
   const login = useLoginAdmin({
     mutation: {
@@ -49,14 +49,14 @@ export function LoginPage() {
         </div>
         <Form layout="vertical" onFinish={() => void form.handleSubmit((data) => login.mutate({ data }))()}>
           <Form.Item
-            label="Email"
-            validateStatus={form.formState.errors.email ? 'error' : undefined}
-            help={form.formState.errors.email?.message}
+            label="Email hoặc số điện thoại"
+            validateStatus={form.formState.errors.identifier ? 'error' : undefined}
+            help={form.formState.errors.identifier?.message}
           >
             <Controller
-              name="email"
+              name="identifier"
               control={form.control}
-              render={({ field }) => <Input {...field} prefix={<MailOutlined />} autoComplete="username" />}
+              render={({ field }) => <Input {...field} prefix={<UserOutlined />} autoComplete="username" />}
             />
           </Form.Item>
           <Form.Item

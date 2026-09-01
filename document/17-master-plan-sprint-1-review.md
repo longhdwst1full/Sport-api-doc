@@ -47,11 +47,12 @@ Không đưa Cart, Inventory mutation, Order, Payment hoặc Shipping vào Sprin
 | ID | Function | DoR/Acceptance chính | Trạng thái |
 | --- | --- | --- | --- |
 | IAM-03 | Staff user lifecycle | OWNER tạo staff; lock/unlock/revoke atomic; không lock/unlock OWNER; Branch Manager chỉ quản lý STAFF cùng branch | DONE-CORE |
+| IAM-01 | Customer register/login | Public register chỉ CUSTOMER; email hoặc phone; phone E.164; tạm bỏ verification | DONE-CORE; thiếu DB e2e rerun và secure protected-API token transport |
 | IAM-04 | Role/permission | Unknown permission deny; stable code; role system không xóa | DONE-CORE; thiếu full permission matrix |
 | IAM-05 | Assignment scope | GLOBAL/BRANCH/WAREHOUSE/OWN đúng FK; duplicate fail; permission version tăng atomic | DONE-CORE; thiếu revoke assignment API |
 | IAM-06 | Audit query | Append-only; che dữ liệu nhạy cảm; lọc actor/action/entity/request | DONE-WRITE; thiếu query API/UI |
 
-Customer registration/login/forgot password (`IAM-01/02`) cần thiết cho V1 nhưng không nằm trên critical path quản trị Catalog; đưa vào Sprint 3 cùng Customer/Guest trừ khi team có thêm capacity độc lập.
+Customer registration/login (`IAM-01`) đã được kéo vào Sprint 1 theo quyết định D38. Forgot/change password (`IAM-02`), OTP/email verification và customer profile/address vẫn thuộc delivery wave sau.
 
 ### P0 — Catalog/Pricing/Media
 

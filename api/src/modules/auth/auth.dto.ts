@@ -1,14 +1,59 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsString, MinLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class LoginDto {
-  @ApiProperty({ example: 'owner@example.com' })
-  @IsEmail()
-  email: string;
+  @ApiProperty({
+    example: 'owner@example.com',
+    description: 'Email or Vietnamese phone number',
+    maxLength: 255,
+  })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(255)
+  identifier: string;
 
-  @ApiProperty({ format: 'password', minLength: 8 })
+  @ApiProperty({ format: 'password', minLength: 8, maxLength: 128 })
   @IsString()
   @MinLength(8)
+  @MaxLength(128)
+  password: string;
+}
+
+export class RegisterCustomerDto {
+  @ApiProperty({ example: 'Nguyễn Minh Anh', maxLength: 255 })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(255)
+  displayName: string;
+
+  @ApiPropertyOptional({ example: 'minh.anh@example.com', maxLength: 255 })
+  @IsOptional()
+  @IsEmail()
+  @MaxLength(255)
+  email?: string;
+
+  @ApiPropertyOptional({
+    example: '0912 345 678',
+    maxLength: 32,
+    description: 'Vietnamese phone; stored in E.164 format',
+  })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(32)
+  phone?: string;
+
+  @ApiProperty({ format: 'password', minLength: 8, maxLength: 128 })
+  @IsString()
+  @MinLength(8)
+  @MaxLength(128)
   password: string;
 }
 

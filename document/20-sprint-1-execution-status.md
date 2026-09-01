@@ -4,7 +4,7 @@ Ngày cập nhật: 2026-09-01
 
 ## Kết luận
 
-Sprint 1 hiện đạt khoảng **86% functional scope** và **78% Definition of Done**. Foundation, verified staff authentication, fixed-role RBAC, persisted Organization/IAM, staff provisioning + lock/unlock/revoke-session, audit atomicity, Catalog CRUD/lifecycle core và contract/codegen chain đã chạy thật. Sprint chưa được đánh dấu DONE vì audit query, variant update, media attach/reorder, price management lifecycle và bắt buộc đổi mật khẩu lần đầu chưa hoàn chỉnh.
+Sprint 1 hiện đạt khoảng **86% functional scope** và **78% Definition of Done** sau khi kéo Customer register/login vào scope. Foundation, staff/customer authentication core, fixed-role RBAC, persisted Organization/IAM, staff provisioning + lock/unlock/revoke-session, audit atomicity, Catalog CRUD/lifecycle core và contract/codegen chain đã chạy thật. Sprint chưa được đánh dấu DONE vì customer auth chưa có DB e2e rerun/secure protected-API transport, audit query, variant update, media attach/reorder, price management lifecycle và bắt buộc đổi mật khẩu lần đầu chưa hoàn chỉnh.
 
 Hai tỷ lệ không được tính theo số file hoặc số endpoint:
 
@@ -18,7 +18,7 @@ Hai tỷ lệ không được tính theo số file hoặc số endpoint:
 | Nhóm | Trọng số | Điểm đạt | Evidence chính | Phần còn thiếu |
 | --- | ---: | ---: | --- | --- |
 | Foundation/platform | 15 | **15** | Config validation, DB/migration/seed, error envelope, request-id, audit writer, CI foundation, OpenAPI V1 | Production readiness được tính trong DoD |
-| IAM/RBAC | 25 | **21** | Login/refresh/logout; fixed roles; staff create/assign; branch scope; lock/unlock/revoke session; audit | Revoke assignment API, audit query UI/API, forced password change, full scope matrix |
+| IAM/RBAC | 25 | **21** | Customer register/login email-phone; staff auth; fixed roles; create/assign; branch scope; lock/unlock/revoke session; audit | DB e2e rerun, secure customer protected-API transport, revoke assignment, audit query, forced password change, full scope matrix |
 | Catalog/Pricing/Media | 40 | **32** | Brand/category CRUD; product CRUD + lifecycle; variant create/lifecycle; combo; effective price; storefront filter | Variant metadata update, media attach/reorder/alt-text, price lifecycle UI/test |
 | Admin/Storefront/contract | 20 | **18** | Admin screens, generated Orval SDK, canonical errors, Catalog storefront, PWA base | Media workflow, một số edit-field coverage và UI acceptance evidence |
 | **Tổng** | **100** | **86** |  |  |
@@ -50,7 +50,7 @@ Hai tỷ lệ không được tính theo số file hoặc số endpoint:
 
 Evidence rà soát lại ngày 2026-09-01:
 
-- [x] API: 16 test suites, **49/49 tests**; lint pass.
+- [x] API: 17 test suites, **60/60 tests**; lint/build pass.
 - [x] Admin: 7 test files, **12/12 tests**; lint pass.
 - [x] Client: 3 test files, **3/3 tests**; TypeScript check pass.
 - [x] GitNexus sau re-index: **4.599 nodes, 8.307 edges, 178 clusters, 217 flows**.
@@ -75,6 +75,13 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 
 ### IAM/RBAC
 
+- [x] Public register chỉ tạo CUSTOMER ACTIVE và yêu cầu ít nhất email hoặc SĐT.
+- [x] Customer/Staff login nhận một `identifier`, tách userType để không đăng nhập chéo luồng.
+- [x] Email trim/lowercase; SĐT Việt Nam validate metadata đầy đủ và lưu E.164.
+- [x] Unique email/phone constraint xử lý race; register tạo user + audit GUEST + session atomic.
+- [x] Storefront `/register` và `/login` dùng generated Auth SDK, có loading/error/disabled states.
+- [~] V1 dev tạm bỏ email/phone verification theo D38.
+- [~] Token lưu sessionStorage; auto attach/refresh protected customer API chưa làm vì shared fetcher có impact HIGH.
 - [x] Staff login, refresh rotation, logout; access token kiểm tra session/permissionVersion.
 - [x] Ba role V1: `OWNER`, `BRANCH_MANAGER`, `STAFF`.
 - [x] Tạo staff ACTIVE bằng email và mật khẩu mặc định `Aa@123456`.
@@ -140,6 +147,7 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 
 | ID | Trạng thái | Đã có | Còn thiếu để DONE |
 | --- | --- | --- | --- |
+| IAM-01 Customer auth | DONE-CORE | Register CUSTOMER ACTIVE; email/phone identifier; E.164; Argon2; session/audit atomic; Storefront login/register generated SDK | DB e2e rerun; verification; protected-API auto attach/refresh; forgot password nằm IAM-02 |
 | IAM-03 Staff lifecycle | DONE-CORE | Tạo ACTIVE staff bằng email + Argon2 default password; lock revoke all sessions; unlock reset password; OWNER/Branch scope; audit atomic | Bắt buộc đổi mật khẩu lần đầu và HTTP e2e cần chạy lại khi DB env thật hoạt động |
 | IAM-04 Fixed RBAC | DONE-CORE | 3 system roles; deny unknown; no create-role API; seed hội tụ | Test matrix toàn permission catalog |
 | IAM-05 Assignment scope | DONE-CORE | GLOBAL/BRANCH; duplicate 201/409; permissionVersion atomic; audit | API revoke assignment; thêm e2e Branch Manager cross-branch deny |
@@ -167,6 +175,7 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 3. Category move không thuộc Sprint 1, chuyển sang P1; `parent_id` bất biến khi update V1 (D37).
 4. Lock chỉ nhận user ACTIVE và yêu cầu lý do; unlock chỉ nhận user LOCKED, không phục hồi session cũ và reset password về `Aa@123456`.
 5. OWNER không được lock/unlock bất kỳ OWNER nào; Branch Manager chỉ lock/unlock STAFF trong branch được gán.
+6. Public register chỉ tạo CUSTOMER ACTIVE; tạm bỏ verification. Login dùng email hoặc SĐT Việt Nam đã chuẩn hóa E.164 (D38).
 
 ## Blocker môi trường
 
