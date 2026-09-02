@@ -1,5 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
+import {
+  ROLE_ASSIGNMENT_STATUS,
+  ROLE_STATUS,
+  USER_STATUS,
+  USER_TYPE,
+} from './iam.constants';
 import { V1_ROLE_PERMISSIONS } from './iam.permissions';
 import { IamRepository } from './iam.repository';
 import {
@@ -7,6 +13,7 @@ import {
   LockStaffUserResult,
   Role,
   ScopeType,
+  SystemRoleCode,
   User,
   UserRoleAssignment,
   UserWithAssignments,
@@ -29,30 +36,30 @@ export class InMemoryIamRepository extends IamRepository {
   private readonly roles: Role[] = [
     {
       id: this.ownerRoleId,
-      code: 'OWNER',
+      code: SystemRoleCode.OWNER,
       name: 'Chủ cửa hàng',
       description: 'Toàn quyền hệ thống và tất cả chi nhánh',
-      status: 'ACTIVE',
+      status: ROLE_STATUS.ACTIVE,
       system: true,
       permissionCodes: [...V1_ROLE_PERMISSIONS.OWNER],
       version: 0,
     },
     {
       id: this.branchManagerRoleId,
-      code: 'BRANCH_MANAGER',
+      code: SystemRoleCode.BRANCH_MANAGER,
       name: 'Branch Manager',
       description: 'Quản lý vận hành theo chi nhánh',
-      status: 'ACTIVE',
+      status: ROLE_STATUS.ACTIVE,
       system: true,
       permissionCodes: [...V1_ROLE_PERMISSIONS.BRANCH_MANAGER],
       version: 0,
     },
     {
       id: this.staffRoleId,
-      code: 'STAFF',
+      code: SystemRoleCode.STAFF,
       name: 'Nhân viên',
       description: 'Thực hiện nghiệp vụ vận hành tại chi nhánh',
-      status: 'ACTIVE',
+      status: ROLE_STATUS.ACTIVE,
       system: true,
       permissionCodes: [...V1_ROLE_PERMISSIONS.STAFF],
       version: 0,
@@ -64,9 +71,9 @@ export class InMemoryIamRepository extends IamRepository {
       id: randomUUID(),
       userId: this.ownerUserId,
       roleId: this.ownerRoleId,
-      roleCode: 'OWNER',
+      roleCode: SystemRoleCode.OWNER,
       scopeType: ScopeType.GLOBAL,
-      status: 'ACTIVE',
+      status: ROLE_ASSIGNMENT_STATUS.ACTIVE,
       validFrom: new Date().toISOString(),
     },
   ];
@@ -76,16 +83,16 @@ export class InMemoryIamRepository extends IamRepository {
       id: this.ownerUserId,
       displayName: 'Long Hoàng',
       maskedEmail: 'lo***@dctd.vn',
-      userType: 'STAFF',
-      status: 'ACTIVE',
+      userType: USER_TYPE.STAFF,
+      status: USER_STATUS.ACTIVE,
       permissionVersion: 1,
     },
     {
       id: randomUUID(),
       displayName: 'Nguyễn Hoàng Nam',
       maskedEmail: 'na***@dctd.vn',
-      userType: 'STAFF',
-      status: 'ACTIVE',
+      userType: USER_TYPE.STAFF,
+      status: USER_STATUS.ACTIVE,
       permissionVersion: 0,
     },
   ];
@@ -111,7 +118,7 @@ export class InMemoryIamRepository extends IamRepository {
 
   findActiveRoleByCode(code: string): Promise<Role | undefined> {
     const role = this.roles.find(
-      (candidate) => candidate.code === code && candidate.status === 'ACTIVE',
+      (candidate) => candidate.code === code && candidate.status === ROLE_STATUS.ACTIVE,
     );
     return Promise.resolve(role ? { ...role, permissionCodes: [...role.permissionCodes] } : undefined);
   }
@@ -162,8 +169,8 @@ export class InMemoryIamRepository extends IamRepository {
       id: input.id,
       displayName: input.displayName,
       maskedEmail: maskEmail(input.normalizedEmail),
-      userType: 'STAFF',
-      status: 'ACTIVE',
+      userType: USER_TYPE.STAFF,
+      status: USER_STATUS.ACTIVE,
       permissionVersion: 1,
     };
     const assignment: UserRoleAssignment = {
@@ -173,7 +180,7 @@ export class InMemoryIamRepository extends IamRepository {
       roleCode: input.role.code,
       scopeType: ScopeType.BRANCH,
       branchId: input.branchId,
-      status: 'ACTIVE',
+      status: ROLE_ASSIGNMENT_STATUS.ACTIVE,
       validFrom: new Date().toISOString(),
     };
     this.users.push(user);
@@ -189,8 +196,8 @@ export class InMemoryIamRepository extends IamRepository {
     context: MutationContext,
   ): Promise<LockStaffUserResult | undefined> {
     const user = this.users.find((candidate) => candidate.id === userId);
-    if (!user || user.status !== 'ACTIVE') return undefined;
-    user.status = 'LOCKED';
+    if (!user || user.status !== USER_STATUS.ACTIVE) return undefined;
+    user.status = USER_STATUS.LOCKED;
     user.permissionVersion += 1;
     void reason;
     void context;
@@ -205,8 +212,8 @@ export class InMemoryIamRepository extends IamRepository {
     context: MutationContext,
   ): Promise<UserWithAssignments | undefined> {
     const user = this.users.find((candidate) => candidate.id === userId);
-    if (!user || user.status !== 'LOCKED') return undefined;
-    user.status = 'ACTIVE';
+    if (!user || user.status !== USER_STATUS.LOCKED) return undefined;
+    user.status = USER_STATUS.ACTIVE;
     user.permissionVersion += 1;
     void passwordHash;
     void context;

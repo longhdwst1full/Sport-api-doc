@@ -1,16 +1,28 @@
-export type UserStatus = 'ACTIVE' | 'INVITED' | 'LOCKED';
-export type RoleStatus = 'ACTIVE' | 'INACTIVE';
+import {
+  ROLE_ASSIGNMENT_STATUS,
+  ROLE_STATUS,
+  USER_STATUS,
+  USER_TYPE,
+} from './iam.constants';
+
+export type UserType = (typeof USER_TYPE)[keyof typeof USER_TYPE];
+export type UserStatus = (typeof USER_STATUS)[keyof typeof USER_STATUS];
+export type RoleStatus = (typeof ROLE_STATUS)[keyof typeof ROLE_STATUS];
+export type RoleAssignmentStatus =
+  (typeof ROLE_ASSIGNMENT_STATUS)[keyof typeof ROLE_ASSIGNMENT_STATUS];
 
 export enum ScopeType {
   GLOBAL = 'GLOBAL',
   BRANCH = 'BRANCH',
 }
 
-export enum SystemRoleCode {
-  OWNER = 'OWNER',
-  BRANCH_MANAGER = 'BRANCH_MANAGER',
-  STAFF = 'STAFF',
-}
+export const SystemRoleCode = {
+  OWNER: 'OWNER',
+  BRANCH_MANAGER: 'BRANCH_MANAGER',
+  STAFF: 'STAFF',
+} as const;
+
+export type SystemRoleCode = (typeof SystemRoleCode)[keyof typeof SystemRoleCode];
 
 export interface Permission {
   code: string;
@@ -37,7 +49,7 @@ export interface UserRoleAssignment {
   roleCode: string;
   scopeType: ScopeType;
   branchId?: string;
-  status: 'ACTIVE';
+  status: typeof ROLE_ASSIGNMENT_STATUS.ACTIVE;
   validFrom: string;
 }
 
@@ -45,7 +57,7 @@ export interface User {
   id: string;
   displayName: string;
   maskedEmail: string;
-  userType: 'STAFF' | 'SYSTEM';
+  userType: typeof USER_TYPE.STAFF | typeof USER_TYPE.SYSTEM;
   status: UserStatus;
   permissionVersion: number;
 }

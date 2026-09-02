@@ -15,6 +15,7 @@ import type { Request } from 'express';
 import { randomUUID } from 'node:crypto';
 import { RequireAuthentication } from '../../common/decorators/require-authentication.decorator';
 import { ErrorResponseDto } from '../../common/exceptions/error-response.dto';
+import { USER_TYPE } from '../iam/iam.constants';
 import { AuthService } from './auth.service';
 import {
   CurrentUserDto,
@@ -41,7 +42,7 @@ export class AuthController {
   @ApiOkResponse({ type: TokenPairDto })
   @ApiUnauthorizedResponse({ description: 'Invalid credentials' })
   login(@Body() input: LoginDto): Promise<TokenPairDto> {
-    return this.auth.login(input, 'STAFF');
+    return this.auth.login(input, USER_TYPE.STAFF);
   }
 
   @Post('refresh')
@@ -110,7 +111,7 @@ export class StorefrontAuthController {
   @ApiOkResponse({ type: TokenPairDto })
   @ApiUnauthorizedResponse({ type: ErrorResponseDto, description: 'Invalid credentials' })
   login(@Body() input: LoginDto): Promise<TokenPairDto> {
-    return this.auth.login(input, 'CUSTOMER');
+    return this.auth.login(input, USER_TYPE.CUSTOMER);
   }
 
   @Post('refresh')

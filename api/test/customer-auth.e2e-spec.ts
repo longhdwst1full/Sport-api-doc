@@ -24,7 +24,7 @@ describe('Storefront customer authentication', () => {
       await prisma.authSession.deleteMany({ where: { userId: customerId } });
       await prisma.user.deleteMany({ where: { id: customerId } });
     }
-    await app.close();
+    if (app) await app.close();
     await prisma.$disconnect();
   });
 

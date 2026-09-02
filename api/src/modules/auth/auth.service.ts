@@ -12,6 +12,12 @@ import { hash, verify } from 'argon2';
 import { v7 as uuidv7 } from 'uuid';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditWriter } from '../audit/audit.writer';
+import {
+  ROLE_ASSIGNMENT_STATUS,
+  ROLE_STATUS,
+  USER_STATUS,
+  USER_TYPE,
+} from '../iam/iam.constants';
 import { ScopeType } from '../iam/iam.types';
 import { LoginDto, RegisterCustomerDto, TokenPairDto } from './auth.dto';
 import { AccessTokenPayload, AuthPrincipal } from './auth.types';
@@ -20,7 +26,7 @@ import {
   normalizeVietnamesePhone,
 } from './phone-normalization';
 
-type LoginUserType = 'CUSTOMER' | 'STAFF';
+type LoginUserType = typeof USER_TYPE.CUSTOMER | typeof USER_TYPE.STAFF;
 
 @Injectable()
 export class AuthService {
@@ -31,7 +37,10 @@ export class AuthService {
     private readonly audit: AuditWriter,
   ) {}
 
-  async login(input: LoginDto, userType: LoginUserType = 'STAFF'): Promise<TokenPairDto> {
+  async login(
+    input: LoginDto,
+    userType: LoginUserType = USER_TYPE.STAFF,
+  ): Promise<TokenPairDto> {
     this.ensureDatabaseEnabled();
     const identity = this.normalizeLoginIdentifier(input.identifier);
     const user = await this.prisma.user.findFirst({
@@ -44,7 +53,7 @@ export class AuthService {
     });
     if (
       !user?.passwordHash ||
-      user.status !== 'ACTIVE' ||
+      user.status !== USER_STATUS.ACTIVE ||
       !(await verify(user.passwordHash, input.password))
     ) {
       throw new UnauthorizedException('Email/phone or password is incorrect');
@@ -84,14 +93,14 @@ export class AuthService {
         const user = await transaction.user.create({
           data: {
             id: userId,
-            userType: 'CUSTOMER',
+            userType: USER_TYPE.CUSTOMER,
             email: normalizedEmail,
             normalizedEmail,
             phone: normalizedPhone,
             normalizedPhone,
             passwordHash,
             displayName: input.displayName.trim(),
-            status: 'ACTIVE',
+            status: USER_STATUS.ACTIVE,
           },
         });
         await this.audit.write(
@@ -103,8 +112,8 @@ export class AuthService {
             entityType: 'USER',
             entityId: user.id,
             after: {
-              userType: 'CUSTOMER',
-              status: 'ACTIVE',
+              userType: USER_TYPE.CUSTOMER,
+              status: USER_STATUS.ACTIVE,
               hasEmail: Boolean(normalizedEmail),
               hasPhone: Boolean(normalizedPhone),
               verificationRequired: false,
@@ -136,7 +145,7 @@ export class AuthService {
             !session ||
             session.revokedAt ||
             session.expiresAt <= new Date() ||
-            session.user.status !== 'ACTIVE'
+            session.user.status !== USER_STATUS.ACTIVE
           ) {
             throw new UnauthorizedException('Refresh token is invalid or expired');
           }
@@ -194,7 +203,7 @@ export class AuthService {
           include: {
             roleAssignments: {
               where: {
-                status: 'ACTIVE',
+                status: ROLE_ASSIGNMENT_STATUS.ACTIVE,
                 validFrom: { lte: now },
                 OR: [{ validTo: null }, { validTo: { gt: now } }],
               },
@@ -210,14 +219,14 @@ export class AuthService {
     });
     if (
       !session ||
-      session.user.status !== 'ACTIVE' ||
+      session.user.status !== USER_STATUS.ACTIVE ||
       session.user.permissionVersion.toString() !== payload.pv
     ) {
       throw new UnauthorizedException('Access token is no longer valid');
     }
 
     const activeAssignments = session.user.roleAssignments.filter(
-      ({ role }) => role.status === 'ACTIVE',
+      ({ role }) => role.status === ROLE_STATUS.ACTIVE,
     );
     return {
       userId: session.user.id,

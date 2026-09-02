@@ -23,8 +23,12 @@ import {
 import { PERMISSION_CATALOG } from './iam.permissions';
 import { IamRepository } from './iam.repository';
 import { ScopeType, SystemRoleCode } from './iam.types';
-
-const DEFAULT_STAFF_PASSWORD = 'Aa@123456';
+import {
+  IAM_SECURITY_DEFAULTS,
+  ROLE_ASSIGNMENT_STATUS,
+  ROLE_STATUS,
+  USER_STATUS,
+} from './iam.constants';
 
 @Injectable()
 export class IamService {
@@ -53,12 +57,14 @@ export class IamService {
     query: ActiveSearchQueryDto,
     actor: AuthPrincipal,
   ): Promise<ActiveLookupResponseDto> {
-    const allowedRoleCodes = this.hasGlobalScope(actor)
+    const allowedRoleCodes: ReadonlySet<SystemRoleCode> | undefined = this.hasGlobalScope(actor)
       ? undefined
-      : new Set([SystemRoleCode.STAFF]);
+      : new Set<SystemRoleCode>([SystemRoleCode.STAFF]);
     return buildActiveLookupResponse(
       (await this.iam.listRoles())
-        .filter((role) => role.status === 'ACTIVE' && (!allowedRoleCodes || allowedRoleCodes.has(role.code as SystemRoleCode)))
+        .filter((role) =>
+          role.status === ROLE_STATUS.ACTIVE
+          && (!allowedRoleCodes || allowedRoleCodes.has(role.code as SystemRoleCode)))
         .map((role) => ({ id: role.id, code: role.code, label: role.name })),
       query,
     );
@@ -91,7 +97,7 @@ export class IamService {
           roleCode: role.code,
           scopeType: input.scopeType,
           branchId: input.branchId,
-          status: 'ACTIVE',
+          status: ROLE_ASSIGNMENT_STATUS.ACTIVE,
           validFrom: new Date().toISOString(),
         },
         context,
@@ -130,7 +136,7 @@ export class IamService {
           displayName: input.displayName.trim(),
           email: normalizedEmail,
           normalizedEmail,
-          passwordHash: await hash(DEFAULT_STAFF_PASSWORD),
+          passwordHash: await hash(IAM_SECURITY_DEFAULTS.INITIAL_STAFF_PASSWORD),
           role,
           branchId: input.branchId,
           assignmentId: uuidv7(),
@@ -152,7 +158,7 @@ export class IamService {
     actor: AuthPrincipal,
   ): Promise<UserDto> {
     const user = await this.requireLifecycleTarget(userId, actor);
-    if (user.status !== 'ACTIVE') {
+    if (user.status !== USER_STATUS.ACTIVE) {
       throw new ConflictException('Only an ACTIVE staff user can be locked');
     }
     const result = await this.iam.lockStaffUser(userId, input.reason.trim(), context);
@@ -168,10 +174,10 @@ export class IamService {
     actor: AuthPrincipal,
   ): Promise<UserDto> {
     const user = await this.requireLifecycleTarget(userId, actor);
-    if (user.status !== 'LOCKED') {
+    if (user.status !== USER_STATUS.LOCKED) {
       throw new ConflictException('Only a LOCKED staff user can be unlocked');
     }
-    const passwordHash = await hash(DEFAULT_STAFF_PASSWORD);
+    const passwordHash = await hash(IAM_SECURITY_DEFAULTS.INITIAL_STAFF_PASSWORD);
     const result = await this.iam.unlockStaffUserAndResetPassword(
       userId,
       passwordHash,
@@ -215,7 +221,7 @@ export class IamService {
   ): Promise<UserDto> {
     const user = await this.iam.findUser(userId);
     if (!user) throw new NotFoundException('Staff user not found');
-    if (user.assignments.some(({ roleCode }) => roleCode === 'OWNER')) {
+    if (user.assignments.some(({ roleCode }) => roleCode === SystemRoleCode.OWNER)) {
       throw new ForbiddenException('OWNER account cannot be locked or unlocked');
     }
     if (this.hasGlobalScope(actor)) return user;
@@ -224,7 +230,7 @@ export class IamService {
     const assignments = user.assignments;
     if (
       assignments.length === 0
-      || assignments.some(({ roleCode }) => roleCode !== 'STAFF')
+      || assignments.some(({ roleCode }) => roleCode !== SystemRoleCode.STAFF)
       || assignments.some(({ branchId }) => !branchId || !branchIds.includes(branchId))
     ) {
       throw new ForbiddenException('Branch manager can manage STAFF only within an assigned branch');

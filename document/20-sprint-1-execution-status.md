@@ -37,7 +37,7 @@ Hai tỷ lệ không được tính theo số file hoặc số endpoint:
 
 ## Evidence nền đã đạt trước lần rà soát này
 
-- [x] 5 migration versioned đã apply trên Supabase; không dùng runtime DDL.
+- [x] 6 migration versioned; PostgreSQL local xác nhận schema up to date và `20260829233000_remove_deleted_at_v1` đã apply; không dùng runtime DDL.
 - [x] Seed hội tụ chạy thành công hai lần liên tiếp.
 - [x] API unit 49/49; Prisma validate; production build.
 - [x] PostgreSQL integration: 18/18 tests.
@@ -50,12 +50,16 @@ Hai tỷ lệ không được tính theo số file hoặc số endpoint:
 
 Evidence rà soát lại ngày 2026-09-01:
 
-- [x] API: 17 test suites, **60/60 tests**; lint/build pass.
+- [x] PostgreSQL local `localhost:55432`: 6/6 migration applied; truy vấn `information_schema.columns` trả **0 cột `deleted_at`** trong schema `public`.
+- [x] Migration from-zero đã được chạy trên database tạm `dctd_deleted_at_verify_20260901`: đủ 6 migration apply thành công, còn 0 cột `deleted_at`; database test đã được xóa sau kiểm tra.
+- [x] API: 17 test suites, **61/61 tests**; lint/build/Prisma validate pass.
 - [x] Admin: 7 test files, **12/12 tests**; lint pass.
 - [x] Client: 3 test files, **3/3 tests**; TypeScript check pass.
-- [x] GitNexus sau re-index: **4.599 nodes, 8.307 edges, 178 clusters, 217 flows**.
-- [~] GitNexus cảnh báo process discovery bị truncate 222 entry-point candidates; số flow dùng để điều hướng/review, không dùng làm bằng chứng duy nhất rằng mọi luồng đã được test.
-- [ ] PostgreSQL integration/HTTP e2e mới chưa rerun vì `.env.local` đang trỏ DB hostname placeholder.
+- [x] GitNexus sau re-index: **4.766 nodes, 8.711 edges, 188 clusters, 202 flows**.
+- [~] GitNexus cảnh báo process discovery bị truncate **257/457 entry-point candidates** và bỏ qua 33 callees theo branching cap; số flow dùng để điều hướng/review, không dùng làm bằng chứng duy nhất rằng mọi luồng đã được test.
+- [~] `detect_changes --scope compare --base-ref HEAD^` cho commit Customer Auth: **49 files, 164 symbols, 19 affected flows, risk CRITICAL**. Mức này phản ánh blast radius xuyên BE/OpenAPI/Admin/Storefront; phải khép HTTP e2e và QA auth regression trước khi coi an toàn để release.
+- [ ] PostgreSQL integration/HTTP e2e đã được gọi lại nhưng **0/9 case khởi tạo được ứng dụng** vì `.env.local` trỏ `aws-0-region.pooler.supabase.com`; đây là placeholder không thể kết nối, không được tính là test pass.
+- [x] E2E teardown đã được guard khi application bootstrap thất bại, tránh lỗi `app.close()` che nguyên nhân kết nối DB.
 
 ## Checklist chi tiết
 
@@ -179,6 +183,6 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 
 ## Blocker môi trường
 
-- `api/.env.local` được git-ignore và không bị track, nhưng phần DB host/tenant vẫn đang là placeholder. Evidence Supabase ở trên được chạy bằng cấu hình đúng chỉ inject trong process để không in/commit secret. Cần sửa local env trước khi dùng các script thông thường.
-- OpenAPI đã sinh thành công với `DATABASE_ENABLED=false`; HTTP e2e lifecycle mới chưa thể chạy ở lượt này vì hostname DB local vẫn là placeholder.
+- `api/.env.local` được git-ignore và không bị track, nhưng DB host/tenant vẫn là placeholder `aws-0-region.pooler.supabase.com`. Lần chạy `test:e2e` ngày 2026-09-01 xác nhận Prisma không thể kết nối; cần thay bằng pooler host thật nhưng không được commit/in log credential.
+- OpenAPI đã sinh thành công với `DATABASE_ENABLED=false`; HTTP e2e có **2 suites/9 cases** nhưng chưa có case nào chạy qua bootstrap vì blocker DB trên.
 - Runtime least-privilege DB role/RLS policy chưa được chốt; hiện migration owner có thể bypass RLS. Không được coi là production-ready cho đến khi có non-owner test.

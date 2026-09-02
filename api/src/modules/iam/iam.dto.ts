@@ -10,6 +10,12 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+import {
+  ROLE_ASSIGNMENT_STATUS,
+  ROLE_STATUS,
+  USER_STATUS,
+  USER_TYPE,
+} from './iam.constants';
 import { RoleStatus, ScopeType, SystemRoleCode, UserStatus } from './iam.types';
 
 export class PermissionDto {
@@ -24,7 +30,7 @@ export class RoleDto {
   @ApiProperty({ example: 'BRANCH_MANAGER' }) code: string;
   @ApiProperty({ example: 'Branch Manager' }) name: string;
   @ApiPropertyOptional() description?: string;
-  @ApiProperty({ enum: ['ACTIVE', 'INACTIVE'] }) status: RoleStatus;
+  @ApiProperty({ enum: Object.values(ROLE_STATUS) }) status: RoleStatus;
   @ApiProperty() system: boolean;
   @ApiProperty({ type: [String] }) permissionCodes: string[];
   @ApiProperty({ example: 0 }) version: number;
@@ -37,7 +43,8 @@ export class UserRoleAssignmentDto {
   @ApiProperty() roleCode: string;
   @ApiProperty({ enum: ScopeType }) scopeType: ScopeType;
   @ApiPropertyOptional({ format: 'uuid' }) branchId?: string;
-  @ApiProperty({ enum: ['ACTIVE'] }) status: 'ACTIVE';
+  @ApiProperty({ enum: [ROLE_ASSIGNMENT_STATUS.ACTIVE] })
+  status: typeof ROLE_ASSIGNMENT_STATUS.ACTIVE;
   @ApiProperty({ format: 'date-time' }) validFrom: string;
 }
 
@@ -45,8 +52,10 @@ export class UserDto {
   @ApiProperty({ format: 'uuid' }) id: string;
   @ApiProperty({ example: 'Long Hoàng' }) displayName: string;
   @ApiProperty({ example: 'lo***@dctd.vn' }) maskedEmail: string;
-  @ApiProperty({ enum: ['STAFF', 'SYSTEM'] }) userType: 'STAFF' | 'SYSTEM';
-  @ApiProperty({ enum: ['ACTIVE', 'INVITED', 'LOCKED'] }) status: UserStatus;
+  @ApiProperty({ enum: [USER_TYPE.STAFF, USER_TYPE.SYSTEM] })
+  userType: typeof USER_TYPE.STAFF | typeof USER_TYPE.SYSTEM;
+  @ApiProperty({ enum: [USER_STATUS.ACTIVE, USER_STATUS.INVITED, USER_STATUS.LOCKED] })
+  status: UserStatus;
   @ApiProperty({ example: 1 }) permissionVersion: number;
   @ApiProperty({ type: [UserRoleAssignmentDto] }) assignments: UserRoleAssignmentDto[];
 }
@@ -95,7 +104,9 @@ export class CreateStaffUserDto {
 
   @ApiProperty({ enum: [SystemRoleCode.BRANCH_MANAGER, SystemRoleCode.STAFF] })
   @IsIn([SystemRoleCode.BRANCH_MANAGER, SystemRoleCode.STAFF])
-  roleCode: SystemRoleCode.BRANCH_MANAGER | SystemRoleCode.STAFF;
+  roleCode:
+    | typeof SystemRoleCode.BRANCH_MANAGER
+    | typeof SystemRoleCode.STAFF;
 
   @ApiProperty({ format: 'uuid' })
   @IsUUID()

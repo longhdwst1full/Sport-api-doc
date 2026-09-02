@@ -3,6 +3,12 @@ import { Prisma } from '@prisma/client';
 import { MutationContext } from '../../common/request/request-context';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditWriter } from '../audit/audit.writer';
+import {
+  ROLE_ASSIGNMENT_STATUS,
+  ROLE_STATUS,
+  USER_STATUS,
+  USER_TYPE,
+} from './iam.constants';
 import { IamRepository } from './iam.repository';
 import {
   CreateStaffUserInput,
@@ -31,14 +37,18 @@ export class PrismaIamRepository extends IamRepository {
   async listUsers(branchIds?: string[]): Promise<UserWithAssignments[]> {
     const rows = await this.prisma.user.findMany({
       where: {
-        userType: 'STAFF',
+        userType: USER_TYPE.STAFF,
         ...(branchIds
-          ? { roleAssignments: { some: { status: 'ACTIVE', branchId: { in: branchIds } } } }
+          ? {
+              roleAssignments: {
+                some: { status: ROLE_ASSIGNMENT_STATUS.ACTIVE, branchId: { in: branchIds } },
+              },
+            }
           : {}),
       },
       include: {
         roleAssignments: {
-          where: { status: 'ACTIVE' },
+          where: { status: ROLE_ASSIGNMENT_STATUS.ACTIVE },
           include: { role: true },
           orderBy: { validFrom: 'asc' },
         },
@@ -59,7 +69,7 @@ export class PrismaIamRepository extends IamRepository {
         roleCode: assignment.role.code,
         scopeType: assignment.scopeType as ScopeType,
         ...(assignment.branchId ? { branchId: assignment.branchId } : {}),
-        status: 'ACTIVE',
+        status: ROLE_ASSIGNMENT_STATUS.ACTIVE,
         validFrom: assignment.validFrom.toISOString(),
       })),
     }));
@@ -71,7 +81,7 @@ export class PrismaIamRepository extends IamRepository {
 
   async listRoles(): Promise<Role[]> {
     const rows = await this.prisma.role.findMany({
-      where: { status: 'ACTIVE' },
+      where: { status: ROLE_STATUS.ACTIVE },
       include: { permissions: { include: { permission: true } } },
       orderBy: { code: 'asc' },
     });
@@ -94,7 +104,11 @@ export class PrismaIamRepository extends IamRepository {
   async hasUser(id: string): Promise<boolean> {
     return (
       (await this.prisma.user.count({
-        where: { id, userType: 'STAFF', status: { not: 'INACTIVE' } },
+        where: {
+          id,
+          userType: USER_TYPE.STAFF,
+          status: { not: USER_STATUS.INACTIVE },
+        },
       })) > 0
     );
   }
@@ -102,7 +116,7 @@ export class PrismaIamRepository extends IamRepository {
   async hasActiveEmail(normalizedEmail: string): Promise<boolean> {
     return (
       (await this.prisma.user.count({
-        where: { normalizedEmail, status: { not: 'INACTIVE' } },
+        where: { normalizedEmail, status: { not: USER_STATUS.INACTIVE } },
       })) > 0
     );
   }
@@ -120,7 +134,7 @@ export class PrismaIamRepository extends IamRepository {
           roleId,
           scopeType,
           branchId: branchId ?? null,
-          status: 'ACTIVE',
+          status: ROLE_ASSIGNMENT_STATUS.ACTIVE,
         },
       })) > 0
     );
@@ -172,12 +186,12 @@ export class PrismaIamRepository extends IamRepository {
       const user = await transaction.user.create({
         data: {
           id: input.id,
-          userType: 'STAFF',
+          userType: USER_TYPE.STAFF,
           email: input.email,
           normalizedEmail: input.normalizedEmail,
           passwordHash: input.passwordHash,
           displayName: input.displayName,
-          status: 'ACTIVE',
+          status: USER_STATUS.ACTIVE,
           permissionVersion: 1,
         },
       });
@@ -188,7 +202,7 @@ export class PrismaIamRepository extends IamRepository {
           roleId: input.role.id,
           scopeType: ScopeType.BRANCH,
           branchId: input.branchId,
-          status: 'ACTIVE',
+          status: ROLE_ASSIGNMENT_STATUS.ACTIVE,
           validFrom: new Date(),
           assignedBy: context.actorUserId,
         },
@@ -197,8 +211,8 @@ export class PrismaIamRepository extends IamRepository {
         id: user.id,
         displayName: user.displayName,
         maskedEmail: maskEmail(user.email),
-        userType: 'STAFF',
-        status: 'ACTIVE',
+        userType: USER_TYPE.STAFF,
+        status: USER_STATUS.ACTIVE,
         permissionVersion: 1,
         assignments: [{
           id: assignment.id,
@@ -207,7 +221,7 @@ export class PrismaIamRepository extends IamRepository {
           roleCode: input.role.code,
           scopeType: ScopeType.BRANCH,
           branchId: input.branchId,
-          status: 'ACTIVE',
+          status: ROLE_ASSIGNMENT_STATUS.ACTIVE,
           validFrom: assignment.validFrom.toISOString(),
         }],
       };
@@ -240,9 +254,13 @@ export class PrismaIamRepository extends IamRepository {
   ): Promise<LockStaffUserResult | undefined> {
     const revokedSessionCount = await this.prisma.$transaction(async (transaction) => {
       const updated = await transaction.user.updateMany({
-        where: { id: userId, userType: 'STAFF', status: 'ACTIVE' },
+        where: {
+          id: userId,
+          userType: USER_TYPE.STAFF,
+          status: USER_STATUS.ACTIVE,
+        },
         data: {
-          status: 'LOCKED',
+          status: USER_STATUS.LOCKED,
           permissionVersion: { increment: 1 },
           version: { increment: 1 },
         },
@@ -262,9 +280,9 @@ export class PrismaIamRepository extends IamRepository {
           action: 'iam.user.lock',
           entityType: 'USER',
           entityId: userId,
-          before: { status: 'ACTIVE' },
+          before: { status: USER_STATUS.ACTIVE },
           after: {
-            status: 'LOCKED',
+            status: USER_STATUS.LOCKED,
             revokedSessionCount: revoked.count,
           },
           reason,
@@ -286,9 +304,13 @@ export class PrismaIamRepository extends IamRepository {
   ): Promise<UserWithAssignments | undefined> {
     const unlocked = await this.prisma.$transaction(async (transaction) => {
       const updated = await transaction.user.updateMany({
-        where: { id: userId, userType: 'STAFF', status: 'LOCKED' },
+        where: {
+          id: userId,
+          userType: USER_TYPE.STAFF,
+          status: USER_STATUS.LOCKED,
+        },
         data: {
-          status: 'ACTIVE',
+          status: USER_STATUS.ACTIVE,
           passwordHash,
           permissionVersion: { increment: 1 },
           version: { increment: 1 },
@@ -305,8 +327,8 @@ export class PrismaIamRepository extends IamRepository {
           action: 'iam.user.unlock',
           entityType: 'USER',
           entityId: userId,
-          before: { status: 'LOCKED' },
-          after: { status: 'ACTIVE', passwordReset: true },
+          before: { status: USER_STATUS.LOCKED },
+          after: { status: USER_STATUS.ACTIVE, passwordReset: true },
         },
         transaction,
       );

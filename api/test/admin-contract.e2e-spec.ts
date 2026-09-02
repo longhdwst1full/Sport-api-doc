@@ -80,7 +80,7 @@ describe('Admin v1 contract', () => {
   });
 
   afterAll(async () => {
-    await app.close();
+    if (app) await app.close();
     if (catalogFixture.variantId) {
       await prisma.productPrice.deleteMany({ where: { productVariantId: catalogFixture.variantId } });
     }
