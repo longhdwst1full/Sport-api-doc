@@ -17,15 +17,29 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
+import {
+  PRODUCT_BUNDLE_STATUS,
+  PRODUCT_BUNDLE_TYPE,
+  PRODUCT_CURRENCY,
+  PRODUCT_STATUS,
+  PRODUCT_TYPE,
+  PRODUCT_VARIANT_STATUS,
+  ProductStatus,
+  ProductType,
+  ProductVariantStatus,
+} from '../product.constants';
 
 export class ProductVariantDto {
   @ApiProperty({ format: 'uuid' }) id: string;
   @ApiProperty() sku: string;
   @ApiPropertyOptional() barcode?: string;
   @ApiProperty() name: string;
-  @ApiProperty({ enum: ['ACTIVE', 'INACTIVE'] }) status: 'ACTIVE' | 'INACTIVE';
+  @ApiProperty({ enum: Object.values(PRODUCT_VARIANT_STATUS) }) status: ProductVariantStatus;
   @ApiProperty({ example: 0 }) version: number;
   @ApiPropertyOptional({ type: String, example: '18990000.00', nullable: true }) effectivePrice?: string | null;
+  @ApiPropertyOptional({ type: String, format: 'uuid', nullable: true }) effectivePriceId?: string | null;
+  @ApiPropertyOptional({ type: Number, example: 0, nullable: true }) effectivePriceVersion?: number | null;
+  @ApiPropertyOptional({ type: () => ProductBundleDto, nullable: true }) bundle?: ProductBundleDto | null;
 }
 
 export class BundleComponentDto {
@@ -36,7 +50,8 @@ export class BundleComponentDto {
 }
 
 export class ProductBundleDto {
-  @ApiProperty({ enum: ['FIXED_VIRTUAL'] }) bundleType: 'FIXED_VIRTUAL';
+  @ApiProperty({ enum: Object.values(PRODUCT_BUNDLE_TYPE) }) bundleType: 'FIXED_VIRTUAL';
+  @ApiProperty({ enum: Object.values(PRODUCT_BUNDLE_STATUS) }) status: 'ACTIVE' | 'INACTIVE';
   @ApiProperty({ type: [BundleComponentDto] }) components: BundleComponentDto[];
 }
 
@@ -47,10 +62,11 @@ export class ProductSummaryDto {
   @ApiProperty() slug: string;
   @ApiPropertyOptional() brand?: string;
   @ApiPropertyOptional() primaryCategory?: string;
-  @ApiProperty({ enum: ['DRAFT', 'PUBLISHED', 'ARCHIVED'] }) status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+  @ApiProperty({ enum: Object.values(PRODUCT_TYPE) }) productType: ProductType;
+  @ApiProperty({ enum: Object.values(PRODUCT_STATUS) }) status: ProductStatus;
   @ApiProperty({ example: 0 }) version: number;
   @ApiPropertyOptional({ type: String, example: '18990000.00', nullable: true }) minPrice?: string | null;
-  @ApiProperty({ example: 'VND' }) currency: 'VND';
+  @ApiProperty({ enum: Object.values(PRODUCT_CURRENCY), example: 'VND' }) currency: 'VND';
   @ApiPropertyOptional({ type: String, format: 'uri', nullable: true }) imageUrl?: string | null;
 }
 
@@ -59,7 +75,6 @@ export class ProductDetailDto extends ProductSummaryDto {
   @ApiPropertyOptional() description?: string;
   @ApiProperty({ type: [ProductVariantDto] }) variants: ProductVariantDto[];
   @ApiProperty({ type: [String], format: 'uuid' }) categoryIds: string[];
-  @ApiPropertyOptional({ type: ProductBundleDto }) bundle?: ProductBundleDto;
 }
 
 export class ProductListMetaDto {
@@ -83,11 +98,16 @@ export class ListProductsQueryDto {
 
   @ApiPropertyOptional() @IsString() @IsOptional() search?: string;
   @ApiPropertyOptional() @IsString() @IsOptional() category?: string;
-  @ApiPropertyOptional({ enum: ['DRAFT', 'PUBLISHED', 'ARCHIVED'] })
-  @IsIn(['DRAFT', 'PUBLISHED', 'ARCHIVED']) @IsOptional() status?: string;
+  @ApiPropertyOptional({ enum: Object.values(PRODUCT_STATUS) })
+  @IsIn(Object.values(PRODUCT_STATUS)) @IsOptional() status?: ProductStatus;
 }
 
 export class CreateProductDto {
+  @ApiPropertyOptional({ enum: Object.values(PRODUCT_TYPE), default: PRODUCT_TYPE.STANDARD })
+  @IsIn(Object.values(PRODUCT_TYPE))
+  @IsOptional()
+  productType?: ProductType = PRODUCT_TYPE.STANDARD;
+
   @ApiProperty() @IsString() @Matches(/^[A-Z0-9-]+$/) @MaxLength(32) productNo: string;
   @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(255) name: string;
   @ApiProperty() @IsString() @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/) @MaxLength(255) slug: string;
@@ -115,9 +135,17 @@ export class CreateVariantDto {
 }
 
 export class CreatePriceDto {
-  @ApiProperty({ example: '18990000.00' }) @IsNumberString() amount: string;
+  @ApiProperty({ example: '18990000.00', description: 'VAT-included VND amount greater than zero' })
+  @IsNumberString()
+  @Matches(/^(?=.*[1-9])\d+(?:\.\d{1,2})?$/)
+  amount: string;
   @ApiProperty({ format: 'date-time' }) @IsDateString() startsAt: string;
   @ApiPropertyOptional({ format: 'date-time' }) @IsDateString() @IsOptional() endsAt?: string;
+}
+
+export class ReplacePriceDto extends CreatePriceDto {
+  @ApiProperty({ format: 'uuid' }) @IsUUID() expectedCurrentPriceId: string;
+  @ApiProperty({ minimum: 0 }) @IsInt() @Min(0) expectedCurrentPriceVersion: number;
 }
 
 export class ChangeProductStatusDto {

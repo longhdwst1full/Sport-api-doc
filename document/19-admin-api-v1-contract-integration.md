@@ -1,6 +1,6 @@
 # Admin và Storefront API v1 contract integration
 
-Ngày cập nhật: 2026-09-01
+Ngày cập nhật: 2026-09-02
 
 ## Nguyên tắc đã áp dụng
 
@@ -31,12 +31,14 @@ Ngày cập nhật: 2026-09-01
 | Kiểm duyệt đánh giá | `PATCH /api/v1/admin/reviews/{id}/moderation` | `moderateAdminReview` | `review.moderate` | Reviews actions |
 | Archive/reactivate product hoặc combo | `POST .../products/{id}/archive|reactivate` | `archiveAdminProduct` / `reactivateAdminProduct` | `catalog.product.publish` | Product workflow drawer |
 | Archive/reactivate variant | `POST .../products/variants/{id}/archive|reactivate` | `archiveAdminProductVariant` / `reactivateAdminProductVariant` | `catalog.product.manage` | Product workflow drawer |
+| Search SKU active để tạo combo | `GET /api/v1/admin/products/variants/active` | `searchActiveAdminProductVariants` | `catalog.product.view` | Combo builder; chỉ SKU thường ACTIVE, không nested combo |
+| Thay giá hiện hành atomic | `POST /api/v1/admin/products/variants/{variantId}/prices/replace` | `replaceAdminProductPrice` | `catalog.price.manage` | Price form gửi expected price id/version |
 | Customer register | `POST /api/v1/auth/register` | `registerCustomer` | Public + rate limit | Storefront `/register` |
 | Customer login email/phone | `POST /api/v1/auth/login` | `loginCustomer` | Public + rate limit | Storefront `/login` |
 | Customer refresh/logout/me | `POST /api/v1/auth/refresh`, `POST /api/v1/auth/logout`, `GET /api/v1/auth/me` | `refreshCustomerToken`, `logoutCustomer`, `getCustomerCurrentUser` | Token/session | Generated Storefront Auth SDK |
 | Staff login email/phone | `POST /api/v1/admin/auth/login` | `loginAdmin` | Public + rate limit; chỉ userType STAFF | Admin Login |
 
-API `/active` nhận `search`, `page`, `limit`; warehouse nhận thêm `branchId`. Response thống nhất:
+API `/active` nhận `search`, `page`, `limit`; warehouse nhận thêm `branchId`. Lookup SKU tìm theo `sku/name`, chỉ trả variant ACTIVE thuộc Product STANDARD chưa archive và loại variant đã là combo. Response thống nhất:
 
 ```json
 {
@@ -66,7 +68,7 @@ Admin dùng `getApiErrorMessage` cho lỗi form/query và `getApiFieldErrors` đ
 
 ## Evidence và checklist
 
-- [x] OpenAPI có đúng ba operation `searchActiveAdminBranches`, `searchActiveAdminWarehouses`, `searchActiveAdminRoles`.
+- [x] OpenAPI có bốn lookup operation: branch, warehouse, role và `searchActiveAdminProductVariants`.
 - [x] Query types trong OpenAPI là `string/number/uuid`, không còn schema `Object` sai.
 - [x] 400/401/403 của API lookup tham chiếu `ErrorResponseDto`.
 - [x] Admin SDK được regenerate bằng Orval; không sửa tay generated files.
@@ -81,6 +83,10 @@ Admin dùng `getApiErrorMessage` cho lỗi form/query và `getApiFieldErrors` đ
 - [x] Demo seed chạy lặp hai lần trên PostgreSQL local, không nhân bản dữ liệu.
 - [x] Staff create dùng Argon2 default password, tạo user + assignment + audit atomic; API không trả credential/hash.
 - [x] Product/combo/variant lifecycle dùng named actions và optimistic version; storefront không trả archived/inactive data.
+- [x] Product có discriminator `STANDARD|BUNDLE`; combo nằm theo từng SKU, không flatten ở Product.
+- [x] Product workflow dùng active SKU lookup generated từ OpenAPI; không tải toàn bộ danh sách quản trị để dựng combo.
+- [x] Giá hiện hành được thay bằng command atomic có expected price id/version; amount VAT-included phải lớn hơn 0.
+- [x] Storefront/cart chốt theo `variantId`/SKU; hai SKU cùng Product là hai dòng giỏ riêng.
 - [x] Storefront Auth contract được tách theo tag `Storefront Auth`; Client Orval sinh SDK riêng từ `document/api/storefront/auth.yaml`.
 - [x] Register chỉ tạo CUSTOMER ACTIVE; login customer/admin tách theo userType và dùng chung identifier email/phone.
 - [x] SĐT Việt Nam được validate bằng metadata đầy đủ và lưu E.164; unique constraint PostgreSQL xử lý đăng ký đồng thời.

@@ -301,6 +301,7 @@ model Category {
 model Product {
   id               String    @id @db.Uuid
   brandId          String?   @map("brand_id") @db.Uuid
+  productType      String    @default("STANDARD") @map("product_type") @db.VarChar(24)
   productNo        String    @unique @map("product_no") @db.VarChar(32)
   name             String    @db.VarChar(255)
   slug             String    @unique @db.VarChar(255)

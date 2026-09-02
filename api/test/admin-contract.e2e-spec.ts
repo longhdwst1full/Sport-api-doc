@@ -36,6 +36,8 @@ describe('Admin v1 contract', () => {
     productId: '',
     variantId: '',
   };
+  const concurrencyProductIds: string[] = [];
+  let concurrencyCategoryId = '';
   const organizationFixture = { branchId: '', warehouseId: '' };
 
   beforeAll(async () => {
@@ -81,13 +83,35 @@ describe('Admin v1 contract', () => {
 
   afterAll(async () => {
     if (app) await app.close();
-    if (catalogFixture.variantId) {
-      await prisma.productPrice.deleteMany({ where: { productVariantId: catalogFixture.variantId } });
-    }
     if (catalogFixture.productId) {
+      await prisma.productPrice.deleteMany({
+        where: { productVariant: { productId: catalogFixture.productId } },
+      });
       await prisma.productCategory.deleteMany({ where: { productId: catalogFixture.productId } });
       await prisma.productVariant.deleteMany({ where: { productId: catalogFixture.productId } });
       await prisma.product.deleteMany({ where: { id: catalogFixture.productId } });
+    }
+    if (concurrencyProductIds.length > 0) {
+      const variants = await prisma.productVariant.findMany({
+        where: { productId: { in: concurrencyProductIds } },
+        select: { id: true },
+      });
+      const variantIds = variants.map(({ id }) => id);
+      await prisma.productPrice.deleteMany({ where: { productVariantId: { in: variantIds } } });
+      const bundles = await prisma.productBundle.findMany({
+        where: { bundleVariantId: { in: variantIds } },
+        select: { id: true },
+      });
+      await prisma.bundleItem.deleteMany({
+        where: { productBundleId: { in: bundles.map(({ id }) => id) } },
+      });
+      await prisma.productBundle.deleteMany({ where: { id: { in: bundles.map(({ id }) => id) } } });
+      await prisma.productCategory.deleteMany({ where: { productId: { in: concurrencyProductIds } } });
+      await prisma.productVariant.deleteMany({ where: { id: { in: variantIds } } });
+      await prisma.product.deleteMany({ where: { id: { in: concurrencyProductIds } } });
+    }
+    if (concurrencyCategoryId) {
+      await prisma.category.deleteMany({ where: { id: concurrencyCategoryId } });
     }
     if (catalogFixture.categoryId) {
       await prisma.category.deleteMany({ where: { id: catalogFixture.categoryId } });
@@ -329,11 +353,58 @@ describe('Admin v1 contract', () => {
       variantResponse.body as { variants: Array<{ id: string }> }
     ).variants[0].id;
 
-    await request(server())
+    const initialPrice = await request(server())
       .post(`/api/v1/admin/products/variants/${catalogFixture.variantId}/prices`)
       .set(authorization)
       .send({ amount: '1490000.00', startsAt: '2026-01-01T00:00:00.000Z' })
       .expect(201);
+    const initialVariant = (
+      initialPrice.body as {
+        variants: Array<{
+          id: string;
+          effectivePriceId: string;
+          effectivePriceVersion: number;
+        }>;
+      }
+    ).variants.find(({ id }) => id === catalogFixture.variantId);
+    expect(initialVariant).toBeDefined();
+
+    await request(server())
+      .post(`/api/v1/admin/products/variants/${catalogFixture.variantId}/prices`)
+      .set(authorization)
+      .send({ amount: '0.00', startsAt: '2026-02-01T00:00:00.000Z' })
+      .expect(400);
+
+    await request(server())
+      .post(`/api/v1/admin/products/variants/${catalogFixture.variantId}/prices/replace`)
+      .set(authorization)
+      .send({
+        amount: '1590000.00',
+        startsAt: '2026-02-01T00:00:00.000Z',
+        expectedCurrentPriceId: initialVariant?.effectivePriceId,
+        expectedCurrentPriceVersion: initialVariant?.effectivePriceVersion,
+      })
+      .expect(201);
+
+    const inactiveVariantResponse = await request(server())
+      .post(`/api/v1/admin/products/${catalogFixture.productId}/variants`)
+      .set(authorization)
+      .send({ sku: `SKU-INACTIVE-${suffix}`.toUpperCase(), name: 'Inactive cheap SKU' })
+      .expect(201);
+    const inactiveVariantId = (
+      inactiveVariantResponse.body as { variants: Array<{ id: string; sku: string }> }
+    ).variants.find(({ sku }) => sku === `SKU-INACTIVE-${suffix}`.toUpperCase())?.id;
+    expect(inactiveVariantId).toBeDefined();
+    await request(server())
+      .post(`/api/v1/admin/products/variants/${inactiveVariantId}/prices`)
+      .set(authorization)
+      .send({ amount: '1.00', startsAt: '2026-01-01T00:00:00.000Z' })
+      .expect(201);
+    await request(server())
+      .post(`/api/v1/admin/products/variants/${inactiveVariantId}/archive`)
+      .set(authorization)
+      .send({ expectedVersion: 0 })
+      .expect(200);
 
     await request(server())
       .post(`/api/v1/admin/products/${catalogFixture.productId}/publish`)
@@ -347,8 +418,11 @@ describe('Admin v1 contract', () => {
     expect(storefront.body).toMatchObject({
       id: catalogFixture.productId,
       status: 'PUBLISHED',
-      minPrice: '1490000.00',
+      minPrice: '1590000.00',
     });
+    expect((storefront.body as { variants: Array<{ id: string }> }).variants).toEqual([
+      expect.objectContaining({ id: catalogFixture.variantId }),
+    ]);
 
     const update = (name: string) =>
       request(server())
@@ -392,6 +466,106 @@ describe('Admin v1 contract', () => {
       .send({ expectedVersion: 1 })
       .expect(200);
     await request(server()).get(`/api/v1/catalog/products/${slug}`).expect(200);
+  });
+
+  it('serializes combo publish against component archive and preserves sellability', async () => {
+    const suffix = uuidv7().replaceAll('-', '').slice(-8).toUpperCase();
+    const authorization = { authorization: `Bearer ${accessToken}` };
+    const categoryResponse = await request(server())
+      .post('/api/v1/admin/catalog/categories')
+      .set(authorization)
+      .send({
+        code: `CON-${suffix}`,
+        name: 'Concurrency category',
+        slug: `concurrency-${suffix.toLowerCase()}`,
+      })
+      .expect(201);
+    concurrencyCategoryId = (categoryResponse.body as { id: string }).id;
+    const createProduct = async (kind: 'STANDARD' | 'BUNDLE', label: string) => {
+      const response = await request(server())
+        .post('/api/v1/admin/products')
+        .set(authorization)
+        .send({
+          productType: kind,
+          productNo: `${kind.slice(0, 3)}-${label}-${suffix}`,
+          name: `${label} ${kind}`,
+          slug: `${label.toLowerCase()}-${kind.toLowerCase()}-${suffix.toLowerCase()}`,
+          categoryIds: [concurrencyCategoryId],
+          primaryCategoryId: concurrencyCategoryId,
+        })
+        .expect(201);
+      const id = (response.body as { id: string }).id;
+      concurrencyProductIds.push(id);
+      return id;
+    };
+
+    const componentProductId = await createProduct('STANDARD', 'COMPONENT');
+    const componentResponse = await request(server())
+      .post(`/api/v1/admin/products/${componentProductId}/variants`)
+      .set(authorization)
+      .send({ sku: `COMPONENT-${suffix}`, name: 'Component SKU' })
+      .expect(201);
+    const componentVariantId = (
+      componentResponse.body as { variants: Array<{ id: string }> }
+    ).variants[0].id;
+
+    const comboProductId = await createProduct('BUNDLE', 'COMBO');
+    const comboVariantResponse = await request(server())
+      .post(`/api/v1/admin/products/${comboProductId}/variants`)
+      .set(authorization)
+      .send({ sku: `COMBO-${suffix}`, name: 'Combo SKU' })
+      .expect(201);
+    const comboVariantId = (
+      comboVariantResponse.body as { variants: Array<{ id: string }> }
+    ).variants[0].id;
+    const activeVariants = await request(server())
+      .get(`/api/v1/admin/products/variants/active?search=${suffix}&page=1&limit=20`)
+      .set(authorization)
+      .expect(200);
+    expect(
+      (activeVariants.body as LookupBody).items.map(({ code }) => code),
+    ).toContain(`COMPONENT-${suffix}`);
+    expect(
+      (activeVariants.body as LookupBody).items.map(({ code }) => code),
+    ).not.toContain(`COMBO-${suffix}`);
+    await request(server())
+      .post(`/api/v1/admin/products/variants/${comboVariantId}/prices`)
+      .set(authorization)
+      .send({ amount: '900000.00', startsAt: '2026-01-01T00:00:00.000Z' })
+      .expect(201);
+    const bundleResponse = await request(server())
+      .post(`/api/v1/admin/products/${comboProductId}/bundle`)
+      .set(authorization)
+      .send({
+        bundleVariantId: comboVariantId,
+        items: [{ componentVariantId, quantity: 2 }],
+      })
+      .expect(201);
+    expect(
+      (
+        bundleResponse.body as {
+          variants: Array<{ id: string; bundle?: { components: unknown[] } }>;
+        }
+      ).variants.find(({ id }) => id === comboVariantId)?.bundle?.components,
+    ).toHaveLength(1);
+
+    const [publishResponse, archiveResponse] = await Promise.all([
+      request(server())
+        .post(`/api/v1/admin/products/${comboProductId}/publish`)
+        .set(authorization)
+        .send({ expectedVersion: 0 }),
+      request(server())
+        .post(`/api/v1/admin/products/variants/${componentVariantId}/archive`)
+        .set(authorization)
+        .send({ expectedVersion: 0 }),
+    ]);
+    expect([publishResponse.status, archiveResponse.status].sort()).toEqual([200, 422]);
+
+    const [combo, component] = await Promise.all([
+      prisma.product.findUniqueOrThrow({ where: { id: comboProductId } }),
+      prisma.productVariant.findUniqueOrThrow({ where: { id: componentVariantId } }),
+    ]);
+    expect(combo.status === 'PUBLISHED' && component.status === 'INACTIVE').toBe(false);
   });
 
   it('creates, updates and changes branch plus warehouse status atomically', async () => {

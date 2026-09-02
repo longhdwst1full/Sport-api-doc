@@ -7,6 +7,7 @@
  */
 
 export interface CreatePriceDto {
+  /** VAT-included VND amount greater than zero */
   amount: string;
   startsAt: string;
   endsAt?: string;

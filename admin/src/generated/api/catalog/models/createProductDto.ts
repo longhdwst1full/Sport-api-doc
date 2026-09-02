@@ -5,8 +5,10 @@
  * Contract for storefront and admin applications
  * OpenAPI spec version: 1.0.0
  */
+import type { CreateProductDtoProductType } from './createProductDtoProductType';
 
 export interface CreateProductDto {
+  productType?: CreateProductDtoProductType;
   productNo: string;
   name: string;
   slug: string;

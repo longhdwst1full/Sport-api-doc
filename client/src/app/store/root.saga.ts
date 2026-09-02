@@ -2,7 +2,7 @@ import { select, takeEvery } from 'redux-saga/effects';
 import { addCartItem, clearCart, type CartItem } from './cart.slice';
 import type { RootState } from './store';
 
-const CART_STORAGE_KEY = 'dctd-storefront-cart-v1';
+const CART_STORAGE_KEY = 'dctd-storefront-cart-v2';
 
 function isCartItem(value: unknown): value is CartItem {
   return (
@@ -10,6 +10,12 @@ function isCartItem(value: unknown): value is CartItem {
     value !== null &&
     'productId' in value &&
     typeof value.productId === 'string' &&
+    'variantId' in value &&
+    typeof value.variantId === 'string' &&
+    'sku' in value &&
+    typeof value.sku === 'string' &&
+    'productType' in value &&
+    (value.productType === 'STANDARD' || value.productType === 'BUNDLE') &&
     'name' in value &&
     typeof value.name === 'string' &&
     'price' in value &&
@@ -26,8 +32,11 @@ export function readPersistedCart(): CartItem[] {
     if (!value) return [];
     const parsed: unknown = JSON.parse(value);
     return Array.isArray(parsed)
-      ? parsed.filter(isCartItem).map(({ productId, name, price, quantity }) => ({
+      ? parsed.filter(isCartItem).map(({ productId, variantId, sku, productType, name, price, quantity }) => ({
           productId,
+          variantId,
+          sku,
+          productType,
           name,
           price,
           quantity,

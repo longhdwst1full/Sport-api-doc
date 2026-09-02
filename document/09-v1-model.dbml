@@ -288,6 +288,7 @@ Table categories {
 Table products {
   id uuid [pk]
   brand_id uuid
+  product_type varchar(24) [not null, default: 'STANDARD']
   product_no varchar(32) [not null, unique]
   name varchar(255) [not null]
   slug varchar(255) [not null, unique]
@@ -301,7 +302,7 @@ Table products {
   created_by uuid
   updated_at timestamptz [not null]
   updated_by uuid
-  Note: '[P0] SPU; không chứa price/stock; ngừng dùng bằng status ARCHIVED.'
+  Note: '[P0] SPU; product_type STANDARD|BUNDLE; không trộn SKU thường/combo trong cùng product; không chứa price/stock; ngừng dùng bằng status ARCHIVED.'
 }
 
 Table product_categories {
@@ -327,7 +328,7 @@ Table product_variants {
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
-  Note: '[P0] Sellable SKU; price/stock đều tham chiếu variant; ngừng bán bằng status INACTIVE.'
+  Note: '[P0] Sellable SKU; price/stock đều tham chiếu variant; bundle gắn theo từng variant; storefront chỉ trả ACTIVE có giá effective và đủ điều kiện combo; ngừng bán bằng status INACTIVE.'
 }
 
 Table product_bundles {
@@ -340,7 +341,7 @@ Table product_bundles {
   created_by uuid [not null]
   updated_at timestamptz [not null]
   updated_by uuid [not null]
-  Note: '[P0] Combo ảo cố định; không giữ tồn riêng và không chứa combo khác.'
+  Note: '[P0] Combo ảo cố định theo bundle_variant_id; không giữ tồn riêng, không chứa combo khác; publish yêu cầu status ACTIVE, có item và mọi component ACTIVE thuộc product chưa ARCHIVED.'
 }
 
 Table bundle_items {
@@ -475,7 +476,7 @@ Table product_prices {
   created_by uuid [not null]
   updated_at timestamptz [not null]
   updated_by uuid [not null]
-  Note: '[P0] CHECK amount>=0 và end>start; exclusion constraint chống overlap.'
+  Note: '[P0] CHECK amount>0 và end>start; exclusion constraint chống overlap; thay giá bằng transaction đóng window hiện tại rồi tạo window mới với optimistic version.'
 }
 
 Table flash_sale_campaigns {

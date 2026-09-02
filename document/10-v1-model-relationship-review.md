@@ -76,8 +76,8 @@ Sơ đồ trên chỉ hiển thị aggregate lõi. File DBML chứa toàn bộ 7
 | `warehouses` | `user_role_assignments` | 1 → n optional | RESTRICT | Dùng khi scope WAREHOUSE |
 | `categories` | `categories` | 1 → n self | RESTRICT | Không xóa node có con; chống cycle |
 | `brands` | `products` | 1 → n optional | RESTRICT | Product có thể chưa chọn brand lúc draft |
-| `products` | `product_variants` | 1 → n | RESTRICT | Product không bán trực tiếp; variant là SKU |
-| `product_variants` | `product_bundles` | 1 → 0..1 | RESTRICT | Bundle variant là combo ảo, không giữ tồn riêng |
+| `products` | `product_variants` | 1 → n | RESTRICT | Product không bán trực tiếp; variant là SKU; product_type STANDARD/BUNDLE không được trộn kiểu SKU |
+| `product_variants` | `product_bundles` | 1 → 0..1 | RESTRICT | Bundle nằm theo từng variant combo ảo, không giữ tồn riêng; API không flatten bundle ở Product |
 | `product_bundles` | `bundle_items` | 1 → n | CASCADE/RESTRICT | Component là variant thường; không nested combo |
 | `order_items` | `order_item_components` | 1 → n với combo | RESTRICT | Snapshot component để reserve/ship/return chính xác |
 | `products` | `categories` | n ↔ n | CASCADE/RESTRICT | Một product có nhiều category; một primary |
@@ -85,7 +85,7 @@ Sơ đồ trên chỉ hiển thị aggregate lõi. File DBML chứa toàn bộ 7
 | `product_reviews` | `product_review_comments` | 1 → n | CASCADE | Shop reply/customer follow-up; tối đa một cấp reply ở V1 |
 | `media_assets` | `product_media/review/page/post/banner` | 1 → n | RESTRICT/SET NULL | Provider asset dùng lại; không xóa khi còn usage |
 | `posts` | `products` | n ↔ n | CASCADE/RESTRICT | Bài viết liên quan sản phẩm và chiều ngược lại |
-| `product_variants` | `product_prices` | 1 → n | RESTRICT | Price effective-dated; không overwrite lịch sử |
+| `product_variants` | `product_prices` | 1 → n | RESTRICT | Price effective-dated, amount > 0; replace atomic đóng window hiện tại và tạo window mới; không overwrite lịch sử |
 | `warehouses + variants` | `inventory_balances` | n ↔ n qua balance | RESTRICT | Unique warehouse+variant |
 | `warehouses + variants` | `inventory_movements` | 1 → n | RESTRICT | Append-only ledger |
 | `orders` | `inventory_reservations` | 1 → n | RESTRICT | Một reservation cho mỗi SKU/kho trong order |

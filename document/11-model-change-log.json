@@ -301,6 +301,67 @@
           "columns": ["Ý nghĩa / trạng thái cho phép"]
         }
       ]
+    },
+    {
+      "id": "DBAPI-20260902-PRODUCT-SELLABILITY",
+      "date": "2026-09-02",
+      "scope": "DB+API+ADMIN+STOREFRONT",
+      "summary": "Tách Product STANDARD/BUNDLE, bundle response theo từng variant, storefront chỉ trả sellable variant và minPrice hợp lệ; publish/combo/variant mutation khóa Product aggregate; giá REGULAR > 0 và có command replace atomic theo expected price id/version.",
+      "sources": [
+        "decision:D39/D40/D41",
+        "migration:20260902090000_product_sellability_hardening",
+        "OpenAPI:searchActiveAdminProductVariants/replaceAdminProductPrice/listCatalogProducts/getCatalogProduct/publishAdminProduct",
+        "test:products.service.spec.ts/catalog-schema.integration-spec.ts/admin-contract.e2e-spec.ts"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "products" },
+          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính"],
+          "set": {
+            "Ý nghĩa": "SPU chuẩn hoặc combo; không bán trực tiếp",
+            "Unique / CHECK": "slug UQ; product_no UQ; product_type CHECK STANDARD/BUNDLE",
+            "Các cột chính": "name,slug,product_type,brand_id,short_description,description,status,published_at,seo_json,version"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": ["product_variants", "product_bundles"] },
+          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính", "Retention"]
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "product_prices" },
+          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính", "Retention"],
+          "set": {
+            "Ý nghĩa": "Lịch sử giá VAT-included; replace atomic",
+            "Unique / CHECK": "no overlap active regular range; amount > 0",
+            "Các cột chính": "price_type,currency_code,amount,starts_at,ends_at,status,version",
+            "Retention": "immutable history after active; replace closes current open window atomically"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "product_prices", "Tên cột": "amount" },
+          "columns": ["Ý nghĩa / trạng thái cho phép"],
+          "set": { "Ý nghĩa / trạng thái cho phép": "VAT-included REGULAR VND amount; bắt buộc > 0" }
+        }
+      ],
+      "upsertRows": [
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "products", "Tên cột": "product_type" },
+          "values": {
+            "Tên bảng": "products",
+            "STT": "16",
+            "Tên cột": "product_type",
+            "Kiểu dữ liệu": "varchar(24)",
+            "Cho phép NULL": "NO",
+            "Default": "STANDARD",
+            "Ý nghĩa / trạng thái cho phép": "STANDARD|BUNDLE; không trộn SKU thường và combo trong cùng Product"
+          }
+        }
+      ]
     }
   ]
 }

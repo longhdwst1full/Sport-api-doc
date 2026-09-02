@@ -11,6 +11,9 @@ describe('readPersistedCart', () => {
         JSON.stringify([
           {
             productId: 'product-1',
+            variantId: 'variant-1',
+            sku: 'TA-5KG',
+            productType: 'STANDARD',
             name: 'Tạ tay',
             price: 450_000,
             quantity: 2,
@@ -22,7 +25,15 @@ describe('readPersistedCart', () => {
     });
 
     expect(readPersistedCart()).toEqual([
-      { productId: 'product-1', name: 'Tạ tay', price: 450_000, quantity: 2 },
+      {
+        productId: 'product-1',
+        variantId: 'variant-1',
+        sku: 'TA-5KG',
+        productType: 'STANDARD',
+        name: 'Tạ tay',
+        price: 450_000,
+        quantity: 2,
+      },
     ]);
     expect(removeItem).not.toHaveBeenCalled();
   });

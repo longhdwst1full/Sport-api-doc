@@ -2,6 +2,9 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 export type CartItem = {
   productId: string;
+  variantId: string;
+  sku: string;
+  productType: 'STANDARD' | 'BUNDLE';
   name: string;
   price: number;
   quantity: number;
@@ -16,7 +19,7 @@ export const cartSlice = createSlice({
   initialState,
   reducers: {
     addCartItem: (state, action: PayloadAction<Omit<CartItem, 'quantity'>>) => {
-      const existing = state.items.find((item) => item.productId === action.payload.productId);
+      const existing = state.items.find((item) => item.variantId === action.payload.variantId);
       if (existing) existing.quantity += 1;
       else state.items.push({ ...action.payload, quantity: 1 });
     },

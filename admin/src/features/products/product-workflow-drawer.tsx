@@ -1,7 +1,9 @@
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Descriptions, Drawer, Empty, Form, Input, Modal, Select, Skeleton, Space, Table, Tag, Typography } from 'antd';
-import { Controller, useForm } from 'react-hook-form';
+import { useState } from 'react';
+import { Controller, useFieldArray, useForm } from 'react-hook-form';
+import { useDebounce } from 'use-debounce';
 import * as yup from 'yup';
 import { PermissionGate } from '@/core/auth/permissions';
 import {
@@ -9,15 +11,19 @@ import {
   getListAdminProductsQueryKey,
   useArchiveAdminProduct,
   useArchiveAdminProductVariant,
+  useCreateAdminProductBundle,
   useCreateAdminProductPrice,
   useCreateAdminProductVariant,
   useGetAdminProduct,
   usePublishAdminProduct,
   useReactivateAdminProduct,
   useReactivateAdminProductVariant,
+  useReplaceAdminProductPrice,
+  useSearchActiveAdminProductVariants,
 } from '@/generated/api/catalog/catalog';
 import type { ProductVariantDto } from '@/generated/api/catalog/models';
 import { getApiErrorMessage } from '@/lib/api/error';
+import { buildPriceCommand, isProductPublishReady } from './product-workflow.policy';
 
 interface VariantFormValues {
   sku: string;
@@ -31,6 +37,11 @@ interface PriceFormValues {
   startsAt: string;
 }
 
+interface BundleFormValues {
+  bundleVariantId: string;
+  items: Array<{ componentVariantId: string; quantity: number }>;
+}
+
 const variantSchema: yup.ObjectSchema<VariantFormValues> = yup.object({
   sku: yup.string().trim().required('Nhập SKU').max(64, 'Tối đa 64 ký tự'),
   name: yup.string().trim().required('Nhập tên phiên bản').max(255, 'Tối đa 255 ký tự'),
@@ -39,8 +50,22 @@ const variantSchema: yup.ObjectSchema<VariantFormValues> = yup.object({
 
 const priceSchema: yup.ObjectSchema<PriceFormValues> = yup.object({
   variantId: yup.string().uuid('SKU không hợp lệ').required('Chọn SKU'),
-  amount: yup.string().trim().matches(/^\d+(?:\.\d{1,2})?$/, 'Nhập số tiền hợp lệ').required('Nhập giá bán'),
+  amount: yup.string().trim().matches(/^(?=.*[1-9])\d+(?:\.\d{1,2})?$/, 'Giá phải lớn hơn 0 và có tối đa 2 số lẻ').required('Nhập giá bán'),
   startsAt: yup.string().required('Chọn thời điểm áp dụng'),
+});
+
+const bundleSchema: yup.ObjectSchema<BundleFormValues> = yup.object({
+  bundleVariantId: yup.string().uuid('SKU combo không hợp lệ').required('Chọn SKU combo'),
+  items: yup
+    .array()
+    .of(
+      yup.object({
+        componentVariantId: yup.string().uuid('SKU thành phần không hợp lệ').required('Chọn SKU thành phần'),
+        quantity: yup.number().integer('Số lượng phải là số nguyên').min(1, 'Tối thiểu 1').required(),
+      }),
+    )
+    .min(1, 'Combo cần ít nhất một thành phần')
+    .required(),
 });
 
 const nowForInput = () => {
@@ -53,6 +78,8 @@ const money = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND
 export function ProductWorkflowDrawer({ slug, onClose }: { slug?: string; onClose: () => void }) {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
+  const [componentSearch, setComponentSearch] = useState('');
+  const [debouncedComponentSearch] = useDebounce(componentSearch.trim(), 300);
   const detail = useGetAdminProduct(slug ?? '', { query: { enabled: Boolean(slug) } });
   const variantForm = useForm<VariantFormValues>({
     resolver: yupResolver(variantSchema),
@@ -62,6 +89,18 @@ export function ProductWorkflowDrawer({ slug, onClose }: { slug?: string; onClos
     resolver: yupResolver(priceSchema),
     defaultValues: { variantId: '', amount: '', startsAt: nowForInput() },
   });
+  const bundleForm = useForm<BundleFormValues>({
+    resolver: yupResolver(bundleSchema),
+    defaultValues: {
+      bundleVariantId: '',
+      items: [{ componentVariantId: '', quantity: 1 }],
+    },
+  });
+  const bundleItems = useFieldArray({ control: bundleForm.control, name: 'items' });
+  const componentOptions = useSearchActiveAdminProductVariants(
+    { search: debouncedComponentSearch || undefined, page: 1, limit: 20 },
+    { query: { enabled: Boolean(slug) } },
+  );
 
   const refresh = async () => {
     await Promise.all([
@@ -89,6 +128,31 @@ export function ProductWorkflowDrawer({ slug, onClose }: { slug?: string; onClos
         void message.success('Đã thêm giá bán đã bao gồm VAT.');
       },
       onError: (error) => void message.error(getApiErrorMessage(error, 'Không thể thêm giá bán.')),
+    },
+  });
+
+  const replacePrice = useReplaceAdminProductPrice({
+    mutation: {
+      onSuccess: async () => {
+        await refresh();
+        priceForm.reset({ variantId: '', amount: '', startsAt: nowForInput() });
+        void message.success('Đã đóng giá cũ và áp dụng giá thay thế trong cùng giao dịch.');
+      },
+      onError: (error) => void message.error(getApiErrorMessage(error, 'Không thể thay giá bán.')),
+    },
+  });
+
+  const createBundle = useCreateAdminProductBundle({
+    mutation: {
+      onSuccess: async () => {
+        await refresh();
+        bundleForm.reset({
+          bundleVariantId: '',
+          items: [{ componentVariantId: '', quantity: 1 }],
+        });
+        void message.success('Đã lưu thành phần combo cho SKU.');
+      },
+      onError: (error) => void message.error(getApiErrorMessage(error, 'Không thể tạo combo.')),
     },
   });
 
@@ -143,8 +207,7 @@ export function ProductWorkflowDrawer({ slug, onClose }: { slug?: string; onClos
   });
 
   const product = detail.data;
-  const canPublish = product?.status === 'DRAFT'
-    && product.variants.some((variant) => variant.status === 'ACTIVE' && Boolean(variant.effectivePrice));
+  const canPublish = product ? isProductPublishReady(product) : false;
 
   const submitVariant = variantForm.handleSubmit((values) => {
     if (!product) return;
@@ -155,10 +218,15 @@ export function ProductWorkflowDrawer({ slug, onClose }: { slug?: string; onClos
   });
 
   const submitPrice = priceForm.handleSubmit((values) => {
-    createPrice.mutate({
-      variantId: values.variantId,
-      data: { amount: values.amount, startsAt: new Date(values.startsAt).toISOString() },
-    });
+    if (!product) return;
+    const command = buildPriceCommand(product, values);
+    if (command.kind === 'replace') replacePrice.mutate(command);
+    else createPrice.mutate(command);
+  });
+
+  const submitBundle = bundleForm.handleSubmit((values) => {
+    if (!product) return;
+    createBundle.mutate({ id: product.id, data: values });
   });
 
   const confirmPublish = () => {
@@ -175,7 +243,7 @@ export function ProductWorkflowDrawer({ slug, onClose }: { slug?: string; onClos
   const confirmProductLifecycle = () => {
     if (!product) return;
     const isArchived = product.status === 'ARCHIVED';
-    const isCombo = Boolean(product.bundle);
+    const isCombo = product.productType === 'BUNDLE';
     Modal.confirm({
       title: isArchived
         ? `Khôi phục “${product.name}” về DRAFT?`
@@ -223,7 +291,7 @@ export function ProductWorkflowDrawer({ slug, onClose }: { slug?: string; onClos
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <Typography.Title level={4} style={{ margin: 0 }}>{product.name}</Typography.Title>
-              <Typography.Text type="secondary">{product.productNo} · version {product.version}</Typography.Text>
+              <Typography.Text type="secondary">{product.productNo} · {product.productType} · version {product.version}</Typography.Text>
             </div>
             <Space>
               <Tag color={product.status === 'PUBLISHED' ? 'green' : 'blue'}>{product.status}</Tag>
@@ -245,12 +313,19 @@ export function ProductWorkflowDrawer({ slug, onClose }: { slug?: string; onClos
           <Descriptions bordered size="small" column={2}>
             <Descriptions.Item label="Thương hiệu">{product.brand ?? '—'}</Descriptions.Item>
             <Descriptions.Item label="Danh mục">{product.primaryCategory ?? '—'}</Descriptions.Item>
+            <Descriptions.Item label="Loại">{product.productType === 'BUNDLE' ? 'Combo cố định' : 'Sản phẩm thường'}</Descriptions.Item>
             <Descriptions.Item label="Giá thấp nhất">{product.minPrice ? money.format(Number(product.minPrice)) : 'Chưa có'}</Descriptions.Item>
             <Descriptions.Item label="Slug">{product.slug}</Descriptions.Item>
           </Descriptions>
 
           {!canPublish && product.status === 'DRAFT' && (
-            <Alert type="info" showIcon message="Cần ít nhất một SKU ACTIVE có giá hiệu lực trước khi publish." />
+            <Alert
+              type="info"
+              showIcon
+              message={product.productType === 'BUNDLE'
+                ? 'Mọi SKU ACTIVE của combo phải có giá hiệu lực và danh sách thành phần hợp lệ trước khi publish.'
+                : 'Cần ít nhất một SKU ACTIVE có giá hiệu lực trước khi publish.'}
+            />
           )}
 
           <div>
@@ -267,6 +342,13 @@ export function ProductWorkflowDrawer({ slug, onClose }: { slug?: string; onClos
                 { title: 'Barcode', dataIndex: 'barcode', render: (value?: string) => value ?? '—' },
                 { title: 'Trạng thái', dataIndex: 'status', render: (value: string) => <Tag color={value === 'ACTIVE' ? 'green' : 'default'}>{value}</Tag> },
                 { title: 'Giá đã VAT', dataIndex: 'effectivePrice', align: 'right', render: (value?: string | null) => value ? money.format(Number(value)) : 'Chưa có giá' },
+                {
+                  title: 'Combo',
+                  key: 'bundle',
+                  render: (_, variant) => variant.bundle
+                    ? `${variant.bundle.components.length} thành phần`
+                    : '—',
+                },
                 {
                   title: 'Thao tác',
                   key: 'actions',
@@ -316,9 +398,108 @@ export function ProductWorkflowDrawer({ slug, onClose }: { slug?: string; onClos
                   <Form.Item label="Áp dụng từ" validateStatus={priceForm.formState.errors.startsAt ? 'error' : undefined} help={priceForm.formState.errors.startsAt?.message}>
                     <Controller name="startsAt" control={priceForm.control} render={({ field }) => <Input {...field} type="datetime-local" />} />
                   </Form.Item>
-                  <Button htmlType="submit" loading={createPrice.isPending} disabled={product.variants.length === 0}>Thêm giá</Button>
+                  <Button
+                    htmlType="submit"
+                    loading={createPrice.isPending || replacePrice.isPending}
+                    disabled={product.variants.length === 0}
+                  >
+                    {product.variants.find(({ id }) => id === priceForm.watch('variantId'))?.effectivePrice
+                      ? 'Thay giá'
+                      : 'Thêm giá'}
+                  </Button>
                 </Form>
               </div>
+            </PermissionGate>
+          )}
+
+          {product.status === 'DRAFT' && product.productType === 'BUNDLE' && (
+            <PermissionGate permission="catalog.product.manage">
+              <Form layout="vertical" onFinish={() => void submitBundle()}>
+                <Typography.Title level={5}>Khai báo thành phần combo theo SKU</Typography.Title>
+                <Form.Item
+                  label="SKU combo"
+                  validateStatus={bundleForm.formState.errors.bundleVariantId ? 'error' : undefined}
+                  help={bundleForm.formState.errors.bundleVariantId?.message}
+                >
+                  <Controller
+                    name="bundleVariantId"
+                    control={bundleForm.control}
+                    render={({ field }) => (
+                      <Select
+                        {...field}
+                        options={product.variants
+                          .filter((variant) => variant.status === 'ACTIVE' && !variant.bundle)
+                          .map((variant) => ({ value: variant.id, label: `${variant.sku} — ${variant.name}` }))}
+                      />
+                    )}
+                  />
+                </Form.Item>
+                <div className="space-y-3">
+                  {bundleItems.fields.map((item, index) => (
+                    <div key={item.id} className="grid gap-3 rounded-lg border border-gray-200 p-3 sm:grid-cols-[1fr_140px_auto]">
+                      <Form.Item
+                        label={`Thành phần ${index + 1}`}
+                        validateStatus={bundleForm.formState.errors.items?.[index]?.componentVariantId ? 'error' : undefined}
+                        help={bundleForm.formState.errors.items?.[index]?.componentVariantId?.message}
+                        style={{ marginBottom: 0 }}
+                      >
+                        <Controller
+                          name={`items.${index}.componentVariantId`}
+                          control={bundleForm.control}
+                          render={({ field }) => (
+                            <Select
+                              {...field}
+                              showSearch
+                              filterOption={false}
+                              onSearch={setComponentSearch}
+                              loading={componentOptions.isFetching}
+                              options={(componentOptions.data?.items ?? []).map((option) => ({
+                                value: option.id,
+                                label: `${option.code} — ${option.label}`,
+                              }))}
+                            />
+                          )}
+                        />
+                      </Form.Item>
+                      <Form.Item
+                        label="Số lượng"
+                        validateStatus={bundleForm.formState.errors.items?.[index]?.quantity ? 'error' : undefined}
+                        help={bundleForm.formState.errors.items?.[index]?.quantity?.message}
+                        style={{ marginBottom: 0 }}
+                      >
+                        <Controller
+                          name={`items.${index}.quantity`}
+                          control={bundleForm.control}
+                          render={({ field }) => (
+                            <Input
+                              {...field}
+                              type="number"
+                              min={1}
+                              onChange={(event) => field.onChange(Number(event.target.value))}
+                            />
+                          )}
+                        />
+                      </Form.Item>
+                      <Button
+                        htmlType="button"
+                        danger
+                        disabled={bundleItems.fields.length === 1}
+                        onClick={() => bundleItems.remove(index)}
+                      >
+                        Xóa
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                <Space className="mt-3">
+                  <Button htmlType="button" onClick={() => bundleItems.append({ componentVariantId: '', quantity: 1 })}>
+                    Thêm thành phần
+                  </Button>
+                  <Button type="primary" htmlType="submit" loading={createBundle.isPending}>
+                    Lưu combo
+                  </Button>
+                </Space>
+              </Form>
             </PermissionGate>
           )}
         </div>

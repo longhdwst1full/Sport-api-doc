@@ -1,39 +1,39 @@
 # Sprint 1 execution status
 
-Ngày cập nhật: 2026-09-01
+Ngày cập nhật: 2026-09-02
 
 ## Kết luận
 
-Sprint 1 hiện đạt khoảng **86% functional scope** và **78% Definition of Done** sau khi kéo Customer register/login vào scope. Foundation, staff/customer authentication core, fixed-role RBAC, persisted Organization/IAM, staff provisioning + lock/unlock/revoke-session, audit atomicity, Catalog CRUD/lifecycle core và contract/codegen chain đã chạy thật. Sprint chưa được đánh dấu DONE vì customer auth chưa có DB e2e rerun/secure protected-API transport, audit query, variant update, media attach/reorder, price management lifecycle và bắt buộc đổi mật khẩu lần đầu chưa hoàn chỉnh.
+Sprint 1 hiện đạt khoảng **90% functional scope** và **87% Definition of Done**. Foundation, staff/customer authentication core, fixed-role RBAC, persisted Organization/IAM, staff provisioning + lock/unlock/revoke-session, audit atomicity, Catalog CRUD/lifecycle, product/combo/price hardening và contract/codegen chain đã chạy thật. Sprint chưa được đánh dấu DONE vì secure protected-API transport, audit query, variant update, media attach/reorder, price scheduling và bắt buộc đổi mật khẩu lần đầu chưa hoàn chỉnh; BA/QA trên environment chung cũng chưa ký nhận.
 
 Hai tỷ lệ không được tính theo số file hoặc số endpoint:
 
-- **Functional scope 86/100**: chức năng người dùng thực hiện được so với phạm vi Sprint 1 đã khóa.
-- **Definition of Done 78/100**: mức hoàn thiện kỹ thuật gồm validation, authorization, transaction, test PostgreSQL/HTTP, UI states, migration, audit, tài liệu và QA acceptance.
+- **Functional scope 90/100**: chức năng người dùng thực hiện được so với phạm vi Sprint 1 đã khóa.
+- **Definition of Done 87/100**: mức hoàn thiện kỹ thuật gồm validation, authorization, transaction, test PostgreSQL/HTTP, UI states, migration, audit, tài liệu và QA acceptance.
 
 ## Bảng điểm có trọng số
 
-### Functional scope — 86/100
+### Functional scope — 90/100
 
 | Nhóm | Trọng số | Điểm đạt | Evidence chính | Phần còn thiếu |
 | --- | ---: | ---: | --- | --- |
 | Foundation/platform | 15 | **15** | Config validation, DB/migration/seed, error envelope, request-id, audit writer, CI foundation, OpenAPI V1 | Production readiness được tính trong DoD |
 | IAM/RBAC | 25 | **21** | Customer register/login email-phone; staff auth; fixed roles; create/assign; branch scope; lock/unlock/revoke session; audit | DB e2e rerun, secure customer protected-API transport, revoke assignment, audit query, forced password change, full scope matrix |
-| Catalog/Pricing/Media | 40 | **32** | Brand/category CRUD; product CRUD + lifecycle; variant create/lifecycle; combo; effective price; storefront filter | Variant metadata update, media attach/reorder/alt-text, price lifecycle UI/test |
-| Admin/Storefront/contract | 20 | **18** | Admin screens, generated Orval SDK, canonical errors, Catalog storefront, PWA base | Media workflow, một số edit-field coverage và UI acceptance evidence |
-| **Tổng** | **100** | **86** |  |  |
+| Catalog/Pricing/Media | 40 | **35** | Brand/category CRUD; product CRUD + lifecycle; variant lifecycle; combo builder; atomic replace price; storefront sellability/detail | Variant metadata update, media attach/reorder/alt-text, price scheduling |
+| Admin/Storefront/contract | 20 | **19** | Admin product type/combo/price flow, generated Orval SDK, canonical errors, Storefront product detail + SKU cart, PWA base | Media workflow và UI acceptance evidence |
+| **Tổng** | **100** | **90** |  |  |
 
-### Definition of Done — 78/100
+### Definition of Done — 87/100
 
 | Nhóm DoD | Trọng số | Điểm đạt | Lý do chưa đủ điểm |
 | --- | ---: | ---: | --- |
 | Backend implementation + validation | 25 | **24** | Còn audit query và media/lifecycle API |
-| Authorization + transaction + concurrency | 20 | **17** | Thiếu full permission/scope HTTP matrix và least-privilege DB evidence |
-| Frontend happy/error/loading/empty/disabled | 15 | **13** | Flow media/price/variant chưa đủ UI state/acceptance |
-| Unit + integration + HTTP tests | 20 | **12** | Unit xanh; lifecycle e2e mới chưa rerun do DB URL placeholder |
+| Authorization + transaction + concurrency | 20 | **18** | Product aggregate locking và race e2e đạt; thiếu full permission/scope HTTP matrix và least-privilege DB evidence |
+| Frontend happy/error/loading/empty/disabled | 15 | **14** | Product/combo/replace-price đạt core; media/price scheduling/variant edit chưa đủ acceptance |
+| Unit + integration + HTTP tests | 20 | **19** | Unit, PostgreSQL integration và full HTTP e2e xanh; còn full permission matrix |
 | Migration + seed + audit + contract docs | 10 | **8** | Thiếu production DB role và backup/restore evidence |
 | BA acceptance + QA regression + release evidence | 10 | **4** | Chưa có BA sign-off, full regression và evidence environment chung |
-| **Tổng** | **100** | **78** |  |
+| **Tổng** | **100** | **87** |  |
 
 ## Evidence nền đã đạt trước lần rà soát này
 
@@ -60,6 +60,18 @@ Evidence rà soát lại ngày 2026-09-01:
 - [~] `detect_changes --scope compare --base-ref HEAD^` cho commit Customer Auth: **49 files, 164 symbols, 19 affected flows, risk CRITICAL**. Mức này phản ánh blast radius xuyên BE/OpenAPI/Admin/Storefront; phải khép HTTP e2e và QA auth regression trước khi coi an toàn để release.
 - [ ] PostgreSQL integration/HTTP e2e đã được gọi lại nhưng **0/9 case khởi tạo được ứng dụng** vì `.env.local` trỏ `aws-0-region.pooler.supabase.com`; đây là placeholder không thể kết nối, không được tính là test pass.
 - [x] E2E teardown đã được guard khi application bootstrap thất bại, tránh lỗi `app.close()` che nguyên nhân kết nối DB.
+
+Evidence bổ sung ngày 2026-09-02:
+
+- [x] Migration from-zero trên database tạm `dctd_verify_20260902`: **7/7 migration**, foundation seed và demo seed pass; database tạm đã được xóa tự động.
+- [x] API lint/build/Prisma validate; **17 suites, 63/63 unit tests**.
+- [x] PostgreSQL integration: **3 suites, 20/20 tests**.
+- [x] HTTP e2e với `AUTH_BYPASS=false`: **2 suites, 10/10 tests**, gồm auth thật, canonical error, active SKU lookup, price replace, storefront projection và combo publish-vs-component-archive concurrency.
+- [x] Admin: lint; **8 files, 15/15 tests**; product type, combo builder và atomic replace-price dùng generated SDK.
+- [x] Client: lint; **3 files, 4/4 tests**; product detail và cart tách dòng theo `variantId`.
+- [x] Lỗi contract lock/unlock được sửa: `ApiOkResponse` và runtime đều trả HTTP 200.
+- [x] GitNexus re-index: **4.960 nodes, 9.112 edges, 187 clusters, 198 flows**; `detect-changes` ghi nhận **44 tracked files, 212 symbols, 63 affected flows, risk CRITICAL** do thay đổi xuyên DB/API/OpenAPI/Admin/Storefront.
+- [~] Risk CRITICAL đã được khép bằng lint/unit/build, migration-from-zero, PostgreSQL integration và HTTP concurrency e2e; process discovery vẫn bị truncate nên graph không phải bằng chứng kiểm thử duy nhất.
 
 ## Checklist chi tiết
 
@@ -95,7 +107,7 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 - [x] Lock yêu cầu lý do, chuyển ACTIVE→LOCKED và revoke toàn bộ session atomic.
 - [x] Unlock chuyển LOCKED→ACTIVE, reset Argon2 password và không phục hồi session cũ.
 - [x] Create/assign/lock/unlock ghi audit cùng transaction.
-- [~] Lifecycle/scope có unit test; HTTP e2e đã viết nhưng chưa rerun với DB thật.
+- [x] Lifecycle/auth/scope core có unit và HTTP e2e chạy với PostgreSQL thật.
 - [ ] API revoke role assignment.
 - [ ] API/màn hình list-filter audit có redaction.
 - [ ] Bắt buộc đổi mật khẩu ở lần đăng nhập đầu tiên.
@@ -107,13 +119,13 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 - [x] Category create/list/update/search/activate/deactivate; parent immutable trong V1.
 - [x] Product create/list/detail/update/publish/archive/reactivate-to-DRAFT.
 - [x] Variant create/archive/reactivate; SKU/barcode constraints.
-- [x] Fixed combo create/lifecycle; không nested; quantity > 0.
-- [x] Effective VAT-included price dùng Decimal(19,2), có no-overlap constraint.
-- [x] Storefront chỉ trả product PUBLISHED, variant ACTIVE và giá effective.
-- [~] Admin Product workflow đã ghép generated hooks nhưng edit field coverage chưa đầy đủ.
+- [x] Fixed combo theo từng SKU; product_type STANDARD/BUNDLE không trộn; không nested; quantity > 0; publish kiểm tra toàn bộ component.
+- [x] Effective VAT-included price dùng Decimal(19,2), amount > 0, no-overlap và replace open window atomic có optimistic check.
+- [x] Storefront chỉ trả product PUBLISHED và variant sellable; SKU INACTIVE không còn làm sai minPrice/response.
+- [x] Admin Product workflow đã ghép generated hooks cho product type, SKU, combo nhiều component và replace giá atomic.
 - [ ] Update metadata variant.
 - [ ] Media finalize verification + attach/reorder/alt-text API và Admin UI.
-- [ ] Price close/schedule UI và explicit concurrent-overlap HTTP test.
+- [x] API + Admin replace giá atomic có optimistic check và test; price scheduling riêng chưa thuộc flow này.
 - [ ] Update bundle items và preview availability theo component.
 
 ### Admin/Storefront
@@ -131,8 +143,8 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 
 ### Trước khi chốt Sprint 1 DONE
 
-- [ ] Khôi phục DB URL dev/staging hợp lệ mà không commit secret.
-- [ ] Chạy migration from-zero, seed hai lần, PostgreSQL integration và HTTP e2e lifecycle mới.
+- [~] PostgreSQL local hoạt động; Supabase dev/staging vẫn cần pooler host thật mà không commit secret.
+- [x] 7 migration applied local, seed demo có 4 product gồm combo, 20 PostgreSQL integration và full 10 HTTP e2e pass.
 - [ ] Chạy full permission/branch-scope regression.
 - [ ] Hoàn thiện Variant update, Product Media và Price lifecycle trong Sprint 1.
 - [ ] Chốt hoặc chuyển scope có Decision Log cho audit query/revoke assignment/forced password change.
@@ -151,19 +163,19 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 
 | ID | Trạng thái | Đã có | Còn thiếu để DONE |
 | --- | --- | --- | --- |
-| IAM-01 Customer auth | DONE-CORE | Register CUSTOMER ACTIVE; email/phone identifier; E.164; Argon2; session/audit atomic; Storefront login/register generated SDK | DB e2e rerun; verification; protected-API auto attach/refresh; forgot password nằm IAM-02 |
-| IAM-03 Staff lifecycle | DONE-CORE | Tạo ACTIVE staff bằng email + Argon2 default password; lock revoke all sessions; unlock reset password; OWNER/Branch scope; audit atomic | Bắt buộc đổi mật khẩu lần đầu và HTTP e2e cần chạy lại khi DB env thật hoạt động |
+| IAM-01 Customer auth | DONE-CORE | Register CUSTOMER ACTIVE; email/phone identifier; E.164; Argon2; session/audit atomic; Storefront login/register generated SDK; DB e2e pass | Verification; protected-API auto attach/refresh; forgot password nằm IAM-02 |
+| IAM-03 Staff lifecycle | DONE-CORE | Tạo ACTIVE staff bằng email + Argon2 default password; lock revoke all sessions; unlock reset password; OWNER/Branch scope; audit atomic; HTTP e2e pass | Bắt buộc đổi mật khẩu lần đầu |
 | IAM-04 Fixed RBAC | DONE-CORE | 3 system roles; deny unknown; no create-role API; seed hội tụ | Test matrix toàn permission catalog |
 | IAM-05 Assignment scope | DONE-CORE | GLOBAL/BRANCH; duplicate 201/409; permissionVersion atomic; audit | API revoke assignment; thêm e2e Branch Manager cross-branch deny |
 | IAM-06 Audit | DONE-WRITE | Append-only UPDATE/DELETE/TRUNCATE; actor constraint; transaction rollback | API list/filter/redaction và màn admin audit |
 | CAT-01 Brand | DONE-CORE | Persisted create/list/update/active-search/activate/deactivate; optimistic version; audit; admin screen | Logo asset workflow độc lập |
 | CAT-02 Category | DONE-V1-CORE | Persisted create/list/update/search/activate/deactivate; parent immutable; chặn tắt cha còn con active | Move subtree đã chốt P1; tiếp tục in-use test matrix |
-| CAT-03 Product SPU | DONE-CORE | Create/list/detail/update/publish/archive/reactivate-to-DRAFT; version conflict; audit; admin actions | Hoàn thiện edit UI field coverage |
+| CAT-03 Product SPU | DONE-CORE | Create/list/detail/update/publish/archive/reactivate-to-DRAFT; STANDARD/BUNDLE invariant; aggregate row locking; version conflict; audit; Admin productType generated UI | Một số metadata edit nâng cao |
 | CAT-04 Variant/SKU | PARTIAL | Persisted create/archive/reactivate; SKU/barcode constraints; optimistic version; combo component protection; admin actions | Update mutable fields và integration matrix đầy đủ |
 | CAT-05 Product media | PARTIAL | Tables, provider metadata, ownership/primary constraints | Finalize provider verification, attach/reorder/alt-text APIs và admin UI |
-| CAT-07 Storefront catalog | DONE-CORE | Chỉ PUBLISHED + ACTIVE variant + effective price; slug detail/list | Brand/price filter, sort và SEO detail page |
-| CAT-12 Fixed combo | DONE-LIFECYCLE-CORE | Persisted create; no nested; quantity > 0; combo archive/reactivate qua Product; admin confirmation | Update bundle items và preview availability theo thành phần |
-| PRI-01 Effective price | DONE-CORE | Decimal(19,2), VAT-included global price, no-overlap DB constraint, audit | Close/schedule management UI và explicit overlap HTTP test |
+| CAT-07 Storefront catalog | DONE-CORE | Chỉ PUBLISHED + sellable variant; minPrice loại INACTIVE; category INACTIVE không lọc/hiện; slug detail/list | Brand/price filter, sort và SEO detail page |
+| CAT-12 Fixed combo | DONE-LIFECYCLE-CORE | Persisted per variant; no nested; quantity > 0; publish validate component; publish/archive concurrency invariant; response bundle per SKU | Update bundle items và preview stock availability theo thành phần |
+| PRI-01 Effective price | DONE-CORE | Decimal(19,2), amount > 0, VAT-included global price, no-overlap, atomic replace + optimistic check, audit; Admin replace UI | Price scheduling/history management UI |
 
 ## RBAC V1 đã áp dụng
 
@@ -180,9 +192,12 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 4. Lock chỉ nhận user ACTIVE và yêu cầu lý do; unlock chỉ nhận user LOCKED, không phục hồi session cũ và reset password về `Aa@123456`.
 5. OWNER không được lock/unlock bất kỳ OWNER nào; Branch Manager chỉ lock/unlock STAFF trong branch được gán.
 6. Public register chỉ tạo CUSTOMER ACTIVE; tạm bỏ verification. Login dùng email hoặc SĐT Việt Nam đã chuẩn hóa E.164 (D38).
+7. Product tách rõ STANDARD/BUNDLE, combo gắn theo từng variant và storefront dùng một sellability predicate thống nhất (D39).
+8. Giá REGULAR phải > 0; thay giá đóng/mở window trong cùng transaction với expected id/version (D40).
+9. Brand INACTIVE không tự ẩn Product; Category INACTIVE không xuất hiện trong filter/navigation storefront (D41).
 
 ## Blocker môi trường
 
 - `api/.env.local` được git-ignore và không bị track, nhưng DB host/tenant vẫn là placeholder `aws-0-region.pooler.supabase.com`. Lần chạy `test:e2e` ngày 2026-09-01 xác nhận Prisma không thể kết nối; cần thay bằng pooler host thật nhưng không được commit/in log credential.
-- OpenAPI đã sinh thành công với `DATABASE_ENABLED=false`; HTTP e2e có **2 suites/9 cases** nhưng chưa có case nào chạy qua bootstrap vì blocker DB trên.
+- PostgreSQL local đã chạy 7 migrations; integration **3 suites/20 cases** và HTTP e2e **2 suites/10 cases** pass với `AUTH_BYPASS=false`.
 - Runtime least-privilege DB role/RLS policy chưa được chốt; hiện migration owner có thể bypass RLS. Không được coi là production-ready cho đến khi có non-owner test.

@@ -20,6 +20,7 @@ describe('Catalog Wave 2 PostgreSQL invariants', () => {
           productNo: `P-${productId.slice(-8)}`,
           name: 'Catalog integration product',
           slug: `catalog-${productId}`,
+          productType: 'BUNDLE',
           status: 'DRAFT',
           createdBy: actorId,
           updatedBy: actorId,
@@ -97,6 +98,31 @@ describe('Catalog Wave 2 PostgreSQL invariants', () => {
           createdBy: actorId,
           updatedBy: actorId,
         },
+      }),
+    ).rejects.toThrow();
+  });
+
+  it('rejects a zero regular price at the database boundary', async () => {
+    await expect(
+      prisma.productPrice.create({
+        data: {
+          id: uuidv7(),
+          productVariantId: otherVariantId,
+          amount: '0.00',
+          startsAt: new Date('2026-01-01T00:00:00.000Z'),
+          status: 'ACTIVE',
+          createdBy: actorId,
+          updatedBy: actorId,
+        },
+      }),
+    ).rejects.toThrow();
+  });
+
+  it('rejects an unknown product type at the database boundary', async () => {
+    await expect(
+      prisma.product.update({
+        where: { id: otherProductId },
+        data: { productType: 'MIXED' },
       }),
     ).rejects.toThrow();
   });

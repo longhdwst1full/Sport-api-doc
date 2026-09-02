@@ -6,9 +6,11 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { ProductBundleDtoBundleType } from './productBundleDtoBundleType';
+import type { ProductBundleDtoStatus } from './productBundleDtoStatus';
 import type { BundleComponentDto } from './bundleComponentDto';
 
 export interface ProductBundleDto {
   bundleType: ProductBundleDtoBundleType;
+  status: ProductBundleDtoStatus;
   components: BundleComponentDto[];
 }

@@ -1374,6 +1374,44 @@ paths:
       summary: Create product
       tags:
         - Admin Products
+  /api/v1/admin/products/variants/active:
+    get:
+      operationId: searchActiveAdminProductVariants
+      parameters:
+        - name: search
+          required: false
+          in: query
+          description: Search by business code or display label
+          schema:
+            maxLength: 100
+            type: string
+        - name: page
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            default: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            maximum: 50
+            default: 20
+            type: number
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActiveLookupResponseDto"
+      security:
+        - bearer: []
+      summary: Search active standard SKU variants for selectors and combo components
+      tags:
+        - Admin Products
   /api/v1/admin/products/{slug}:
     get:
       operationId: getAdminProduct
@@ -1471,9 +1509,78 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ProductDetailDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
       security:
         - bearer: []
       summary: Create a global VAT-included price window
+      tags:
+        - Admin Products
+  /api/v1/admin/products/variants/{variantId}/prices/replace:
+    post:
+      operationId: replaceAdminProductPrice
+      parameters:
+        - name: variantId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReplacePriceDto"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetailDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "422":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Atomically close the current open price and create its replacement
       tags:
         - Admin Products
   /api/v1/admin/products/{id}/publish:
@@ -1498,6 +1605,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ProductDetailDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "422":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
       security:
         - bearer: []
       summary: Publish a complete draft product
@@ -2820,6 +2945,11 @@ components:
           type: string
         primaryCategory:
           type: string
+        productType:
+          type: string
+          enum:
+            - STANDARD
+            - BUNDLE
         status:
           type: string
           enum:
@@ -2835,6 +2965,8 @@ components:
           nullable: true
         currency:
           type: string
+          enum:
+            - VND
           example: VND
         imageUrl:
           type: string
@@ -2845,6 +2977,7 @@ components:
         - productNo
         - name
         - slug
+        - productType
         - status
         - version
         - currency
@@ -2880,36 +3013,6 @@ components:
       required:
         - items
         - meta
-    ProductVariantDto:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        sku:
-          type: string
-        barcode:
-          type: string
-        name:
-          type: string
-        status:
-          type: string
-          enum:
-            - ACTIVE
-            - INACTIVE
-        version:
-          type: number
-          example: 0
-        effectivePrice:
-          type: string
-          example: "18990000.00"
-          nullable: true
-      required:
-        - id
-        - sku
-        - name
-        - status
-        - version
     BundleComponentDto:
       type: object
       properties:
@@ -2935,13 +3038,62 @@ components:
           type: string
           enum:
             - FIXED_VIRTUAL
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
         components:
           type: array
           items:
             $ref: "#/components/schemas/BundleComponentDto"
       required:
         - bundleType
+        - status
         - components
+    ProductVariantDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        sku:
+          type: string
+        barcode:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+        version:
+          type: number
+          example: 0
+        effectivePrice:
+          type: string
+          example: "18990000.00"
+          nullable: true
+        effectivePriceId:
+          type: string
+          format: uuid
+          nullable: true
+        effectivePriceVersion:
+          type: number
+          example: 0
+          nullable: true
+        bundle:
+          nullable: true
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/ProductBundleDto"
+      required:
+        - id
+        - sku
+        - name
+        - status
+        - version
     ProductDetailDto:
       type: object
       properties:
@@ -2958,6 +3110,11 @@ components:
           type: string
         primaryCategory:
           type: string
+        productType:
+          type: string
+          enum:
+            - STANDARD
+            - BUNDLE
         status:
           type: string
           enum:
@@ -2973,6 +3130,8 @@ components:
           nullable: true
         currency:
           type: string
+          enum:
+            - VND
           example: VND
         imageUrl:
           type: string
@@ -2991,13 +3150,12 @@ components:
           items:
             type: string
             format: uuid
-        bundle:
-          $ref: "#/components/schemas/ProductBundleDto"
       required:
         - id
         - productNo
         - name
         - slug
+        - productType
         - status
         - version
         - currency
@@ -3006,6 +3164,12 @@ components:
     CreateProductDto:
       type: object
       properties:
+        productType:
+          type: string
+          enum:
+            - STANDARD
+            - BUNDLE
+          default: STANDARD
         productNo:
           type: string
         name:
@@ -3036,6 +3200,12 @@ components:
     UpdateProductDto:
       type: object
       properties:
+        productType:
+          type: string
+          enum:
+            - STANDARD
+            - BUNDLE
+          default: STANDARD
         productNo:
           type: string
         name:
@@ -3089,6 +3259,7 @@ components:
         amount:
           type: string
           example: "18990000.00"
+          description: VAT-included VND amount greater than zero
         startsAt:
           type: string
           format: date-time
@@ -3098,6 +3269,30 @@ components:
       required:
         - amount
         - startsAt
+    ReplacePriceDto:
+      type: object
+      properties:
+        amount:
+          type: string
+          example: "18990000.00"
+          description: VAT-included VND amount greater than zero
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+        expectedCurrentPriceId:
+          type: string
+          format: uuid
+        expectedCurrentPriceVersion:
+          type: number
+          minimum: 0
+      required:
+        - amount
+        - startsAt
+        - expectedCurrentPriceId
+        - expectedCurrentPriceVersion
     ChangeProductStatusDto:
       type: object
       properties:

@@ -5,7 +5,9 @@
  * Contract for storefront and admin applications
  * OpenAPI spec version: 1.0.0
  */
+import type { ProductSummaryDtoProductType } from './productSummaryDtoProductType';
 import type { ProductSummaryDtoStatus } from './productSummaryDtoStatus';
+import type { ProductSummaryDtoCurrency } from './productSummaryDtoCurrency';
 
 export interface ProductSummaryDto {
   id: string;
@@ -14,11 +16,12 @@ export interface ProductSummaryDto {
   slug: string;
   brand?: string;
   primaryCategory?: string;
+  productType: ProductSummaryDtoProductType;
   status: ProductSummaryDtoStatus;
   version: number;
   /** @nullable */
   minPrice?: string | null;
-  currency: string;
+  currency: ProductSummaryDtoCurrency;
   /** @nullable */
   imageUrl?: string | null;
 }

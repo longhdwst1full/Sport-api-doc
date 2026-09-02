@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { ProductVariantDtoStatus } from './productVariantDtoStatus';
+import type { ProductVariantDtoBundle } from './productVariantDtoBundle';
 
 export interface ProductVariantDto {
   id: string;
@@ -16,4 +17,10 @@ export interface ProductVariantDto {
   version: number;
   /** @nullable */
   effectivePrice?: string | null;
+  /** @nullable */
+  effectivePriceId?: string | null;
+  /** @nullable */
+  effectivePriceVersion?: number | null;
+  /** @nullable */
+  bundle?: ProductVariantDtoBundle;
 }

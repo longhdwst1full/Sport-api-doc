@@ -86,6 +86,16 @@ export function ProductsPage() {
               ),
             },
             {
+              title: 'Loại',
+              dataIndex: 'productType',
+              align: 'center',
+              render: (value: string) => (
+                <Tag color={value === 'BUNDLE' ? 'purple' : 'default'}>
+                  {value === 'BUNDLE' ? 'Combo' : 'Thường'}
+                </Tag>
+              ),
+            },
+            {
               title: 'Trạng thái',
               dataIndex: 'status',
               align: 'center',

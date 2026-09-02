@@ -5,8 +5,10 @@
  * Contract for storefront and admin applications
  * OpenAPI spec version: 1.0.0
  */
+import type { UpdateProductDtoProductType } from './updateProductDtoProductType';
 
 export interface UpdateProductDto {
+  productType?: UpdateProductDtoProductType;
   productNo?: string;
   name?: string;
   slug?: string;

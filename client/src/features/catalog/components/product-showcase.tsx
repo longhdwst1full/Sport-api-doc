@@ -1,11 +1,12 @@
 'use client';
 
 import Image from 'next/image';
-import { ShoppingBag, Star } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowRight, Star } from 'lucide-react';
 import { useProductShowcase } from '../hooks/use-product-showcase';
 
 export function ProductShowcase() {
-  const { products, addToCart, isPending, isError } = useProductShowcase();
+  const { products, isPending, isError } = useProductShowcase();
   if (isPending)
     return <div className="rounded-3xl bg-white p-10 text-center">Đang tải sản phẩm…</div>;
   if (isError)
@@ -33,7 +34,7 @@ export function ProductShowcase() {
               className="object-cover transition duration-500 group-hover:scale-105"
             />
             <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-bold">
-              {product.badge}
+              {product.productType === 'BUNDLE' ? 'Combo' : product.badge}
             </span>
           </div>
           <div className="p-5">
@@ -47,13 +48,13 @@ export function ProductShowcase() {
             </div>
             <div className="mt-5 flex items-center justify-between">
               <strong className="text-lg">{product.displayPrice}</strong>
-              <button
-                aria-label={`Thêm ${product.name} vào giỏ`}
+              <Link
+                aria-label={`Xem chi tiết ${product.name}`}
                 className="grid size-11 place-items-center rounded-full bg-ink text-white transition hover:bg-brand-600"
-                onClick={() => addToCart(product)}
+                href={`/products/${product.slug}`}
               >
-                <ShoppingBag className="size-5" />
-              </button>
+                <ArrowRight className="size-5" />
+              </Link>
             </div>
           </div>
         </article>

@@ -57,6 +57,8 @@ const products = [
     variantId: '41000000-0000-7000-8000-000000000001',
     sku: 'TA-CAO-SU-5KG',
     amount: '450000.00',
+    productType: 'STANDARD',
+    components: [],
   },
   {
     id: '40000000-0000-7000-8000-000000000002',
@@ -68,6 +70,8 @@ const products = [
     variantId: '41000000-0000-7000-8000-000000000002',
     sku: 'AIR-ZOOM-42',
     amount: '2890000.00',
+    productType: 'STANDARD',
+    components: [],
   },
   {
     id: '40000000-0000-7000-8000-000000000003',
@@ -79,6 +83,24 @@ const products = [
     variantId: '41000000-0000-7000-8000-000000000003',
     sku: 'THAM-YOGA-BLUE',
     amount: '690000.00',
+    productType: 'STANDARD',
+    components: [],
+  },
+  {
+    id: '40000000-0000-7000-8000-000000000004',
+    productNo: 'SP-COMBO-GYM-01',
+    name: 'Combo tập gym tại nhà 5 kg',
+    slug: 'combo-tap-gym-tai-nha-5kg',
+    brandCode: 'FITGEAR',
+    categoryCode: 'GYM',
+    variantId: '41000000-0000-7000-8000-000000000004',
+    sku: 'COMBO-GYM-5KG',
+    amount: '1490000.00',
+    productType: 'BUNDLE',
+    components: [
+      { sku: 'TA-CAO-SU-5KG', quantity: 2 },
+      { sku: 'THAM-YOGA-BLUE', quantity: 1 },
+    ],
   },
 ] as const;
 
@@ -150,6 +172,7 @@ async function importDemoData(transaction: Prisma.TransactionClient): Promise<vo
       where: { productNo: item.productNo },
       update: {
         brandId: brand.id,
+        productType: item.productType,
         name: item.name,
         slug: item.slug,
         status: 'PUBLISHED',
@@ -159,6 +182,7 @@ async function importDemoData(transaction: Prisma.TransactionClient): Promise<vo
       create: {
         id: item.id,
         brandId: brand.id,
+        productType: item.productType,
         productNo: item.productNo,
         name: item.name,
         slug: item.slug,
@@ -204,12 +228,42 @@ async function importDemoData(transaction: Prisma.TransactionClient): Promise<vo
         updatedBy: bootstrapUserId,
       },
     });
+    if (item.productType === 'BUNDLE') {
+      const componentVariants = await transaction.productVariant.findMany({
+        where: { sku: { in: item.components.map(({ sku }) => sku) } },
+        select: { id: true, sku: true },
+      });
+      if (componentVariants.length !== item.components.length) {
+        throw new Error(`Missing demo component for ${item.sku}`);
+      }
+      const bundle = await transaction.productBundle.upsert({
+        where: { bundleVariantId: variant.id },
+        update: { status: 'ACTIVE', updatedBy: bootstrapUserId },
+        create: {
+          id: item.variantId,
+          bundleVariantId: variant.id,
+          status: 'ACTIVE',
+          createdBy: bootstrapUserId,
+          updatedBy: bootstrapUserId,
+        },
+      });
+      await transaction.bundleItem.deleteMany({ where: { productBundleId: bundle.id } });
+      await transaction.bundleItem.createMany({
+        data: item.components.map((component, sortOrder) => ({
+          id: `${sortOrder + 1}1000000-0000-7000-8000-000000000004`,
+          productBundleId: bundle.id,
+          componentVariantId: componentVariants.find(({ sku }) => sku === component.sku)!.id,
+          quantity: component.quantity,
+          sortOrder,
+        })),
+      });
+    }
   }
 }
 
 async function main(): Promise<void> {
   await prisma.$transaction(importDemoData, { maxWait: 10_000, timeout: 120_000 });
-  console.log('Demo data imported: 3 branches/warehouses, 3 brands, 3 categories, 3 products.');
+  console.log('Demo data imported: 3 branches/warehouses, 3 brands, 3 categories, 4 products (including 1 combo).');
 }
 
 void main().finally(async () => prisma.$disconnect());

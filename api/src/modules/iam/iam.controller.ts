@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+  Req,
+} from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -72,6 +82,7 @@ export class IamController {
   }
 
   @Post('users/:userId/lock')
+  @HttpCode(200)
   @RequirePermissions('iam.user.manage')
   @ApiOperation({
     operationId: 'lockAdminStaffUser',
@@ -97,6 +108,7 @@ export class IamController {
   }
 
   @Post('users/:userId/unlock')
+  @HttpCode(200)
   @RequirePermissions('iam.user.manage')
   @ApiOperation({
     operationId: 'unlockAdminStaffUser',

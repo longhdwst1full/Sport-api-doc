@@ -11,6 +11,10 @@ import {
   useSearchActiveAdminBrands,
   useSearchActiveAdminCategories,
 } from '@/generated/api/catalog/catalog';
+import {
+  CreateProductDtoProductType,
+  type CreateProductDtoProductType as ProductType,
+} from '@/generated/api/catalog/models';
 import { RichTextEditor } from '@/foundation/inputs/rich-text-editor';
 import { getApiErrorMessage } from '@/lib/api/error';
 import { uploadImage } from '@/lib/media/upload-image';
@@ -19,6 +23,7 @@ const uploadRichTextImage = async (file: File, signal: AbortSignal) =>
   (await uploadImage(file, signal)).secureUrl;
 
 interface ProductFormValues {
+  productType: ProductType;
   productNo: string;
   name: string;
   slug: string;
@@ -29,6 +34,10 @@ interface ProductFormValues {
 }
 
 const schema: yup.ObjectSchema<ProductFormValues> = yup.object({
+  productType: yup
+    .mixed<ProductType>()
+    .oneOf(Object.values(CreateProductDtoProductType))
+    .required('Chọn loại sản phẩm'),
   productNo: yup.string().trim().matches(/^[A-Z0-9-]+$/, 'Chỉ dùng chữ hoa, số và dấu gạch ngang').required('Nhập mã sản phẩm'),
   name: yup.string().trim().required('Nhập tên sản phẩm'),
   slug: yup.string().trim().matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug không hợp lệ').required('Nhập slug'),
@@ -39,6 +48,7 @@ const schema: yup.ObjectSchema<ProductFormValues> = yup.object({
 });
 
 const defaults: ProductFormValues = {
+  productType: CreateProductDtoProductType.STANDARD,
   productNo: '', name: '', slug: '', brandId: undefined, categoryId: '', shortDescription: '', description: '',
 };
 
@@ -82,6 +92,7 @@ export function ProductFormDrawer({
   const submit = form.handleSubmit((values) => {
     createProduct.mutate({
       data: {
+        productType: values.productType,
         productNo: values.productNo,
         name: values.name,
         slug: values.slug,
@@ -110,6 +121,26 @@ export function ProductFormDrawer({
       extra={<Button type="primary" loading={createProduct.isPending} onClick={() => void submit()}>Tạo bản nháp</Button>}
     >
       <Form layout="vertical" onFinish={() => void submit()}>
+        <Form.Item
+          label="Loại sản phẩm"
+          validateStatus={form.formState.errors.productType ? 'error' : undefined}
+          help={form.formState.errors.productType?.message}
+          extra="STANDARD là sản phẩm thường; BUNDLE là combo cố định và mỗi SKU combo phải khai báo thành phần trước khi publish."
+        >
+          <Controller
+            name="productType"
+            control={form.control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                options={[
+                  { value: CreateProductDtoProductType.STANDARD, label: 'Sản phẩm thường' },
+                  { value: CreateProductDtoProductType.BUNDLE, label: 'Combo cố định' },
+                ]}
+              />
+            )}
+          />
+        </Form.Item>
         <div className="grid gap-4 sm:grid-cols-2">
           {textField('productNo', 'Mã sản phẩm')}
           {textField('slug', 'Slug')}

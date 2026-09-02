@@ -39,8 +39,10 @@ import type {
   ListAdminProductsParams,
   ProductDetailDto,
   ProductListResponseDto,
+  ReplacePriceDto,
   SearchActiveAdminBrandsParams,
   SearchActiveAdminCategoriesParams,
+  SearchActiveAdminProductVariantsParams,
   UpdateBrandDto,
   UpdateCategoryDto,
   UpdateProductDto,
@@ -1351,6 +1353,137 @@ export const useCreateAdminProduct = <TError = ErrorType<unknown>, TContext = un
 };
 
 /**
+ * @summary Search active standard SKU variants for selectors and combo components
+ */
+export const searchActiveAdminProductVariants = (
+  params?: SearchActiveAdminProductVariantsParams,
+  signal?: AbortSignal,
+) => {
+  return apiFetcher<ActiveLookupResponseDto>({
+    url: `/api/v1/admin/products/variants/active`,
+    method: 'GET',
+    params,
+    signal,
+  });
+};
+
+export const getSearchActiveAdminProductVariantsQueryKey = (
+  params?: SearchActiveAdminProductVariantsParams,
+) => {
+  return [`/api/v1/admin/products/variants/active`, ...(params ? [params] : [])] as const;
+};
+
+export const getSearchActiveAdminProductVariantsQueryOptions = <
+  TData = Awaited<ReturnType<typeof searchActiveAdminProductVariants>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: SearchActiveAdminProductVariantsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchActiveAdminProductVariants>>, TError, TData>
+    >;
+  },
+) => {
+  const { query: queryOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getSearchActiveAdminProductVariantsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof searchActiveAdminProductVariants>>> = ({
+    signal,
+  }) => searchActiveAdminProductVariants(params, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof searchActiveAdminProductVariants>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type SearchActiveAdminProductVariantsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof searchActiveAdminProductVariants>>
+>;
+export type SearchActiveAdminProductVariantsQueryError = ErrorType<unknown>;
+
+export function useSearchActiveAdminProductVariants<
+  TData = Awaited<ReturnType<typeof searchActiveAdminProductVariants>>,
+  TError = ErrorType<unknown>,
+>(
+  params: undefined | SearchActiveAdminProductVariantsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchActiveAdminProductVariants>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchActiveAdminProductVariants>>,
+          TError,
+          Awaited<ReturnType<typeof searchActiveAdminProductVariants>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchActiveAdminProductVariants<
+  TData = Awaited<ReturnType<typeof searchActiveAdminProductVariants>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: SearchActiveAdminProductVariantsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchActiveAdminProductVariants>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchActiveAdminProductVariants>>,
+          TError,
+          Awaited<ReturnType<typeof searchActiveAdminProductVariants>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchActiveAdminProductVariants<
+  TData = Awaited<ReturnType<typeof searchActiveAdminProductVariants>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: SearchActiveAdminProductVariantsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchActiveAdminProductVariants>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Search active standard SKU variants for selectors and combo components
+ */
+
+export function useSearchActiveAdminProductVariants<
+  TData = Awaited<ReturnType<typeof searchActiveAdminProductVariants>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: SearchActiveAdminProductVariantsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchActiveAdminProductVariants>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getSearchActiveAdminProductVariantsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+/**
  * @summary Get product detail for admin
  */
 export const getAdminProduct = (slug: string, signal?: AbortSignal) => {
@@ -1639,7 +1772,7 @@ export const createAdminProductPrice = (
 };
 
 export const getCreateAdminProductPriceMutationOptions = <
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1677,12 +1810,17 @@ export type CreateAdminProductPriceMutationResult = NonNullable<
   Awaited<ReturnType<typeof createAdminProductPrice>>
 >;
 export type CreateAdminProductPriceMutationBody = BodyType<CreatePriceDto>;
-export type CreateAdminProductPriceMutationError = ErrorType<unknown>;
+export type CreateAdminProductPriceMutationError = ErrorType<
+  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+>;
 
 /**
  * @summary Create a global VAT-included price window
  */
-export const useCreateAdminProductPrice = <TError = ErrorType<unknown>, TContext = unknown>(
+export const useCreateAdminProductPrice = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createAdminProductPrice>>,
@@ -1699,6 +1837,93 @@ export const useCreateAdminProductPrice = <TError = ErrorType<unknown>, TContext
   TContext
 > => {
   const mutationOptions = getCreateAdminProductPriceMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+/**
+ * @summary Atomically close the current open price and create its replacement
+ */
+export const replaceAdminProductPrice = (
+  variantId: string,
+  replacePriceDto: BodyType<ReplacePriceDto>,
+  signal?: AbortSignal,
+) => {
+  return apiFetcher<ProductDetailDto>({
+    url: `/api/v1/admin/products/variants/${variantId}/prices/replace`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: replacePriceDto,
+    signal,
+  });
+};
+
+export const getReplaceAdminProductPriceMutationOptions = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof replaceAdminProductPrice>>,
+    TError,
+    { variantId: string; data: BodyType<ReplacePriceDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof replaceAdminProductPrice>>,
+  TError,
+  { variantId: string; data: BodyType<ReplacePriceDto> },
+  TContext
+> => {
+  const mutationKey = ['replaceAdminProductPrice'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof replaceAdminProductPrice>>,
+    { variantId: string; data: BodyType<ReplacePriceDto> }
+  > = (props) => {
+    const { variantId, data } = props ?? {};
+
+    return replaceAdminProductPrice(variantId, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReplaceAdminProductPriceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof replaceAdminProductPrice>>
+>;
+export type ReplaceAdminProductPriceMutationBody = BodyType<ReplacePriceDto>;
+export type ReplaceAdminProductPriceMutationError = ErrorType<
+  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+>;
+
+/**
+ * @summary Atomically close the current open price and create its replacement
+ */
+export const useReplaceAdminProductPrice = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof replaceAdminProductPrice>>,
+      TError,
+      { variantId: string; data: BodyType<ReplacePriceDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof replaceAdminProductPrice>>,
+  TError,
+  { variantId: string; data: BodyType<ReplacePriceDto> },
+  TContext
+> => {
+  const mutationOptions = getReplaceAdminProductPriceMutationOptions(options);
 
   return useMutation(mutationOptions, queryClient);
 };
@@ -1721,7 +1946,7 @@ export const publishAdminProduct = (
 };
 
 export const getPublishAdminProductMutationOptions = <
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1759,12 +1984,17 @@ export type PublishAdminProductMutationResult = NonNullable<
   Awaited<ReturnType<typeof publishAdminProduct>>
 >;
 export type PublishAdminProductMutationBody = BodyType<ChangeProductStatusDto>;
-export type PublishAdminProductMutationError = ErrorType<unknown>;
+export type PublishAdminProductMutationError = ErrorType<
+  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+>;
 
 /**
  * @summary Publish a complete draft product
  */
-export const usePublishAdminProduct = <TError = ErrorType<unknown>, TContext = unknown>(
+export const usePublishAdminProduct = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof publishAdminProduct>>,

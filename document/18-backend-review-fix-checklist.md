@@ -1,5 +1,7 @@
 # Backend review-fix và checklist kiểm thử Sprint 1
 
+> **Snapshot lịch sử ngày 2026-08-29.** Các finding trong tài liệu này ghi lại trạng thái tại thời điểm review và không được dùng như trạng thái hiện tại. BF-01/BF-02, persisted Organization/IAM, HTTP e2e và phần lớn Catalog Wave 2 đã được triển khai sau đó. Trạng thái/checklist đang hiệu lực nằm tại `20-sprint-1-execution-status.md`; các mục production RLS/least-privilege, audit query, media và phần scope còn thiếu vẫn giữ nguyên là blocker.
+
 Ngày review: 2026-08-29  
 Phạm vi: toàn bộ thay đổi chưa commit phục vụ Sprint 0 foundation closure và khởi động Sprint 1.  
 Phương pháp: review độc lập theo `review-fix`; vòng này không tự sửa source để giữ kết luận khách quan.
