@@ -1,4 +1,5 @@
 import { UnprocessableEntityException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../database/prisma.service';
 import { AuditWriter } from '../../../audit/audit.writer';
 import { ProductsService } from './products.service';
@@ -23,6 +24,7 @@ describe('ProductsService', () => {
 
   it('rejects archiving a product that is already archived', async () => {
     const transaction = {
+      $queryRaw: jest.fn().mockResolvedValue([]),
       product: {
         findUnique: jest.fn().mockResolvedValue({ id: 'product-id', status: 'ARCHIVED' }),
       },
@@ -43,12 +45,16 @@ describe('ProductsService', () => {
 
   it('requires reactivating the product before reactivating one of its variants', async () => {
     const transaction = {
+      $queryRaw: jest.fn().mockResolvedValue([]),
       productVariant: {
-        findUnique: jest.fn().mockResolvedValue({
-          id: 'variant-id',
-          status: 'INACTIVE',
-          product: { status: 'ARCHIVED' },
-        }),
+        findUnique: jest
+          .fn()
+          .mockResolvedValueOnce({ productId: 'product-id' })
+          .mockResolvedValueOnce({
+            id: 'variant-id',
+            status: 'INACTIVE',
+            product: { status: 'ARCHIVED' },
+          }),
       },
     };
     const prisma = {
@@ -67,12 +73,16 @@ describe('ProductsService', () => {
 
   it('protects a published combo from losing an active component variant', async () => {
     const transaction = {
+      $queryRaw: jest.fn().mockResolvedValue([]),
       productVariant: {
-        findUnique: jest.fn().mockResolvedValue({
-          id: 'variant-id',
-          productId: 'product-id',
-          status: 'ACTIVE',
-        }),
+        findUnique: jest
+          .fn()
+          .mockResolvedValueOnce({ productId: 'product-id' })
+          .mockResolvedValueOnce({
+            id: 'variant-id',
+            productId: 'product-id',
+            status: 'ACTIVE',
+          }),
       },
       bundleItem: { count: jest.fn().mockResolvedValue(1) },
     };
@@ -88,5 +98,109 @@ describe('ProductsService', () => {
         { requestId: 'request', actorUserId: '00000000-0000-7000-8000-000000000002' },
       ),
     ).rejects.toThrow('archive the combo first');
+  });
+
+  it('returns only sellable variants and excludes an inactive SKU from storefront minPrice', async () => {
+    const row = {
+      id: 'product-id',
+      productType: 'STANDARD',
+      productNo: 'SP-001',
+      name: 'Running shoes',
+      slug: 'running-shoes',
+      brand: null,
+      status: 'PUBLISHED',
+      version: 1n,
+      shortDescription: null,
+      description: null,
+      categories: [],
+      media: [],
+      variants: [
+        {
+          id: 'inactive-variant',
+          sku: 'INACTIVE-SKU',
+          barcode: null,
+          name: 'Inactive cheap SKU',
+          status: 'INACTIVE',
+          version: 0n,
+          prices: [{ id: 'price-1', amount: new Prisma.Decimal('1.00'), version: 0n }],
+          bundleDefinition: null,
+        },
+        {
+          id: 'active-variant',
+          sku: 'ACTIVE-SKU',
+          barcode: null,
+          name: 'Active SKU',
+          status: 'ACTIVE',
+          version: 0n,
+          prices: [{ id: 'price-2', amount: new Prisma.Decimal('500000.00'), version: 0n }],
+          bundleDefinition: null,
+        },
+      ],
+    };
+    const product = {
+      findMany: jest.fn().mockResolvedValue([row]),
+      count: jest.fn().mockResolvedValue(1),
+    };
+    const prisma = {
+      product,
+      $transaction: jest.fn((operations: Promise<unknown>[]) => Promise.all(operations)),
+    } as unknown as PrismaService;
+    const storefront = new ProductsService(prisma, {} as AuditWriter);
+
+    const result = await storefront.list({ page: 1, limit: 12 }, true);
+
+    expect(result.items[0]).toMatchObject({ minPrice: '500000.00' });
+    expect(product.findMany).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects publishing a combo when one component variant is inactive', async () => {
+    const transaction = {
+      $queryRaw: jest.fn().mockResolvedValue([]),
+      product: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'combo-product-id',
+          variants: [
+            {
+              bundleDefinition: {
+                items: [{ componentVariant: { productId: 'component-product-id' } }],
+              },
+            },
+          ],
+        }),
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'combo-product-id',
+          productType: 'BUNDLE',
+          status: 'DRAFT',
+          variants: [
+            {
+              prices: [{}],
+              bundleDefinition: {
+                status: 'ACTIVE',
+                items: [
+                  {
+                    componentVariant: {
+                      status: 'INACTIVE',
+                      product: { status: 'PUBLISHED' },
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+      },
+    };
+    const prisma = {
+      $transaction: jest.fn((work: (client: typeof transaction) => unknown) => work(transaction)),
+    } as unknown as PrismaService;
+    const lifecycle = new ProductsService(prisma, {} as AuditWriter);
+
+    await expect(
+      lifecycle.publish(
+        '00000000-0000-7000-8000-000000000001',
+        { expectedVersion: 0 },
+        { requestId: 'request', actorUserId: '00000000-0000-7000-8000-000000000002' },
+      ),
+    ).rejects.toThrow('Every active BUNDLE variant requires');
   });
 });

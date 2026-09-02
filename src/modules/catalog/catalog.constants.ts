@@ -1,0 +1,5 @@
+export const CATALOG_REFERENCE_STATUS = {
+  ACTIVE: 'ACTIVE',
+  INACTIVE: 'INACTIVE',
+} as const;
+

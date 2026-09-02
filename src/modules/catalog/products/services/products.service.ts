@@ -7,8 +7,13 @@ import {
 import { Prisma } from '@prisma/client';
 import { v7 as uuidv7 } from 'uuid';
 import { MutationContext } from '../../../../common/request/request-context';
+import {
+  ActiveLookupResponseDto,
+  ActiveSearchQueryDto,
+} from '../../../../common/pagination/active-search.dto';
 import { PrismaService } from '../../../../database/prisma.service';
 import { AuditWriter } from '../../../audit/audit.writer';
+import { CATALOG_REFERENCE_STATUS } from '../../catalog.constants';
 import {
   ChangeProductStatusDto,
   CreateBundleDto,
@@ -19,11 +24,27 @@ import {
   ProductDetailDto,
   ProductListResponseDto,
   ProductSummaryDto,
+  ReplacePriceDto,
   UpdateProductDto,
 } from '../dto/product.dto';
+import {
+  PRODUCT_AUDIT_ACTION,
+  PRODUCT_BUNDLE_STATUS,
+  PRODUCT_BUNDLE_TYPE,
+  PRODUCT_CURRENCY,
+  PRODUCT_ERROR,
+  PRODUCT_PRICE_STATUS,
+  PRODUCT_PRICE_TYPE,
+  PRODUCT_SALES_CHANNEL,
+  PRODUCT_STATUS,
+  PRODUCT_TYPE,
+  PRODUCT_VARIANT_STATUS,
+  ProductStatus,
+  ProductType,
+} from '../product.constants';
 
 const effectivePriceWhere = (now: Date): Prisma.ProductPriceWhereInput => ({
-  status: { in: ['ACTIVE', 'SCHEDULED'] },
+  status: { in: [PRODUCT_PRICE_STATUS.ACTIVE, PRODUCT_PRICE_STATUS.SCHEDULED] },
   startsAt: { lte: now },
   OR: [{ endsAt: null }, { endsAt: { gt: now } }],
 });
@@ -35,11 +56,55 @@ export class ProductsService {
     private readonly audit: AuditWriter,
   ) {}
 
+  async searchActiveVariants(query: ActiveSearchQueryDto): Promise<ActiveLookupResponseDto> {
+    const search = query.search?.trim();
+    const where: Prisma.ProductVariantWhereInput = {
+      status: PRODUCT_VARIANT_STATUS.ACTIVE,
+      bundleDefinition: { is: null },
+      product: {
+        productType: PRODUCT_TYPE.STANDARD,
+        status: { not: PRODUCT_STATUS.ARCHIVED },
+      },
+      ...(search
+        ? {
+            OR: [
+              { sku: { contains: search, mode: 'insensitive' } },
+              { name: { contains: search, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+    };
+    const skip = (query.page - 1) * query.limit;
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.productVariant.findMany({
+        where,
+        orderBy: [{ sku: 'asc' }, { id: 'asc' }],
+        skip,
+        take: query.limit,
+        select: { id: true, sku: true, name: true },
+      }),
+      this.prisma.productVariant.count({ where }),
+    ]);
+    return {
+      items: rows.map(({ id, sku, name }) => ({ id, code: sku, label: name })),
+      meta: {
+        page: query.page,
+        limit: query.limit,
+        total,
+        hasMore: skip + query.limit < total,
+      },
+    };
+  }
+
   async list(query: ListProductsQueryDto, storefront: boolean): Promise<ProductListResponseDto> {
     const now = new Date();
     const search = query.search?.trim();
     const where: Prisma.ProductWhereInput = {
-      ...(storefront ? { status: 'PUBLISHED' } : query.status ? { status: query.status } : {}),
+      ...(storefront
+        ? { status: PRODUCT_STATUS.PUBLISHED, ...this.sellableProductWhere(now) }
+        : query.status
+          ? { status: query.status }
+          : {}),
       ...(search
         ? {
             OR: [
@@ -50,14 +115,13 @@ export class ProductsService {
           }
         : {}),
       ...(query.category
-        ? { categories: { some: { category: { slug: query.category } } } }
-        : {}),
-      ...(storefront
         ? {
-            variants: {
+            categories: {
               some: {
-                status: 'ACTIVE',
-                prices: { some: effectivePriceWhere(now) },
+                category: {
+                  slug: query.category,
+                  ...(storefront ? { status: PRODUCT_VARIANT_STATUS.ACTIVE } : {}),
+                },
               },
             },
           }
@@ -67,7 +131,7 @@ export class ProductsService {
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.product.findMany({
         where,
-        include: this.productInclude(now),
+        include: this.productInclude(now, storefront),
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         skip,
         take: query.limit,
@@ -75,7 +139,7 @@ export class ProductsService {
       this.prisma.product.count({ where }),
     ]);
     return {
-      items: rows.map((row) => this.toSummary(row)),
+      items: rows.map((row) => this.toSummary(row, storefront)),
       meta: {
         page: query.page,
         limit: query.limit,
@@ -92,20 +156,15 @@ export class ProductsService {
         slug,
         ...(storefront
           ? {
-              status: 'PUBLISHED',
-              variants: {
-                some: {
-                  status: 'ACTIVE',
-                  prices: { some: effectivePriceWhere(now) },
-                },
-              },
+              status: PRODUCT_STATUS.PUBLISHED,
+              ...this.sellableProductWhere(now),
             }
           : {}),
       },
-      include: this.productInclude(now),
+      include: this.productInclude(now, storefront),
     });
-    if (!row) throw new NotFoundException('Product not found');
-    return this.toDetail(row);
+    if (!row) throw new NotFoundException(PRODUCT_ERROR.NOT_FOUND);
+    return this.toDetail(row, storefront);
   }
 
   async create(input: CreateProductDto, context: MutationContext): Promise<ProductDetailDto> {
@@ -117,6 +176,7 @@ export class ProductsService {
         await transaction.product.create({
           data: {
             id: productId,
+            productType: input.productType ?? PRODUCT_TYPE.STANDARD,
             productNo: input.productNo,
             name: input.name,
             slug: input.slug,
@@ -141,7 +201,7 @@ export class ProductsService {
             sequenceNo: 1,
             actorType: 'USER',
             actorUserId: context.actorUserId,
-            action: 'catalog.product.create',
+            action: PRODUCT_AUDIT_ACTION.CREATE,
             entityType: 'PRODUCT',
             entityId: productId,
             after: input as unknown as Prisma.InputJsonValue,
@@ -167,9 +227,28 @@ export class ProductsService {
     if (categoryIds && primaryCategoryId) this.validateCategorySelection(categoryIds, primaryCategoryId);
     try {
       await this.prisma.$transaction(async (transaction) => {
+        await this.lockProductIds(transaction, [id]);
+        const current = await transaction.product.findUnique({
+          where: { id },
+          select: { productType: true, _count: { select: { variants: true } } },
+        });
+        if (!current) throw new NotFoundException(PRODUCT_ERROR.NOT_FOUND);
+        if (
+          fields.productType &&
+          fields.productType !== current.productType &&
+          current._count.variants > 0
+        ) {
+          throw new UnprocessableEntityException(
+            'Product type cannot change after variants have been created',
+          );
+        }
         await this.validateReferences(transaction, fields.brandId, categoryIds);
         const updated = await transaction.product.updateMany({
-          where: { id, version: BigInt(expectedVersion), status: { not: 'ARCHIVED' } },
+          where: {
+            id,
+            version: BigInt(expectedVersion),
+            status: { not: PRODUCT_STATUS.ARCHIVED },
+          },
           data: {
             ...fields,
             version: { increment: 1 },
@@ -194,7 +273,7 @@ export class ProductsService {
             sequenceNo: 1,
             actorType: 'USER',
             actorUserId: context.actorUserId,
-            action: 'catalog.product.update',
+            action: PRODUCT_AUDIT_ACTION.UPDATE,
             entityType: 'PRODUCT',
             entityId: id,
             after: input as unknown as Prisma.InputJsonValue,
@@ -215,32 +294,77 @@ export class ProductsService {
   ): Promise<ProductDetailDto> {
     const now = new Date();
     return this.prisma.$transaction(async (transaction) => {
+      const candidate = await transaction.product.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          variants: {
+            select: {
+              bundleDefinition: {
+                select: {
+                  items: {
+                    select: { componentVariant: { select: { productId: true } } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+      if (!candidate) throw new NotFoundException(PRODUCT_ERROR.NOT_FOUND);
+      const aggregateProductIds = [
+        candidate.id,
+        ...candidate.variants.flatMap(({ bundleDefinition }) =>
+          bundleDefinition?.items.map(({ componentVariant }) => componentVariant.productId) ?? [],
+        ),
+      ];
+      await this.lockProductIds(transaction, aggregateProductIds);
       const product = await transaction.product.findFirst({
         where: { id },
         include: {
           variants: {
-            where: { status: 'ACTIVE' },
-            include: { prices: { where: effectivePriceWhere(now) } },
+            where: { status: PRODUCT_VARIANT_STATUS.ACTIVE },
+            include: {
+              prices: { where: effectivePriceWhere(now) },
+              bundleDefinition: {
+                include: {
+                  items: {
+                    include: {
+                      componentVariant: { include: { product: true } },
+                    },
+                  },
+                },
+              },
+            },
           },
         },
       });
-      if (!product) throw new NotFoundException('Product not found');
-      if (product.status !== 'DRAFT') throw new UnprocessableEntityException('Only DRAFT product can be published');
-      if (!product.variants.some(({ prices }) => prices.length > 0)) {
-        throw new UnprocessableEntityException('Published product requires an active variant and effective price');
+      if (!product) throw new NotFoundException(PRODUCT_ERROR.NOT_FOUND);
+      if (product.status !== PRODUCT_STATUS.DRAFT) {
+        throw new UnprocessableEntityException('Only DRAFT product can be published');
       }
+      this.assertPublishable(product.productType as ProductType, product.variants);
       const updated = await transaction.product.updateMany({
-        where: { id, version: BigInt(input.expectedVersion), status: 'DRAFT' },
-        data: { status: 'PUBLISHED', publishedAt: now, version: { increment: 1 }, updatedBy: context.actorUserId },
+        where: {
+          id,
+          version: BigInt(input.expectedVersion),
+          status: PRODUCT_STATUS.DRAFT,
+        },
+        data: {
+          status: PRODUCT_STATUS.PUBLISHED,
+          publishedAt: now,
+          version: { increment: 1 },
+          updatedBy: context.actorUserId,
+        },
       });
-      if (updated.count !== 1) throw new ConflictException('Product version conflict');
+      if (updated.count !== 1) throw new ConflictException(PRODUCT_ERROR.VERSION_CONFLICT);
       await this.audit.write(
         {
           requestId: context.requestId,
           sequenceNo: 1,
           actorType: 'USER',
           actorUserId: context.actorUserId,
-          action: 'catalog.product.publish',
+          action: PRODUCT_AUDIT_ACTION.PUBLISH,
           entityType: 'PRODUCT',
           entityId: id,
         },
@@ -259,9 +383,9 @@ export class ProductsService {
       id,
       input,
       context,
-      ['DRAFT', 'PUBLISHED'],
-      'ARCHIVED',
-      'catalog.product.archive',
+      [PRODUCT_STATUS.DRAFT, PRODUCT_STATUS.PUBLISHED],
+      PRODUCT_STATUS.ARCHIVED,
+      PRODUCT_AUDIT_ACTION.ARCHIVE,
     );
   }
 
@@ -274,9 +398,9 @@ export class ProductsService {
       id,
       input,
       context,
-      ['ARCHIVED'],
-      'DRAFT',
-      'catalog.product.reactivate',
+      [PRODUCT_STATUS.ARCHIVED],
+      PRODUCT_STATUS.DRAFT,
+      PRODUCT_AUDIT_ACTION.REACTIVATE,
     );
   }
 
@@ -286,19 +410,25 @@ export class ProductsService {
     context: MutationContext,
   ): Promise<ProductDetailDto> {
     return this.prisma.$transaction(async (transaction) => {
+      const candidate = await transaction.productVariant.findUnique({
+        where: { id: variantId },
+        select: { productId: true },
+      });
+      if (!candidate) throw new NotFoundException(PRODUCT_ERROR.VARIANT_NOT_FOUND);
+      await this.lockProductIds(transaction, [candidate.productId]);
       const variant = await transaction.productVariant.findUnique({
         where: { id: variantId },
       });
-      if (!variant) throw new NotFoundException('Variant not found');
-      if (variant.status !== 'ACTIVE') {
+      if (!variant) throw new NotFoundException(PRODUCT_ERROR.VARIANT_NOT_FOUND);
+      if (variant.status !== PRODUCT_VARIANT_STATUS.ACTIVE) {
         throw new UnprocessableEntityException('Only ACTIVE variant can be archived');
       }
       const activePublishedBundleUsage = await transaction.bundleItem.count({
         where: {
           componentVariantId: variantId,
           productBundle: {
-            status: 'ACTIVE',
-            bundleVariant: { product: { status: 'PUBLISHED' } },
+            status: PRODUCT_BUNDLE_STATUS.ACTIVE,
+            bundleVariant: { product: { status: PRODUCT_STATUS.PUBLISHED } },
           },
         },
       });
@@ -308,21 +438,25 @@ export class ProductsService {
         );
       }
       const updated = await transaction.productVariant.updateMany({
-        where: { id: variantId, version: BigInt(input.expectedVersion), status: 'ACTIVE' },
-        data: { status: 'INACTIVE', version: { increment: 1 } },
+        where: {
+          id: variantId,
+          version: BigInt(input.expectedVersion),
+          status: PRODUCT_VARIANT_STATUS.ACTIVE,
+        },
+        data: { status: PRODUCT_VARIANT_STATUS.INACTIVE, version: { increment: 1 } },
       });
-      if (updated.count !== 1) throw new ConflictException('Variant version conflict');
+      if (updated.count !== 1) throw new ConflictException(PRODUCT_ERROR.VARIANT_VERSION_CONFLICT);
       await this.audit.write(
         {
           requestId: context.requestId,
           sequenceNo: 1,
           actorType: 'USER',
           actorUserId: context.actorUserId,
-          action: 'catalog.variant.archive',
+          action: PRODUCT_AUDIT_ACTION.VARIANT_ARCHIVE,
           entityType: 'PRODUCT_VARIANT',
           entityId: variantId,
-          before: { status: 'ACTIVE', version: input.expectedVersion },
-          after: { status: 'INACTIVE', version: input.expectedVersion + 1 },
+          before: { status: PRODUCT_VARIANT_STATUS.ACTIVE, version: input.expectedVersion },
+          after: { status: PRODUCT_VARIANT_STATUS.INACTIVE, version: input.expectedVersion + 1 },
         },
         transaction,
       );
@@ -336,33 +470,43 @@ export class ProductsService {
     context: MutationContext,
   ): Promise<ProductDetailDto> {
     return this.prisma.$transaction(async (transaction) => {
+      const candidate = await transaction.productVariant.findUnique({
+        where: { id: variantId },
+        select: { productId: true },
+      });
+      if (!candidate) throw new NotFoundException(PRODUCT_ERROR.VARIANT_NOT_FOUND);
+      await this.lockProductIds(transaction, [candidate.productId]);
       const variant = await transaction.productVariant.findUnique({
         where: { id: variantId },
         include: { product: true },
       });
-      if (!variant) throw new NotFoundException('Variant not found');
-      if (variant.status !== 'INACTIVE') {
+      if (!variant) throw new NotFoundException(PRODUCT_ERROR.VARIANT_NOT_FOUND);
+      if (variant.status !== PRODUCT_VARIANT_STATUS.INACTIVE) {
         throw new UnprocessableEntityException('Only INACTIVE variant can be reactivated');
       }
-      if (variant.product.status === 'ARCHIVED') {
+      if (variant.product.status === PRODUCT_STATUS.ARCHIVED) {
         throw new UnprocessableEntityException('Reactivate the product before its variant');
       }
       const updated = await transaction.productVariant.updateMany({
-        where: { id: variantId, version: BigInt(input.expectedVersion), status: 'INACTIVE' },
-        data: { status: 'ACTIVE', version: { increment: 1 } },
+        where: {
+          id: variantId,
+          version: BigInt(input.expectedVersion),
+          status: PRODUCT_VARIANT_STATUS.INACTIVE,
+        },
+        data: { status: PRODUCT_VARIANT_STATUS.ACTIVE, version: { increment: 1 } },
       });
-      if (updated.count !== 1) throw new ConflictException('Variant version conflict');
+      if (updated.count !== 1) throw new ConflictException(PRODUCT_ERROR.VARIANT_VERSION_CONFLICT);
       await this.audit.write(
         {
           requestId: context.requestId,
           sequenceNo: 1,
           actorType: 'USER',
           actorUserId: context.actorUserId,
-          action: 'catalog.variant.reactivate',
+          action: PRODUCT_AUDIT_ACTION.VARIANT_REACTIVATE,
           entityType: 'PRODUCT_VARIANT',
           entityId: variantId,
-          before: { status: 'INACTIVE', version: input.expectedVersion },
-          after: { status: 'ACTIVE', version: input.expectedVersion + 1 },
+          before: { status: PRODUCT_VARIANT_STATUS.INACTIVE, version: input.expectedVersion },
+          after: { status: PRODUCT_VARIANT_STATUS.ACTIVE, version: input.expectedVersion + 1 },
         },
         transaction,
       );
@@ -377,8 +521,11 @@ export class ProductsService {
   ): Promise<ProductDetailDto> {
     try {
       await this.prisma.$transaction(async (transaction) => {
-        const product = await transaction.product.findFirst({ where: { id: productId, status: { not: 'ARCHIVED' } } });
-        if (!product) throw new NotFoundException('Product not found');
+        await this.lockProductIds(transaction, [productId]);
+        const product = await transaction.product.findFirst({
+          where: { id: productId, status: { not: PRODUCT_STATUS.ARCHIVED } },
+        });
+        if (!product) throw new NotFoundException(PRODUCT_ERROR.NOT_FOUND);
         const variantId = uuidv7();
         await transaction.productVariant.create({ data: { id: variantId, productId, ...input } });
         await this.audit.write(
@@ -387,7 +534,7 @@ export class ProductsService {
             sequenceNo: 1,
             actorType: 'USER',
             actorUserId: context.actorUserId,
-            action: 'catalog.variant.create',
+            action: PRODUCT_AUDIT_ACTION.VARIANT_CREATE,
             entityType: 'PRODUCT_VARIANT',
             entityId: variantId,
           },
@@ -411,7 +558,8 @@ export class ProductsService {
     try {
       const productId = await this.prisma.$transaction(async (transaction) => {
         const variant = await transaction.productVariant.findFirst({ where: { id: variantId } });
-        if (!variant) throw new NotFoundException('Variant not found');
+        if (!variant) throw new NotFoundException(PRODUCT_ERROR.VARIANT_NOT_FOUND);
+        await this.lockProductIds(transaction, [variant.productId]);
         const priceId = uuidv7();
         await transaction.productPrice.create({
           data: {
@@ -420,7 +568,10 @@ export class ProductsService {
             amount: new Prisma.Decimal(input.amount),
             startsAt,
             endsAt,
-            status: startsAt <= new Date() ? 'ACTIVE' : 'SCHEDULED',
+            status:
+              startsAt <= new Date()
+                ? PRODUCT_PRICE_STATUS.ACTIVE
+                : PRODUCT_PRICE_STATUS.SCHEDULED,
             createdBy: context.actorUserId,
             updatedBy: context.actorUserId,
           },
@@ -431,7 +582,7 @@ export class ProductsService {
             sequenceNo: 1,
             actorType: 'USER',
             actorUserId: context.actorUserId,
-            action: 'catalog.price.create',
+            action: PRODUCT_AUDIT_ACTION.PRICE_CREATE,
             entityType: 'PRODUCT_PRICE',
             entityId: priceId,
             after: { ...input, amount: input.amount },
@@ -443,7 +594,111 @@ export class ProductsService {
       return this.getById(productId);
     } catch (error) {
       if (error instanceof Prisma.PrismaClientUnknownRequestError) {
-        throw new ConflictException('Price effective window overlaps an existing price');
+        throw new ConflictException(PRODUCT_ERROR.PRICE_OVERLAP);
+      }
+      throw error;
+    }
+  }
+
+  async replacePrice(
+    variantId: string,
+    input: ReplacePriceDto,
+    context: MutationContext,
+  ): Promise<ProductDetailDto> {
+    const startsAt = new Date(input.startsAt);
+    const endsAt = input.endsAt ? new Date(input.endsAt) : undefined;
+    if (endsAt && endsAt <= startsAt) {
+      throw new UnprocessableEntityException('endsAt must be after startsAt');
+    }
+
+    try {
+      const productId = await this.prisma.$transaction(async (transaction) => {
+        const variant = await transaction.productVariant.findUnique({ where: { id: variantId } });
+        if (!variant) throw new NotFoundException(PRODUCT_ERROR.VARIANT_NOT_FOUND);
+        await this.lockProductIds(transaction, [variant.productId]);
+
+        const current = await transaction.productPrice.findFirst({
+          where: {
+            id: input.expectedCurrentPriceId,
+            productVariantId: variantId,
+            priceType: PRODUCT_PRICE_TYPE.REGULAR,
+            channel: PRODUCT_SALES_CHANNEL.ONLINE,
+            currencyCode: PRODUCT_CURRENCY.VND,
+            status: { in: [PRODUCT_PRICE_STATUS.ACTIVE, PRODUCT_PRICE_STATUS.SCHEDULED] },
+            endsAt: null,
+          },
+        });
+        if (!current || current.version !== BigInt(input.expectedCurrentPriceVersion)) {
+          throw new ConflictException('Current price changed; reload before replacing it');
+        }
+        if (startsAt <= current.startsAt) {
+          throw new UnprocessableEntityException(
+            'Replacement price must start after the current price starts',
+          );
+        }
+
+        const closed = await transaction.productPrice.updateMany({
+          where: {
+            id: current.id,
+            version: BigInt(input.expectedCurrentPriceVersion),
+            endsAt: null,
+          },
+          data: {
+            endsAt: startsAt,
+            version: { increment: 1 },
+            updatedBy: context.actorUserId,
+          },
+        });
+        if (closed.count !== 1) {
+          throw new ConflictException('Current price changed; reload before replacing it');
+        }
+
+        const priceId = uuidv7();
+        await transaction.productPrice.create({
+          data: {
+            id: priceId,
+            productVariantId: variantId,
+            amount: new Prisma.Decimal(input.amount),
+            startsAt,
+            endsAt,
+            status:
+              startsAt <= new Date()
+                ? PRODUCT_PRICE_STATUS.ACTIVE
+                : PRODUCT_PRICE_STATUS.SCHEDULED,
+            createdBy: context.actorUserId,
+            updatedBy: context.actorUserId,
+          },
+        });
+        await this.audit.write(
+          {
+            requestId: context.requestId,
+            sequenceNo: 1,
+            actorType: 'USER',
+            actorUserId: context.actorUserId,
+            action: PRODUCT_AUDIT_ACTION.PRICE_REPLACE,
+            entityType: 'PRODUCT_PRICE',
+            entityId: priceId,
+            before: {
+              id: current.id,
+              amount: current.amount.toFixed(2),
+              endsAt: current.endsAt?.toISOString() ?? null,
+              version: Number(current.version),
+            },
+            after: {
+              id: priceId,
+              amount: input.amount,
+              startsAt: input.startsAt,
+              endsAt: input.endsAt ?? null,
+            },
+          },
+          transaction,
+        );
+        return variant.productId;
+      });
+      return this.getById(productId);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientUnknownRequestError) {
+        throw new ConflictException(PRODUCT_ERROR.PRICE_OVERLAP);
       }
       throw error;
     }
@@ -456,16 +711,43 @@ export class ProductsService {
   ): Promise<ProductDetailDto> {
     try {
       await this.prisma.$transaction(async (transaction) => {
-        const bundleVariant = await transaction.productVariant.findFirst({
-          where: { id: input.bundleVariantId, productId },
-        });
-        if (!bundleVariant) throw new UnprocessableEntityException('Bundle variant must belong to product');
         const componentIds = input.items.map(({ componentVariantId }) => componentVariantId);
         if (new Set(componentIds).size !== componentIds.length) {
           throw new UnprocessableEntityException('Bundle components must be unique');
         }
+        const candidateComponents = await transaction.productVariant.findMany({
+          where: { id: { in: componentIds } },
+          select: { productId: true },
+        });
+        await this.lockProductIds(transaction, [
+          productId,
+          ...candidateComponents.map(({ productId: componentProductId }) => componentProductId),
+        ]);
+        const product = await transaction.product.findUnique({ where: { id: productId } });
+        if (!product) throw new NotFoundException(PRODUCT_ERROR.NOT_FOUND);
+        if (product.productType !== PRODUCT_TYPE.BUNDLE) {
+          throw new UnprocessableEntityException(
+            'Bundle definition can only be created for a BUNDLE product',
+          );
+        }
+        const bundleVariant = await transaction.productVariant.findFirst({
+          where: {
+            id: input.bundleVariantId,
+            productId,
+            status: PRODUCT_VARIANT_STATUS.ACTIVE,
+          },
+        });
+        if (!bundleVariant) {
+          throw new UnprocessableEntityException(
+            'Active bundle variant must belong to the BUNDLE product',
+          );
+        }
         const componentCount = await transaction.productVariant.count({
-          where: { id: { in: componentIds }, status: 'ACTIVE' },
+          where: {
+            id: { in: componentIds },
+            status: PRODUCT_VARIANT_STATUS.ACTIVE,
+            product: { status: { not: PRODUCT_STATUS.ARCHIVED } },
+          },
         });
         if (componentCount !== componentIds.length) throw new UnprocessableEntityException('Bundle contains invalid component');
         const bundleId = uuidv7();
@@ -486,7 +768,7 @@ export class ProductsService {
             sequenceNo: 1,
             actorType: 'USER',
             actorUserId: context.actorUserId,
-            action: 'catalog.bundle.create',
+            action: PRODUCT_AUDIT_ACTION.BUNDLE_CREATE,
             entityType: 'PRODUCT_BUNDLE',
             entityId: bundleId,
           },
@@ -508,27 +790,44 @@ export class ProductsService {
   ): Promise<ProductDetailDto> {
     const row = await client.product.findFirst({
       where: { id },
-      include: this.productInclude(new Date()),
+      include: this.productInclude(new Date(), false),
     });
-    if (!row) throw new NotFoundException('Product not found');
-    return this.toDetail(row);
+    if (!row) throw new NotFoundException(PRODUCT_ERROR.NOT_FOUND);
+    return this.toDetail(row, false);
   }
 
   private async changeProductStatus(
     id: string,
     input: ChangeProductStatusDto,
     context: MutationContext,
-    allowedFrom: Array<'DRAFT' | 'PUBLISHED' | 'ARCHIVED'>,
-    targetStatus: 'DRAFT' | 'ARCHIVED',
+    allowedFrom: ProductStatus[],
+    targetStatus: typeof PRODUCT_STATUS.DRAFT | typeof PRODUCT_STATUS.ARCHIVED,
     action: string,
   ): Promise<ProductDetailDto> {
     return this.prisma.$transaction(async (transaction) => {
+      await this.lockProductIds(transaction, [id]);
       const product = await transaction.product.findUnique({ where: { id } });
-      if (!product) throw new NotFoundException('Product not found');
+      if (!product) throw new NotFoundException(PRODUCT_ERROR.NOT_FOUND);
       if (!allowedFrom.includes(product.status as (typeof allowedFrom)[number])) {
         throw new UnprocessableEntityException(
           `Product cannot transition from ${product.status} to ${targetStatus}`,
         );
+      }
+      if (targetStatus === PRODUCT_STATUS.ARCHIVED) {
+        const activePublishedBundleUsage = await transaction.bundleItem.count({
+          where: {
+            componentVariant: { productId: id },
+            productBundle: {
+              status: PRODUCT_BUNDLE_STATUS.ACTIVE,
+              bundleVariant: { product: { status: PRODUCT_STATUS.PUBLISHED } },
+            },
+          },
+        });
+        if (activePublishedBundleUsage > 0) {
+          throw new UnprocessableEntityException(
+            'Product supplies an active published combo; archive the combo first',
+          );
+        }
       }
       const updated = await transaction.product.updateMany({
         where: {
@@ -538,12 +837,12 @@ export class ProductsService {
         },
         data: {
           status: targetStatus,
-          ...(targetStatus === 'DRAFT' ? { publishedAt: null } : {}),
+          ...(targetStatus === PRODUCT_STATUS.DRAFT ? { publishedAt: null } : {}),
           version: { increment: 1 },
           updatedBy: context.actorUserId,
         },
       });
-      if (updated.count !== 1) throw new ConflictException('Product version conflict');
+      if (updated.count !== 1) throw new ConflictException(PRODUCT_ERROR.VERSION_CONFLICT);
       await this.audit.write(
         {
           requestId: context.requestId,
@@ -562,20 +861,78 @@ export class ProductsService {
     });
   }
 
-  private productInclude(now: Date) {
+  private sellableProductWhere(now: Date): Prisma.ProductWhereInput {
+    const pricedActiveVariant = {
+      status: PRODUCT_VARIANT_STATUS.ACTIVE,
+      prices: { some: effectivePriceWhere(now) },
+    } satisfies Prisma.ProductVariantWhereInput;
+    return {
+      OR: [
+        {
+          productType: PRODUCT_TYPE.STANDARD,
+          variants: {
+            some: { ...pricedActiveVariant, bundleDefinition: { is: null } },
+          },
+        },
+        {
+          productType: PRODUCT_TYPE.BUNDLE,
+          variants: {
+            some: {
+              ...pricedActiveVariant,
+              bundleDefinition: {
+                is: {
+                  status: PRODUCT_BUNDLE_STATUS.ACTIVE,
+                  items: {
+                    some: {},
+                    every: {
+                      componentVariant: {
+                        status: PRODUCT_VARIANT_STATUS.ACTIVE,
+                        product: { status: { not: PRODUCT_STATUS.ARCHIVED } },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      ],
+    };
+  }
+
+  private productInclude(now: Date, storefront: boolean) {
     return {
       brand: true,
-      categories: { include: { category: true }, orderBy: { sortOrder: 'asc' as const } },
+      categories: {
+        ...(storefront
+          ? { where: { category: { status: CATALOG_REFERENCE_STATUS.ACTIVE } } }
+          : {}),
+        include: { category: true },
+        orderBy: { sortOrder: 'asc' as const },
+      },
       media: {
-        where: { status: 'ACTIVE' },
+        where: { status: PRODUCT_VARIANT_STATUS.ACTIVE },
         include: { mediaAsset: true },
         orderBy: [{ isPrimary: 'desc' as const }, { sortOrder: 'asc' as const }],
       },
       variants: {
+        ...(storefront
+          ? {
+              where: {
+                status: PRODUCT_VARIANT_STATUS.ACTIVE,
+                prices: { some: effectivePriceWhere(now) },
+              },
+            }
+          : {}),
         include: {
           prices: { where: effectivePriceWhere(now), orderBy: { startsAt: 'desc' as const }, take: 1 },
           bundleDefinition: {
-            include: { items: { include: { componentVariant: true }, orderBy: { sortOrder: 'asc' as const } } },
+            include: {
+              items: {
+                include: { componentVariant: { include: { product: true } } },
+                orderBy: { sortOrder: 'asc' as const },
+              },
+            },
           },
         },
         orderBy: { createdAt: 'asc' as const },
@@ -583,8 +940,18 @@ export class ProductsService {
     } satisfies Prisma.ProductInclude;
   }
 
-  private toSummary(row: Awaited<ReturnType<ProductsService['findProductForMapping']>>): ProductSummaryDto {
-    const prices = row.variants.flatMap(({ prices: variantPrices }) => variantPrices.map(({ amount }) => amount));
+  private toSummary(
+    row: Awaited<ReturnType<ProductsService['findProductForMapping']>>,
+    storefront: boolean,
+  ): ProductSummaryDto {
+    const variants = storefront
+      ? row.variants.filter((variant) =>
+          this.isLoadedVariantSellable(row.productType as ProductType, variant),
+        )
+      : row.variants;
+    const prices = variants.flatMap(({ prices: variantPrices }) =>
+      variantPrices.map(({ amount }) => amount),
+    );
     const minPrice = prices.sort((left, right) => left.comparedTo(right))[0];
     const primaryCategory = row.categories.find(({ isPrimary }) => isPrimary)?.category.name;
     const imageUrl = row.media[0]?.mediaAsset.secureUrl;
@@ -593,50 +960,144 @@ export class ProductsService {
       productNo: row.productNo,
       name: row.name,
       slug: row.slug,
+      productType: row.productType as ProductType,
       ...(row.brand ? { brand: row.brand.name } : {}),
       ...(primaryCategory ? { primaryCategory } : {}),
       status: row.status as ProductSummaryDto['status'],
       version: Number(row.version),
       minPrice: minPrice?.toFixed(2) ?? null,
-      currency: 'VND',
+      currency: PRODUCT_CURRENCY.VND,
       imageUrl: imageUrl ?? null,
     };
   }
 
-  private toDetail(row: Awaited<ReturnType<ProductsService['findProductForMapping']>>): ProductDetailDto {
-    const bundle = row.variants.find(({ bundleDefinition }) => bundleDefinition)?.bundleDefinition;
+  private toDetail(
+    row: Awaited<ReturnType<ProductsService['findProductForMapping']>>,
+    storefront: boolean,
+  ): ProductDetailDto {
+    const variants = storefront
+      ? row.variants.filter((variant) =>
+          this.isLoadedVariantSellable(row.productType as ProductType, variant),
+        )
+      : row.variants;
     return {
-      ...this.toSummary(row),
+      ...this.toSummary(row, storefront),
       ...(row.shortDescription ? { shortDescription: row.shortDescription } : {}),
       ...(row.description ? { description: row.description } : {}),
       categoryIds: row.categories.map(({ categoryId }) => categoryId),
-      variants: row.variants.map((variant) => ({
+      variants: variants.map((variant) => ({
         id: variant.id,
         sku: variant.sku,
         ...(variant.barcode ? { barcode: variant.barcode } : {}),
         name: variant.name,
-        status: variant.status as 'ACTIVE' | 'INACTIVE',
+        status: variant.status as ProductDetailDto['variants'][number]['status'],
         version: Number(variant.version),
         effectivePrice: variant.prices[0]?.amount.toFixed(2) ?? null,
-      })),
-      ...(bundle
-        ? {
-            bundle: {
-              bundleType: 'FIXED_VIRTUAL',
-              components: bundle.items.map((item) => ({
+        effectivePriceId: variant.prices[0]?.id ?? null,
+        effectivePriceVersion:
+          variant.prices[0] === undefined ? null : Number(variant.prices[0].version),
+        bundle: variant.bundleDefinition
+          ? {
+              bundleType: PRODUCT_BUNDLE_TYPE.FIXED_VIRTUAL,
+              status: variant.bundleDefinition.status as 'ACTIVE' | 'INACTIVE',
+              components: variant.bundleDefinition.items.map((item) => ({
                 componentVariantId: item.componentVariantId,
                 componentSku: item.componentVariant.sku,
                 componentName: item.componentVariant.name,
                 quantity: item.quantity,
               })),
-            },
-          }
-        : {}),
+            }
+          : null,
+      })),
     };
   }
 
   private findProductForMapping() {
-    return this.prisma.product.findFirstOrThrow({ include: this.productInclude(new Date()) });
+    return this.prisma.product.findFirstOrThrow({
+      include: this.productInclude(new Date(), false),
+    });
+  }
+
+  private isLoadedVariantSellable(
+    productType: ProductType,
+    variant: Awaited<ReturnType<ProductsService['findProductForMapping']>>['variants'][number],
+  ): boolean {
+    if (
+      variant.status !== PRODUCT_VARIANT_STATUS.ACTIVE ||
+      variant.prices.length === 0
+    ) {
+      return false;
+    }
+    if (productType === PRODUCT_TYPE.STANDARD) return variant.bundleDefinition === null;
+    const bundle = variant.bundleDefinition;
+    return Boolean(
+      bundle &&
+        bundle.status === PRODUCT_BUNDLE_STATUS.ACTIVE &&
+        bundle.items.length > 0 &&
+        bundle.items.every(
+          ({ componentVariant }) =>
+            componentVariant.status === PRODUCT_VARIANT_STATUS.ACTIVE &&
+            componentVariant.product.status !== PRODUCT_STATUS.ARCHIVED,
+        ),
+    );
+  }
+
+  private assertPublishable(
+    productType: ProductType,
+    variants: Array<{
+      prices: unknown[];
+      bundleDefinition: null | {
+        status: string;
+        items: Array<{
+          componentVariant: { status: string; product: { status: string } };
+        }>;
+      };
+    }>,
+  ): void {
+    if (variants.length === 0 || !variants.some(({ prices }) => prices.length > 0)) {
+      throw new UnprocessableEntityException(
+        'Published product requires an active variant and effective price',
+      );
+    }
+    if (productType === PRODUCT_TYPE.STANDARD) {
+      if (variants.some(({ bundleDefinition }) => bundleDefinition !== null)) {
+        throw new UnprocessableEntityException(
+          'STANDARD product cannot contain a bundle variant',
+        );
+      }
+      return;
+    }
+    if (
+      variants.some(
+        ({ prices, bundleDefinition }) =>
+          prices.length === 0 ||
+          !bundleDefinition ||
+          bundleDefinition.status !== PRODUCT_BUNDLE_STATUS.ACTIVE ||
+          bundleDefinition.items.length === 0 ||
+          bundleDefinition.items.some(
+            ({ componentVariant }) =>
+              componentVariant.status !== PRODUCT_VARIANT_STATUS.ACTIVE ||
+              componentVariant.product.status === PRODUCT_STATUS.ARCHIVED,
+          ),
+      )
+    ) {
+      throw new UnprocessableEntityException(
+        'Every active BUNDLE variant requires an active non-empty definition, effective price and active components',
+      );
+    }
+  }
+
+  private async lockProductIds(
+    transaction: Prisma.TransactionClient,
+    productIds: string[],
+  ): Promise<void> {
+    const orderedIds = [...new Set(productIds)].sort();
+    if (orderedIds.length === 0) return;
+    await transaction.$queryRaw(
+      Prisma.sql`SELECT "id" FROM "products" WHERE "id" IN (${Prisma.join(
+        orderedIds.map((id) => Prisma.sql`${id}::uuid`),
+      )}) ORDER BY "id" FOR UPDATE`,
+    );
   }
 
   private validateCategorySelection(categoryIds: string[], primaryCategoryId: string): void {
@@ -654,12 +1115,14 @@ export class ProductsService {
     categoryIds?: string[],
   ): Promise<void> {
     if (brandId) {
-      const brand = await transaction.brand.count({ where: { id: brandId, status: 'ACTIVE' } });
+      const brand = await transaction.brand.count({
+        where: { id: brandId, status: CATALOG_REFERENCE_STATUS.ACTIVE },
+      });
       if (!brand) throw new UnprocessableEntityException('Brand is not active');
     }
     if (categoryIds) {
       const count = await transaction.category.count({
-        where: { id: { in: categoryIds }, status: 'ACTIVE' },
+        where: { id: { in: categoryIds }, status: CATALOG_REFERENCE_STATUS.ACTIVE },
       });
       if (count !== categoryIds.length) throw new UnprocessableEntityException('Category is not active');
     }

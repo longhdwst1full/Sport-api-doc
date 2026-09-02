@@ -1,12 +1,21 @@
 import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Query, Req } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiConflictResponse,
   ApiCreatedResponse,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
+  ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
 import { RequirePermissions } from '../../../../common/decorators/require-permissions.decorator';
+import { ErrorResponseDto } from '../../../../common/exceptions/error-response.dto';
+import {
+  ActiveLookupResponseDto,
+  ActiveSearchQueryDto,
+} from '../../../../common/pagination/active-search.dto';
 import { AuthenticatedRequest, getMutationContext } from '../../../../common/request/request-context';
 import {
   ChangeProductStatusDto,
@@ -17,6 +26,7 @@ import {
   ListProductsQueryDto,
   ProductDetailDto,
   ProductListResponseDto,
+  ReplacePriceDto,
   UpdateProductDto,
 } from '../dto/product.dto';
 import { ProductsService } from '../services/products.service';
@@ -33,6 +43,19 @@ export class AdminProductsController {
   @ApiOkResponse({ type: ProductListResponseDto })
   listAdminProducts(@Query() query: ListProductsQueryDto): Promise<ProductListResponseDto> {
     return this.products.list(query, false);
+  }
+
+  @Get('variants/active')
+  @RequirePermissions('catalog.product.view')
+  @ApiOperation({
+    operationId: 'searchActiveAdminProductVariants',
+    summary: 'Search active standard SKU variants for selectors and combo components',
+  })
+  @ApiOkResponse({ type: ActiveLookupResponseDto })
+  searchActiveVariants(
+    @Query() query: ActiveSearchQueryDto,
+  ): Promise<ActiveLookupResponseDto> {
+    return this.products.searchActiveVariants(query);
   }
 
   @Get(':slug')
@@ -83,6 +106,9 @@ export class AdminProductsController {
   @RequirePermissions('catalog.price.manage')
   @ApiOperation({ operationId: 'createAdminProductPrice', summary: 'Create a global VAT-included price window' })
   @ApiCreatedResponse({ type: ProductDetailDto })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
   createPrice(
     @Param('variantId', new ParseUUIDPipe()) variantId: string,
     @Body() input: CreatePriceDto,
@@ -91,11 +117,33 @@ export class AdminProductsController {
     return this.products.createPrice(variantId, input, getMutationContext(request));
   }
 
+  @Post('variants/:variantId/prices/replace')
+  @RequirePermissions('catalog.price.manage')
+  @ApiOperation({
+    operationId: 'replaceAdminProductPrice',
+    summary: 'Atomically close the current open price and create its replacement',
+  })
+  @ApiCreatedResponse({ type: ProductDetailDto })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  @ApiUnprocessableEntityResponse({ type: ErrorResponseDto })
+  replacePrice(
+    @Param('variantId', new ParseUUIDPipe()) variantId: string,
+    @Body() input: ReplacePriceDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ProductDetailDto> {
+    return this.products.replacePrice(variantId, input, getMutationContext(request));
+  }
+
   @Post(':id/publish')
   @HttpCode(200)
   @RequirePermissions('catalog.product.publish')
   @ApiOperation({ operationId: 'publishAdminProduct', summary: 'Publish a complete draft product' })
   @ApiOkResponse({ type: ProductDetailDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  @ApiUnprocessableEntityResponse({ type: ErrorResponseDto })
   publish(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() input: ChangeProductStatusDto,

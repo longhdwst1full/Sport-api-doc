@@ -159,6 +159,27 @@ function markTarget(workbook, change, target) {
   return rows.length * columns.length;
 }
 
+function upsertRow(workbook, change, target) {
+  const worksheet = workbook.getWorksheet(target.sheet);
+  if (!worksheet) throw new Error(`Missing upsert sheet "${target.sheet}" for ${change.id}`);
+  const headers = headerMap(worksheet);
+  let matchedRow;
+  worksheet.eachRow((row, rowNumber) => {
+    if (rowNumber > 1 && matchesRow(row, headers, target.match)) matchedRow = row;
+  });
+  const row = matchedRow ?? worksheet.addRow([]);
+  for (const [header, value] of Object.entries(target.values)) {
+    const column = headers.get(header);
+    if (!column) throw new Error(`Missing upsert column "${header}" in "${target.sheet}" for ${change.id}`);
+    const cell = row.getCell(column);
+    cell.value = value;
+    applyRedStyle(cell);
+    cell.alignment = { vertical: 'top', wrapText: true };
+    cell.note = noteFor(change);
+  }
+  return Object.keys(target.values).length;
+}
+
 function rebuildChangeLog(workbook, changes) {
   const existing = workbook.getWorksheet('Change Log');
   if (existing) workbook.removeWorksheet(existing.id);
@@ -174,13 +195,17 @@ function rebuildChangeLog(workbook, changes) {
   worksheet.getRow(1).font = { color: { argb: 'FFFFFFFF' }, bold: true };
   worksheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F4E78' } };
   for (const change of changes) {
+    const targetDescriptions = [
+      ...change.targets.map((target) => `${target.sheet}: ${JSON.stringify(target.match)} → ${target.columns === '*' ? '*' : target.columns.join(', ')}${target.archiveRemovedRowsTo ? ` (archived to ${target.archiveRemovedRowsTo})` : ''}`),
+      ...(change.upsertRows ?? []).map((target) => `${target.sheet}: upsert ${JSON.stringify(target.match)}`),
+    ];
     const row = worksheet.addRow({
       id: change.id,
       date: change.date,
       scope: change.scope,
       summary: change.summary,
       sources: change.sources.join('\n'),
-      targets: change.targets.map((target) => `${target.sheet}: ${JSON.stringify(target.match)} → ${target.columns === '*' ? '*' : target.columns.join(', ')}${target.archiveRemovedRowsTo ? ` (archived to ${target.archiveRemovedRowsTo})` : ''}`).join('\n') || 'API-only; no table cell',
+      targets: targetDescriptions.join('\n') || 'API-only; no table cell',
     });
     row.eachCell((cell) => {
       applyRedStyle(cell);
@@ -209,6 +234,10 @@ async function main() {
     }
     if (!Array.isArray(change.targets)) throw new Error(`targets must be an array for ${change.id}`);
     for (const target of change.targets) markedCells += markTarget(workbook, change, target);
+    if (change.upsertRows !== undefined && !Array.isArray(change.upsertRows)) {
+      throw new Error(`upsertRows must be an array for ${change.id}`);
+    }
+    for (const target of change.upsertRows ?? []) markedCells += upsertRow(workbook, change, target);
   }
   rebuildChangeLog(workbook, payload.changes);
   const temporaryPath = `${workbookPath}.tmp`;
