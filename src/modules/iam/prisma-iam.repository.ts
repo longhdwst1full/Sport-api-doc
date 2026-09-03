@@ -63,6 +63,10 @@ export class PrismaIamRepository extends IamRepository {
       userType: row.userType as UserWithAssignments['userType'],
       status: row.status as UserWithAssignments['status'],
       permissionVersion: Number(row.permissionVersion),
+      failedLoginAttempts: row.failedLoginAttempts,
+      mustChangePassword: row.mustChangePassword,
+      ...(row.lockedAt ? { lockedAt: row.lockedAt.toISOString() } : {}),
+      ...(row.lockReason ? { lockReason: row.lockReason } : {}),
       assignments: row.roleAssignments.map((assignment) => ({
         id: assignment.id,
         userId: assignment.userId,
@@ -244,6 +248,7 @@ export class PrismaIamRepository extends IamRepository {
           displayName: input.displayName,
           status: USER_STATUS.ACTIVE,
           permissionVersion: 1,
+          mustChangePassword: true,
         },
       });
       const assignment = await transaction.userRoleAssignment.create({
@@ -265,6 +270,8 @@ export class PrismaIamRepository extends IamRepository {
         userType: USER_TYPE.STAFF,
         status: USER_STATUS.ACTIVE,
         permissionVersion: 1,
+        failedLoginAttempts: 0,
+        mustChangePassword: true,
         assignments: [{
           id: assignment.id,
           userId: user.id,
@@ -312,6 +319,8 @@ export class PrismaIamRepository extends IamRepository {
         },
         data: {
           status: USER_STATUS.LOCKED,
+          lockedAt: new Date(),
+          lockReason: reason,
           permissionVersion: { increment: 1 },
           version: { increment: 1 },
         },
@@ -363,6 +372,10 @@ export class PrismaIamRepository extends IamRepository {
         data: {
           status: USER_STATUS.ACTIVE,
           passwordHash,
+          failedLoginAttempts: 0,
+          mustChangePassword: true,
+          lockedAt: null,
+          lockReason: null,
           permissionVersion: { increment: 1 },
           version: { increment: 1 },
         },
@@ -379,7 +392,12 @@ export class PrismaIamRepository extends IamRepository {
           entityType: 'USER',
           entityId: userId,
           before: { status: USER_STATUS.LOCKED },
-          after: { status: USER_STATUS.ACTIVE, passwordReset: true },
+          after: {
+            status: USER_STATUS.ACTIVE,
+            passwordReset: true,
+            mustChangePassword: true,
+            failedLoginAttempts: 0,
+          },
         },
         transaction,
       );

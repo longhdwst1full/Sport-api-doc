@@ -23,6 +23,8 @@ import {
   ListProductsQueryDto,
   ProductDetailDto,
   ProductListResponseDto,
+  ProductPriceTimelineDto,
+  ProductPriceWindowDto,
   ProductSummaryDto,
   ReplacePriceDto,
   UpdateProductDto,
@@ -604,12 +606,22 @@ export class ProductsService {
   ): Promise<ProductDetailDto> {
     const startsAt = new Date(input.startsAt);
     const endsAt = input.endsAt ? new Date(input.endsAt) : undefined;
+    this.ensurePriceIsNotRetroactive(startsAt);
     if (endsAt && endsAt <= startsAt) throw new UnprocessableEntityException('endsAt must be after startsAt');
     try {
       const productId = await this.prisma.$transaction(async (transaction) => {
         const variant = await transaction.productVariant.findFirst({ where: { id: variantId } });
         if (!variant) throw new NotFoundException(PRODUCT_ERROR.VARIANT_NOT_FOUND);
         await this.lockProductIds(transaction, [variant.productId]);
+        const reference = await transaction.productPrice.findFirst({
+          where: {
+            productVariantId: variantId,
+            startsAt: { lte: startsAt },
+            OR: [{ endsAt: null }, { endsAt: { gt: startsAt } }],
+          },
+          orderBy: { startsAt: 'desc' },
+        });
+        this.ensureLargeReductionHasReason(reference?.amount, input.amount, input.reason);
         const priceId = uuidv7();
         await transaction.productPrice.create({
           data: {
@@ -636,6 +648,7 @@ export class ProductsService {
             entityType: 'PRODUCT_PRICE',
             entityId: priceId,
             after: { ...input, amount: input.amount },
+            reason: input.reason?.trim(),
           },
           transaction,
         );
@@ -657,6 +670,7 @@ export class ProductsService {
   ): Promise<ProductDetailDto> {
     const startsAt = new Date(input.startsAt);
     const endsAt = input.endsAt ? new Date(input.endsAt) : undefined;
+    this.ensurePriceIsNotRetroactive(startsAt);
     if (endsAt && endsAt <= startsAt) {
       throw new UnprocessableEntityException('endsAt must be after startsAt');
     }
@@ -686,6 +700,7 @@ export class ProductsService {
             'Replacement price must start after the current price starts',
           );
         }
+        this.ensureLargeReductionHasReason(current.amount, input.amount, input.reason);
 
         const closed = await transaction.productPrice.updateMany({
           where: {
@@ -738,8 +753,10 @@ export class ProductsService {
               id: priceId,
               amount: input.amount,
               startsAt: input.startsAt,
+              reason: input.reason?.trim() || null,
               endsAt: input.endsAt ?? null,
             },
+            reason: input.reason?.trim(),
           },
           transaction,
         );
@@ -751,6 +768,57 @@ export class ProductsService {
         throw new ConflictException(PRODUCT_ERROR.PRICE_OVERLAP);
       }
       throw error;
+    }
+  }
+
+  async getPriceTimeline(variantId: string): Promise<ProductPriceTimelineDto> {
+    const exists = await this.prisma.productVariant.count({ where: { id: variantId } });
+    if (!exists) throw new NotFoundException(PRODUCT_ERROR.VARIANT_NOT_FOUND);
+    const rows = await this.prisma.productPrice.findMany({
+      where: { productVariantId: variantId },
+      orderBy: [{ startsAt: 'desc' }, { id: 'desc' }],
+    });
+    const now = new Date();
+    const mapPrice = (row: (typeof rows)[number]): ProductPriceWindowDto => ({
+      id: row.id,
+      amount: row.amount.toFixed(2),
+      startsAt: row.startsAt.toISOString(),
+      endsAt: row.endsAt?.toISOString() ?? null,
+      status: row.status,
+      version: Number(row.version),
+      createdAt: row.createdAt.toISOString(),
+    });
+    const current = rows.find(
+      (row) => row.startsAt <= now && (!row.endsAt || row.endsAt > now),
+    );
+    return {
+      productVariantId: variantId,
+      current: current ? mapPrice(current) : null,
+      upcoming: rows.filter((row) => row.startsAt > now).reverse().map(mapPrice),
+      history: rows.filter((row) => Boolean(row.endsAt && row.endsAt <= now)).map(mapPrice),
+    };
+  }
+
+  private ensurePriceIsNotRetroactive(startsAt: Date): void {
+    const immediateRequestToleranceMs = 60_000;
+    if (startsAt.getTime() < Date.now() - immediateRequestToleranceMs) {
+      throw new UnprocessableEntityException('Price startsAt cannot be in the past');
+    }
+  }
+
+  private ensureLargeReductionHasReason(
+    referenceAmount: Prisma.Decimal | undefined,
+    nextAmount: string,
+    reason: string | undefined,
+  ): void {
+    if (!referenceAmount || referenceAmount.lte(0)) return;
+    const next = new Prisma.Decimal(nextAmount);
+    const reductionRatio = referenceAmount.minus(next).div(referenceAmount);
+    if (reductionRatio.gt(new Prisma.Decimal('0.20')) && !reason?.trim()) {
+      throw new UnprocessableEntityException({
+        code: 'PRICE_REDUCTION_REASON_REQUIRED',
+        message: 'A reason is required when reducing price by more than 20%',
+      });
     }
   }
 

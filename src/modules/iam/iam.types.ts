@@ -60,6 +60,10 @@ export interface User {
   userType: typeof USER_TYPE.STAFF | typeof USER_TYPE.SYSTEM;
   status: UserStatus;
   permissionVersion: number;
+  failedLoginAttempts: number;
+  mustChangePassword: boolean;
+  lockedAt?: string;
+  lockReason?: string;
 }
 
 export interface UserWithAssignments extends User {

@@ -1,5 +1,15 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsInt, IsNotEmpty, IsString, ValidateNested } from 'class-validator';
+import {
+  ArrayNotEmpty,
+  IsArray,
+  IsInt,
+  IsNotEmpty,
+  IsString,
+  MaxLength,
+  MinLength,
+  NotEquals,
+  ValidateNested,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class InventoryBalanceDto {
@@ -21,15 +31,26 @@ export class InventoryBalanceListDto {
 }
 
 export class StockAdjustmentItemInputDto {
-  @ApiProperty() @IsString() @IsNotEmpty() sku: string;
-  @ApiProperty({ example: 5 }) @IsInt() quantityDelta: number;
+  @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(64) sku: string;
+  @ApiProperty({ example: 5 }) @IsInt() @NotEquals(0) quantityDelta: number;
 }
 
 export class CreateStockAdjustmentDto {
-  @ApiProperty({ example: 'WH-HCM-01' }) @IsString() @IsNotEmpty() warehouseCode: string;
-  @ApiProperty() @IsString() @IsNotEmpty() reason: string;
+  @ApiProperty({ example: 'KHO-HCM-01' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(32)
+  warehouseCode: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(3)
+  @MaxLength(1000)
+  reason: string;
   @ApiProperty({ type: [StockAdjustmentItemInputDto] })
   @IsArray()
+  @ArrayNotEmpty()
   @ValidateNested({ each: true })
   @Type(() => StockAdjustmentItemInputDto)
   items: StockAdjustmentItemInputDto[];

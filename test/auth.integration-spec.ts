@@ -59,7 +59,8 @@ describe('Admin authentication', () => {
   afterAll(async () => {
     await cleanup.authSession.deleteMany({ where: { userId } });
     await cleanup.userRoleAssignment.deleteMany({ where: { userId } });
-    await cleanup.user.deleteMany({ where: { id: userId } });
+    // Audit logs are intentionally append-only and retain their actor reference.
+    // Integration environments must be disposable instead of deleting audit evidence.
     await Promise.all([prisma.$disconnect(), cleanup.$disconnect()]);
   });
 
@@ -77,8 +78,8 @@ describe('Admin authentication', () => {
     expect(principal.permissions).toContain('iam.user.manage');
     expect(principal.scopes).toEqual([{ type: 'GLOBAL' }]);
 
-    const second = await auth.refresh(first.refreshToken);
-    await expect(auth.refresh(first.refreshToken)).rejects.toBeInstanceOf(UnauthorizedException);
+    const second = await auth.refresh(first.refreshToken!);
+    await expect(auth.refresh(first.refreshToken!)).rejects.toBeInstanceOf(UnauthorizedException);
     await expect(auth.authorizeAccessToken(second.accessToken)).resolves.toMatchObject({ userId });
 
     await prisma.user.update({
@@ -92,7 +93,29 @@ describe('Admin authentication', () => {
 
   it('revokes the presented refresh token on logout', async () => {
     const pair = await auth.login({ identifier: email, password });
-    await auth.logout(pair.refreshToken);
-    await expect(auth.refresh(pair.refreshToken)).rejects.toBeInstanceOf(UnauthorizedException);
+    await auth.logout(pair.refreshToken!);
+    await expect(auth.refresh(pair.refreshToken!)).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('locks on the fifth consecutive failure, revokes active sessions, and writes audit', async () => {
+    await auth.login({ identifier: email, password });
+    for (let attempt = 1; attempt <= 5; attempt += 1) {
+      await expect(
+        auth.login(
+          { identifier: email, password: 'incorrect-password' },
+          'STAFF',
+          `lockout-${userId}-${attempt}`,
+        ),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+    }
+    await expect(prisma.user.findUnique({ where: { id: userId } })).resolves.toMatchObject({
+      status: 'LOCKED',
+      failedLoginAttempts: 5,
+      lockReason: 'MAX_FAILED_LOGIN_ATTEMPTS',
+    });
+    await expect(prisma.authSession.count({ where: { userId, revokedAt: null } })).resolves.toBe(0);
+    await expect(prisma.auditLog.count({
+      where: { entityId: userId, action: 'auth.account.auto_lock' },
+    })).resolves.toBe(1);
   });
 });

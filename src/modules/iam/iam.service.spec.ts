@@ -10,7 +10,7 @@ describe('IamService', () => {
   const context = { requestId: 'unit-request', actorUserId: 'unit-actor' };
   const ownerActor: AuthPrincipal = {
     userId: 'owner', sessionId: 'session', displayName: 'Owner', permissionVersion: '1',
-    permissions: [], scopes: [{ type: ScopeType.GLOBAL }],
+    permissions: [], scopes: [{ type: ScopeType.GLOBAL }], mustChangePassword: false,
   };
   const createService = () => {
     const organization = new OrganizationService(new InMemoryOrganizationRepository());

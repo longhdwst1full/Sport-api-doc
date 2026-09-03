@@ -12,6 +12,7 @@ import {
   ValidateIf,
   validateSync,
 } from 'class-validator';
+import { AUTH_TOKEN_TRANSPORT, AuthTokenTransport } from '../modules/auth/auth.constants';
 
 enum NodeEnvironment {
   DEVELOPMENT = 'development',
@@ -37,6 +38,9 @@ class EnvironmentVariables {
   @Transform(toBoolean)
   @IsBoolean()
   AUTH_BYPASS = true;
+
+  @IsEnum(AUTH_TOKEN_TRANSPORT)
+  AUTH_TOKEN_TRANSPORT: AuthTokenTransport = AUTH_TOKEN_TRANSPORT.BODY;
 
   @IsString()
   @MinLength(32)
@@ -119,6 +123,11 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
     }
     if (environment.AUTH_BYPASS) {
       throw new Error('Environment validation failed: AUTH_BYPASS must be false in production');
+    }
+    if (environment.AUTH_TOKEN_TRANSPORT !== AUTH_TOKEN_TRANSPORT.COOKIE) {
+      throw new Error(
+        'Environment validation failed: AUTH_TOKEN_TRANSPORT must be COOKIE in production',
+      );
     }
   }
   return { ...config, ...environment };

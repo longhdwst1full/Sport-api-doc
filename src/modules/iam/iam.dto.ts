@@ -57,6 +57,10 @@ export class UserDto {
   @ApiProperty({ enum: [USER_STATUS.ACTIVE, USER_STATUS.INVITED, USER_STATUS.LOCKED] })
   status: UserStatus;
   @ApiProperty({ example: 1 }) permissionVersion: number;
+  @ApiProperty({ example: 0, minimum: 0 }) failedLoginAttempts: number;
+  @ApiProperty({ example: false }) mustChangePassword: boolean;
+  @ApiPropertyOptional({ format: 'date-time' }) lockedAt?: string;
+  @ApiPropertyOptional() lockReason?: string;
   @ApiProperty({ type: [UserRoleAssignmentDto] }) assignments: UserRoleAssignmentDto[];
 }
 

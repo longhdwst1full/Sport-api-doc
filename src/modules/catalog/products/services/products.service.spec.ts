@@ -22,6 +22,38 @@ describe('ProductsService', () => {
     ).rejects.toBeInstanceOf(UnprocessableEntityException);
   });
 
+  it('rejects retroactive price windows before accessing persistence', async () => {
+    await expect(
+      service.createPrice(
+        '00000000-0000-7000-8000-000000000001',
+        { amount: '100000.00', startsAt: '2020-01-01T00:00:00.000Z' },
+        { requestId: 'request', actorUserId: '00000000-0000-7000-8000-000000000002' },
+      ),
+    ).rejects.toThrow('cannot be in the past');
+  });
+
+  it('requires a reason when a price is reduced by more than 20 percent', async () => {
+    const transaction = {
+      $queryRaw: jest.fn().mockResolvedValue([]),
+      productVariant: { findFirst: jest.fn().mockResolvedValue({ productId: 'product-id' }) },
+      productPrice: {
+        findFirst: jest.fn().mockResolvedValue({ amount: new Prisma.Decimal('100000.00') }),
+      },
+    };
+    const prisma = {
+      $transaction: jest.fn((work: (client: typeof transaction) => unknown) => work(transaction)),
+    } as unknown as PrismaService;
+    const pricing = new ProductsService(prisma, {} as AuditWriter);
+
+    await expect(
+      pricing.createPrice(
+        '00000000-0000-7000-8000-000000000001',
+        { amount: '79000.00', startsAt: new Date(Date.now() + 60_000).toISOString() },
+        { requestId: 'request', actorUserId: '00000000-0000-7000-8000-000000000002' },
+      ),
+    ).rejects.toThrow('A reason is required when reducing price by more than 20%');
+  });
+
   it('rejects archiving a product that is already archived', async () => {
     const transaction = {
       $queryRaw: jest.fn().mockResolvedValue([]),

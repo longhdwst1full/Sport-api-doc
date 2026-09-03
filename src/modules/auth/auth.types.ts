@@ -19,4 +19,5 @@ export interface AuthPrincipal {
   permissionVersion: string;
   permissions: string[];
   scopes: AuthScope[];
+  mustChangePassword: boolean;
 }

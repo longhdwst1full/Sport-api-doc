@@ -31,6 +31,7 @@ import {
   ProductDetailDto,
   ProductListResponseDto,
   ProductMediaDto,
+  ProductPriceTimelineDto,
   ReorderProductMediaDto,
   ReplacePriceDto,
   UpdateProductDto,
@@ -217,6 +218,20 @@ export class AdminProductsController {
     @Req() request: AuthenticatedRequest,
   ): Promise<ProductDetailDto> {
     return this.products.createPrice(variantId, input, getMutationContext(request));
+  }
+
+  @Get('variants/:variantId/prices')
+  @RequirePermissions('catalog.price.view')
+  @ApiOperation({
+    operationId: 'getAdminProductPriceTimeline',
+    summary: 'Get the current, upcoming, and immutable price history of a SKU',
+  })
+  @ApiOkResponse({ type: ProductPriceTimelineDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  getPriceTimeline(
+    @Param('variantId', new ParseUUIDPipe()) variantId: string,
+  ): Promise<ProductPriceTimelineDto> {
+    return this.products.getPriceTimeline(variantId);
   }
 
   @Post('variants/:variantId/prices/replace')
