@@ -40,7 +40,7 @@ export const createAdminMediaUpload = (
 };
 
 export const getCreateAdminMediaUploadMutationOptions = <
-  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -78,13 +78,15 @@ export type CreateAdminMediaUploadMutationResult = NonNullable<
   Awaited<ReturnType<typeof createAdminMediaUpload>>
 >;
 export type CreateAdminMediaUploadMutationBody = BodyType<CreateMediaUploadDto>;
-export type CreateAdminMediaUploadMutationError = ErrorType<ErrorResponseDto | ErrorResponseDto>;
+export type CreateAdminMediaUploadMutationError = ErrorType<
+  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+>;
 
 /**
  * @summary Create a short-lived signed Cloudinary image upload
  */
 export const useCreateAdminMediaUpload = <
-  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
   TContext = unknown,
 >(
   options?: {
@@ -124,7 +126,9 @@ export const finalizeAdminMediaUpload = (
 };
 
 export const getFinalizeAdminMediaUploadMutationOptions = <
-  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TError = ErrorType<
+    ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -162,13 +166,17 @@ export type FinalizeAdminMediaUploadMutationResult = NonNullable<
   Awaited<ReturnType<typeof finalizeAdminMediaUpload>>
 >;
 export type FinalizeAdminMediaUploadMutationBody = BodyType<FinalizeMediaUploadDto>;
-export type FinalizeAdminMediaUploadMutationError = ErrorType<ErrorResponseDto | ErrorResponseDto>;
+export type FinalizeAdminMediaUploadMutationError = ErrorType<
+  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+>;
 
 /**
  * @summary Verify a direct Cloudinary upload and return trusted metadata
  */
 export const useFinalizeAdminMediaUpload = <
-  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TError = ErrorType<
+    ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+  >,
   TContext = unknown,
 >(
   options?: {

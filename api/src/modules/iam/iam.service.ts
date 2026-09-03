@@ -14,6 +14,7 @@ import {
   AssignUserRoleDto,
   CreateStaffUserDto,
   LockStaffUserDto,
+  RevokeRoleAssignmentDto,
   PermissionListDto,
   RoleListDto,
   UserDto,
@@ -108,6 +109,37 @@ export class IamService {
       }
       throw error;
     }
+  }
+
+  async revokeRoleAssignment(
+    userId: string,
+    assignmentId: string,
+    input: RevokeRoleAssignmentDto,
+    context: MutationContext,
+    actor: AuthPrincipal,
+  ): Promise<UserDto> {
+    const user = await this.iam.findUser(userId);
+    if (!user) throw new NotFoundException('Staff user not found');
+    const assignment = user.assignments.find(({ id }) => id === assignmentId);
+    if (!assignment) throw new NotFoundException('Active role assignment not found');
+    if (assignment.roleCode === SystemRoleCode.OWNER) {
+      throw new ForbiddenException('OWNER assignment cannot be revoked');
+    }
+    this.authorizeAssignment(actor, {
+      roleCode: assignment.roleCode as SystemRoleCode,
+      scopeType: assignment.scopeType,
+      branchId: assignment.branchId,
+    });
+    const updated = await this.iam.revokeAssignmentAndIncrementPermissionVersion(
+      assignmentId,
+      userId,
+      input.reason.trim(),
+      context,
+    );
+    if (!updated) {
+      throw new ConflictException('Role assignment changed; reload the user list and try again');
+    }
+    return updated;
   }
 
   async createStaffUser(

@@ -1,12 +1,12 @@
 import { EditOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons';
-import { useQueryClient } from '@tanstack/react-query';
-import { Avatar, Button, Card, Input, Space, Table, Tag, Typography } from 'antd';
-import { useState } from 'react';
+import { Alert, Avatar, Button, Card, Input, Space, Table, Tag, Typography } from 'antd';
+import { useEffect, useState } from 'react';
 import { useDebounce } from 'use-debounce';
 import { PermissionGate } from '@/core/auth/permissions';
 import { useListAdminProducts } from '@/generated/api/catalog/catalog';
 import { ProductFormDrawer } from './product-form-drawer';
 import { ProductWorkflowDrawer } from './product-workflow-drawer';
+import { getApiErrorMessage } from '@/lib/api/error';
 
 const money = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' });
 
@@ -14,11 +14,13 @@ export function ProductsPage() {
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedSlug, setSelectedSlug] = useState<string>();
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [debouncedSearch] = useDebounce(search.trim(), 350);
-  const queryClient = useQueryClient();
+  useEffect(() => setPage(1), [debouncedSearch]);
   const query = useListAdminProducts({
-    page: 1,
-    limit: 20,
+    page,
+    limit: pageSize,
     search: debouncedSearch || undefined,
   });
   return (
@@ -50,15 +52,35 @@ export function ProductsPage() {
             className="max-w-md"
             onChange={(event) => setSearch(event.target.value)}
           />
-          <Button icon={<ReloadOutlined />} onClick={() => void queryClient.invalidateQueries()}>
+          <Button icon={<ReloadOutlined />} onClick={() => void query.refetch()}>
             Làm mới
           </Button>
         </div>
+        {query.isError && (
+          <Alert
+            className="mb-4"
+            showIcon
+            type="error"
+            message="Không tải được danh sách sản phẩm"
+            description={getApiErrorMessage(query.error, 'Vui lòng thử lại.')}
+            action={<Button onClick={() => void query.refetch()}>Thử lại</Button>}
+          />
+        )}
         <Table
           rowKey="id"
           loading={query.isPending}
           dataSource={query.data?.items ?? []}
-          pagination={false}
+          pagination={{
+            current: query.data?.meta.page ?? page,
+            pageSize: query.data?.meta.limit ?? pageSize,
+            total: query.data?.meta.total ?? 0,
+            showSizeChanger: true,
+            showTotal: (total) => `${total} sản phẩm`,
+            onChange: (nextPage, nextPageSize) => {
+              setPage(nextPageSize === pageSize ? nextPage : 1);
+              setPageSize(nextPageSize);
+            },
+          }}
           columns={[
             {
               title: 'Sản phẩm',

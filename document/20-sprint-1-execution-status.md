@@ -1,39 +1,39 @@
 # Sprint 1 execution status
 
-Ngày cập nhật: 2026-09-02
+Ngày cập nhật: 2026-09-03
 
 ## Kết luận
 
-Sprint 1 hiện đạt khoảng **90% functional scope** và **87% Definition of Done**. Foundation, staff/customer authentication core, fixed-role RBAC, persisted Organization/IAM, staff provisioning + lock/unlock/revoke-session, audit atomicity, Catalog CRUD/lifecycle, product/combo/price hardening và contract/codegen chain đã chạy thật. Sprint chưa được đánh dấu DONE vì secure protected-API transport, audit query, variant update, media attach/reorder, price scheduling và bắt buộc đổi mật khẩu lần đầu chưa hoàn chỉnh; BA/QA trên environment chung cũng chưa ký nhận.
+Sprint 1 hiện đạt khoảng **96% functional scope** và **92% Definition of Done**. Foundation, staff/customer authentication core, fixed-role RBAC, persisted Organization/IAM, staff lifecycle, assign/revoke role, Catalog CRUD/lifecycle, variant metadata, Product Media, combo/price hardening và contract/codegen chain đã chạy thật. Sprint chưa được đánh dấu DONE vì secure protected-API transport, audit query, price scheduling/history UI, bắt buộc đổi mật khẩu lần đầu và full permission matrix chưa hoàn chỉnh; BA/QA trên environment chung cũng chưa ký nhận.
 
 Hai tỷ lệ không được tính theo số file hoặc số endpoint:
 
-- **Functional scope 90/100**: chức năng người dùng thực hiện được so với phạm vi Sprint 1 đã khóa.
-- **Definition of Done 87/100**: mức hoàn thiện kỹ thuật gồm validation, authorization, transaction, test PostgreSQL/HTTP, UI states, migration, audit, tài liệu và QA acceptance.
+- **Functional scope 96/100**: chức năng người dùng thực hiện được so với phạm vi Sprint 1 đã khóa.
+- **Definition of Done 92/100**: mức hoàn thiện kỹ thuật gồm validation, authorization, transaction, test PostgreSQL/HTTP, UI states, migration, audit, tài liệu và QA acceptance.
 
 ## Bảng điểm có trọng số
 
-### Functional scope — 90/100
+### Functional scope — 96/100
 
 | Nhóm | Trọng số | Điểm đạt | Evidence chính | Phần còn thiếu |
 | --- | ---: | ---: | --- | --- |
 | Foundation/platform | 15 | **15** | Config validation, DB/migration/seed, error envelope, request-id, audit writer, CI foundation, OpenAPI V1 | Production readiness được tính trong DoD |
-| IAM/RBAC | 25 | **21** | Customer register/login email-phone; staff auth; fixed roles; create/assign; branch scope; lock/unlock/revoke session; audit | DB e2e rerun, secure customer protected-API transport, revoke assignment, audit query, forced password change, full scope matrix |
-| Catalog/Pricing/Media | 40 | **35** | Brand/category CRUD; product CRUD + lifecycle; variant lifecycle; combo builder; atomic replace price; storefront sellability/detail | Variant metadata update, media attach/reorder/alt-text, price scheduling |
-| Admin/Storefront/contract | 20 | **19** | Admin product type/combo/price flow, generated Orval SDK, canonical errors, Storefront product detail + SKU cart, PWA base | Media workflow và UI acceptance evidence |
-| **Tổng** | **100** | **90** |  |  |
+| IAM/RBAC | 25 | **23** | Customer register/login email-phone; staff auth; fixed roles; create/assign/revoke; branch scope; lock/unlock/revoke session; audit | Secure customer protected-API transport, audit query, forced password change, full scope matrix |
+| Catalog/Pricing/Media | 40 | **39** | Brand/category CRUD; product CRUD + lifecycle; variant update/lifecycle; persisted media attach/update/reorder/archive; combo builder; atomic replace price; storefront sellability/detail | Price scheduling/history UI |
+| Admin/Storefront/contract | 20 | **19** | Generated Orval SDK; Variant drawer; Product Media panel; IAM revoke modal; canonical errors; Storefront detail + SKU cart/PWA base | QA acceptance evidence toàn màn |
+| **Tổng** | **100** | **96** |  |  |
 
-### Definition of Done — 87/100
+### Definition of Done — 92/100
 
 | Nhóm DoD | Trọng số | Điểm đạt | Lý do chưa đủ điểm |
 | --- | ---: | ---: | --- |
-| Backend implementation + validation | 25 | **24** | Còn audit query và media/lifecycle API |
-| Authorization + transaction + concurrency | 20 | **18** | Product aggregate locking và race e2e đạt; thiếu full permission/scope HTTP matrix và least-privilege DB evidence |
-| Frontend happy/error/loading/empty/disabled | 15 | **14** | Product/combo/replace-price đạt core; media/price scheduling/variant edit chưa đủ acceptance |
+| Backend implementation + validation | 25 | **24** | Còn audit query và price history management |
+| Authorization + transaction + concurrency | 20 | **19** | Revoke/Media optimistic transaction và race e2e đạt; thiếu full permission/scope HTTP matrix và least-privilege DB evidence |
+| Frontend happy/error/loading/empty/disabled | 15 | **15** | Variant/Media/IAM revoke đã ghép generated SDK; còn QA acceptance toàn màn |
 | Unit + integration + HTTP tests | 20 | **19** | Unit, PostgreSQL integration và full HTTP e2e xanh; còn full permission matrix |
-| Migration + seed + audit + contract docs | 10 | **8** | Thiếu production DB role và backup/restore evidence |
-| BA acceptance + QA regression + release evidence | 10 | **4** | Chưa có BA sign-off, full regression và evidence environment chung |
-| **Tổng** | **100** | **87** |  |
+| Migration + seed + audit + contract docs | 10 | **9** | Thiếu production DB role và backup/restore evidence |
+| BA acceptance + QA regression + release evidence | 10 | **5** | Chưa có BA sign-off và full regression environment chung |
+| **Tổng** | **100** | **92** |  |
 
 ## Evidence nền đã đạt trước lần rà soát này
 
@@ -73,6 +73,15 @@ Evidence bổ sung ngày 2026-09-02:
 - [x] GitNexus re-index: **4.960 nodes, 9.112 edges, 187 clusters, 198 flows**; `detect-changes` ghi nhận **44 tracked files, 212 symbols, 63 affected flows, risk CRITICAL** do thay đổi xuyên DB/API/OpenAPI/Admin/Storefront.
 - [~] Risk CRITICAL đã được khép bằng lint/unit/build, migration-from-zero, PostgreSQL integration và HTTP concurrency e2e; process discovery vẫn bị truncate nên graph không phải bằng chứng kiểm thử duy nhất.
 
+Evidence bổ sung ngày 2026-09-03:
+
+- [x] API unit: **19 suites, 70/70 tests**; bổ sung media finalize persistence/idempotency/concurrency, product-media optimistic version và IAM revoke policy.
+- [x] PostgreSQL integration: **3 suites, 20/20 tests**.
+- [x] HTTP e2e `AUTH_BYPASS=false`: **2 suites, 10/10 tests**; có revoke assignment, variant metadata update, media attach/update/reorder và audit.
+- [x] Admin: **10 files, 18/18 tests**; generated hooks cho Variant/Media/IAM revoke, server error mapping và destructive confirmation.
+- [x] OpenAPI producer JSON, consumer YAML và Admin/Client generated SDK được regenerate từ NestJS source.
+- [~] Phân vùng `/` từng đầy làm PostgreSQL crash; thư mục tạm `/tmp/dctd-utc-source` đã được di chuyển nguyên vẹn sang `/home/longhd/.tmp-dctd/archived-dctd-utc-source`, sau đó database recovery healthy và e2e pass.
+
 ## Checklist chi tiết
 
 Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nhưng chưa đủ DoD; `[ ]` chưa làm.
@@ -108,7 +117,7 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 - [x] Unlock chuyển LOCKED→ACTIVE, reset Argon2 password và không phục hồi session cũ.
 - [x] Create/assign/lock/unlock ghi audit cùng transaction.
 - [x] Lifecycle/auth/scope core có unit và HTTP e2e chạy với PostgreSQL thật.
-- [ ] API revoke role assignment.
+- [x] API/UI revoke role assignment: giữ lịch sử REVOKED, reason + validTo, permissionVersion và audit atomic; chặn OWNER.
 - [ ] API/màn hình list-filter audit có redaction.
 - [ ] Bắt buộc đổi mật khẩu ở lần đăng nhập đầu tiên.
 - [ ] Full permission + GLOBAL/BRANCH HTTP test matrix.
@@ -123,8 +132,8 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 - [x] Effective VAT-included price dùng Decimal(19,2), amount > 0, no-overlap và replace open window atomic có optimistic check.
 - [x] Storefront chỉ trả product PUBLISHED và variant sellable; SKU INACTIVE không còn làm sai minPrice/response.
 - [x] Admin Product workflow đã ghép generated hooks cho product type, SKU, combo nhiều component và replace giá atomic.
-- [ ] Update metadata variant.
-- [ ] Media finalize verification + attach/reorder/alt-text API và Admin UI.
+- [x] Update metadata variant optimistic version; SKU immutable; Admin drawer map field error.
+- [x] Media finalize provider verification + persist idempotent; attach/reorder/alt-text/primary/archive API và Admin UI.
 - [x] API + Admin replace giá atomic có optimistic check và test; price scheduling riêng chưa thuộc flow này.
 - [ ] Update bundle items và preview availability theo component.
 
@@ -138,7 +147,7 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 - [x] Axios canonical fetcher/error mapping; loading/error patterns.
 - [x] Storefront Next.js và PWA base; Catalog list/detail generated API.
 - [~] UI states có ở flow chính, chưa có QA matrix toàn bộ màn.
-- [ ] Media library và product media reorder UI.
+- [x] Product media upload/attach/alt/primary/reorder/archive UI; media library dùng lại toàn hệ thống vẫn là MED-02/P1.
 - [ ] Hoàn thiện price scheduling UI.
 
 ### Trước khi chốt Sprint 1 DONE
@@ -146,8 +155,8 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 - [~] PostgreSQL local hoạt động; Supabase dev/staging vẫn cần pooler host thật mà không commit secret.
 - [x] 7 migration applied local, seed demo có 4 product gồm combo, 20 PostgreSQL integration và full 10 HTTP e2e pass.
 - [ ] Chạy full permission/branch-scope regression.
-- [ ] Hoàn thiện Variant update, Product Media và Price lifecycle trong Sprint 1.
-- [ ] Chốt hoặc chuyển scope có Decision Log cho audit query/revoke assignment/forced password change.
+- [~] Variant update và Product Media đã hoàn thiện core; còn Price scheduling/history UI.
+- [ ] Chốt hoặc chuyển scope có Decision Log cho audit query/forced password change.
 - [ ] BA acceptance và QA regression trên environment chung.
 - [ ] Không còn P0/P1 bug mở.
 - [ ] Lưu screenshot/API/test/log evidence và cập nhật Function Matrix.
@@ -156,7 +165,7 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 
 1. **DB/e2e evidence**: có thể nâng DoD khoảng 3–5 điểm.
 2. **Variant update + Media workflow**: khoảng 4–5 điểm functional và 3–4 điểm DoD.
-3. **Audit query + revoke assignment + permission matrix**: khoảng 3 điểm functional và 3 điểm DoD.
+3. **Audit query + permission matrix**: khoảng 2 điểm functional và 3 điểm DoD.
 4. **Price lifecycle UI + QA/BA acceptance**: khoảng 2 điểm functional và 5–7 điểm DoD.
 
 ## Function checklist
@@ -166,13 +175,13 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 | IAM-01 Customer auth | DONE-CORE | Register CUSTOMER ACTIVE; email/phone identifier; E.164; Argon2; session/audit atomic; Storefront login/register generated SDK; DB e2e pass | Verification; protected-API auto attach/refresh; forgot password nằm IAM-02 |
 | IAM-03 Staff lifecycle | DONE-CORE | Tạo ACTIVE staff bằng email + Argon2 default password; lock revoke all sessions; unlock reset password; OWNER/Branch scope; audit atomic; HTTP e2e pass | Bắt buộc đổi mật khẩu lần đầu |
 | IAM-04 Fixed RBAC | DONE-CORE | 3 system roles; deny unknown; no create-role API; seed hội tụ | Test matrix toàn permission catalog |
-| IAM-05 Assignment scope | DONE-CORE | GLOBAL/BRANCH; duplicate 201/409; permissionVersion atomic; audit | API revoke assignment; thêm e2e Branch Manager cross-branch deny |
+| IAM-05 Assignment scope | DONE-V1-CORE | GLOBAL/BRANCH; duplicate 201/409; assign/revoke atomic; permissionVersion; audit; OWNER revoke deny | Thêm full e2e Branch Manager cross-branch deny matrix |
 | IAM-06 Audit | DONE-WRITE | Append-only UPDATE/DELETE/TRUNCATE; actor constraint; transaction rollback | API list/filter/redaction và màn admin audit |
 | CAT-01 Brand | DONE-CORE | Persisted create/list/update/active-search/activate/deactivate; optimistic version; audit; admin screen | Logo asset workflow độc lập |
 | CAT-02 Category | DONE-V1-CORE | Persisted create/list/update/search/activate/deactivate; parent immutable; chặn tắt cha còn con active | Move subtree đã chốt P1; tiếp tục in-use test matrix |
 | CAT-03 Product SPU | DONE-CORE | Create/list/detail/update/publish/archive/reactivate-to-DRAFT; STANDARD/BUNDLE invariant; aggregate row locking; version conflict; audit; Admin productType generated UI | Một số metadata edit nâng cao |
-| CAT-04 Variant/SKU | PARTIAL | Persisted create/archive/reactivate; SKU/barcode constraints; optimistic version; combo component protection; admin actions | Update mutable fields và integration matrix đầy đủ |
-| CAT-05 Product media | PARTIAL | Tables, provider metadata, ownership/primary constraints | Finalize provider verification, attach/reorder/alt-text APIs và admin UI |
+| CAT-04 Variant/SKU | DONE-V1-CORE | Persisted create/update/archive/reactivate; SKU immutable; barcode/dimension validation; optimistic version; admin drawer | QA acceptance toàn màn |
+| CAT-05 Product media | DONE-V1-CORE | Cloudinary verify + persist idempotent; attach/update/reorder/archive; ownership/primary; product version; Admin panel | MED-02 media library/reuse và provider cleanup là P1 |
 | CAT-07 Storefront catalog | DONE-CORE | Chỉ PUBLISHED + sellable variant; minPrice loại INACTIVE; category INACTIVE không lọc/hiện; slug detail/list | Brand/price filter, sort và SEO detail page |
 | CAT-12 Fixed combo | DONE-LIFECYCLE-CORE | Persisted per variant; no nested; quantity > 0; publish validate component; publish/archive concurrency invariant; response bundle per SKU | Update bundle items và preview stock availability theo thành phần |
 | PRI-01 Effective price | DONE-CORE | Decimal(19,2), amount > 0, VAT-included global price, no-overlap, atomic replace + optimistic check, audit; Admin replace UI | Price scheduling/history management UI |

@@ -13,6 +13,23 @@ export interface ProductVariantDto {
   sku: string;
   barcode?: string;
   name: string;
+  /** @minimum 0 */
+  weightGrams: number;
+  /**
+   * @minimum 1
+   * @nullable
+   */
+  lengthMm?: number | null;
+  /**
+   * @minimum 1
+   * @nullable
+   */
+  widthMm?: number | null;
+  /**
+   * @minimum 1
+   * @nullable
+   */
+  heightMm?: number | null;
   status: ProductVariantDtoStatus;
   version: number;
   /** @nullable */

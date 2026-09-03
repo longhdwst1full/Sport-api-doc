@@ -12,11 +12,14 @@ export interface UpdateProductDto {
   productNo?: string;
   name?: string;
   slug?: string;
-  brandId?: string;
-  shortDescription?: string;
-  description?: string;
   categoryIds?: string[];
   primaryCategoryId?: string;
+  /** @nullable */
+  brandId?: string | null;
+  /** @nullable */
+  shortDescription?: string | null;
+  /** @nullable */
+  description?: string | null;
   /** @minimum 0 */
   expectedVersion: number;
 }

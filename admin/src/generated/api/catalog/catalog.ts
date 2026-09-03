@@ -23,11 +23,13 @@ import type {
 
 import type {
   ActiveLookupResponseDto,
+  AttachProductMediaDto,
   BrandDto,
   BrandListDto,
   CategoryDto,
   CategoryListDto,
   ChangeMasterStatusDto,
+  ChangeProductMediaStatusDto,
   ChangeProductStatusDto,
   CreateBrandDto,
   CreateBundleDto,
@@ -39,6 +41,8 @@ import type {
   ListAdminProductsParams,
   ProductDetailDto,
   ProductListResponseDto,
+  ProductMediaDto,
+  ReorderProductMediaDto,
   ReplacePriceDto,
   SearchActiveAdminBrandsParams,
   SearchActiveAdminCategoriesParams,
@@ -46,6 +50,8 @@ import type {
   UpdateBrandDto,
   UpdateCategoryDto,
   UpdateProductDto,
+  UpdateProductMediaDto,
+  UpdateVariantDto,
 } from './models';
 
 import { apiFetcher } from '../../../lib/api/fetcher';
@@ -1174,7 +1180,7 @@ export const getListAdminProductsQueryKey = (params?: ListAdminProductsParams) =
 
 export const getListAdminProductsQueryOptions = <
   TData = Awaited<ReturnType<typeof listAdminProducts>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   params?: ListAdminProductsParams,
   options?: {
@@ -1198,11 +1204,11 @@ export const getListAdminProductsQueryOptions = <
 export type ListAdminProductsQueryResult = NonNullable<
   Awaited<ReturnType<typeof listAdminProducts>>
 >;
-export type ListAdminProductsQueryError = ErrorType<unknown>;
+export type ListAdminProductsQueryError = ErrorType<ErrorResponseDto | ErrorResponseDto>;
 
 export function useListAdminProducts<
   TData = Awaited<ReturnType<typeof listAdminProducts>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   params: undefined | ListAdminProductsParams,
   options: {
@@ -1220,7 +1226,7 @@ export function useListAdminProducts<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListAdminProducts<
   TData = Awaited<ReturnType<typeof listAdminProducts>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   params?: ListAdminProductsParams,
   options?: {
@@ -1238,7 +1244,7 @@ export function useListAdminProducts<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListAdminProducts<
   TData = Awaited<ReturnType<typeof listAdminProducts>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   params?: ListAdminProductsParams,
   options?: {
@@ -1252,7 +1258,7 @@ export function useListAdminProducts<
 
 export function useListAdminProducts<
   TData = Awaited<ReturnType<typeof listAdminProducts>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   params?: ListAdminProductsParams,
   options?: {
@@ -1288,7 +1294,7 @@ export const createAdminProduct = (
 };
 
 export const getCreateAdminProductMutationOptions = <
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1326,12 +1332,15 @@ export type CreateAdminProductMutationResult = NonNullable<
   Awaited<ReturnType<typeof createAdminProduct>>
 >;
 export type CreateAdminProductMutationBody = BodyType<CreateProductDto>;
-export type CreateAdminProductMutationError = ErrorType<unknown>;
+export type CreateAdminProductMutationError = ErrorType<ErrorResponseDto | ErrorResponseDto>;
 
 /**
  * @summary Create product
  */
-export const useCreateAdminProduct = <TError = ErrorType<unknown>, TContext = unknown>(
+export const useCreateAdminProduct = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createAdminProduct>>,
@@ -1375,7 +1384,7 @@ export const getSearchActiveAdminProductVariantsQueryKey = (
 
 export const getSearchActiveAdminProductVariantsQueryOptions = <
   TData = Awaited<ReturnType<typeof searchActiveAdminProductVariants>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   params?: SearchActiveAdminProductVariantsParams,
   options?: {
@@ -1402,11 +1411,13 @@ export const getSearchActiveAdminProductVariantsQueryOptions = <
 export type SearchActiveAdminProductVariantsQueryResult = NonNullable<
   Awaited<ReturnType<typeof searchActiveAdminProductVariants>>
 >;
-export type SearchActiveAdminProductVariantsQueryError = ErrorType<unknown>;
+export type SearchActiveAdminProductVariantsQueryError = ErrorType<
+  ErrorResponseDto | ErrorResponseDto
+>;
 
 export function useSearchActiveAdminProductVariants<
   TData = Awaited<ReturnType<typeof searchActiveAdminProductVariants>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   params: undefined | SearchActiveAdminProductVariantsParams,
   options: {
@@ -1426,7 +1437,7 @@ export function useSearchActiveAdminProductVariants<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useSearchActiveAdminProductVariants<
   TData = Awaited<ReturnType<typeof searchActiveAdminProductVariants>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   params?: SearchActiveAdminProductVariantsParams,
   options?: {
@@ -1446,7 +1457,7 @@ export function useSearchActiveAdminProductVariants<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useSearchActiveAdminProductVariants<
   TData = Awaited<ReturnType<typeof searchActiveAdminProductVariants>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   params?: SearchActiveAdminProductVariantsParams,
   options?: {
@@ -1462,7 +1473,7 @@ export function useSearchActiveAdminProductVariants<
 
 export function useSearchActiveAdminProductVariants<
   TData = Awaited<ReturnType<typeof searchActiveAdminProductVariants>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   params?: SearchActiveAdminProductVariantsParams,
   options?: {
@@ -1500,7 +1511,7 @@ export const getGetAdminProductQueryKey = (slug?: string) => {
 
 export const getGetAdminProductQueryOptions = <
   TData = Awaited<ReturnType<typeof getAdminProduct>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   slug: string,
   options?: {
@@ -1522,11 +1533,11 @@ export const getGetAdminProductQueryOptions = <
 };
 
 export type GetAdminProductQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminProduct>>>;
-export type GetAdminProductQueryError = ErrorType<unknown>;
+export type GetAdminProductQueryError = ErrorType<ErrorResponseDto | ErrorResponseDto>;
 
 export function useGetAdminProduct<
   TData = Awaited<ReturnType<typeof getAdminProduct>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   slug: string,
   options: {
@@ -1544,7 +1555,7 @@ export function useGetAdminProduct<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetAdminProduct<
   TData = Awaited<ReturnType<typeof getAdminProduct>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   slug: string,
   options?: {
@@ -1562,7 +1573,7 @@ export function useGetAdminProduct<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetAdminProduct<
   TData = Awaited<ReturnType<typeof getAdminProduct>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   slug: string,
   options?: {
@@ -1576,7 +1587,7 @@ export function useGetAdminProduct<
 
 export function useGetAdminProduct<
   TData = Awaited<ReturnType<typeof getAdminProduct>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   slug: string,
   options?: {
@@ -1608,7 +1619,7 @@ export const updateAdminProduct = (id: string, updateProductDto: BodyType<Update
 };
 
 export const getUpdateAdminProductMutationOptions = <
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1646,12 +1657,15 @@ export type UpdateAdminProductMutationResult = NonNullable<
   Awaited<ReturnType<typeof updateAdminProduct>>
 >;
 export type UpdateAdminProductMutationBody = BodyType<UpdateProductDto>;
-export type UpdateAdminProductMutationError = ErrorType<unknown>;
+export type UpdateAdminProductMutationError = ErrorType<ErrorResponseDto | ErrorResponseDto>;
 
 /**
  * @summary Update product
  */
-export const useUpdateAdminProduct = <TError = ErrorType<unknown>, TContext = unknown>(
+export const useUpdateAdminProduct = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof updateAdminProduct>>,
@@ -1690,7 +1704,7 @@ export const createAdminProductVariant = (
 };
 
 export const getCreateAdminProductVariantMutationOptions = <
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1728,12 +1742,15 @@ export type CreateAdminProductVariantMutationResult = NonNullable<
   Awaited<ReturnType<typeof createAdminProductVariant>>
 >;
 export type CreateAdminProductVariantMutationBody = BodyType<CreateVariantDto>;
-export type CreateAdminProductVariantMutationError = ErrorType<unknown>;
+export type CreateAdminProductVariantMutationError = ErrorType<ErrorResponseDto | ErrorResponseDto>;
 
 /**
  * @summary Create a sellable SKU variant
  */
-export const useCreateAdminProductVariant = <TError = ErrorType<unknown>, TContext = unknown>(
+export const useCreateAdminProductVariant = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createAdminProductVariant>>,
@@ -1750,6 +1767,532 @@ export const useCreateAdminProductVariant = <TError = ErrorType<unknown>, TConte
   TContext
 > => {
   const mutationOptions = getCreateAdminProductVariantMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+/**
+ * @summary Update mutable SKU metadata
+ */
+export const updateAdminProductVariant = (
+  variantId: string,
+  updateVariantDto: BodyType<UpdateVariantDto>,
+) => {
+  return apiFetcher<ProductDetailDto>({
+    url: `/api/v1/admin/products/variants/${variantId}`,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    data: updateVariantDto,
+  });
+};
+
+export const getUpdateAdminProductVariantMutationOptions = <
+  TError = ErrorType<
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateAdminProductVariant>>,
+    TError,
+    { variantId: string; data: BodyType<UpdateVariantDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateAdminProductVariant>>,
+  TError,
+  { variantId: string; data: BodyType<UpdateVariantDto> },
+  TContext
+> => {
+  const mutationKey = ['updateAdminProductVariant'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateAdminProductVariant>>,
+    { variantId: string; data: BodyType<UpdateVariantDto> }
+  > = (props) => {
+    const { variantId, data } = props ?? {};
+
+    return updateAdminProductVariant(variantId, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateAdminProductVariantMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateAdminProductVariant>>
+>;
+export type UpdateAdminProductVariantMutationBody = BodyType<UpdateVariantDto>;
+export type UpdateAdminProductVariantMutationError = ErrorType<
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+>;
+
+/**
+ * @summary Update mutable SKU metadata
+ */
+export const useUpdateAdminProductVariant = <
+  TError = ErrorType<
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateAdminProductVariant>>,
+      TError,
+      { variantId: string; data: BodyType<UpdateVariantDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateAdminProductVariant>>,
+  TError,
+  { variantId: string; data: BodyType<UpdateVariantDto> },
+  TContext
+> => {
+  const mutationOptions = getUpdateAdminProductVariantMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+/**
+ * @summary Attach one finalized media asset to a product or SKU
+ */
+export const attachAdminProductMedia = (
+  id: string,
+  attachProductMediaDto: BodyType<AttachProductMediaDto>,
+  signal?: AbortSignal,
+) => {
+  return apiFetcher<ProductMediaDto[]>({
+    url: `/api/v1/admin/products/${id}/media`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: attachProductMediaDto,
+    signal,
+  });
+};
+
+export const getAttachAdminProductMediaMutationOptions = <
+  TError = ErrorType<
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof attachAdminProductMedia>>,
+    TError,
+    { id: string; data: BodyType<AttachProductMediaDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof attachAdminProductMedia>>,
+  TError,
+  { id: string; data: BodyType<AttachProductMediaDto> },
+  TContext
+> => {
+  const mutationKey = ['attachAdminProductMedia'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof attachAdminProductMedia>>,
+    { id: string; data: BodyType<AttachProductMediaDto> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return attachAdminProductMedia(id, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AttachAdminProductMediaMutationResult = NonNullable<
+  Awaited<ReturnType<typeof attachAdminProductMedia>>
+>;
+export type AttachAdminProductMediaMutationBody = BodyType<AttachProductMediaDto>;
+export type AttachAdminProductMediaMutationError = ErrorType<
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+>;
+
+/**
+ * @summary Attach one finalized media asset to a product or SKU
+ */
+export const useAttachAdminProductMedia = <
+  TError = ErrorType<
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof attachAdminProductMedia>>,
+      TError,
+      { id: string; data: BodyType<AttachProductMediaDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof attachAdminProductMedia>>,
+  TError,
+  { id: string; data: BodyType<AttachProductMediaDto> },
+  TContext
+> => {
+  const mutationOptions = getAttachAdminProductMediaMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+/**
+ * @summary Replace the order of all active product media
+ */
+export const reorderAdminProductMedia = (
+  id: string,
+  reorderProductMediaDto: BodyType<ReorderProductMediaDto>,
+) => {
+  return apiFetcher<ProductMediaDto[]>({
+    url: `/api/v1/admin/products/${id}/media/reorder`,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    data: reorderProductMediaDto,
+  });
+};
+
+export const getReorderAdminProductMediaMutationOptions = <
+  TError = ErrorType<
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof reorderAdminProductMedia>>,
+    TError,
+    { id: string; data: BodyType<ReorderProductMediaDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof reorderAdminProductMedia>>,
+  TError,
+  { id: string; data: BodyType<ReorderProductMediaDto> },
+  TContext
+> => {
+  const mutationKey = ['reorderAdminProductMedia'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof reorderAdminProductMedia>>,
+    { id: string; data: BodyType<ReorderProductMediaDto> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return reorderAdminProductMedia(id, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReorderAdminProductMediaMutationResult = NonNullable<
+  Awaited<ReturnType<typeof reorderAdminProductMedia>>
+>;
+export type ReorderAdminProductMediaMutationBody = BodyType<ReorderProductMediaDto>;
+export type ReorderAdminProductMediaMutationError = ErrorType<
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+>;
+
+/**
+ * @summary Replace the order of all active product media
+ */
+export const useReorderAdminProductMedia = <
+  TError = ErrorType<
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof reorderAdminProductMedia>>,
+      TError,
+      { id: string; data: BodyType<ReorderProductMediaDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof reorderAdminProductMedia>>,
+  TError,
+  { id: string; data: BodyType<ReorderProductMediaDto> },
+  TContext
+> => {
+  const mutationOptions = getReorderAdminProductMediaMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+/**
+ * @summary Update product media alt text or primary flag
+ */
+export const updateAdminProductMedia = (
+  id: string,
+  mediaId: string,
+  updateProductMediaDto: BodyType<UpdateProductMediaDto>,
+) => {
+  return apiFetcher<ProductMediaDto[]>({
+    url: `/api/v1/admin/products/${id}/media/${mediaId}`,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    data: updateProductMediaDto,
+  });
+};
+
+export const getUpdateAdminProductMediaMutationOptions = <
+  TError = ErrorType<
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateAdminProductMedia>>,
+    TError,
+    { id: string; mediaId: string; data: BodyType<UpdateProductMediaDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateAdminProductMedia>>,
+  TError,
+  { id: string; mediaId: string; data: BodyType<UpdateProductMediaDto> },
+  TContext
+> => {
+  const mutationKey = ['updateAdminProductMedia'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateAdminProductMedia>>,
+    { id: string; mediaId: string; data: BodyType<UpdateProductMediaDto> }
+  > = (props) => {
+    const { id, mediaId, data } = props ?? {};
+
+    return updateAdminProductMedia(id, mediaId, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateAdminProductMediaMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateAdminProductMedia>>
+>;
+export type UpdateAdminProductMediaMutationBody = BodyType<UpdateProductMediaDto>;
+export type UpdateAdminProductMediaMutationError = ErrorType<
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+>;
+
+/**
+ * @summary Update product media alt text or primary flag
+ */
+export const useUpdateAdminProductMedia = <
+  TError = ErrorType<
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateAdminProductMedia>>,
+      TError,
+      { id: string; mediaId: string; data: BodyType<UpdateProductMediaDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateAdminProductMedia>>,
+  TError,
+  { id: string; mediaId: string; data: BodyType<UpdateProductMediaDto> },
+  TContext
+> => {
+  const mutationOptions = getUpdateAdminProductMediaMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+/**
+ * @summary Archive a product media link without deleting its asset
+ */
+export const archiveAdminProductMedia = (
+  id: string,
+  mediaId: string,
+  changeProductMediaStatusDto: BodyType<ChangeProductMediaStatusDto>,
+  signal?: AbortSignal,
+) => {
+  return apiFetcher<ProductMediaDto[]>({
+    url: `/api/v1/admin/products/${id}/media/${mediaId}/archive`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: changeProductMediaStatusDto,
+    signal,
+  });
+};
+
+export const getArchiveAdminProductMediaMutationOptions = <
+  TError = ErrorType<
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof archiveAdminProductMedia>>,
+    TError,
+    { id: string; mediaId: string; data: BodyType<ChangeProductMediaStatusDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof archiveAdminProductMedia>>,
+  TError,
+  { id: string; mediaId: string; data: BodyType<ChangeProductMediaStatusDto> },
+  TContext
+> => {
+  const mutationKey = ['archiveAdminProductMedia'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof archiveAdminProductMedia>>,
+    { id: string; mediaId: string; data: BodyType<ChangeProductMediaStatusDto> }
+  > = (props) => {
+    const { id, mediaId, data } = props ?? {};
+
+    return archiveAdminProductMedia(id, mediaId, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ArchiveAdminProductMediaMutationResult = NonNullable<
+  Awaited<ReturnType<typeof archiveAdminProductMedia>>
+>;
+export type ArchiveAdminProductMediaMutationBody = BodyType<ChangeProductMediaStatusDto>;
+export type ArchiveAdminProductMediaMutationError = ErrorType<
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+>;
+
+/**
+ * @summary Archive a product media link without deleting its asset
+ */
+export const useArchiveAdminProductMedia = <
+  TError = ErrorType<
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof archiveAdminProductMedia>>,
+      TError,
+      { id: string; mediaId: string; data: BodyType<ChangeProductMediaStatusDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof archiveAdminProductMedia>>,
+  TError,
+  { id: string; mediaId: string; data: BodyType<ChangeProductMediaStatusDto> },
+  TContext
+> => {
+  const mutationOptions = getArchiveAdminProductMediaMutationOptions(options);
 
   return useMutation(mutationOptions, queryClient);
 };
@@ -1772,7 +2315,9 @@ export const createAdminProductPrice = (
 };
 
 export const getCreateAdminProductPriceMutationOptions = <
-  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+  TError = ErrorType<
+    ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1811,14 +2356,16 @@ export type CreateAdminProductPriceMutationResult = NonNullable<
 >;
 export type CreateAdminProductPriceMutationBody = BodyType<CreatePriceDto>;
 export type CreateAdminProductPriceMutationError = ErrorType<
-  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
 >;
 
 /**
  * @summary Create a global VAT-included price window
  */
 export const useCreateAdminProductPrice = <
-  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+  TError = ErrorType<
+    ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+  >,
   TContext = unknown,
 >(
   options?: {
@@ -1859,7 +2406,14 @@ export const replaceAdminProductPrice = (
 };
 
 export const getReplaceAdminProductPriceMutationOptions = <
-  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+  TError = ErrorType<
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1898,14 +2452,26 @@ export type ReplaceAdminProductPriceMutationResult = NonNullable<
 >;
 export type ReplaceAdminProductPriceMutationBody = BodyType<ReplacePriceDto>;
 export type ReplaceAdminProductPriceMutationError = ErrorType<
-  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
 >;
 
 /**
  * @summary Atomically close the current open price and create its replacement
  */
 export const useReplaceAdminProductPrice = <
-  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+  TError = ErrorType<
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+  >,
   TContext = unknown,
 >(
   options?: {
@@ -1946,7 +2512,9 @@ export const publishAdminProduct = (
 };
 
 export const getPublishAdminProductMutationOptions = <
-  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+  TError = ErrorType<
+    ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1985,14 +2553,16 @@ export type PublishAdminProductMutationResult = NonNullable<
 >;
 export type PublishAdminProductMutationBody = BodyType<ChangeProductStatusDto>;
 export type PublishAdminProductMutationError = ErrorType<
-  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
 >;
 
 /**
  * @summary Publish a complete draft product
  */
 export const usePublishAdminProduct = <
-  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+  TError = ErrorType<
+    ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+  >,
   TContext = unknown,
 >(
   options?: {
@@ -2033,7 +2603,7 @@ export const archiveAdminProduct = (
 };
 
 export const getArchiveAdminProductMutationOptions = <
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -2071,12 +2641,15 @@ export type ArchiveAdminProductMutationResult = NonNullable<
   Awaited<ReturnType<typeof archiveAdminProduct>>
 >;
 export type ArchiveAdminProductMutationBody = BodyType<ChangeProductStatusDto>;
-export type ArchiveAdminProductMutationError = ErrorType<unknown>;
+export type ArchiveAdminProductMutationError = ErrorType<ErrorResponseDto | ErrorResponseDto>;
 
 /**
  * @summary Archive a product or combo and remove it from storefront sales
  */
-export const useArchiveAdminProduct = <TError = ErrorType<unknown>, TContext = unknown>(
+export const useArchiveAdminProduct = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof archiveAdminProduct>>,
@@ -2115,7 +2688,7 @@ export const reactivateAdminProduct = (
 };
 
 export const getReactivateAdminProductMutationOptions = <
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -2153,12 +2726,15 @@ export type ReactivateAdminProductMutationResult = NonNullable<
   Awaited<ReturnType<typeof reactivateAdminProduct>>
 >;
 export type ReactivateAdminProductMutationBody = BodyType<ChangeProductStatusDto>;
-export type ReactivateAdminProductMutationError = ErrorType<unknown>;
+export type ReactivateAdminProductMutationError = ErrorType<ErrorResponseDto | ErrorResponseDto>;
 
 /**
  * @summary Reactivate an archived product or combo as DRAFT for review
  */
-export const useReactivateAdminProduct = <TError = ErrorType<unknown>, TContext = unknown>(
+export const useReactivateAdminProduct = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof reactivateAdminProduct>>,
@@ -2197,7 +2773,7 @@ export const archiveAdminProductVariant = (
 };
 
 export const getArchiveAdminProductVariantMutationOptions = <
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -2235,12 +2811,17 @@ export type ArchiveAdminProductVariantMutationResult = NonNullable<
   Awaited<ReturnType<typeof archiveAdminProductVariant>>
 >;
 export type ArchiveAdminProductVariantMutationBody = BodyType<ChangeProductStatusDto>;
-export type ArchiveAdminProductVariantMutationError = ErrorType<unknown>;
+export type ArchiveAdminProductVariantMutationError = ErrorType<
+  ErrorResponseDto | ErrorResponseDto
+>;
 
 /**
  * @summary Archive one sellable SKU variant
  */
-export const useArchiveAdminProductVariant = <TError = ErrorType<unknown>, TContext = unknown>(
+export const useArchiveAdminProductVariant = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof archiveAdminProductVariant>>,
@@ -2279,7 +2860,7 @@ export const reactivateAdminProductVariant = (
 };
 
 export const getReactivateAdminProductVariantMutationOptions = <
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -2317,12 +2898,17 @@ export type ReactivateAdminProductVariantMutationResult = NonNullable<
   Awaited<ReturnType<typeof reactivateAdminProductVariant>>
 >;
 export type ReactivateAdminProductVariantMutationBody = BodyType<ChangeProductStatusDto>;
-export type ReactivateAdminProductVariantMutationError = ErrorType<unknown>;
+export type ReactivateAdminProductVariantMutationError = ErrorType<
+  ErrorResponseDto | ErrorResponseDto
+>;
 
 /**
  * @summary Reactivate one archived SKU variant
  */
-export const useReactivateAdminProductVariant = <TError = ErrorType<unknown>, TContext = unknown>(
+export const useReactivateAdminProductVariant = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof reactivateAdminProductVariant>>,
@@ -2361,7 +2947,7 @@ export const createAdminProductBundle = (
 };
 
 export const getCreateAdminProductBundleMutationOptions = <
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -2399,12 +2985,15 @@ export type CreateAdminProductBundleMutationResult = NonNullable<
   Awaited<ReturnType<typeof createAdminProductBundle>>
 >;
 export type CreateAdminProductBundleMutationBody = BodyType<CreateBundleDto>;
-export type CreateAdminProductBundleMutationError = ErrorType<unknown>;
+export type CreateAdminProductBundleMutationError = ErrorType<ErrorResponseDto | ErrorResponseDto>;
 
 /**
  * @summary Create a fixed non-nested virtual combo
  */
-export const useCreateAdminProductBundle = <TError = ErrorType<unknown>, TContext = unknown>(
+export const useCreateAdminProductBundle = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createAdminProductBundle>>,

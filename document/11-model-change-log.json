@@ -362,6 +362,44 @@
           }
         }
       ]
+    },
+    {
+      "id": "API-20260903-SPRINT1-VARIANT-MEDIA-IAM",
+      "date": "2026-09-03",
+      "scope": "API+ADMIN+PERSISTENCE-SEMANTICS",
+      "summary": "Đóng phần quản trị Sprint 1: Product create/update/detail/lifecycle và server pagination; SKU metadata update optimistic với SKU bất biến; Cloudinary finalize persist idempotent và Product Media attach/update/reorder/archive; role assignment revoke giữ history, tăng permissionVersion và audit atomic.",
+      "sources": [
+        "OpenAPI:updateAdminProduct/updateAdminProductVariant/finalizeAdminMediaUpload/attachAdminProductMedia/updateAdminProductMedia/reorderAdminProductMedia/archiveAdminProductMedia/revokeAdminUserRoleAssignment",
+        "test:media.service.spec.ts/product-media.service.spec.ts/iam.service.spec.ts/admin-contract.e2e-spec.ts",
+        "admin:variant-edit-drawer.tsx/product-media-panel.tsx/role-assignment-revoke-modal.tsx"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "product_variants" },
+          "columns": ["Ý nghĩa", "Các cột chính", "Retention"]
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": ["media_assets", "product_media"] },
+          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính", "Retention"]
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "user_role_assignments" },
+          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính", "Retention"]
+        },
+        {
+          "sheet": "RBAC Permissions",
+          "match": { "Permission code": "iam.assignment.manage" },
+          "columns": ["Allowed scopes", "Default roles", "Ghi chú"],
+          "set": {
+            "Allowed scopes": "GLOBAL;BRANCH",
+            "Default roles": "OWNER; BRANCH_MANAGER",
+            "Ghi chú": "OWNER gán/thu hồi assignment không phải OWNER; Branch Manager chỉ gán/thu hồi STAFF trong branch; thay đổi tăng permissionVersion và audit atomic"
+          }
+        }
+      ]
     }
   ]
 }

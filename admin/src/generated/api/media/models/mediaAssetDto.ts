@@ -6,8 +6,10 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { MediaAssetDtoProvider } from './mediaAssetDtoProvider';
+import type { MediaAssetDtoStatus } from './mediaAssetDtoStatus';
 
 export interface MediaAssetDto {
+  id: string;
   provider: MediaAssetDtoProvider;
   providerAssetId: string;
   publicId: string;
@@ -18,5 +20,7 @@ export interface MediaAssetDto {
   height: number;
   sizeBytes: number;
   format: string;
-  version: number;
+  /** Cloudinary resource version used during provider verification */
+  providerVersion: number;
+  status: MediaAssetDtoStatus;
 }

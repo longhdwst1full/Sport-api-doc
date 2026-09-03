@@ -35,6 +35,7 @@ describe('Admin v1 contract', () => {
     categoryId: '',
     productId: '',
     variantId: '',
+    mediaAssetId: '',
   };
   const concurrencyProductIds: string[] = [];
   let concurrencyCategoryId = '';
@@ -87,9 +88,13 @@ describe('Admin v1 contract', () => {
       await prisma.productPrice.deleteMany({
         where: { productVariant: { productId: catalogFixture.productId } },
       });
+      await prisma.productMedia.deleteMany({ where: { productId: catalogFixture.productId } });
       await prisma.productCategory.deleteMany({ where: { productId: catalogFixture.productId } });
       await prisma.productVariant.deleteMany({ where: { productId: catalogFixture.productId } });
       await prisma.product.deleteMany({ where: { id: catalogFixture.productId } });
+    }
+    if (catalogFixture.mediaAssetId) {
+      await prisma.mediaAsset.deleteMany({ where: { id: catalogFixture.mediaAssetId } });
     }
     if (concurrencyProductIds.length > 0) {
       const variants = await prisma.productVariant.findMany({
@@ -191,7 +196,7 @@ describe('Admin v1 contract', () => {
     expect(typeof body.requestId).toBe('string');
   });
 
-  it('serializes duplicate role assignment and writes one atomic audit', async () => {
+  it('serializes duplicate role assignment and revokes the winner atomically', async () => {
     const branch = await prisma.branch.findFirstOrThrow({ where: { status: 'ACTIVE' } });
     const sendAssignment = () =>
       request(server())
@@ -214,6 +219,21 @@ describe('Admin v1 contract', () => {
         where: { action: 'iam.assignment.create', entityType: 'USER_ROLE_ASSIGNMENT' },
       }),
     ).resolves.toBeGreaterThanOrEqual(1);
+
+    const activeAssignment = await prisma.userRoleAssignment.findFirstOrThrow({
+      where: { userId: staffUserId, status: 'ACTIVE' },
+    });
+    const revoked = await request(server())
+      .post(`/api/v1/admin/iam/users/${staffUserId}/role-assignments/${activeAssignment.id}/revoke`)
+      .set('authorization', `Bearer ${accessToken}`)
+      .send({ reason: 'E2E assignment revoke' })
+      .expect(200);
+    expect(revoked.body).toMatchObject({ permissionVersion: 2, assignments: [] });
+    await expect(prisma.userRoleAssignment.findUniqueOrThrow({ where: { id: activeAssignment.id } }))
+      .resolves.toMatchObject({ status: 'REVOKED' });
+    await expect(
+      prisma.auditLog.count({ where: { action: 'iam.assignment.revoke', entityId: activeAssignment.id } }),
+    ).resolves.toBe(1);
   });
 
   it('creates an active branch staff account that can login with the approved default password', async () => {
@@ -353,6 +373,63 @@ describe('Admin v1 contract', () => {
       variantResponse.body as { variants: Array<{ id: string }> }
     ).variants[0].id;
 
+    const updatedVariant = await request(server())
+      .patch(`/api/v1/admin/products/variants/${catalogFixture.variantId}`)
+      .set(authorization)
+      .send({
+        name: 'Default SKU Updated',
+        barcode: `BAR-${suffix}`.toUpperCase(),
+        weightGrams: 1250,
+        lengthMm: 400,
+        widthMm: 200,
+        heightMm: 150,
+        expectedVersion: 0,
+      })
+      .expect(200);
+    expect(updatedVariant.body).toMatchObject({
+      variants: [expect.objectContaining({
+        id: catalogFixture.variantId,
+        name: 'Default SKU Updated',
+        weightGrams: 1250,
+        version: 1,
+      })],
+    });
+
+    catalogFixture.mediaAssetId = uuidv7();
+    await prisma.mediaAsset.create({
+      data: {
+        id: catalogFixture.mediaAssetId,
+        provider: 'CLOUDINARY',
+        providerAssetId: `e2e-${catalogFixture.mediaAssetId}`,
+        publicId: `sport-sys/sport/e2e-${catalogFixture.mediaAssetId}`,
+        secureUrl: 'https://example.invalid/e2e-product.webp',
+        thumbnailUrl: 'https://example.invalid/e2e-product-thumb.webp',
+        status: 'ACTIVE',
+        uploadedBy: userId,
+      },
+    });
+    const attachedMedia = await request(server())
+      .post(`/api/v1/admin/products/${catalogFixture.productId}/media`)
+      .set(authorization)
+      .send({
+        mediaAssetId: catalogFixture.mediaAssetId,
+        altText: 'E2E product front',
+        isPrimary: true,
+        expectedProductVersion: 0,
+      })
+      .expect(201);
+    const productMediaId = (attachedMedia.body as Array<{ id: string }>)[0].id;
+    await request(server())
+      .patch(`/api/v1/admin/products/${catalogFixture.productId}/media/${productMediaId}`)
+      .set(authorization)
+      .send({ altText: 'E2E product front updated', expectedProductVersion: 1 })
+      .expect(200);
+    await request(server())
+      .patch(`/api/v1/admin/products/${catalogFixture.productId}/media/reorder`)
+      .set(authorization)
+      .send({ items: [{ id: productMediaId, sortOrder: 0 }], expectedProductVersion: 2 })
+      .expect(200);
+
     const initialPrice = await request(server())
       .post(`/api/v1/admin/products/variants/${catalogFixture.variantId}/prices`)
       .set(authorization)
@@ -409,7 +486,7 @@ describe('Admin v1 contract', () => {
     await request(server())
       .post(`/api/v1/admin/products/${catalogFixture.productId}/publish`)
       .set(authorization)
-      .send({ expectedVersion: 0 })
+      .send({ expectedVersion: 3 })
       .expect(200);
 
     const storefront = await request(server())
@@ -419,6 +496,7 @@ describe('Admin v1 contract', () => {
       id: catalogFixture.productId,
       status: 'PUBLISHED',
       minPrice: '1590000.00',
+      imageUrl: 'https://example.invalid/e2e-product.webp',
     });
     expect((storefront.body as { variants: Array<{ id: string }> }).variants).toEqual([
       expect.objectContaining({ id: catalogFixture.variantId }),
@@ -428,42 +506,42 @@ describe('Admin v1 contract', () => {
       request(server())
         .patch(`/api/v1/admin/products/${catalogFixture.productId}`)
         .set(authorization)
-        .send({ name, expectedVersion: 1 });
+        .send({ name, expectedVersion: 4 });
     const updateResponses = await Promise.all([update('Winner A'), update('Winner B')]);
     expect(updateResponses.map(({ status }) => status).sort()).toEqual([200, 409]);
 
     await request(server())
       .post(`/api/v1/admin/products/${catalogFixture.productId}/archive`)
       .set(authorization)
-      .send({ expectedVersion: 2 })
+      .send({ expectedVersion: 5 })
       .expect(200)
-      .expect(({ body }) => expect(body).toMatchObject({ status: 'ARCHIVED', version: 3 }));
+      .expect(({ body }) => expect(body).toMatchObject({ status: 'ARCHIVED', version: 6 }));
     await request(server()).get(`/api/v1/catalog/products/${slug}`).expect(404);
 
     await request(server())
       .post(`/api/v1/admin/products/${catalogFixture.productId}/reactivate`)
       .set(authorization)
-      .send({ expectedVersion: 3 })
+      .send({ expectedVersion: 6 })
       .expect(200)
-      .expect(({ body }) => expect(body).toMatchObject({ status: 'DRAFT', version: 4 }));
+      .expect(({ body }) => expect(body).toMatchObject({ status: 'DRAFT', version: 7 }));
     await request(server()).get(`/api/v1/catalog/products/${slug}`).expect(404);
 
     await request(server())
       .post(`/api/v1/admin/products/${catalogFixture.productId}/publish`)
       .set(authorization)
-      .send({ expectedVersion: 4 })
+      .send({ expectedVersion: 7 })
       .expect(200);
     await request(server())
       .post(`/api/v1/admin/products/variants/${catalogFixture.variantId}/archive`)
       .set(authorization)
-      .send({ expectedVersion: 0 })
+      .send({ expectedVersion: 1 })
       .expect(200);
     await request(server()).get(`/api/v1/catalog/products/${slug}`).expect(404);
 
     await request(server())
       .post(`/api/v1/admin/products/variants/${catalogFixture.variantId}/reactivate`)
       .set(authorization)
-      .send({ expectedVersion: 1 })
+      .send({ expectedVersion: 2 })
       .expect(200);
     await request(server()).get(`/api/v1/catalog/products/${slug}`).expect(200);
   });

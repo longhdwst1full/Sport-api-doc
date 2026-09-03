@@ -9,6 +9,8 @@ import type { ProductDetailDtoProductType } from './productDetailDtoProductType'
 import type { ProductDetailDtoStatus } from './productDetailDtoStatus';
 import type { ProductDetailDtoCurrency } from './productDetailDtoCurrency';
 import type { ProductVariantDto } from './productVariantDto';
+import type { ProductMediaDto } from './productMediaDto';
+import type { ProductCategoryDto } from './productCategoryDto';
 
 export interface ProductDetailDto {
   id: string;
@@ -25,8 +27,14 @@ export interface ProductDetailDto {
   currency: ProductDetailDtoCurrency;
   /** @nullable */
   imageUrl?: string | null;
+  /** @nullable */
+  brandId?: string | null;
+  /** @nullable */
+  primaryCategoryId?: string | null;
   shortDescription?: string;
   description?: string;
   variants: ProductVariantDto[];
+  media: ProductMediaDto[];
+  categories: ProductCategoryDto[];
   categoryIds: string[];
 }

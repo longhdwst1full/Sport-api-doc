@@ -4,11 +4,13 @@ import {
   ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
   ApiUnprocessableEntityResponse,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { RequirePermissions } from '../../../../common/decorators/require-permissions.decorator';
 import { ErrorResponseDto } from '../../../../common/exceptions/error-response.dto';
@@ -19,6 +21,8 @@ import {
 import { AuthenticatedRequest, getMutationContext } from '../../../../common/request/request-context';
 import {
   ChangeProductStatusDto,
+  ChangeProductMediaStatusDto,
+  AttachProductMediaDto,
   CreateBundleDto,
   CreatePriceDto,
   CreateProductDto,
@@ -26,16 +30,26 @@ import {
   ListProductsQueryDto,
   ProductDetailDto,
   ProductListResponseDto,
+  ProductMediaDto,
+  ReorderProductMediaDto,
   ReplacePriceDto,
   UpdateProductDto,
+  UpdateProductMediaDto,
+  UpdateVariantDto,
 } from '../dto/product.dto';
+import { ProductMediaService } from '../services/product-media.service';
 import { ProductsService } from '../services/products.service';
 
 @ApiTags('Admin Products')
 @ApiBearerAuth()
+@ApiUnauthorizedResponse({ type: ErrorResponseDto })
+@ApiForbiddenResponse({ type: ErrorResponseDto })
 @Controller('admin/products')
 export class AdminProductsController {
-  constructor(private readonly products: ProductsService) {}
+  constructor(
+    private readonly products: ProductsService,
+    private readonly productMedia: ProductMediaService,
+  ) {}
 
   @Get()
   @RequirePermissions('catalog.product.view')
@@ -100,6 +114,94 @@ export class AdminProductsController {
     @Req() request: AuthenticatedRequest,
   ): Promise<ProductDetailDto> {
     return this.products.createVariant(id, input, getMutationContext(request));
+  }
+
+  @Patch('variants/:variantId')
+  @RequirePermissions('catalog.product.manage')
+  @ApiOperation({ operationId: 'updateAdminProductVariant', summary: 'Update mutable SKU metadata' })
+  @ApiOkResponse({ type: ProductDetailDto })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  @ApiUnprocessableEntityResponse({ type: ErrorResponseDto })
+  updateVariant(
+    @Param('variantId', new ParseUUIDPipe()) variantId: string,
+    @Body() input: UpdateVariantDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ProductDetailDto> {
+    return this.products.updateVariant(variantId, input, getMutationContext(request));
+  }
+
+  @Post(':id/media')
+  @RequirePermissions('catalog.product.manage')
+  @ApiOperation({ operationId: 'attachAdminProductMedia', summary: 'Attach one finalized media asset to a product or SKU' })
+  @ApiCreatedResponse({ type: [ProductMediaDto] })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  @ApiUnprocessableEntityResponse({ type: ErrorResponseDto })
+  attachMedia(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() input: AttachProductMediaDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ProductMediaDto[]> {
+    return this.productMedia.attach(id, input, getMutationContext(request));
+  }
+
+  @Patch(':id/media/reorder')
+  @RequirePermissions('catalog.product.manage')
+  @ApiOperation({ operationId: 'reorderAdminProductMedia', summary: 'Replace the order of all active product media' })
+  @ApiOkResponse({ type: [ProductMediaDto] })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  @ApiUnprocessableEntityResponse({ type: ErrorResponseDto })
+  reorderMedia(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() input: ReorderProductMediaDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ProductMediaDto[]> {
+    return this.productMedia.reorder(id, input, getMutationContext(request));
+  }
+
+  @Patch(':id/media/:mediaId')
+  @RequirePermissions('catalog.product.manage')
+  @ApiOperation({ operationId: 'updateAdminProductMedia', summary: 'Update product media alt text or primary flag' })
+  @ApiOkResponse({ type: [ProductMediaDto] })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  @ApiUnprocessableEntityResponse({ type: ErrorResponseDto })
+  updateMedia(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('mediaId', new ParseUUIDPipe()) mediaId: string,
+    @Body() input: UpdateProductMediaDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ProductMediaDto[]> {
+    return this.productMedia.update(id, mediaId, input, getMutationContext(request));
+  }
+
+  @Post(':id/media/:mediaId/archive')
+  @HttpCode(200)
+  @RequirePermissions('catalog.product.manage')
+  @ApiOperation({ operationId: 'archiveAdminProductMedia', summary: 'Archive a product media link without deleting its asset' })
+  @ApiOkResponse({ type: [ProductMediaDto] })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  @ApiUnprocessableEntityResponse({ type: ErrorResponseDto })
+  archiveMedia(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('mediaId', new ParseUUIDPipe()) mediaId: string,
+    @Body() input: ChangeProductMediaStatusDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ProductMediaDto[]> {
+    return this.productMedia.archive(
+      id,
+      mediaId,
+      input.expectedProductVersion,
+      getMutationContext(request),
+    );
   }
 
   @Post('variants/:variantId/prices')

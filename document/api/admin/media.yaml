@@ -32,6 +32,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
         "503":
           description: Cloudinary is not configured
           content:
@@ -62,6 +74,24 @@ paths:
                 $ref: "#/components/schemas/MediaAssetDto"
         "400":
           description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: Verified asset exists but is inactive
           content:
             application/json:
               schema:
@@ -207,6 +237,9 @@ components:
     MediaAssetDto:
       type: object
       properties:
+        id:
+          type: string
+          format: uuid
         provider:
           type: string
           enum:
@@ -232,9 +265,15 @@ components:
           type: number
         format:
           type: string
-        version:
+        providerVersion:
           type: number
+          description: Cloudinary resource version used during provider verification
+        status:
+          type: string
+          enum:
+            - ACTIVE
       required:
+        - id
         - provider
         - providerAssetId
         - publicId
@@ -245,7 +284,8 @@ components:
         - height
         - sizeBytes
         - format
-        - version
+        - providerVersion
+        - status
     ErrorDetailDto:
       type: object
       properties:

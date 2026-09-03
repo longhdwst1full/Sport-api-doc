@@ -139,6 +139,14 @@ components:
           type: string
           format: uri
           nullable: true
+        brandId:
+          type: string
+          format: uuid
+          nullable: true
+        primaryCategoryId:
+          type: string
+          format: uuid
+          nullable: true
         shortDescription:
           type: string
         description:
@@ -147,6 +155,14 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ProductVariantDto"
+        media:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductMediaDto"
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductCategoryDto"
         categoryIds:
           type: array
           items:
@@ -162,6 +178,8 @@ components:
         - version
         - currency
         - variants
+        - media
+        - categories
         - categoryIds
     ErrorResponseDto:
       type: object
@@ -281,6 +299,21 @@ components:
           type: string
         name:
           type: string
+        weightGrams:
+          type: number
+          minimum: 0
+        lengthMm:
+          type: number
+          minimum: 1
+          nullable: true
+        widthMm:
+          type: number
+          minimum: 1
+          nullable: true
+        heightMm:
+          type: number
+          minimum: 1
+          nullable: true
         status:
           type: string
           enum:
@@ -310,8 +343,63 @@ components:
         - id
         - sku
         - name
+        - weightGrams
         - status
         - version
+    ProductMediaDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        mediaAssetId:
+          type: string
+          format: uuid
+        variantId:
+          type: object
+          format: uuid
+          nullable: true
+        secureUrl:
+          type: string
+          format: uri
+        thumbnailUrl:
+          type: string
+          format: uri
+          nullable: true
+        altText:
+          type: string
+          nullable: true
+        sortOrder:
+          type: number
+          minimum: 0
+        isPrimary:
+          type: boolean
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+      required:
+        - id
+        - mediaAssetId
+        - secureUrl
+        - sortOrder
+        - isPrimary
+        - status
+    ProductCategoryDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        isPrimary:
+          type: boolean
+      required:
+        - id
+        - name
+        - isPrimary
     ErrorDetailDto:
       type: object
       properties:

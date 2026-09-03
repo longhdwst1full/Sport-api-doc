@@ -25,6 +25,12 @@ export abstract class IamRepository {
     assignment: UserRoleAssignment,
     context: MutationContext,
   ): Promise<UserRoleAssignment>;
+  abstract revokeAssignmentAndIncrementPermissionVersion(
+    assignmentId: string,
+    userId: string,
+    reason: string,
+    context: MutationContext,
+  ): Promise<UserWithAssignments | undefined>;
   abstract createStaffUser(
     input: CreateStaffUserInput,
     context: MutationContext,

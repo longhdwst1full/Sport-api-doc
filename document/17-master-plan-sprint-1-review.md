@@ -49,7 +49,7 @@ Không đưa Cart, Inventory mutation, Order, Payment hoặc Shipping vào Sprin
 | IAM-03 | Staff user lifecycle | OWNER tạo staff; lock/unlock/revoke atomic; không lock/unlock OWNER; Branch Manager chỉ quản lý STAFF cùng branch | DONE-CORE |
 | IAM-01 | Customer register/login | Public register chỉ CUSTOMER; email hoặc phone; phone E.164; tạm bỏ verification | DONE-CORE; thiếu DB e2e rerun và secure protected-API token transport |
 | IAM-04 | Role/permission | Unknown permission deny; stable code; role system không xóa | DONE-CORE; thiếu full permission matrix |
-| IAM-05 | Assignment scope | GLOBAL/BRANCH/WAREHOUSE/OWN đúng FK; duplicate fail; permission version tăng atomic | DONE-CORE; thiếu revoke assignment API |
+| IAM-05 | Assignment scope | GLOBAL/BRANCH/WAREHOUSE/OWN đúng FK; duplicate fail; permission version tăng atomic | DONE-V1-CORE; assign/revoke atomic, giữ lịch sử REVOKED |
 | IAM-06 | Audit query | Append-only; che dữ liệu nhạy cảm; lọc actor/action/entity/request | DONE-WRITE; thiếu query API/UI |
 
 Customer registration/login (`IAM-01`) đã được kéo vào Sprint 1 theo quyết định D38. Forgot/change password (`IAM-02`), OTP/email verification và customer profile/address vẫn thuộc delivery wave sau.
@@ -61,8 +61,8 @@ Customer registration/login (`IAM-01`) đã được kéo vào Sprint 1 theo quy
 | CAT-01 | Brand | code/slug unique; archive master; logo media asset | DONE-CORE; logo workflow còn thiếu |
 | CAT-02 | Category tree | chặn cycle; path/depth nhất quán; không xóa khi đang dùng | DONE-V1-CORE; move subtree P1 |
 | CAT-03 | Product SPU | DRAFT → PUBLISHED → ARCHIVED; optimistic version; không có stock/price | DONE-CORE |
-| CAT-04 | Variant/SKU | SKU unique; barcode partial unique; archive thay hard delete | PARTIAL; thiếu update metadata |
-| CAT-05 | Product media | một primary theo product/variant; asset đã finalize | IN-PROGRESS |
+| CAT-04 | Variant/SKU | SKU unique; barcode partial unique; archive thay hard delete | DONE-V1-CORE; SKU immutable, metadata update optimistic |
+| CAT-05 | Product media | một primary theo product/variant; asset đã finalize | DONE-V1-CORE; finalize persist, attach/update/reorder/archive |
 | CAT-07 | Storefront catalog | chỉ published product + active variant + effective regular price | DONE-CORE |
 | CAT-12 | Fixed combo | không nested; component quantity > 0 | DONE-LIFECYCLE-CORE |
 | PRI-01 | Effective price | decimal; thời gian không overlap; audit actor; optimistic version | DONE-CORE; thiếu management lifecycle UI/test |

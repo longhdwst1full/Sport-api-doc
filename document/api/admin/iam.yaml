@@ -317,6 +317,68 @@ paths:
       summary: Assign a role with a validated data scope
       tags:
         - Admin IAM
+  /api/v1/admin/iam/users/{userId}/role-assignments/{assignmentId}/revoke:
+    post:
+      operationId: revokeAdminUserRoleAssignment
+      parameters:
+        - name: userId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: assignmentId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RevokeRoleAssignmentDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Revoke one active non-owner role assignment and refresh effective permissions
+      tags:
+        - Admin IAM
 components:
   schemas:
     UserListDto:
@@ -531,6 +593,16 @@ components:
         - scopeType
         - status
         - validFrom
+    RevokeRoleAssignmentDto:
+      type: object
+      properties:
+        reason:
+          type: string
+          example: Nhân viên chuyển sang vai trò khác
+          minLength: 3
+          maxLength: 255
+      required:
+        - reason
     ErrorDetailDto:
       type: object
       properties:

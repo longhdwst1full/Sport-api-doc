@@ -1,4 +1,5 @@
 import { yupResolver } from '@hookform/resolvers/yup';
+import { EditOutlined } from '@ant-design/icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Descriptions, Drawer, Empty, Form, Input, Modal, Select, Skeleton, Space, Table, Tag, Typography } from 'antd';
 import { useState } from 'react';
@@ -24,6 +25,9 @@ import {
 import type { ProductVariantDto } from '@/generated/api/catalog/models';
 import { getApiErrorMessage } from '@/lib/api/error';
 import { buildPriceCommand, isProductPublishReady } from './product-workflow.policy';
+import { ProductMediaPanel } from './product-media-panel';
+import { ProductFormDrawer } from './product-form-drawer';
+import { VariantEditDrawer } from './variant-edit-drawer';
 
 interface VariantFormValues {
   sku: string;
@@ -79,6 +83,8 @@ export function ProductWorkflowDrawer({ slug, onClose }: { slug?: string; onClos
   const { message } = App.useApp();
   const queryClient = useQueryClient();
   const [componentSearch, setComponentSearch] = useState('');
+  const [editingVariant, setEditingVariant] = useState<ProductVariantDto>();
+  const [editProductOpen, setEditProductOpen] = useState(false);
   const [debouncedComponentSearch] = useDebounce(componentSearch.trim(), 300);
   const detail = useGetAdminProduct(slug ?? '', { query: { enabled: Boolean(slug) } });
   const variantForm = useForm<VariantFormValues>({
@@ -295,6 +301,15 @@ export function ProductWorkflowDrawer({ slug, onClose }: { slug?: string; onClos
             </div>
             <Space>
               <Tag color={product.status === 'PUBLISHED' ? 'green' : 'blue'}>{product.status}</Tag>
+              <PermissionGate permission="catalog.product.manage">
+                <Button
+                  icon={<EditOutlined />}
+                  disabled={product.status === 'ARCHIVED'}
+                  onClick={() => setEditProductOpen(true)}
+                >
+                  Sửa thông tin
+                </Button>
+              </PermissionGate>
               <PermissionGate permission="catalog.product.publish">
                 {product.status === 'DRAFT' && (
                   <Button type="primary" disabled={!canPublish} loading={publish.isPending} onClick={confirmPublish}>Publish</Button>
@@ -357,6 +372,14 @@ export function ProductWorkflowDrawer({ slug, onClose }: { slug?: string; onClos
                     <PermissionGate permission="catalog.product.manage">
                       <Button
                         type="link"
+                        icon={<EditOutlined />}
+                        disabled={product.status === 'ARCHIVED'}
+                        onClick={() => setEditingVariant(variant)}
+                      >
+                        Sửa
+                      </Button>
+                      <Button
+                        type="link"
                         danger={variant.status === 'ACTIVE'}
                         loading={archiveVariant.isPending || reactivateVariant.isPending}
                         onClick={() => confirmVariantLifecycle(variant)}
@@ -367,8 +390,15 @@ export function ProductWorkflowDrawer({ slug, onClose }: { slug?: string; onClos
                   ),
                 },
               ]}
-            />
+              />
           </div>
+
+          <PermissionGate permission="catalog.product.manage">
+            <div>
+              <Typography.Title level={5}>Ảnh sản phẩm và SKU</Typography.Title>
+              <ProductMediaPanel product={product} onChanged={refresh} />
+            </div>
+          </PermissionGate>
 
           {product.status === 'DRAFT' && (
             <PermissionGate permission="catalog.product.manage">
@@ -502,6 +532,17 @@ export function ProductWorkflowDrawer({ slug, onClose }: { slug?: string; onClos
               </Form>
             </PermissionGate>
           )}
+          <VariantEditDrawer
+            variant={editingVariant}
+            onClose={() => setEditingVariant(undefined)}
+            onUpdated={refresh}
+          />
+          <ProductFormDrawer
+            open={editProductOpen}
+            product={product}
+            onClose={() => setEditProductOpen(false)}
+            onCreated={async () => { await refresh(); }}
+          />
         </div>
       )}
     </Drawer>

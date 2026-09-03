@@ -19,6 +19,7 @@ export * from './errorResponseDto';
 export * from './lockStaffUserDto';
 export * from './permissionDto';
 export * from './permissionListDto';
+export * from './revokeRoleAssignmentDto';
 export * from './roleDto';
 export * from './roleDtoStatus';
 export * from './roleListDto';

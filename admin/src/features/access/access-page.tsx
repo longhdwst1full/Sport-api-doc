@@ -17,6 +17,7 @@ import {
 } from '@/generated/api/iam/iam';
 import type { UserDto, UserDtoStatus, UserRoleAssignmentDto } from '@/generated/api/iam/models';
 import { RoleAssignmentDrawer } from './role-assignment-drawer';
+import { RoleAssignmentRevokeModal } from './role-assignment-revoke-modal';
 import { StaffCreationDrawer } from './staff-creation-drawer';
 import { StaffLifecycleModal, type StaffLifecycleAction } from './staff-lifecycle-modal';
 
@@ -29,6 +30,10 @@ const userStatuses: Record<UserDtoStatus, { color: string; label: string }> = {
 export function AccessPage() {
   const [activeTab, setActiveTab] = useState('users');
   const [assignmentUser, setAssignmentUser] = useState<UserDto>();
+  const [revokeTarget, setRevokeTarget] = useState<{
+    user: UserDto;
+    assignment: UserRoleAssignmentDto;
+  }>();
   const [staffCreationOpen, setStaffCreationOpen] = useState(false);
   const [lifecycle, setLifecycle] = useState<{ action: StaffLifecycleAction; user: UserDto }>();
   const canViewRoles = useCan('iam.role.view');
@@ -137,12 +142,22 @@ export function AccessPage() {
                     title: 'Vai trò',
                     dataIndex: 'assignments',
                     width: 210,
-                    render: (assignments: UserRoleAssignmentDto[]) => (
+                    render: (assignments: UserRoleAssignmentDto[], user: UserDto) => (
                       <Space size={[4, 4]} wrap>
                         {assignments.map((assignment) => (
-                          <Tag color="blue" key={assignment.id}>
-                            {assignment.roleCode}
-                          </Tag>
+                          <Space.Compact key={assignment.id}>
+                            <Tag color="blue" style={{ marginInlineEnd: 0 }}>{assignment.roleCode}</Tag>
+                            {canAssignRoles && assignment.roleCode !== 'OWNER' && (
+                              <Button
+                                size="small"
+                                danger
+                                type="link"
+                                onClick={() => setRevokeTarget({ user, assignment })}
+                              >
+                                Thu hồi
+                              </Button>
+                            )}
+                          </Space.Compact>
                         ))}
                       </Space>
                     ),
@@ -278,6 +293,7 @@ export function AccessPage() {
         open={Boolean(assignmentUser)}
         onClose={() => setAssignmentUser(undefined)}
       />
+      <RoleAssignmentRevokeModal target={revokeTarget} onClose={() => setRevokeTarget(undefined)} />
       <StaffCreationDrawer open={staffCreationOpen} onClose={() => setStaffCreationOpen(false)} />
       <StaffLifecycleModal
         action={lifecycle?.action}

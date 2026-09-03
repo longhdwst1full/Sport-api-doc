@@ -28,6 +28,7 @@ import type {
   ErrorResponseDto,
   LockStaffUserDto,
   PermissionListDto,
+  RevokeRoleAssignmentDto,
   RoleListDto,
   SearchActiveAdminRolesParams,
   UserDto,
@@ -833,6 +834,98 @@ export const useAssignAdminUserRole = <
   TContext
 > => {
   const mutationOptions = getAssignAdminUserRoleMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+/**
+ * @summary Revoke one active non-owner role assignment and refresh effective permissions
+ */
+export const revokeAdminUserRoleAssignment = (
+  userId: string,
+  assignmentId: string,
+  revokeRoleAssignmentDto: BodyType<RevokeRoleAssignmentDto>,
+  signal?: AbortSignal,
+) => {
+  return apiFetcher<UserDto>({
+    url: `/api/v1/admin/iam/users/${userId}/role-assignments/${assignmentId}/revoke`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: revokeRoleAssignmentDto,
+    signal,
+  });
+};
+
+export const getRevokeAdminUserRoleAssignmentMutationOptions = <
+  TError = ErrorType<
+    ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof revokeAdminUserRoleAssignment>>,
+    TError,
+    { userId: string; assignmentId: string; data: BodyType<RevokeRoleAssignmentDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof revokeAdminUserRoleAssignment>>,
+  TError,
+  { userId: string; assignmentId: string; data: BodyType<RevokeRoleAssignmentDto> },
+  TContext
+> => {
+  const mutationKey = ['revokeAdminUserRoleAssignment'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof revokeAdminUserRoleAssignment>>,
+    { userId: string; assignmentId: string; data: BodyType<RevokeRoleAssignmentDto> }
+  > = (props) => {
+    const { userId, assignmentId, data } = props ?? {};
+
+    return revokeAdminUserRoleAssignment(userId, assignmentId, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RevokeAdminUserRoleAssignmentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof revokeAdminUserRoleAssignment>>
+>;
+export type RevokeAdminUserRoleAssignmentMutationBody = BodyType<RevokeRoleAssignmentDto>;
+export type RevokeAdminUserRoleAssignmentMutationError = ErrorType<
+  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+>;
+
+/**
+ * @summary Revoke one active non-owner role assignment and refresh effective permissions
+ */
+export const useRevokeAdminUserRoleAssignment = <
+  TError = ErrorType<
+    ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof revokeAdminUserRoleAssignment>>,
+      TError,
+      { userId: string; assignmentId: string; data: BodyType<RevokeRoleAssignmentDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof revokeAdminUserRoleAssignment>>,
+  TError,
+  { userId: string; assignmentId: string; data: BodyType<RevokeRoleAssignmentDto> },
+  TContext
+> => {
+  const mutationOptions = getRevokeAdminUserRoleAssignmentMutationOptions(options);
 
   return useMutation(mutationOptions, queryClient);
 };

@@ -24,13 +24,18 @@ Ngày cập nhật: 2026-09-02
 | Danh sách role quản trị | `GET /api/v1/admin/iam/roles` | `listAdminRoles` | `iam.role.view` | Tab Role |
 | Search role active | `GET /api/v1/admin/iam/roles/active` | `searchActiveAdminRoles` | `iam.role.view` | Gán role cho user |
 | Gán role | `POST /api/v1/admin/iam/users/{userId}/role-assignments` | `assignAdminUserRole` | `iam.assignment.manage` | Role assignment drawer |
+| Thu hồi assignment | `POST /api/v1/admin/iam/users/{userId}/role-assignments/{assignmentId}/revoke` | `revokeAdminUserRoleAssignment` | `iam.assignment.manage` | Access page + reason modal |
 | Tạo staff và gán branch role | `POST /api/v1/admin/iam/users` | `createAdminStaffUser` | `iam.user.manage` | Staff creation drawer |
 | CRUD lifecycle brand | `GET/POST/PATCH` + `POST .../{id}/activate|deactivate` | `list/create/update/activate/deactivateAdminBrand` | `catalog.brand.view/manage` | Catalog master page |
 | CRUD lifecycle category | `GET/POST/PATCH` + `POST .../{id}/activate|deactivate` | `list/create/update/activate/deactivateAdminCategory` | `catalog.category.view/manage` | Catalog master page |
+| Product SPU create/update/detail | `POST/PATCH/GET /api/v1/admin/products...` | `create/update/getAdminProduct` | `catalog.product.manage/view` | Product create/edit drawer + workflow detail |
 | Điều chỉnh kho | `POST /api/v1/admin/inventory/adjustments` | `createStockAdjustment` | `inventory.stock.adjust` | Inventory drawer; generated request option truyền Idempotency-Key |
 | Kiểm duyệt đánh giá | `PATCH /api/v1/admin/reviews/{id}/moderation` | `moderateAdminReview` | `review.moderate` | Reviews actions |
 | Archive/reactivate product hoặc combo | `POST .../products/{id}/archive|reactivate` | `archiveAdminProduct` / `reactivateAdminProduct` | `catalog.product.publish` | Product workflow drawer |
 | Archive/reactivate variant | `POST .../products/variants/{id}/archive|reactivate` | `archiveAdminProductVariant` / `reactivateAdminProductVariant` | `catalog.product.manage` | Product workflow drawer |
+| Sửa metadata variant | `PATCH /api/v1/admin/products/variants/{variantId}` | `updateAdminProductVariant` | `catalog.product.manage` | Variant edit drawer; SKU bất biến |
+| Product media lifecycle | `POST/PATCH .../products/{id}/media...` | `attach/update/reorder/archiveAdminProductMedia` | `catalog.product.manage` | Product media panel |
+| Finalize media asset | `POST /api/v1/admin/media/uploads/finalize` | `finalizeAdminMediaUpload` | `media.asset.upload` | Cloudinary upload adapter; verify rồi persist idempotent |
 | Search SKU active để tạo combo | `GET /api/v1/admin/products/variants/active` | `searchActiveAdminProductVariants` | `catalog.product.view` | Combo builder; chỉ SKU thường ACTIVE, không nested combo |
 | Thay giá hiện hành atomic | `POST /api/v1/admin/products/variants/{variantId}/prices/replace` | `replaceAdminProductPrice` | `catalog.price.manage` | Price form gửi expected price id/version |
 | Customer register | `POST /api/v1/auth/register` | `registerCustomer` | Public + rate limit | Storefront `/register` |
@@ -87,11 +92,15 @@ Admin dùng `getApiErrorMessage` cho lỗi form/query và `getApiFieldErrors` đ
 - [x] Product workflow dùng active SKU lookup generated từ OpenAPI; không tải toàn bộ danh sách quản trị để dựng combo.
 - [x] Giá hiện hành được thay bằng command atomic có expected price id/version; amount VAT-included phải lớn hơn 0.
 - [x] Storefront/cart chốt theo `variantId`/SKU; hai SKU cùng Product là hai dòng giỏ riêng.
+- [x] Variant metadata update dùng expected version; SKU không nằm trong update contract và không thể đổi.
+- [x] Product Admin hỗ trợ create/update/detail/lifecycle; danh sách dùng search debounce và server pagination thay vì khóa page đầu.
+- [x] Cloudinary finalize verify provider rồi persist `media_assets` idempotent; Product Media attach/update alt/primary/reorder/archive qua generated SDK.
+- [x] Revoke assignment giữ row `REVOKED`, ghi `valid_to`, tăng permission version và audit atomic; OWNER assignment không thể revoke.
 - [x] Storefront Auth contract được tách theo tag `Storefront Auth`; Client Orval sinh SDK riêng từ `document/api/storefront/auth.yaml`.
 - [x] Register chỉ tạo CUSTOMER ACTIVE; login customer/admin tách theo userType và dùng chung identifier email/phone.
 - [x] SĐT Việt Nam được validate bằng metadata đầy đủ và lưu E.164; unique constraint PostgreSQL xử lý đăng ký đồng thời.
 - [x] Contract writer unit test xác nhận operation `Storefront Auth` chỉ nằm trong `document/api/storefront/auth.yaml`; API hiện có 17 suites/61 unit tests pass.
 - [~] Client lưu token trong sessionStorage sau login/register; chưa sửa shared fetcher HIGH-risk để auto attach/refresh protected API.
-- [ ] HTTP e2e Customer Auth đã viết nhưng lần chạy 2026-09-01 bị chặn ở bootstrap bởi Supabase pooler hostname placeholder; chưa được ghi nhận pass.
+- [x] HTTP e2e với PostgreSQL local và `AUTH_BYPASS=false`: 2 suites, 10/10 test; gồm revoke assignment, variant update và product media commands.
 - [ ] Verified identity/token — development đang dùng `AUTH_BYPASS=true` và principal OWNER bootstrap; production bắt buộc tắt bypass.
 - [ ] PostgreSQL permission/scope + transaction/audit integration — blocker trước staging.

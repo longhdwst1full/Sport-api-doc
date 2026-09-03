@@ -1,7 +1,7 @@
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useQueryClient } from '@tanstack/react-query';
 import { App, Button, Drawer, Form, Input, Select } from 'antd';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useDebounce } from 'use-debounce';
 import * as yup from 'yup';
@@ -10,13 +10,15 @@ import {
   useCreateAdminProduct,
   useSearchActiveAdminBrands,
   useSearchActiveAdminCategories,
+  useUpdateAdminProduct,
 } from '@/generated/api/catalog/catalog';
 import {
   CreateProductDtoProductType,
+  type ProductDetailDto,
   type CreateProductDtoProductType as ProductType,
 } from '@/generated/api/catalog/models';
 import { RichTextEditor } from '@/foundation/inputs/rich-text-editor';
-import { getApiErrorMessage } from '@/lib/api/error';
+import { getApiErrorMessage, getApiFieldErrors } from '@/lib/api/error';
 import { uploadImage } from '@/lib/media/upload-image';
 
 const uploadRichTextImage = async (file: File, signal: AbortSignal) =>
@@ -28,7 +30,8 @@ interface ProductFormValues {
   name: string;
   slug: string;
   brandId?: string;
-  categoryId: string;
+  categoryIds: string[];
+  primaryCategoryId: string;
   shortDescription?: string;
   description?: string;
 }
@@ -42,24 +45,33 @@ const schema: yup.ObjectSchema<ProductFormValues> = yup.object({
   name: yup.string().trim().required('Nhập tên sản phẩm'),
   slug: yup.string().trim().matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug không hợp lệ').required('Nhập slug'),
   brandId: yup.string().uuid('Thương hiệu không hợp lệ').optional(),
-  categoryId: yup.string().uuid('Danh mục không hợp lệ').required('Chọn danh mục chính'),
+  categoryIds: yup.array().of(yup.string().uuid('Danh mục không hợp lệ').required()).min(1, 'Chọn ít nhất một danh mục').required(),
+  primaryCategoryId: yup
+    .string()
+    .uuid('Danh mục chính không hợp lệ')
+    .required('Chọn danh mục chính')
+    .test('selected-category', 'Danh mục chính phải nằm trong danh mục đã chọn', function (value) {
+      return Boolean(value && (this.parent.categoryIds ?? []).includes(value));
+    }),
   shortDescription: yup.string().trim().optional(),
   description: yup.string().trim().optional(),
 });
 
 const defaults: ProductFormValues = {
   productType: CreateProductDtoProductType.STANDARD,
-  productNo: '', name: '', slug: '', brandId: undefined, categoryId: '', shortDescription: '', description: '',
+  productNo: '', name: '', slug: '', brandId: undefined, categoryIds: [], primaryCategoryId: '', shortDescription: '', description: '',
 };
 
 export function ProductFormDrawer({
   open,
   onClose,
   onCreated,
+  product,
 }: {
   open: boolean;
   onClose: () => void;
   onCreated?: (slug: string) => void;
+  product?: ProductDetailDto;
 }) {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
@@ -68,6 +80,7 @@ export function ProductFormDrawer({
   const [debouncedBrand] = useDebounce(brandSearch.trim(), 300);
   const [debouncedCategory] = useDebounce(categorySearch.trim(), 300);
   const form = useForm<ProductFormValues>({ resolver: yupResolver(schema), defaultValues: defaults });
+  const isEdit = Boolean(product);
   const brands = useSearchActiveAdminBrands(
     { search: debouncedBrand || undefined, page: 1, limit: 20 },
     { query: { enabled: open } },
@@ -85,24 +98,72 @@ export function ProductFormDrawer({
         onClose();
         onCreated?.(product.slug);
       },
-      onError: (error) => void message.error(getApiErrorMessage(error, 'Không thể tạo sản phẩm.')),
+      onError: (error) => handleError(error, 'Không thể tạo sản phẩm.'),
+    },
+  });
+  const updateProduct = useUpdateAdminProduct({
+    mutation: {
+      onSuccess: async (updated) => {
+        await queryClient.invalidateQueries({ queryKey: getListAdminProductsQueryKey() });
+        void message.success('Đã cập nhật thông tin sản phẩm.');
+        onClose();
+        onCreated?.(updated.slug);
+      },
+      onError: (error) => handleError(error, 'Không thể cập nhật sản phẩm.'),
     },
   });
 
-  const submit = form.handleSubmit((values) => {
-    createProduct.mutate({
-      data: {
-        productType: values.productType,
-        productNo: values.productNo,
-        name: values.name,
-        slug: values.slug,
-        ...(values.brandId ? { brandId: values.brandId } : {}),
-        ...(values.shortDescription ? { shortDescription: values.shortDescription } : {}),
-        ...(values.description ? { description: values.description } : {}),
-        categoryIds: [values.categoryId],
-        primaryCategoryId: values.categoryId,
-      },
+  function handleError(error: unknown, fallback: string) {
+    Object.entries(getApiFieldErrors(error)).forEach(([field, fieldMessage]) => {
+      if (field in schema.fields) {
+        form.setError(field as keyof ProductFormValues, { message: fieldMessage });
+      }
     });
+    void message.error(getApiErrorMessage(error, fallback));
+  }
+
+  useEffect(() => {
+    if (!open) return;
+    form.reset(product ? {
+      productType: product.productType,
+      productNo: product.productNo,
+      name: product.name,
+      slug: product.slug,
+      brandId: product.brandId ?? undefined,
+      categoryIds: product.categoryIds,
+      primaryCategoryId: product.primaryCategoryId ?? product.categoryIds[0] ?? '',
+      shortDescription: product.shortDescription ?? '',
+      description: product.description ?? '',
+    } : defaults);
+  }, [form, open, product]);
+
+  const submit = form.handleSubmit((values) => {
+    const fields = {
+      productType: values.productType,
+      productNo: values.productNo.trim(),
+      name: values.name.trim(),
+      slug: values.slug.trim(),
+      shortDescription: values.shortDescription?.trim() || undefined,
+      description: values.description?.trim() || undefined,
+      categoryIds: values.categoryIds,
+      primaryCategoryId: values.primaryCategoryId,
+    };
+    if (product) {
+      updateProduct.mutate({
+        id: product.id,
+        data: {
+          ...fields,
+          brandId: values.brandId ?? null,
+          shortDescription: values.shortDescription?.trim() || null,
+          description: values.description?.trim() || null,
+          expectedVersion: product.version,
+        },
+      });
+    } else {
+      createProduct.mutate({
+        data: { ...fields, ...(values.brandId ? { brandId: values.brandId } : {}) },
+      });
+    }
   });
 
   const textField = (name: 'productNo' | 'name' | 'slug', label: string) => (
@@ -113,12 +174,20 @@ export function ProductFormDrawer({
 
   return (
     <Drawer
-      title="Tạo sản phẩm nháp (SPU)"
+      title={isEdit ? 'Sửa thông tin sản phẩm' : 'Tạo sản phẩm nháp (SPU)'}
       width={640}
       open={open}
       onClose={onClose}
       destroyOnHidden
-      extra={<Button type="primary" loading={createProduct.isPending} onClick={() => void submit()}>Tạo bản nháp</Button>}
+      extra={(
+        <Button
+          type="primary"
+          loading={createProduct.isPending || updateProduct.isPending}
+          onClick={() => void submit()}
+        >
+          {isEdit ? 'Lưu thay đổi' : 'Tạo bản nháp'}
+        </Button>
+      )}
     >
       <Form layout="vertical" onFinish={() => void submit()}>
         <Form.Item
@@ -133,6 +202,7 @@ export function ProductFormDrawer({
             render={({ field }) => (
               <Select
                 {...field}
+                disabled={Boolean(product?.variants.length)}
                 options={[
                   { value: CreateProductDtoProductType.STANDARD, label: 'Sản phẩm thường' },
                   { value: CreateProductDtoProductType.BUNDLE, label: 'Combo cố định' },
@@ -159,28 +229,59 @@ export function ProductFormDrawer({
                   filterOption={false}
                   onSearch={setBrandSearch}
                   loading={brands.isFetching}
-                  options={(brands.data?.items ?? []).map((item) => ({ value: item.id, label: `${item.code} — ${item.label}` }))}
+                  options={[
+                    ...(product?.brandId && product.brand
+                      ? [{ value: product.brandId, label: product.brand }]
+                      : []),
+                    ...(brands.data?.items ?? []).map((item) => ({ value: item.id, label: `${item.code} — ${item.label}` })),
+                  ].filter((item, index, items) => items.findIndex(({ value }) => value === item.value) === index)}
                 />
               )}
             />
           </Form.Item>
-          <Form.Item label="Danh mục chính" validateStatus={form.formState.errors.categoryId ? 'error' : undefined} help={form.formState.errors.categoryId?.message}>
+          <Form.Item label="Danh mục" validateStatus={form.formState.errors.categoryIds ? 'error' : undefined} help={form.formState.errors.categoryIds?.message}>
             <Controller
-              name="categoryId"
+              name="categoryIds"
               control={form.control}
               render={({ field }) => (
                 <Select
                   {...field}
+                  mode="multiple"
                   showSearch
                   filterOption={false}
                   onSearch={setCategorySearch}
                   loading={categories.isFetching}
-                  options={(categories.data?.items ?? []).map((item) => ({ value: item.id, label: `${item.code} — ${item.label}` }))}
+                  options={[
+                    ...(product?.categories ?? []).map((category) => ({ value: category.id, label: category.name })),
+                    ...(categories.data?.items ?? []).map((item) => ({ value: item.id, label: `${item.code} — ${item.label}` })),
+                  ].filter((item, index, items) => items.findIndex(({ value }) => value === item.value) === index)}
                 />
               )}
             />
           </Form.Item>
         </div>
+        <Form.Item
+          label="Danh mục chính"
+          validateStatus={form.formState.errors.primaryCategoryId ? 'error' : undefined}
+          help={form.formState.errors.primaryCategoryId?.message}
+        >
+          <Controller
+            name="primaryCategoryId"
+            control={form.control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                options={form.watch('categoryIds').map((categoryId) => ({
+                  value: categoryId,
+                  label: product?.categories.find(({ id }) => id === categoryId)?.name
+                    ?? categories.data?.items.find(({ id }) => id === categoryId)?.label
+                    ?? categoryId,
+                }))}
+                placeholder="Chọn trong danh mục đã gán"
+              />
+            )}
+          />
+        </Form.Item>
         <Form.Item label="Mô tả ngắn">
           <Controller name="shortDescription" control={form.control} render={({ field }) => <Input {...field} />} />
         </Form.Item>

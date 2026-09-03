@@ -13,6 +13,8 @@ const product = (overrides: Partial<ProductDetailDto> = {}): ProductDetailDto =>
   currency: 'VND',
   categoryIds: [],
   variants: [],
+  media: [],
+  categories: [],
   ...overrides,
 });
 
@@ -20,6 +22,7 @@ describe('product workflow policy', () => {
   it('does not treat an inactive cheap SKU as publishable', () => {
     expect(isProductPublishReady(product({
       variants: [{
+        weightGrams: 0,
         id: '00000000-0000-7000-8000-000000000002',
         sku: 'SKU-INACTIVE',
         name: 'Inactive',
@@ -34,6 +37,7 @@ describe('product workflow policy', () => {
     expect(isProductPublishReady(product({
       productType: 'BUNDLE',
       variants: [{
+        weightGrams: 0,
         id: '00000000-0000-7000-8000-000000000002',
         sku: 'COMBO-01',
         name: 'Combo',
@@ -48,6 +52,7 @@ describe('product workflow policy', () => {
   it('builds an optimistic replace command when the current price identity is available', () => {
     const command = buildPriceCommand(product({
       variants: [{
+        weightGrams: 0,
         id: '00000000-0000-7000-8000-000000000002',
         sku: 'SKU-01',
         name: 'SKU',

@@ -13,5 +13,6 @@ export * from './errorResponseDto';
 export * from './finalizeMediaUploadDto';
 export * from './mediaAssetDto';
 export * from './mediaAssetDtoProvider';
+export * from './mediaAssetDtoStatus';
 export * from './signedMediaUploadDto';
 export * from './signedMediaUploadDtoProvider';

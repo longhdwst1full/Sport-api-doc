@@ -294,4 +294,48 @@ describe('IamService', () => {
       ),
     ).resolves.toMatchObject({ status: 'LOCKED' });
   });
+
+  it('revokes a non-owner assignment and increments permission version', async () => {
+    const { organization, service } = createService();
+    const branch = (await organization.listBranches()).items[0];
+    const user = await service.createStaffUser(
+      {
+        displayName: 'Nhân viên thu hồi quyền',
+        email: 'revoke.staff@example.com',
+        roleCode: SystemRoleCode.STAFF,
+        branchId: branch.id,
+      },
+      context,
+      ownerActor,
+    );
+
+    const revoked = await service.revokeRoleAssignment(
+      user.id,
+      user.assignments[0].id,
+      { reason: 'Điều chuyển công việc' },
+      context,
+      ownerActor,
+    );
+
+    expect(revoked.permissionVersion).toBe(user.permissionVersion + 1);
+    expect(revoked.assignments).toEqual([]);
+  });
+
+  it('never allows an OWNER assignment to be revoked', async () => {
+    const { service } = createService();
+    const owner = (await service.listUsers(ownerActor)).items.find((user) =>
+      user.assignments.some(({ roleCode }) => roleCode === SystemRoleCode.OWNER),
+    );
+    const assignment = owner?.assignments[0];
+    expect(owner).toBeDefined();
+    expect(assignment).toBeDefined();
+
+    await expect(service.revokeRoleAssignment(
+      owner!.id,
+      assignment!.id,
+      { reason: 'Không hợp lệ' },
+      context,
+      ownerActor,
+    )).rejects.toThrow('OWNER assignment cannot be revoked');
+  });
 });
