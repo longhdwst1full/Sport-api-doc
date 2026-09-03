@@ -1051,6 +1051,44 @@ paths:
       summary: Create a global VAT-included price window
       tags:
         - Admin Products
+    get:
+      operationId: getAdminProductPriceTimeline
+      parameters:
+        - name: variantId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductPriceTimelineDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Get the current, upcoming, and immutable price history of a SKU
+      tags:
+        - Admin Products
   /api/v1/admin/products/variants/{variantId}/prices/replace:
     post:
       operationId: replaceAdminProductPrice
@@ -1929,9 +1967,36 @@ components:
         endsAt:
           type: string
           format: date-time
+        reason:
+          type: string
+          maxLength: 500
+          description: Business reason; mandatory when reducing the reference price by more than 20%
       required:
         - amount
         - startsAt
+    ProductPriceTimelineDto:
+      type: object
+      properties:
+        productVariantId:
+          type: string
+          format: uuid
+        current:
+          nullable: true
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/ProductPriceWindowDto"
+        upcoming:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductPriceWindowDto"
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductPriceWindowDto"
+      required:
+        - productVariantId
+        - upcoming
+        - history
     ReplacePriceDto:
       type: object
       properties:
@@ -1945,6 +2010,10 @@ components:
         endsAt:
           type: string
           format: date-time
+        reason:
+          type: string
+          maxLength: 500
+          description: Business reason; mandatory when reducing the reference price by more than 20%
         expectedCurrentPriceId:
           type: string
           format: uuid
@@ -2185,6 +2254,37 @@ components:
       required:
         - id
         - sortOrder
+    ProductPriceWindowDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        amount:
+          type: string
+          example: "18990000.00"
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: object
+          format: date-time
+          nullable: true
+        status:
+          type: string
+        version:
+          type: number
+          minimum: 0
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - amount
+        - startsAt
+        - status
+        - version
+        - createdAt
     CreateBundleItemDto:
       type: object
       properties:

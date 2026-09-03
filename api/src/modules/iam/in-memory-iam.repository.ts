@@ -86,6 +86,8 @@ export class InMemoryIamRepository extends IamRepository {
       userType: USER_TYPE.STAFF,
       status: USER_STATUS.ACTIVE,
       permissionVersion: 1,
+      failedLoginAttempts: 0,
+      mustChangePassword: false,
     },
     {
       id: randomUUID(),
@@ -94,6 +96,8 @@ export class InMemoryIamRepository extends IamRepository {
       userType: USER_TYPE.STAFF,
       status: USER_STATUS.ACTIVE,
       permissionVersion: 0,
+      failedLoginAttempts: 0,
+      mustChangePassword: true,
     },
   ];
 
@@ -191,6 +195,8 @@ export class InMemoryIamRepository extends IamRepository {
       userType: USER_TYPE.STAFF,
       status: USER_STATUS.ACTIVE,
       permissionVersion: 1,
+      failedLoginAttempts: 0,
+      mustChangePassword: true,
     };
     const assignment: UserRoleAssignment = {
       id: input.assignmentId,
@@ -217,6 +223,8 @@ export class InMemoryIamRepository extends IamRepository {
     const user = this.users.find((candidate) => candidate.id === userId);
     if (!user || user.status !== USER_STATUS.ACTIVE) return undefined;
     user.status = USER_STATUS.LOCKED;
+    user.lockedAt = new Date().toISOString();
+    user.lockReason = reason;
     user.permissionVersion += 1;
     void reason;
     void context;
@@ -233,6 +241,10 @@ export class InMemoryIamRepository extends IamRepository {
     const user = this.users.find((candidate) => candidate.id === userId);
     if (!user || user.status !== USER_STATUS.LOCKED) return undefined;
     user.status = USER_STATUS.ACTIVE;
+    user.failedLoginAttempts = 0;
+    user.mustChangePassword = true;
+    delete user.lockedAt;
+    delete user.lockReason;
     user.permissionVersion += 1;
     void passwordHash;
     void context;

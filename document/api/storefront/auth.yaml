@@ -164,17 +164,21 @@ components:
           type: string
         refreshToken:
           type: string
+          description: Returned only in BODY transport; COOKIE transport uses an HttpOnly cookie
         tokenType:
           type: string
           example: Bearer
         expiresIn:
           type: number
           example: 900
+        mustChangePassword:
+          type: boolean
+          example: false
       required:
         - accessToken
-        - refreshToken
         - tokenType
         - expiresIn
+        - mustChangePassword
     ErrorResponseDto:
       type: object
       properties:
@@ -230,8 +234,7 @@ components:
       properties:
         refreshToken:
           type: string
-      required:
-        - refreshToken
+          description: Required in BODY transport; omitted when the refresh token is in HttpOnly cookie
     CurrentUserDto:
       type: object
       properties:
@@ -248,11 +251,15 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AuthScopeDto"
+        mustChangePassword:
+          type: boolean
+          example: false
       required:
         - userId
         - displayName
         - permissions
         - scopes
+        - mustChangePassword
     ErrorDetailDto:
       type: object
       properties:

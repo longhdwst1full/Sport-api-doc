@@ -19,7 +19,8 @@ import {
   USER_TYPE,
 } from '../iam/iam.constants';
 import { ScopeType } from '../iam/iam.types';
-import { LoginDto, RegisterCustomerDto, TokenPairDto } from './auth.dto';
+import { AUTH_AUDIT_ACTION, AUTH_SECURITY } from './auth.constants';
+import { ChangePasswordDto, LoginDto, RegisterCustomerDto, TokenPairDto } from './auth.dto';
 import { AccessTokenPayload, AuthPrincipal } from './auth.types';
 import {
   InvalidVietnamesePhoneNumberError,
@@ -40,6 +41,7 @@ export class AuthService {
   async login(
     input: LoginDto,
     userType: LoginUserType = USER_TYPE.STAFF,
+    requestId = `login-${uuidv7()}`,
   ): Promise<TokenPairDto> {
     this.ensureDatabaseEnabled();
     const identity = this.normalizeLoginIdentifier(input.identifier);
@@ -51,21 +53,84 @@ export class AuthService {
           : { normalizedPhone: identity.value }),
       },
     });
-    if (
-      !user?.passwordHash ||
-      user.status !== USER_STATUS.ACTIVE ||
-      !(await verify(user.passwordHash, input.password))
-    ) {
+    if (!user?.passwordHash || user.status !== USER_STATUS.ACTIVE) {
+      throw new UnauthorizedException('Email/phone or password is incorrect');
+    }
+    if (!(await verify(user.passwordHash, input.password))) {
+      await this.recordFailedLogin(user, requestId);
       throw new UnauthorizedException('Email/phone or password is incorrect');
     }
 
     return this.prisma.$transaction(async (transaction) => {
-      const pair = await this.createSession(transaction, user);
-      await transaction.user.update({
-        where: { id: user.id },
-        data: { lastLoginAt: new Date() },
+      const reset = await transaction.user.updateMany({
+        where: { id: user.id, status: USER_STATUS.ACTIVE },
+        data: {
+          failedLoginAttempts: 0,
+          lockedAt: null,
+          lockReason: null,
+          lastLoginAt: new Date(),
+        },
       });
+      if (reset.count !== 1) {
+        throw new UnauthorizedException('Email/phone or password is incorrect');
+      }
+      const pair = await this.createSession(transaction, user);
       return pair;
+    });
+  }
+
+  async changePassword(
+    principal: AuthPrincipal,
+    input: ChangePasswordDto,
+    requestId: string,
+  ): Promise<void> {
+    this.ensureDatabaseEnabled();
+    const user = await this.prisma.user.findUnique({ where: { id: principal.userId } });
+    if (!user?.passwordHash || user.status !== USER_STATUS.ACTIVE) {
+      throw new UnauthorizedException('Account is unavailable');
+    }
+    if (!(await verify(user.passwordHash, input.currentPassword))) {
+      throw new BadRequestException({
+        code: 'CURRENT_PASSWORD_INCORRECT',
+        message: 'Current password is incorrect',
+      });
+    }
+    if (await verify(user.passwordHash, input.newPassword)) {
+      throw new BadRequestException({
+        code: 'PASSWORD_UNCHANGED',
+        message: 'New password must be different from the current password',
+      });
+    }
+    const passwordHash = await hash(input.newPassword);
+    await this.prisma.$transaction(async (transaction) => {
+      const changed = await transaction.user.updateMany({
+        where: { id: user.id, version: user.version, status: USER_STATUS.ACTIVE },
+        data: {
+          passwordHash,
+          mustChangePassword: false,
+          failedLoginAttempts: 0,
+          lockedAt: null,
+          lockReason: null,
+          version: { increment: 1 },
+        },
+      });
+      if (changed.count !== 1) {
+        throw new ConflictException('Account changed; retry password change');
+      }
+      await this.audit.write(
+        {
+          requestId,
+          sequenceNo: 1,
+          actorType: 'USER',
+          actorUserId: user.id,
+          action: AUTH_AUDIT_ACTION.PASSWORD_CHANGE,
+          entityType: 'USER',
+          entityId: user.id,
+          before: { mustChangePassword: user.mustChangePassword },
+          after: { mustChangePassword: false },
+        },
+        transaction,
+      );
     });
   }
 
@@ -244,6 +309,7 @@ export class AuthService {
         type: assignment.scopeType as ScopeType,
         ...(assignment.branchId ? { branchId: assignment.branchId } : {}),
       })),
+      mustChangePassword: session.user.mustChangePassword,
     };
   }
 
@@ -269,7 +335,80 @@ export class AuthService {
       { sub: user.id, sid: sessionId, pv: user.permissionVersion.toString(), typ: 'access' },
       { expiresIn: accessTtlSeconds },
     );
-    return { accessToken, refreshToken, tokenType: 'Bearer', expiresIn: accessTtlSeconds };
+    return {
+      accessToken,
+      refreshToken,
+      tokenType: 'Bearer',
+      expiresIn: accessTtlSeconds,
+      mustChangePassword: user.mustChangePassword,
+    };
+  }
+
+  private async recordFailedLogin(user: User, requestId: string): Promise<void> {
+    await this.prisma.$transaction(async (transaction) => {
+      const rows = await transaction.$queryRaw<
+        Array<{ status: string; failedLoginAttempts: number; lockedAt: Date | null }>
+      >(Prisma.sql`
+        UPDATE "users"
+        SET
+          "failed_login_attempts" = "failed_login_attempts" + 1,
+          "status" = CASE
+            WHEN "failed_login_attempts" + 1 >= ${AUTH_SECURITY.MAX_FAILED_LOGIN_ATTEMPTS}
+              THEN ${USER_STATUS.LOCKED}
+            ELSE "status"
+          END,
+          "locked_at" = CASE
+            WHEN "failed_login_attempts" + 1 >= ${AUTH_SECURITY.MAX_FAILED_LOGIN_ATTEMPTS}
+              THEN NOW()
+            ELSE "locked_at"
+          END,
+          "lock_reason" = CASE
+            WHEN "failed_login_attempts" + 1 >= ${AUTH_SECURITY.MAX_FAILED_LOGIN_ATTEMPTS}
+              THEN ${AUTH_SECURITY.AUTO_LOCK_REASON}
+            ELSE "lock_reason"
+          END,
+          "permission_version" = CASE
+            WHEN "failed_login_attempts" + 1 >= ${AUTH_SECURITY.MAX_FAILED_LOGIN_ATTEMPTS}
+              THEN "permission_version" + 1
+            ELSE "permission_version"
+          END,
+          "version" = "version" + 1,
+          "updated_at" = NOW()
+        WHERE "id" = ${user.id}::uuid AND "status" = ${USER_STATUS.ACTIVE}
+        RETURNING
+          "status",
+          "failed_login_attempts" AS "failedLoginAttempts",
+          "locked_at" AS "lockedAt"
+      `);
+      const result = rows[0];
+      if (result?.status !== USER_STATUS.LOCKED) return;
+
+      const revoked = await transaction.authSession.updateMany({
+        where: { userId: user.id, revokedAt: null },
+        data: { revokedAt: result.lockedAt ?? new Date(), revokeReason: 'ACCOUNT_AUTO_LOCKED' },
+      });
+      await this.audit.write(
+        {
+          requestId,
+          sequenceNo: 1,
+          actorType: 'GUEST',
+          action: AUTH_AUDIT_ACTION.ACCOUNT_AUTO_LOCK,
+          entityType: 'USER',
+          entityId: user.id,
+          before: {
+            status: USER_STATUS.ACTIVE,
+            failedLoginAttempts: AUTH_SECURITY.MAX_FAILED_LOGIN_ATTEMPTS - 1,
+          },
+          after: {
+            status: USER_STATUS.LOCKED,
+            failedLoginAttempts: result.failedLoginAttempts,
+            revokedSessionCount: revoked.count,
+          },
+          reason: AUTH_SECURITY.AUTO_LOCK_REASON,
+        },
+        transaction,
+      );
+    });
   }
 
   private hashRefreshToken(token: string): string {

@@ -57,6 +57,9 @@ const products = [
     variantId: '41000000-0000-7000-8000-000000000001',
     sku: 'TA-CAO-SU-5KG',
     amount: '450000.00',
+    balanceId: '51000000-0000-7000-8000-000000000001',
+    initialOnHand: 24,
+    reorderPoint: 5,
     productType: 'STANDARD',
     components: [],
   },
@@ -70,6 +73,9 @@ const products = [
     variantId: '41000000-0000-7000-8000-000000000002',
     sku: 'AIR-ZOOM-42',
     amount: '2890000.00',
+    balanceId: '51000000-0000-7000-8000-000000000002',
+    initialOnHand: 12,
+    reorderPoint: 3,
     productType: 'STANDARD',
     components: [],
   },
@@ -83,6 +89,9 @@ const products = [
     variantId: '41000000-0000-7000-8000-000000000003',
     sku: 'THAM-YOGA-BLUE',
     amount: '690000.00',
+    balanceId: '51000000-0000-7000-8000-000000000003',
+    initialOnHand: 18,
+    reorderPoint: 4,
     productType: 'STANDARD',
     components: [],
   },
@@ -96,6 +105,9 @@ const products = [
     variantId: '41000000-0000-7000-8000-000000000004',
     sku: 'COMBO-GYM-5KG',
     amount: '1490000.00',
+    balanceId: '51000000-0000-7000-8000-000000000004',
+    initialOnHand: 0,
+    reorderPoint: 0,
     productType: 'BUNDLE',
     components: [
       { sku: 'TA-CAO-SU-5KG', quantity: 2 },
@@ -110,6 +122,7 @@ async function importDemoData(transaction: Prisma.TransactionClient): Promise<vo
     throw new Error('Foundation seed is required. Run prisma:seed before prisma:seed:demo.');
   }
 
+  const warehouseIdsByCode = new Map<string, string>();
   for (const item of branches) {
     const branch = await transaction.branch.upsert({
       where: { code: item.code },
@@ -124,7 +137,7 @@ async function importDemoData(transaction: Prisma.TransactionClient): Promise<vo
         updatedBy: bootstrapUserId,
       },
     });
-    await transaction.warehouse.upsert({
+    const warehouse = await transaction.warehouse.upsert({
       where: { code: item.warehouseCode },
       update: { branchId: branch.id, name: item.warehouseName, status: 'ACTIVE', isPrimary: true },
       create: {
@@ -138,6 +151,7 @@ async function importDemoData(transaction: Prisma.TransactionClient): Promise<vo
         updatedBy: bootstrapUserId,
       },
     });
+    warehouseIdsByCode.set(item.warehouseCode, warehouse.id);
   }
 
   for (const item of brands) {
@@ -209,6 +223,24 @@ async function importDemoData(transaction: Prisma.TransactionClient): Promise<vo
         status: 'ACTIVE',
       },
     });
+    if (item.productType === 'STANDARD') {
+      await transaction.inventoryBalance.upsert({
+        where: {
+          warehouseId_productVariantId: {
+            warehouseId: warehouseIdsByCode.get('KHO-HCM-01')!,
+            productVariantId: variant.id,
+          },
+        },
+        update: { reorderPoint: item.reorderPoint },
+        create: {
+          id: item.balanceId,
+          warehouseId: warehouseIdsByCode.get('KHO-HCM-01')!,
+          productVariantId: variant.id,
+          onHand: item.initialOnHand,
+          reorderPoint: item.reorderPoint,
+        },
+      });
+    }
     await transaction.productPrice.upsert({
       where: { id: item.variantId },
       update: {

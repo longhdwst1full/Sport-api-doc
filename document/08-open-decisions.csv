@@ -10,9 +10,9 @@ D08,Guest order access,Order number cộng signed token gửi email/SMS; OTP cho
 D09,Return scope,V1 trả theo order item/quantity; combo phải trả nguyên combo; refund được partial,Đúng trải nghiệm mua hàng nhưng vẫn giữ combo nhất quán,Product+Ops,7,DECIDED
 D10,Return window,Mặc định 7 ngày và version theo category/policy,Ảnh hưởng UX/pháp lý/chi phí,Business+Legal,7,PROPOSED
 D11,Approval stock threshold,Cần duyệt khi giảm tồn vượt 10 đơn vị hoặc 5 triệu VND cost,Maker-checker cần rule cụ thể,Ops+Finance,3,PROPOSED
-D12,Approval price threshold,Cần duyệt khi giảm quá 20 phần trăm hoặc retroactive,Tránh sai giá hàng loạt,Business,2,PROPOSED
+D12,Approval price threshold,"V1 không maker-checker; cấm retroactive; giảm quá 20% hiển thị cảnh báo, bắt buộc reason và OWNER xác nhận",Tránh sai giá nhưng không tăng workflow phê duyệt trong V1,Business+Tech,1,DECIDED
 D13,Warehouse cardinality,V1 đúng một warehouse mỗi branch; branch_id unique,Đơn giản hóa routing và kho vận V1,Ops,1,DECIDED
-D14,Price scope,Một giá toàn hệ thống; shipping khác theo vùng,Giảm price matrix và đồng bộ storefront,Business,2,PROPOSED
+D14,Price scope,Một giá VAT-included toàn hệ thống theo SKU; shipping khác theo vùng,Giảm price matrix và đồng bộ storefront,Business,1,DECIDED
 D15,Tax,Giá niêm yết và shipping đã gồm VAT; tax_total chỉ để báo cáo không cộng thêm,Khách thanh toán đúng giá hiển thị,Finance+Legal,4,DECIDED
 D16,Invoice,V1 xuất chứng từ/receipt cơ bản; e-invoice integration để phase sau,Ảnh hưởng compliance,Finance+Legal,5,PROPOSED
 D17,Customer identity,Guest vẫn tạo customer nội bộ user_id null bằng normalized phone; đăng ký sau mới link user sau xác minh,Lưu lịch sử mua mà không bắt tạo tài khoản,Product+Security,1,DECIDED

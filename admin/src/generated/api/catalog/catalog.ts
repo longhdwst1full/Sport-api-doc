@@ -42,6 +42,7 @@ import type {
   ProductDetailDto,
   ProductListResponseDto,
   ProductMediaDto,
+  ProductPriceTimelineDto,
   ReorderProductMediaDto,
   ReplacePriceDto,
   SearchActiveAdminBrandsParams,
@@ -2387,6 +2388,133 @@ export const useCreateAdminProductPrice = <
 
   return useMutation(mutationOptions, queryClient);
 };
+
+/**
+ * @summary Get the current, upcoming, and immutable price history of a SKU
+ */
+export const getAdminProductPriceTimeline = (variantId: string, signal?: AbortSignal) => {
+  return apiFetcher<ProductPriceTimelineDto>({
+    url: `/api/v1/admin/products/variants/${variantId}/prices`,
+    method: 'GET',
+    signal,
+  });
+};
+
+export const getGetAdminProductPriceTimelineQueryKey = (variantId?: string) => {
+  return [`/api/v1/admin/products/variants/${variantId}/prices`] as const;
+};
+
+export const getGetAdminProductPriceTimelineQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAdminProductPriceTimeline>>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+>(
+  variantId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getAdminProductPriceTimeline>>, TError, TData>
+    >;
+  },
+) => {
+  const { query: queryOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAdminProductPriceTimelineQueryKey(variantId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminProductPriceTimeline>>> = ({
+    signal,
+  }) => getAdminProductPriceTimeline(variantId, signal);
+
+  return { queryKey, queryFn, enabled: !!variantId, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminProductPriceTimeline>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetAdminProductPriceTimelineQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAdminProductPriceTimeline>>
+>;
+export type GetAdminProductPriceTimelineQueryError = ErrorType<
+  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+>;
+
+export function useGetAdminProductPriceTimeline<
+  TData = Awaited<ReturnType<typeof getAdminProductPriceTimeline>>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+>(
+  variantId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getAdminProductPriceTimeline>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAdminProductPriceTimeline>>,
+          TError,
+          Awaited<ReturnType<typeof getAdminProductPriceTimeline>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetAdminProductPriceTimeline<
+  TData = Awaited<ReturnType<typeof getAdminProductPriceTimeline>>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+>(
+  variantId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getAdminProductPriceTimeline>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAdminProductPriceTimeline>>,
+          TError,
+          Awaited<ReturnType<typeof getAdminProductPriceTimeline>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetAdminProductPriceTimeline<
+  TData = Awaited<ReturnType<typeof getAdminProductPriceTimeline>>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+>(
+  variantId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getAdminProductPriceTimeline>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Get the current, upcoming, and immutable price history of a SKU
+ */
+
+export function useGetAdminProductPriceTimeline<
+  TData = Awaited<ReturnType<typeof getAdminProductPriceTimeline>>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+>(
+  variantId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getAdminProductPriceTimeline>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetAdminProductPriceTimelineQueryOptions(variantId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
 
 /**
  * @summary Atomically close the current open price and create its replacement

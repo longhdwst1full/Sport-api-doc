@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Post } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Post, Req } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -8,6 +8,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
+import { AuthenticatedRequest, getAuthPrincipal } from '../../common/request/request-context';
 import {
   CreateStockAdjustmentDto,
   InventoryBalanceListDto,
@@ -25,8 +26,8 @@ export class InventoryController {
   @RequirePermissions('inventory.stock.view')
   @ApiOperation({ operationId: 'listInventoryBalances', summary: 'List warehouse balances' })
   @ApiOkResponse({ type: InventoryBalanceListDto })
-  listInventoryBalances(): InventoryBalanceListDto {
-    return this.inventory.list();
+  listInventoryBalances(@Req() request: AuthenticatedRequest): Promise<InventoryBalanceListDto> {
+    return this.inventory.list(getAuthPrincipal(request));
   }
 
   @Post('adjustments')
@@ -37,7 +38,12 @@ export class InventoryController {
   createStockAdjustment(
     @Body() input: CreateStockAdjustmentDto,
     @Headers('idempotency-key') idempotencyKey = '',
-  ): StockAdjustmentResultDto {
-    return this.inventory.adjust(input, idempotencyKey);
+    @Req() request: AuthenticatedRequest,
+  ): Promise<StockAdjustmentResultDto> {
+    const principal = getAuthPrincipal(request);
+    const requestId = typeof request.id === 'string' || typeof request.id === 'number'
+      ? String(request.id)
+      : (request.header('x-request-id') ?? `inventory-${idempotencyKey}`);
+    return this.inventory.adjust(input, idempotencyKey, principal, requestId);
   }
 }

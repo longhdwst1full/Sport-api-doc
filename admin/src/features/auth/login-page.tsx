@@ -28,6 +28,10 @@ export function LoginPage() {
     mutation: {
       onSuccess: (tokens) => {
         saveAuthTokens(tokens);
+        if (tokens.mustChangePassword) {
+          navigate('/change-password', { replace: true });
+          return;
+        }
         const from = (location.state as { from?: string } | null)?.from ?? '/';
         navigate(from, { replace: true });
       },
@@ -35,7 +39,9 @@ export function LoginPage() {
     },
   });
 
-  if (auth.authenticated) return <Navigate to="/" replace />;
+  if (auth.authenticated) {
+    return <Navigate to={auth.currentUser?.mustChangePassword ? '/change-password' : '/'} replace />;
+  }
 
   return (
     <main className="grid min-h-screen place-items-center bg-slate-100 p-4">

@@ -40,7 +40,9 @@ OpenAPI is served at `http://localhost:4000/openapi.json`; Swagger UI is at `htt
 
 The storefront exposes its PWA diagnostics/reset screen at `http://localhost:3000/pwa`. API, checkout, account and payment data are never service-worker cached.
 
-The API registers all 74 reviewed V1 models across 19 bounded contexts. Organization, IAM, Audit and Catalog Wave 2 use Prisma/PostgreSQL when `DATABASE_ENABLED=true`. Basic Inventory, CMS Content and Review moderation remain in-memory V1 vertical slices.
+The API registers the reviewed V1 model across bounded contexts. Organization, IAM, Audit, Catalog and basic Inventory adjustment/balance/ledger use Prisma/PostgreSQL when `DATABASE_ENABLED=true`. CMS Content and Review moderation remain in-memory vertical slices until their delivery sprint.
+
+Authentication transport is environment-specific: use `AUTH_TOKEN_TRANSPORT=BODY` with the matching frontend flags in local development; production validation requires `COOKIE`, `AUTH_BYPASS=false`, and explicit `CORS_ORIGINS`. COOKIE mode keeps refresh tokens in scoped HttpOnly cookies and access tokens in frontend memory.
 
 Each application owns an independent agent context:
 

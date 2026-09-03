@@ -8,7 +8,9 @@
 
 export interface TokenPairDto {
   accessToken: string;
-  refreshToken: string;
+  /** Returned only in BODY transport; COOKIE transport uses an HttpOnly cookie */
+  refreshToken?: string;
   tokenType: string;
   expiresIn: number;
+  mustChangePassword: boolean;
 }

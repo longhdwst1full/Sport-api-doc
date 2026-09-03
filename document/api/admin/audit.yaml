@@ -1,0 +1,210 @@
+# Generated from NestJS decorators. Do not edit by hand.
+openapi: 3.0.0
+info:
+  title: DCTD-UTC Commerce API
+  description: Contract for storefront and admin applications
+  version: 1.0.0
+  contact: {}
+servers:
+  - url: http://localhost:4000
+    description: Local
+paths:
+  /api/v1/admin/audit-logs:
+    get:
+      operationId: listAdminAuditLogs
+      parameters:
+        - name: limit
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 25
+            type: number
+        - name: cursor
+          required: false
+          in: query
+          description: Opaque cursor returned by the previous response
+          schema:
+            type: string
+        - name: action
+          required: false
+          in: query
+          schema:
+            maxLength: 150
+            type: string
+        - name: entityType
+          required: false
+          in: query
+          schema:
+            maxLength: 100
+            type: string
+        - name: entityId
+          required: false
+          in: query
+          schema:
+            format: uuid
+            type: string
+        - name: actorUserId
+          required: false
+          in: query
+          schema:
+            format: uuid
+            type: string
+        - name: requestId
+          required: false
+          in: query
+          schema:
+            maxLength: 100
+            type: string
+        - name: from
+          required: false
+          in: query
+          schema:
+            format: date-time
+            type: string
+        - name: to
+          required: false
+          in: query
+          schema:
+            format: date-time
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditListDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: List immutable redacted audit logs for a global owner
+      tags:
+        - Admin Audit
+components:
+  schemas:
+    AuditListDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditLogDto"
+        nextCursor:
+          type: string
+          nullable: true
+      required:
+        - items
+    ErrorResponseDto:
+      type: object
+      properties:
+        statusCode:
+          type: number
+          example: 400
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: Request validation failed
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorDetailDto"
+        path:
+          type: string
+          example: /api/v1/catalog/products
+        method:
+          type: string
+          example: POST
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+      required:
+        - statusCode
+        - code
+        - message
+        - path
+        - method
+        - timestamp
+    AuditLogDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        requestId:
+          type: string
+        sequenceNo:
+          type: number
+        actorType:
+          type: string
+        actorUserId:
+          type: string
+          format: uuid
+          nullable: true
+        actorDisplayName:
+          type: string
+          nullable: true
+        action:
+          type: string
+        entityType:
+          type: string
+        entityId:
+          type: string
+          format: uuid
+          nullable: true
+        before:
+          type: object
+          nullable: true
+        after:
+          type: object
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - requestId
+        - sequenceNo
+        - actorType
+        - action
+        - entityType
+        - createdAt
+    ErrorDetailDto:
+      type: object
+      properties:
+        field:
+          type: string
+          example: name
+        code:
+          type: string
+          example: INVALID_VALUE
+        message:
+          type: string
+          example: name should not be empty
+      required:
+        - code
+        - message
+  securitySchemes:
+    bearer:
+      scheme: bearer
+      bearerFormat: JWT
+      type: http

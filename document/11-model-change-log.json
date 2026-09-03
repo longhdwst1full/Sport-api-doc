@@ -400,6 +400,162 @@
           }
         }
       ]
+    },
+    {
+      "id": "DBAPI-20260903-AUTH-AUDIT-PRICE-CLOSEOUT",
+      "date": "2026-09-03",
+      "scope": "DB+API+ADMIN+STOREFRONT+SECURITY",
+      "summary": "Khóa tài khoản atomic ở lần sai mật khẩu thứ 5 và revoke session; staff mới/unlock bắt buộc đổi mật khẩu; refresh token hỗ trợ BODY dev và HttpOnly COOKIE production; audit cursor query GLOBAL owner-only có redaction; price future scheduling/history và rule giảm trên 20% cần reason + OWNER confirm.",
+      "sources": [
+        "migration:20260903173000_auth_lockout_and_audit_query",
+        "OpenAPI:changeAdminPassword/listAdminAuditLogs/getAdminProductPriceTimeline/createAdminProductPrice/replaceAdminProductPrice",
+        "test:auth.service.spec.ts/auth-token-transport.service.spec.ts/audit.service.spec.ts/products.service.spec.ts",
+        "admin:change-password-page.tsx/audit-page.tsx/product-price-panel.tsx"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "users" },
+          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính", "Retention"],
+          "set": {
+            "Ý nghĩa": "Customer/staff account; lockout 5 lần sai; staff forced password change",
+            "Unique / CHECK": "normalized email/phone partial UQ; failed_login_attempts >= 0",
+            "Các cột chính": "type,email,normalized_email,phone,normalized_phone,password_hash,status,failed_login_attempts,must_change_password,locked_at,lock_reason,permission_version,last_login_at,version",
+            "Retention": "LOCKED để bảo vệ; INACTIVE/anonymize theo lifecycle; never hard-delete"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "audit_logs" },
+          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính", "Retention"],
+          "set": {
+            "Ý nghĩa": "Append-only audit; cursor query GLOBAL owner-only; redacted output",
+            "Unique / CHECK": "request+sequence UQ; actor consistency CHECK; reject UPDATE/DELETE/TRUNCATE; created_at+id IDX",
+            "Các cột chính": "actor_type,actor_user_id,action,entity_type,entity_id,before_json,after_json,reason,ip_hash,created_at",
+            "Retention": "10 years proposed; no physical delete"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "product_prices" },
+          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính", "Retention"],
+          "set": {
+            "Ý nghĩa": "VAT-included SKU price windows; current/upcoming/history",
+            "Unique / CHECK": "no overlap active regular range; amount > 0; no retroactive",
+            "Các cột chính": "price_type,currency_code,amount,starts_at,ends_at,status,version",
+            "Retention": "immutable history; >20% reduction requires reason and OWNER confirmation"
+          }
+        },
+        {
+          "sheet": "RBAC Permissions",
+          "match": { "Permission code": "iam.audit.view" },
+          "columns": ["Allowed scopes", "Default roles", "Ghi chú"],
+          "set": {
+            "Allowed scopes": "GLOBAL",
+            "Default roles": "OWNER",
+            "Ghi chú": "API kiểm tra GLOBAL scope bổ sung; redaction password/token/secret/hash/email/phone; không expose ip/user-agent hash"
+          }
+        }
+      ],
+      "upsertRows": [
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "users", "Tên cột": "failed_login_attempts" },
+          "values": {
+            "Tên bảng": "users", "STT": "10A", "Tên cột": "failed_login_attempts", "Kiểu dữ liệu": "int", "Cho phép NULL": "NO", "Default": "0", "Ý nghĩa / trạng thái cho phép": "Số lần sai liên tiếp; lần 5 chuyển LOCKED; reset khi login thành công/unlock"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "users", "Tên cột": "must_change_password" },
+          "values": {
+            "Tên bảng": "users", "STT": "10B", "Tên cột": "must_change_password", "Kiểu dữ liệu": "boolean", "Cho phép NULL": "NO", "Default": "false", "Ý nghĩa / trạng thái cho phép": "true cho staff mới và sau Admin unlock/reset; chỉ me/change-password/logout được phép"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "users", "Tên cột": "locked_at" },
+          "values": {
+            "Tên bảng": "users", "STT": "10C", "Tên cột": "locked_at", "Kiểu dữ liệu": "timestamptz", "Cho phép NULL": "YES", "Default": "", "Ý nghĩa / trạng thái cho phép": "Thời điểm khóa manual hoặc auto lock"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "users", "Tên cột": "lock_reason" },
+          "values": {
+            "Tên bảng": "users", "STT": "10D", "Tên cột": "lock_reason", "Kiểu dữ liệu": "varchar(255)", "Cho phép NULL": "YES", "Default": "", "Ý nghĩa / trạng thái cho phép": "MAX_FAILED_LOGIN_ATTEMPTS hoặc lý do Admin nhập"
+          }
+        }
+      ]
+    },
+    {
+      "id": "DBAPI-20260903-INVENTORY-PERSISTENCE",
+      "date": "2026-09-03",
+      "scope": "DB+API+ADMIN+INVENTORY",
+      "summary": "Thay Inventory in-memory bằng PostgreSQL cho balance, stock adjustment, adjustment items và append-only movement; Idempotency-Key có request hash/result snapshot; branch scope, row lock, optimistic version và audit cùng transaction.",
+      "sources": [
+        "migration:20260903190000_inventory_adjustment_persistence",
+        "OpenAPI:listInventoryBalances/createStockAdjustment",
+        "test:inventory.service.spec.ts",
+        "seed:prisma/seed-demo.ts"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": ["inventory_balances", "inventory_movements", "stock_adjustments", "stock_adjustment_items"] },
+          "columns": ["Ý nghĩa", "Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính", "Retention"]
+        },
+        {
+          "sheet": "Relationships",
+          "match": { "Bảng con": ["inventory_balances", "inventory_movements", "stock_adjustments", "stock_adjustment_items"] },
+          "columns": ["Bảng con", "Cột FK", "Bảng cha", "Cột PK", "ON DELETE"]
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "inventory_movements" },
+          "columns": ["Ý nghĩa", "Unique / CHECK", "Retention"],
+          "set": {
+            "Ý nghĩa": "Sổ kho append-only cho mọi thay đổi balance",
+            "Unique / CHECK": "idempotency_key UQ; quantity_delta != 0; reject UPDATE/DELETE/TRUNCATE",
+            "Retention": "10 years proposed; no physical delete"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "stock_adjustments" },
+          "columns": ["Ý nghĩa", "Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính", "Retention"],
+          "set": {
+            "Ý nghĩa": "Phiếu điều chỉnh tồn cơ bản post trực tiếp Sprint 1",
+            "Khóa ngoại quan trọng": "warehouse_id->warehouses; created_by->users",
+            "Unique / CHECK": "adjustment_no UQ; idempotency_key UQ; status POSTED",
+            "Các cột chính": "adjustment_type,reason_code,reason,status,idempotency_key,request_hash,result_json,created_by,posted_at,version",
+            "Retention": "10 years proposed; immutable posted business record"
+          }
+        }
+      ],
+      "upsertRows": [
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "stock_adjustments", "Tên cột": "idempotency_key" },
+          "values": {
+            "Tên bảng": "stock_adjustments", "STT": "31A", "Tên cột": "idempotency_key", "Kiểu dữ liệu": "varchar(150)", "Cho phép NULL": "NO", "Default": "", "Ý nghĩa / trạng thái cho phép": "Unique command key; replay exact result for same payload"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "stock_adjustments", "Tên cột": "request_hash" },
+          "values": {
+            "Tên bảng": "stock_adjustments", "STT": "31B", "Tên cột": "request_hash", "Kiểu dữ liệu": "char(64)", "Cho phép NULL": "NO", "Default": "", "Ý nghĩa / trạng thái cho phép": "SHA-256 canonical payload; same key/different payload => 409"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "stock_adjustments", "Tên cột": "result_json" },
+          "values": {
+            "Tên bảng": "stock_adjustments", "STT": "31C", "Tên cột": "result_json", "Kiểu dữ liệu": "jsonb", "Cho phép NULL": "NO", "Default": "", "Ý nghĩa / trạng thái cho phép": "Immutable response snapshot for idempotent replay"
+          }
+        }
+      ]
     }
   ]
 }

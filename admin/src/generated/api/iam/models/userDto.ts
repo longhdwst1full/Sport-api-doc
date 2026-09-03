@@ -16,5 +16,10 @@ export interface UserDto {
   userType: UserDtoUserType;
   status: UserDtoStatus;
   permissionVersion: number;
+  /** @minimum 0 */
+  failedLoginAttempts: number;
+  mustChangePassword: boolean;
+  lockedAt?: string;
+  lockReason?: string;
   assignments: UserRoleAssignmentDto[];
 }

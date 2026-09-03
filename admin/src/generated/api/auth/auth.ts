@@ -21,7 +21,14 @@ import type {
   UseQueryResult,
 } from '@tanstack/react-query';
 
-import type { CurrentUserDto, LoginDto, RefreshTokenDto, TokenPairDto } from './models';
+import type {
+  ChangePasswordDto,
+  CurrentUserDto,
+  ErrorResponseDto,
+  LoginDto,
+  RefreshTokenDto,
+  TokenPairDto,
+} from './models';
 
 import { apiFetcher } from '../../../lib/api/fetcher';
 import type { ErrorType, BodyType } from '../../../lib/api/fetcher';
@@ -254,6 +261,90 @@ export const useLogoutAdmin = <TError = ErrorType<unknown>, TContext = unknown>(
   TContext
 > => {
   const mutationOptions = getLogoutAdminMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+/**
+ * @summary Change the current staff password and clear mandatory password change
+ */
+export const changeAdminPassword = (
+  changePasswordDto: BodyType<ChangePasswordDto>,
+  signal?: AbortSignal,
+) => {
+  return apiFetcher<void>({
+    url: `/api/v1/admin/auth/change-password`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: changePasswordDto,
+    signal,
+  });
+};
+
+export const getChangeAdminPasswordMutationOptions = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof changeAdminPassword>>,
+    TError,
+    { data: BodyType<ChangePasswordDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof changeAdminPassword>>,
+  TError,
+  { data: BodyType<ChangePasswordDto> },
+  TContext
+> => {
+  const mutationKey = ['changeAdminPassword'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof changeAdminPassword>>,
+    { data: BodyType<ChangePasswordDto> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return changeAdminPassword(data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ChangeAdminPasswordMutationResult = NonNullable<
+  Awaited<ReturnType<typeof changeAdminPassword>>
+>;
+export type ChangeAdminPasswordMutationBody = BodyType<ChangePasswordDto>;
+export type ChangeAdminPasswordMutationError = ErrorType<ErrorResponseDto | ErrorResponseDto>;
+
+/**
+ * @summary Change the current staff password and clear mandatory password change
+ */
+export const useChangeAdminPassword = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof changeAdminPassword>>,
+      TError,
+      { data: BodyType<ChangePasswordDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof changeAdminPassword>>,
+  TError,
+  { data: BodyType<ChangePasswordDto> },
+  TContext
+> => {
+  const mutationOptions = getChangeAdminPasswordMutationOptions(options);
 
   return useMutation(mutationOptions, queryClient);
 };

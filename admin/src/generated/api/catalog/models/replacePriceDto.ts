@@ -11,6 +11,11 @@ export interface ReplacePriceDto {
   amount: string;
   startsAt: string;
   endsAt?: string;
+  /**
+   * Business reason; mandatory when reducing the reference price by more than 20%
+   * @maxLength 500
+   */
+  reason?: string;
   expectedCurrentPriceId: string;
   /** @minimum 0 */
   expectedCurrentPriceVersion: number;

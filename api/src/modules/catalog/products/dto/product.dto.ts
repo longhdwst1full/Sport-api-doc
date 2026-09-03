@@ -239,11 +239,37 @@ export class CreatePriceDto {
   amount: string;
   @ApiProperty({ format: 'date-time' }) @IsDateString() startsAt: string;
   @ApiPropertyOptional({ format: 'date-time' }) @IsDateString() @IsOptional() endsAt?: string;
+  @ApiPropertyOptional({
+    maxLength: 500,
+    description: 'Business reason; mandatory when reducing the reference price by more than 20%',
+  })
+  @IsString()
+  @MaxLength(500)
+  @IsOptional()
+  reason?: string;
 }
 
 export class ReplacePriceDto extends CreatePriceDto {
   @ApiProperty({ format: 'uuid' }) @IsUUID() expectedCurrentPriceId: string;
   @ApiProperty({ minimum: 0 }) @IsInt() @Min(0) expectedCurrentPriceVersion: number;
+}
+
+export class ProductPriceWindowDto {
+  @ApiProperty({ format: 'uuid' }) id: string;
+  @ApiProperty({ example: '18990000.00' }) amount: string;
+  @ApiProperty({ format: 'date-time' }) startsAt: string;
+  @ApiPropertyOptional({ format: 'date-time', nullable: true }) endsAt?: string | null;
+  @ApiProperty() status: string;
+  @ApiProperty({ minimum: 0 }) version: number;
+  @ApiProperty({ format: 'date-time' }) createdAt: string;
+}
+
+export class ProductPriceTimelineDto {
+  @ApiProperty({ format: 'uuid' }) productVariantId: string;
+  @ApiPropertyOptional({ type: ProductPriceWindowDto, nullable: true })
+  current?: ProductPriceWindowDto | null;
+  @ApiProperty({ type: [ProductPriceWindowDto] }) upcoming: ProductPriceWindowDto[];
+  @ApiProperty({ type: [ProductPriceWindowDto] }) history: ProductPriceWindowDto[];
 }
 
 export class ChangeProductStatusDto {

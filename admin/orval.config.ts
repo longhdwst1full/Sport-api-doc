@@ -38,6 +38,7 @@ export default defineConfig({
   auth: createDomainConfig('auth'),
   organization: createDomainConfig('organization'),
   iam: createDomainConfig('iam'),
+  audit: createDomainConfig('audit'),
   catalog: createDomainConfig('catalog'),
   inventory: createDomainConfig('inventory'),
   content: createDomainConfig('content'),

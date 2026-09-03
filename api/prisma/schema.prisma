@@ -48,6 +48,9 @@ model Warehouse {
 
   branch          Branch               @relation(fields: [branchId], references: [id], onDelete: Restrict)
   roleAssignments UserRoleAssignment[]
+  inventoryBalances InventoryBalance[]
+  inventoryMovements InventoryMovement[]
+  stockAdjustments StockAdjustment[]
 
   @@map("warehouses")
 }
@@ -62,6 +65,10 @@ model User {
   passwordHash      String?  @map("password_hash") @db.VarChar(255)
   displayName       String   @map("display_name") @db.VarChar(255)
   status            String   @default("ACTIVE") @db.VarChar(24)
+  failedLoginAttempts Int     @default(0) @map("failed_login_attempts")
+  mustChangePassword Boolean  @default(false) @map("must_change_password")
+  lockedAt          DateTime? @map("locked_at") @db.Timestamptz(6)
+  lockReason        String?   @map("lock_reason") @db.VarChar(255)
   emailVerifiedAt   DateTime? @map("email_verified_at") @db.Timestamptz(6)
   phoneVerifiedAt   DateTime? @map("phone_verified_at") @db.Timestamptz(6)
   permissionVersion BigInt   @default(0) @map("permission_version")
@@ -82,6 +89,8 @@ model User {
   updatedBundles         ProductBundle[]      @relation("BundleUpdater")
   createdPrices          ProductPrice[]       @relation("PriceCreator")
   updatedPrices          ProductPrice[]       @relation("PriceUpdater")
+  createdInventoryMovements InventoryMovement[] @relation("InventoryMovementCreator")
+  createdStockAdjustments StockAdjustment[]    @relation("StockAdjustmentCreator")
 
   @@map("users")
 }
@@ -211,6 +220,7 @@ model AuditLog {
   @@index([actorUserId, createdAt])
   @@index([action, createdAt])
   @@index([entityType, entityId, createdAt])
+  @@index([createdAt, id])
   @@map("audit_logs")
 }
 
@@ -363,6 +373,9 @@ model ProductVariant {
   bundleDefinition ProductBundle? @relation("BundleVariant")
   bundleComponents BundleItem[]   @relation("BundleComponent")
   prices           ProductPrice[]
+  inventoryBalances InventoryBalance[]
+  inventoryMovements InventoryMovement[]
+  stockAdjustmentItems StockAdjustmentItem[]
 
   @@index([productId, status])
   @@map("product_variants")
@@ -446,4 +459,88 @@ model ProductPrice {
 
   @@index([productVariantId, status, startsAt])
   @@map("product_prices")
+}
+
+model InventoryBalance {
+  id               String   @id @db.Uuid
+  warehouseId      String   @map("warehouse_id") @db.Uuid
+  productVariantId String   @map("product_variant_id") @db.Uuid
+  onHand           Int      @default(0) @map("on_hand")
+  reserved         Int      @default(0)
+  reorderPoint     Int      @default(0) @map("reorder_point")
+  version          BigInt   @default(0)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  warehouse      Warehouse      @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  productVariant ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Restrict)
+
+  @@unique([warehouseId, productVariantId])
+  @@index([productVariantId])
+  @@map("inventory_balances")
+}
+
+model InventoryMovement {
+  id               String   @id @db.Uuid
+  warehouseId      String   @map("warehouse_id") @db.Uuid
+  productVariantId String   @map("product_variant_id") @db.Uuid
+  movementType     String   @map("movement_type") @db.VarChar(40)
+  quantityDelta    Int      @map("quantity_delta")
+  balanceAfter     Int      @map("balance_after")
+  referenceType    String   @map("reference_type") @db.VarChar(64)
+  referenceId      String   @map("reference_id") @db.Uuid
+  idempotencyKey   String   @unique @map("idempotency_key") @db.VarChar(200)
+  reason           String
+  occurredAt       DateTime @map("occurred_at") @db.Timestamptz(6)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy        String   @map("created_by") @db.Uuid
+
+  warehouse      Warehouse      @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  productVariant ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Restrict)
+  creator        User           @relation("InventoryMovementCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+
+  @@index([warehouseId, productVariantId, occurredAt])
+  @@index([referenceType, referenceId])
+  @@map("inventory_movements")
+}
+
+model StockAdjustment {
+  id               String   @id @db.Uuid
+  adjustmentNo     String   @unique @map("adjustment_no") @db.VarChar(32)
+  warehouseId      String   @map("warehouse_id") @db.Uuid
+  adjustmentType   String   @default("CORRECTION") @map("adjustment_type") @db.VarChar(32)
+  reasonCode       String   @default("MANUAL") @map("reason_code") @db.VarChar(64)
+  reason           String
+  status           String   @default("POSTED") @db.VarChar(24)
+  idempotencyKey   String   @unique @map("idempotency_key") @db.VarChar(150)
+  requestHash      String   @map("request_hash") @db.Char(64)
+  resultJson       Json     @map("result_json") @db.JsonB
+  createdBy        String   @map("created_by") @db.Uuid
+  postedAt         DateTime @map("posted_at") @db.Timestamptz(6)
+  version          BigInt   @default(0)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  creator   User      @relation("StockAdjustmentCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  items     StockAdjustmentItem[]
+
+  @@index([warehouseId, postedAt])
+  @@map("stock_adjustments")
+}
+
+model StockAdjustmentItem {
+  id                String @id @db.Uuid
+  stockAdjustmentId String @map("stock_adjustment_id") @db.Uuid
+  productVariantId  String @map("product_variant_id") @db.Uuid
+  quantityDelta     Int    @map("quantity_delta")
+  expectedOnHand    Int    @map("expected_on_hand")
+  actualOnHand      Int    @map("actual_on_hand")
+  note              String?
+
+  stockAdjustment StockAdjustment @relation(fields: [stockAdjustmentId], references: [id], onDelete: Restrict)
+  productVariant  ProductVariant  @relation(fields: [productVariantId], references: [id], onDelete: Restrict)
+
+  @@unique([stockAdjustmentId, productVariantId])
+  @@index([productVariantId])
+  @@map("stock_adjustment_items")
 }

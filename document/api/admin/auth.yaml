@@ -69,6 +69,36 @@ paths:
       summary: Revoke a refresh token
       tags:
         - Admin Auth
+  /api/v1/admin/auth/change-password:
+    post:
+      operationId: changeAdminPassword
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordDto"
+      responses:
+        "204":
+          description: ""
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Change the current staff password and clear mandatory password change
+      tags:
+        - Admin Auth
   /api/v1/admin/auth/me:
     get:
       operationId: getAdminCurrentUser
@@ -112,24 +142,77 @@ components:
           type: string
         refreshToken:
           type: string
+          description: Returned only in BODY transport; COOKIE transport uses an HttpOnly cookie
         tokenType:
           type: string
           example: Bearer
         expiresIn:
           type: number
           example: 900
+        mustChangePassword:
+          type: boolean
+          example: false
       required:
         - accessToken
-        - refreshToken
         - tokenType
         - expiresIn
+        - mustChangePassword
     RefreshTokenDto:
       type: object
       properties:
         refreshToken:
           type: string
+          description: Required in BODY transport; omitted when the refresh token is in HttpOnly cookie
+    ChangePasswordDto:
+      type: object
+      properties:
+        currentPassword:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 128
+        newPassword:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 128
       required:
-        - refreshToken
+        - currentPassword
+        - newPassword
+    ErrorResponseDto:
+      type: object
+      properties:
+        statusCode:
+          type: number
+          example: 400
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: Request validation failed
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorDetailDto"
+        path:
+          type: string
+          example: /api/v1/catalog/products
+        method:
+          type: string
+          example: POST
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+      required:
+        - statusCode
+        - code
+        - message
+        - path
+        - method
+        - timestamp
     CurrentUserDto:
       type: object
       properties:
@@ -146,11 +229,30 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AuthScopeDto"
+        mustChangePassword:
+          type: boolean
+          example: false
       required:
         - userId
         - displayName
         - permissions
         - scopes
+        - mustChangePassword
+    ErrorDetailDto:
+      type: object
+      properties:
+        field:
+          type: string
+          example: name
+        code:
+          type: string
+          example: INVALID_VALUE
+        message:
+          type: string
+          example: name should not be empty
+      required:
+        - code
+        - message
     AuthScopeDto:
       type: object
       properties:

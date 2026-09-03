@@ -12,5 +12,11 @@ export function AuthenticatedRoute({ children }: { children: ReactNode }) {
   if (!auth.authenticated) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
+  if (auth.currentUser?.mustChangePassword && location.pathname !== '/change-password') {
+    return <Navigate to="/change-password" replace />;
+  }
+  if (!auth.currentUser?.mustChangePassword && location.pathname === '/change-password') {
+    return <Navigate to="/" replace />;
+  }
   return children;
 }

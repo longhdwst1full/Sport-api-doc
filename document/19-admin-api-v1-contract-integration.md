@@ -1,6 +1,6 @@
 # Admin và Storefront API v1 contract integration
 
-Ngày cập nhật: 2026-09-02
+Ngày cập nhật: 2026-09-03
 
 ## Nguyên tắc đã áp dụng
 
@@ -38,10 +38,13 @@ Ngày cập nhật: 2026-09-02
 | Finalize media asset | `POST /api/v1/admin/media/uploads/finalize` | `finalizeAdminMediaUpload` | `media.asset.upload` | Cloudinary upload adapter; verify rồi persist idempotent |
 | Search SKU active để tạo combo | `GET /api/v1/admin/products/variants/active` | `searchActiveAdminProductVariants` | `catalog.product.view` | Combo builder; chỉ SKU thường ACTIVE, không nested combo |
 | Thay giá hiện hành atomic | `POST /api/v1/admin/products/variants/{variantId}/prices/replace` | `replaceAdminProductPrice` | `catalog.price.manage` | Price form gửi expected price id/version |
+| Lịch giá SKU | `GET /api/v1/admin/products/variants/{variantId}/prices` | `getAdminProductPriceTimeline` | `catalog.price.view` | Current/upcoming/history; history chỉ đọc |
+| Audit cursor query | `GET /api/v1/admin/audit-logs` | `listAdminAuditLogs` | `iam.audit.view` + GLOBAL scope | Filter action/entity/request/time; redacted snapshots |
 | Customer register | `POST /api/v1/auth/register` | `registerCustomer` | Public + rate limit | Storefront `/register` |
 | Customer login email/phone | `POST /api/v1/auth/login` | `loginCustomer` | Public + rate limit | Storefront `/login` |
 | Customer refresh/logout/me | `POST /api/v1/auth/refresh`, `POST /api/v1/auth/logout`, `GET /api/v1/auth/me` | `refreshCustomerToken`, `logoutCustomer`, `getCustomerCurrentUser` | Token/session | Generated Storefront Auth SDK |
 | Staff login email/phone | `POST /api/v1/admin/auth/login` | `loginAdmin` | Public + rate limit; chỉ userType STAFF | Admin Login |
+| Staff đổi mật khẩu bắt buộc | `POST /api/v1/admin/auth/change-password` | `changeAdminPassword` | Verified token | Forced-password page; trước khi đổi chỉ me/change-password/logout |
 
 API `/active` nhận `search`, `page`, `limit`; warehouse nhận thêm `branchId`. Lookup SKU tìm theo `sku/name`, chỉ trả variant ACTIVE thuộc Product STANDARD chưa archive và loại variant đã là combo. Response thống nhất:
 
@@ -100,7 +103,11 @@ Admin dùng `getApiErrorMessage` cho lỗi form/query và `getApiFieldErrors` đ
 - [x] Register chỉ tạo CUSTOMER ACTIVE; login customer/admin tách theo userType và dùng chung identifier email/phone.
 - [x] SĐT Việt Nam được validate bằng metadata đầy đủ và lưu E.164; unique constraint PostgreSQL xử lý đăng ký đồng thời.
 - [x] Contract writer unit test xác nhận operation `Storefront Auth` chỉ nằm trong `document/api/storefront/auth.yaml`; API hiện có 17 suites/61 unit tests pass.
-- [~] Client lưu token trong sessionStorage sau login/register; chưa sửa shared fetcher HIGH-risk để auto attach/refresh protected API.
-- [x] HTTP e2e với PostgreSQL local và `AUTH_BYPASS=false`: 2 suites, 10/10 test; gồm revoke assignment, variant update và product media commands.
+- [x] BODY transport ở development giữ sessionStorage; COOKIE transport production giữ refresh token HttpOnly, access token memory; shared fetcher auto attach/rotate và giữ BODY compatibility.
+- [x] Sai password lần 5 auto-lock atomic, revoke session và audit; staff mới/unlock phải đổi mật khẩu mặc định.
+- [x] Audit Admin dùng cursor pagination, GLOBAL owner scope và recursive redaction; không expose IP/user-agent hash.
+- [x] Price Admin quản lý current/upcoming/history, future schedule, no-retroactive và >20% reason/confirm.
+- [x] HTTP e2e với fresh PostgreSQL local và `AUTH_BYPASS=false`: 2 suites, 11/11 test; gồm revoke assignment, variant/media, price lifecycle và inventory adjustment persist/replay/conflict/audit.
+- [x] PostgreSQL integration: 3 suites, 21/21 test; fresh 9/9 migration và seed demo chạy lặp hai lần.
 - [ ] Verified identity/token — development đang dùng `AUTH_BYPASS=true` và principal OWNER bootstrap; production bắt buộc tắt bypass.
 - [ ] PostgreSQL permission/scope + transaction/audit integration — blocker trước staging.

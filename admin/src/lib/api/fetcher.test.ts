@@ -10,6 +10,7 @@ describe('apiFetcher', () => {
       refreshToken: 'refresh-token-long-enough-for-test',
       tokenType: 'Bearer',
       expiresIn: 900,
+      mustChangePassword: false,
     });
     let request: InternalAxiosRequestConfig | undefined;
     const adapter: AxiosAdapter = async (config) => {

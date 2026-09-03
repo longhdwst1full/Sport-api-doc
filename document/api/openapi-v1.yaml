@@ -326,6 +326,90 @@ paths:
       summary: Reactivate a branch and its V1 warehouse atomically
       tags:
         - Admin Organization
+  /api/v1/admin/audit-logs:
+    get:
+      operationId: listAdminAuditLogs
+      parameters:
+        - name: limit
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 25
+            type: number
+        - name: cursor
+          required: false
+          in: query
+          description: Opaque cursor returned by the previous response
+          schema:
+            type: string
+        - name: action
+          required: false
+          in: query
+          schema:
+            maxLength: 150
+            type: string
+        - name: entityType
+          required: false
+          in: query
+          schema:
+            maxLength: 100
+            type: string
+        - name: entityId
+          required: false
+          in: query
+          schema:
+            format: uuid
+            type: string
+        - name: actorUserId
+          required: false
+          in: query
+          schema:
+            format: uuid
+            type: string
+        - name: requestId
+          required: false
+          in: query
+          schema:
+            maxLength: 100
+            type: string
+        - name: from
+          required: false
+          in: query
+          schema:
+            format: date-time
+            type: string
+        - name: to
+          required: false
+          in: query
+          schema:
+            format: date-time
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditListDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: List immutable redacted audit logs for a global owner
+      tags:
+        - Admin Audit
   /api/v1/admin/iam/users:
     get:
       operationId: listAdminUsers
@@ -754,6 +838,36 @@ paths:
         "204":
           description: ""
       summary: Revoke a refresh token
+      tags:
+        - Admin Auth
+  /api/v1/admin/auth/change-password:
+    post:
+      operationId: changeAdminPassword
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordDto"
+      responses:
+        "204":
+          description: ""
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Change the current staff password and clear mandatory password change
       tags:
         - Admin Auth
   /api/v1/admin/auth/me:
@@ -2011,6 +2125,44 @@ paths:
       summary: Create a global VAT-included price window
       tags:
         - Admin Products
+    get:
+      operationId: getAdminProductPriceTimeline
+      parameters:
+        - name: variantId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductPriceTimelineDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Get the current, upcoming, and immutable price history of a SKU
+      tags:
+        - Admin Products
   /api/v1/admin/products/variants/{variantId}/prices/replace:
     post:
       operationId: replaceAdminProductPrice
@@ -3015,6 +3167,65 @@ components:
       required:
         - expectedVersion
         - warehouseExpectedVersion
+    AuditLogDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        requestId:
+          type: string
+        sequenceNo:
+          type: number
+        actorType:
+          type: string
+        actorUserId:
+          type: string
+          format: uuid
+          nullable: true
+        actorDisplayName:
+          type: string
+          nullable: true
+        action:
+          type: string
+        entityType:
+          type: string
+        entityId:
+          type: string
+          format: uuid
+          nullable: true
+        before:
+          type: object
+          nullable: true
+        after:
+          type: object
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - requestId
+        - sequenceNo
+        - actorType
+        - action
+        - entityType
+        - createdAt
+    AuditListDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditLogDto"
+        nextCursor:
+          type: string
+          nullable: true
+      required:
+        - items
     UserRoleAssignmentDto:
       type: object
       properties:
@@ -3078,6 +3289,18 @@ components:
         permissionVersion:
           type: number
           example: 1
+        failedLoginAttempts:
+          type: number
+          example: 0
+          minimum: 0
+        mustChangePassword:
+          type: boolean
+          example: false
+        lockedAt:
+          type: string
+          format: date-time
+        lockReason:
+          type: string
         assignments:
           type: array
           items:
@@ -3089,6 +3312,8 @@ components:
         - userType
         - status
         - permissionVersion
+        - failedLoginAttempts
+        - mustChangePassword
         - assignments
     UserListDto:
       type: object
@@ -3270,24 +3495,43 @@ components:
           type: string
         refreshToken:
           type: string
+          description: Returned only in BODY transport; COOKIE transport uses an HttpOnly cookie
         tokenType:
           type: string
           example: Bearer
         expiresIn:
           type: number
           example: 900
+        mustChangePassword:
+          type: boolean
+          example: false
       required:
         - accessToken
-        - refreshToken
         - tokenType
         - expiresIn
+        - mustChangePassword
     RefreshTokenDto:
       type: object
       properties:
         refreshToken:
           type: string
+          description: Required in BODY transport; omitted when the refresh token is in HttpOnly cookie
+    ChangePasswordDto:
+      type: object
+      properties:
+        currentPassword:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 128
+        newPassword:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 128
       required:
-        - refreshToken
+        - currentPassword
+        - newPassword
     AuthScopeDto:
       type: object
       properties:
@@ -3317,11 +3561,15 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AuthScopeDto"
+        mustChangePassword:
+          type: boolean
+          example: false
       required:
         - userId
         - displayName
         - permissions
         - scopes
+        - mustChangePassword
     RegisterCustomerDto:
       type: object
       properties:
@@ -4056,9 +4304,67 @@ components:
         endsAt:
           type: string
           format: date-time
+        reason:
+          type: string
+          maxLength: 500
+          description: Business reason; mandatory when reducing the reference price by more than 20%
       required:
         - amount
         - startsAt
+    ProductPriceWindowDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        amount:
+          type: string
+          example: "18990000.00"
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: object
+          format: date-time
+          nullable: true
+        status:
+          type: string
+        version:
+          type: number
+          minimum: 0
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - amount
+        - startsAt
+        - status
+        - version
+        - createdAt
+    ProductPriceTimelineDto:
+      type: object
+      properties:
+        productVariantId:
+          type: string
+          format: uuid
+        current:
+          nullable: true
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/ProductPriceWindowDto"
+        upcoming:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductPriceWindowDto"
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductPriceWindowDto"
+      required:
+        - productVariantId
+        - upcoming
+        - history
     ReplacePriceDto:
       type: object
       properties:
@@ -4072,6 +4378,10 @@ components:
         endsAt:
           type: string
           format: date-time
+        reason:
+          type: string
+          maxLength: 500
+          description: Business reason; mandatory when reducing the reference price by more than 20%
         expectedCurrentPriceId:
           type: string
           format: uuid
@@ -4179,7 +4489,7 @@ components:
       properties:
         warehouseCode:
           type: string
-          example: WH-HCM-01
+          example: KHO-HCM-01
         reason:
           type: string
         items:

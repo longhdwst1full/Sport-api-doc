@@ -13,32 +13,25 @@ import {
   useArchiveAdminProduct,
   useArchiveAdminProductVariant,
   useCreateAdminProductBundle,
-  useCreateAdminProductPrice,
   useCreateAdminProductVariant,
   useGetAdminProduct,
   usePublishAdminProduct,
   useReactivateAdminProduct,
   useReactivateAdminProductVariant,
-  useReplaceAdminProductPrice,
   useSearchActiveAdminProductVariants,
 } from '@/generated/api/catalog/catalog';
 import type { ProductVariantDto } from '@/generated/api/catalog/models';
 import { getApiErrorMessage } from '@/lib/api/error';
-import { buildPriceCommand, isProductPublishReady } from './product-workflow.policy';
+import { isProductPublishReady } from './product-workflow.policy';
 import { ProductMediaPanel } from './product-media-panel';
 import { ProductFormDrawer } from './product-form-drawer';
 import { VariantEditDrawer } from './variant-edit-drawer';
+import { ProductPricePanel } from './product-price-panel';
 
 interface VariantFormValues {
   sku: string;
   name: string;
   barcode?: string;
-}
-
-interface PriceFormValues {
-  variantId: string;
-  amount: string;
-  startsAt: string;
 }
 
 interface BundleFormValues {
@@ -50,12 +43,6 @@ const variantSchema: yup.ObjectSchema<VariantFormValues> = yup.object({
   sku: yup.string().trim().required('Nhập SKU').max(64, 'Tối đa 64 ký tự'),
   name: yup.string().trim().required('Nhập tên phiên bản').max(255, 'Tối đa 255 ký tự'),
   barcode: yup.string().trim().max(64, 'Tối đa 64 ký tự').optional(),
-});
-
-const priceSchema: yup.ObjectSchema<PriceFormValues> = yup.object({
-  variantId: yup.string().uuid('SKU không hợp lệ').required('Chọn SKU'),
-  amount: yup.string().trim().matches(/^(?=.*[1-9])\d+(?:\.\d{1,2})?$/, 'Giá phải lớn hơn 0 và có tối đa 2 số lẻ').required('Nhập giá bán'),
-  startsAt: yup.string().required('Chọn thời điểm áp dụng'),
 });
 
 const bundleSchema: yup.ObjectSchema<BundleFormValues> = yup.object({
@@ -72,11 +59,6 @@ const bundleSchema: yup.ObjectSchema<BundleFormValues> = yup.object({
     .required(),
 });
 
-const nowForInput = () => {
-  const now = new Date(Date.now() - new Date().getTimezoneOffset() * 60_000);
-  return now.toISOString().slice(0, 16);
-};
-
 const money = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' });
 
 export function ProductWorkflowDrawer({ slug, onClose }: { slug?: string; onClose: () => void }) {
@@ -90,10 +72,6 @@ export function ProductWorkflowDrawer({ slug, onClose }: { slug?: string; onClos
   const variantForm = useForm<VariantFormValues>({
     resolver: yupResolver(variantSchema),
     defaultValues: { sku: '', name: '', barcode: '' },
-  });
-  const priceForm = useForm<PriceFormValues>({
-    resolver: yupResolver(priceSchema),
-    defaultValues: { variantId: '', amount: '', startsAt: nowForInput() },
   });
   const bundleForm = useForm<BundleFormValues>({
     resolver: yupResolver(bundleSchema),
@@ -123,28 +101,6 @@ export function ProductWorkflowDrawer({ slug, onClose }: { slug?: string; onClos
         void message.success('Đã thêm SKU.');
       },
       onError: (error) => void message.error(getApiErrorMessage(error, 'Không thể thêm SKU.')),
-    },
-  });
-
-  const createPrice = useCreateAdminProductPrice({
-    mutation: {
-      onSuccess: async () => {
-        await refresh();
-        priceForm.reset({ variantId: '', amount: '', startsAt: nowForInput() });
-        void message.success('Đã thêm giá bán đã bao gồm VAT.');
-      },
-      onError: (error) => void message.error(getApiErrorMessage(error, 'Không thể thêm giá bán.')),
-    },
-  });
-
-  const replacePrice = useReplaceAdminProductPrice({
-    mutation: {
-      onSuccess: async () => {
-        await refresh();
-        priceForm.reset({ variantId: '', amount: '', startsAt: nowForInput() });
-        void message.success('Đã đóng giá cũ và áp dụng giá thay thế trong cùng giao dịch.');
-      },
-      onError: (error) => void message.error(getApiErrorMessage(error, 'Không thể thay giá bán.')),
     },
   });
 
@@ -221,13 +177,6 @@ export function ProductWorkflowDrawer({ slug, onClose }: { slug?: string; onClos
       id: product.id,
       data: { sku: values.sku, name: values.name, ...(values.barcode ? { barcode: values.barcode } : {}) },
     });
-  });
-
-  const submitPrice = priceForm.handleSubmit((values) => {
-    if (!product) return;
-    const command = buildPriceCommand(product, values);
-    if (command.kind === 'replace') replacePrice.mutate(command);
-    else createPrice.mutate(command);
   });
 
   const submitBundle = bundleForm.handleSubmit((values) => {
@@ -400,9 +349,13 @@ export function ProductWorkflowDrawer({ slug, onClose }: { slug?: string; onClos
             </div>
           </PermissionGate>
 
+          <PermissionGate permission="catalog.price.view">
+            <ProductPricePanel product={product} onChanged={refresh} />
+          </PermissionGate>
+
           {product.status === 'DRAFT' && (
             <PermissionGate permission="catalog.product.manage">
-              <div className="grid gap-6 lg:grid-cols-2">
+              <div>
                 <Form layout="vertical" onFinish={() => void submitVariant()}>
                   <Typography.Title level={5}>Thêm SKU</Typography.Title>
                   <Form.Item label="SKU" validateStatus={variantForm.formState.errors.sku ? 'error' : undefined} help={variantForm.formState.errors.sku?.message}>
@@ -417,27 +370,6 @@ export function ProductWorkflowDrawer({ slug, onClose }: { slug?: string; onClos
                   <Button htmlType="submit" loading={createVariant.isPending}>Thêm SKU</Button>
                 </Form>
 
-                <Form layout="vertical" onFinish={() => void submitPrice()}>
-                  <Typography.Title level={5}>Thêm giá hiệu lực</Typography.Title>
-                  <Form.Item label="SKU" validateStatus={priceForm.formState.errors.variantId ? 'error' : undefined} help={priceForm.formState.errors.variantId?.message}>
-                    <Controller name="variantId" control={priceForm.control} render={({ field }) => <Select {...field} options={product.variants.map((variant) => ({ value: variant.id, label: `${variant.sku} — ${variant.name}` }))} />} />
-                  </Form.Item>
-                  <Form.Item label="Giá bán đã VAT (VND)" validateStatus={priceForm.formState.errors.amount ? 'error' : undefined} help={priceForm.formState.errors.amount?.message}>
-                    <Controller name="amount" control={priceForm.control} render={({ field }) => <Input {...field} inputMode="decimal" />} />
-                  </Form.Item>
-                  <Form.Item label="Áp dụng từ" validateStatus={priceForm.formState.errors.startsAt ? 'error' : undefined} help={priceForm.formState.errors.startsAt?.message}>
-                    <Controller name="startsAt" control={priceForm.control} render={({ field }) => <Input {...field} type="datetime-local" />} />
-                  </Form.Item>
-                  <Button
-                    htmlType="submit"
-                    loading={createPrice.isPending || replacePrice.isPending}
-                    disabled={product.variants.length === 0}
-                  >
-                    {product.variants.find(({ id }) => id === priceForm.watch('variantId'))?.effectivePrice
-                      ? 'Thay giá'
-                      : 'Thêm giá'}
-                  </Button>
-                </Form>
               </div>
             </PermissionGate>
           )}

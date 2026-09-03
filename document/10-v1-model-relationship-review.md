@@ -85,9 +85,9 @@ Sơ đồ trên chỉ hiển thị aggregate lõi. File DBML chứa toàn bộ 7
 | `product_reviews` | `product_review_comments` | 1 → n | CASCADE | Shop reply/customer follow-up; tối đa một cấp reply ở V1 |
 | `media_assets` | `product_media/review/page/post/banner` | 1 → n | RESTRICT/SET NULL | Provider asset dùng lại; không xóa khi còn usage |
 | `posts` | `products` | n ↔ n | CASCADE/RESTRICT | Bài viết liên quan sản phẩm và chiều ngược lại |
-| `product_variants` | `product_prices` | 1 → n | RESTRICT | Price effective-dated, amount > 0; replace atomic đóng window hiện tại và tạo window mới; không overwrite lịch sử |
-| `warehouses + variants` | `inventory_balances` | n ↔ n qua balance | RESTRICT | Unique warehouse+variant |
-| `warehouses + variants` | `inventory_movements` | 1 → n | RESTRICT | Append-only ledger |
+| `product_variants` | `product_prices` | 1 → n | RESTRICT | Price effective-dated, amount > 0; future scheduling; cấm retroactive; replace atomic; history bất biến; giảm >20% cần reason + OWNER confirm |
+| `warehouses + variants` | `inventory_balances` | n ↔ n qua balance | RESTRICT | Unique warehouse+variant; on_hand/reserved nonnegative; mutation khóa row và optimistic version |
+| `warehouses + variants` | `inventory_movements` | 1 → n | RESTRICT | Append-only ledger; DB reject UPDATE/DELETE/TRUNCATE; movement idempotency unique |
 | `orders` | `inventory_reservations` | 1 → n | RESTRICT | Một reservation cho mỗi SKU/kho trong order |
 | `carts` | `cart_items` | 1 → n | CASCADE | Cart là dữ liệu tạm; không reserve stock |
 | `customers` | `orders` | 1 → n | RESTRICT | Guest checkout vẫn tạo customer record |
@@ -99,7 +99,7 @@ Sơ đồ trên chỉ hiển thị aggregate lõi. File DBML chứa toàn bộ 7
 | `shipping_zones` | `shipping_rates` | 1 → n | RESTRICT | Rate có thể mặc định hoặc override theo branch |
 | `orders` | `return_requests` | 1 → 0..1 active | RESTRICT | Chọn item/quantity; combo trả nguyên bộ |
 | `return_requests` | `return_items` | 1 → n | RESTRICT | Mỗi item tham chiếu order item gốc |
-| `approval_requests` | `refunds/stock_adjustments` | 1 → 0..1 mỗi loại | RESTRICT | Approval generic; payload immutable |
+| `approval_requests` | `refunds` và stock adjustment nâng cao sau V1 | 1 → 0..1 mỗi loại | RESTRICT | Sprint 1 stock adjustment cơ bản post trực tiếp; threshold approval mở ở sprint sau |
 
 Lifecycle P0 sau quyết định D22:
 
@@ -116,7 +116,7 @@ Lifecycle P0 sau quyết định D22:
 | `payments` | `payment_transactions`, `payment_evidences` | Payment status/received amount |
 | `fulfillments` | `fulfillment_status_history` | Fulfillment status/timestamps |
 | `inventory_balances` | `inventory_movements`, `inventory_reservations` theo command | `on_hand`, `reserved` |
-| `stock_adjustments` | `stock_adjustment_items` | Adjustment status/post result |
+| `stock_adjustments` | `stock_adjustment_items` | Sprint 1 post trực tiếp; idempotency key + request hash + result snapshot; items/movement/balance/audit cùng transaction |
 | `stocktakes` | `stocktake_items` | Snapshot/count/variance |
 | `stock_transfers` | `stock_transfer_items` | Ship/receive quantities |
 | `flash_sale_campaigns` | `flash_sale_items`, quota reservations | quota counters |
@@ -127,7 +127,7 @@ Lifecycle P0 sau quyết định D22:
 
 | Cột | Lý do | Cách bảo vệ |
 |---|---|---|
-| `audit_logs.entity_type/entity_id` | Audit nhiều loại entity | App validation; index entity type/id; không cascade |
+| `audit_logs.entity_type/entity_id` | Audit nhiều loại entity | App validation; index entity type/id và cursor created_at/id; không cascade; API GLOBAL owner-only và redact secret/PII |
 | `inventory_movements.reference_type/reference_id` | Movement sinh từ order/transfer/adjustment/return | Unique idempotency key và reconciliation job |
 | `outbox_events.aggregate_type/aggregate_id` | Event nhiều aggregate | Ghi cùng transaction; retention policy |
 | `idempotency_keys.actor_id` | Actor có thể user/system/signed guest | Actor type + signed context + expiry |

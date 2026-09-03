@@ -1,6 +1,7 @@
 import type { TokenPairDto } from '@/generated/api/auth/models';
 
 const STORAGE_KEY = 'dctd.admin.auth.v1';
+const cookieTransport = import.meta.env.VITE_AUTH_TOKEN_TRANSPORT === 'COOKIE';
 let memoryTokens: TokenPairDto | undefined;
 const listeners = new Set<() => void>();
 
@@ -10,6 +11,7 @@ function getStorage(): Storage | undefined {
 
 export function readAuthTokens(): TokenPairDto | undefined {
   if (memoryTokens) return memoryTokens;
+  if (cookieTransport) return undefined;
   const raw = getStorage()?.getItem(STORAGE_KEY);
   if (!raw) return undefined;
   try {
@@ -23,8 +25,12 @@ export function readAuthTokens(): TokenPairDto | undefined {
 
 export function saveAuthTokens(tokens: TokenPairDto): void {
   memoryTokens = tokens;
-  getStorage()?.setItem(STORAGE_KEY, JSON.stringify(tokens));
+  if (!cookieTransport) getStorage()?.setItem(STORAGE_KEY, JSON.stringify(tokens));
   listeners.forEach((listener) => listener());
+}
+
+export function usesAuthCookieTransport(): boolean {
+  return cookieTransport;
 }
 
 export function clearAuthTokens(): void {

@@ -1,4 +1,10 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
@@ -22,6 +28,7 @@ function createDevelopmentPrincipal(requiredPermissions: string[]): AuthPrincipa
     permissionVersion: 'dev',
     permissions: requiredPermissions,
     scopes: [{ type: ScopeType.GLOBAL }],
+    mustChangePassword: false,
   };
 }
 
@@ -58,6 +65,12 @@ export class PermissionGuard implements CanActivate {
     }
     const principal = await this.auth.authorizeAccessToken(authorization.slice(7).trim());
     request.auth = principal;
+    if (required?.length && principal.mustChangePassword) {
+      throw new ForbiddenException({
+        code: 'PASSWORD_CHANGE_REQUIRED',
+        message: 'Password must be changed before using this function',
+      });
+    }
     const granted = new Set(principal.permissions);
     return required.every((permission) => granted.has(permission));
   }

@@ -9,6 +9,10 @@ Table branches {
   code varchar(32) [not null, unique]
   name varchar(255) [not null]
   status varchar(24) [not null, default: 'ACTIVE']
+  failed_login_attempts int [not null, default: 0, note: 'Số lần sai liên tiếp; reset về 0 khi login thành công hoặc Admin unlock']
+  must_change_password boolean [not null, default: false, note: 'true cho staff mới và sau unlock/reset']
+  locked_at timestamptz
+  lock_reason varchar(255)
   phone varchar(32)
   email varchar(255)
   address_json jsonb [not null]
@@ -53,7 +57,7 @@ Table users {
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
-  Note: '[P0] Public register chỉ tạo CUSTOMER ACTIVE và yêu cầu email hoặc phone; V1 tạm chưa verification. Unique indexes cho normalized_email/phone khi khác null; INACTIVE rồi anonymize, không soft-delete.'
+  Note: '[P0] Public register chỉ tạo CUSTOMER ACTIVE và yêu cầu email hoặc phone; V1 tạm chưa verification. Sai mật khẩu lần 5 chuyển LOCKED, revoke session và audit atomic; staff mới/unlock bắt buộc đổi mật khẩu. Unique indexes cho normalized_email/phone khi khác null; INACTIVE rồi anonymize, không soft-delete.'
 }
 
 Table auth_sessions {
@@ -141,8 +145,11 @@ Table audit_logs {
   ip_hash varchar(128)
   user_agent_hash varchar(128)
   created_at timestamptz [not null]
-  indexes { (request_id, sequence_no) [unique] }
-  Note: '[P0] Append-only UPDATE/DELETE/TRUNCATE; actor consistency CHECK; entity_id polymorphic nên không tạo FK.'
+  indexes {
+    (request_id, sequence_no) [unique]
+    (created_at, id)
+  }
+  Note: '[P0] Append-only UPDATE/DELETE/TRUNCATE; actor consistency CHECK; entity_id polymorphic nên không tạo FK; query cursor mới nhất trước, chỉ GLOBAL owner và redact credential/PII.'
 }
 
 Table approval_requests {
@@ -476,7 +483,7 @@ Table product_prices {
   created_by uuid [not null]
   updated_at timestamptz [not null]
   updated_by uuid [not null]
-  Note: '[P0] CHECK amount>0 và end>start; exclusion constraint chống overlap; thay giá bằng transaction đóng window hiện tại rồi tạo window mới với optimistic version.'
+  Note: '[P0] CHECK amount>0 và end>start; exclusion constraint chống overlap; không tạo giá retroactive; future scheduling được phép; history không sửa/xóa; giảm trên 20% bắt buộc reason và OWNER xác nhận; replace atomic với optimistic version.'
 }
 
 Table flash_sale_campaigns {
@@ -554,7 +561,7 @@ Table inventory_movements {
   occurred_at timestamptz [not null]
   created_at timestamptz [not null]
   created_by uuid [not null]
-  Note: '[P0] Append-only ledger; không delete/update.'
+  Note: '[P0] Append-only ledger; reject UPDATE/DELETE/TRUNCATE; mỗi dòng adjustment có idempotency key riêng.'
 }
 
 Table inventory_reservations {
@@ -581,22 +588,19 @@ Table stock_adjustments {
   id uuid [pk]
   adjustment_no varchar(32) [not null, unique]
   warehouse_id uuid [not null]
-  adjustment_type varchar(32) [not null, note: 'OPENING_BALANCE|MANUAL_RECEIPT|CORRECTION_IN|CORRECTION_OUT|DAMAGE_OUT']
-  reason_code varchar(64) [not null]
+  adjustment_type varchar(32) [not null, default: 'CORRECTION']
+  reason_code varchar(64) [not null, default: 'MANUAL']
   reason text [not null]
-  external_reference varchar(150)
-  source_name varchar(255)
-  status varchar(24) [not null, default: 'DRAFT']
-  approval_request_id uuid
+  status varchar(24) [not null, default: 'POSTED']
+  idempotency_key varchar(150) [not null, unique]
+  request_hash char(64) [not null]
+  result_json jsonb [not null, note: 'Snapshot response để replay idempotent chính xác']
   created_by uuid [not null]
-  submitted_at timestamptz
-  approved_by uuid
-  approved_at timestamptz
-  posted_at timestamptz
+  posted_at timestamptz [not null]
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
-  Note: '[P0] DRAFT|SUBMITTED|APPROVED|POSTED|REJECTED|CANCELLED. MANUAL_RECEIPT bắt buộc external_reference.'
+  Note: '[P0] Sprint 1 post trực tiếp CORRECTION/POSTED; transaction khóa balance, ghi items + movements + audit atomic. Workflow approval/receipt mở rộng ở sprint sau.'
 }
 
 Table stock_adjustment_items {
@@ -1292,10 +1296,8 @@ Ref: inventory_reservations.order_id > orders.id [delete: restrict]
 Ref: inventory_reservations.order_item_id > order_items.id [delete: restrict]
 Ref: inventory_reservations.order_item_component_id > order_item_components.id [delete: restrict]
 Ref: stock_adjustments.warehouse_id > warehouses.id [delete: restrict]
-Ref: stock_adjustments.approval_request_id > approval_requests.id [delete: restrict]
 Ref: stock_adjustments.created_by > users.id [delete: restrict]
-Ref: stock_adjustments.approved_by > users.id [delete: restrict]
-Ref: stock_adjustment_items.stock_adjustment_id > stock_adjustments.id [delete: cascade]
+Ref: stock_adjustment_items.stock_adjustment_id > stock_adjustments.id [delete: restrict]
 Ref: stock_adjustment_items.product_variant_id > product_variants.id [delete: restrict]
 Ref: stocktakes.warehouse_id > warehouses.id [delete: restrict]
 Ref: stocktakes.created_by > users.id [delete: restrict]

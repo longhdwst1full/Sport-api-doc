@@ -1,4 +1,5 @@
 import { registerAs } from '@nestjs/config';
+import { AUTH_TOKEN_TRANSPORT } from '../modules/auth/auth.constants';
 
 function splitCsv(value: string | undefined, fallback: string[]): string[] {
   if (!value?.trim()) return fallback;
@@ -15,6 +16,8 @@ export default registerAs('app', () => ({
   authBypass:
     (process.env.NODE_ENV ?? 'development') === 'development' &&
     (process.env.AUTH_BYPASS ?? 'true') === 'true',
+  authTokenTransport:
+    process.env.AUTH_TOKEN_TRANSPORT ?? AUTH_TOKEN_TRANSPORT.BODY,
   jwt: {
     accessSecret:
       process.env.JWT_ACCESS_SECRET ?? 'development-only-change-this-jwt-secret',

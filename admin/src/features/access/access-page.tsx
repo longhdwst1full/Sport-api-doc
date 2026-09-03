@@ -55,7 +55,7 @@ export function AccessPage() {
       eyebrow="Identity & access"
       title="Người dùng & phân quyền"
       description="RBAC V1 gồm OWNER, BRANCH_MANAGER và STAFF với scope GLOBAL/BRANCH; backend luôn là nguồn quyết định quyền cuối cùng."
-      dataNotice="Dữ liệu lấy từ generated Admin IAM SDK. JWT đã xác minh danh tính và quyền từ PostgreSQL; danh sách IAM đang được chuyển tiếp từ adapter sang persistence."
+      dataNotice="Dữ liệu lấy từ generated Admin IAM SDK và PostgreSQL. Nhân viên mới hoặc vừa mở khóa phải đổi mật khẩu mặc định trước khi dùng chức năng quản trị."
       metrics={[
         { key: 'users', label: 'Người dùng', value: users.length, icon: <UserOutlined /> },
         {
@@ -92,8 +92,8 @@ export function AccessPage() {
         className="mb-5"
         showIcon
         type="warning"
-        message="Dev bypass chỉ áp dụng hiển thị phía frontend"
-        description="API vẫn kiểm tra permission và scope; không dùng flag frontend làm cơ chế bảo mật."
+        message="Development đang mở bypass ở cả giao diện và API"
+        description="Chỉ dùng cho local development. Staging/production bắt buộc AUTH_BYPASS=false và kiểm tra permission/scope phía server."
       />
       {hasError && (
         <div className="mb-4">
@@ -169,6 +169,23 @@ export function AccessPage() {
                     render: (assignments: UserRoleAssignmentDto[]) =>
                       assignments.map((assignment) => assignment.scopeType).join(', ') ||
                       'Chưa gán',
+                  },
+                  {
+                    title: 'Bảo mật đăng nhập',
+                    width: 190,
+                    render: (_, user) => (
+                      <div>
+                        {user.mustChangePassword
+                          ? <Tag color="gold">Phải đổi mật khẩu</Tag>
+                          : <Tag color="green">Mật khẩu đã đổi</Tag>}
+                        <div className="mt-1 text-xs text-slate-500">
+                          Sai liên tiếp: {user.failedLoginAttempts}/5
+                        </div>
+                        {user.lockReason && (
+                          <div className="mt-1 text-xs text-red-600">Lý do: {user.lockReason}</div>
+                        )}
+                      </div>
+                    ),
                   },
                   {
                     title: 'Permission version',

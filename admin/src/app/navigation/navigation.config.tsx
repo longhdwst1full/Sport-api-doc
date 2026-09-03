@@ -1,5 +1,6 @@
 import {
   AppstoreOutlined,
+  AuditOutlined,
   BankOutlined,
   CommentOutlined,
   DashboardOutlined,
@@ -98,5 +99,12 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
     group: 'system',
     icon: <SafetyCertificateOutlined />,
     permission: 'iam.user.view',
+  },
+  {
+    path: '/audit',
+    label: 'Nhật ký hệ thống',
+    group: 'system',
+    icon: <AuditOutlined />,
+    permission: 'iam.audit.view',
   },
 ];

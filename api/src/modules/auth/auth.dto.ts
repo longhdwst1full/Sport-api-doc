@@ -58,17 +58,38 @@ export class RegisterCustomerDto {
 }
 
 export class RefreshTokenDto {
-  @ApiProperty()
+  @ApiPropertyOptional({
+    description: 'Required in BODY transport; omitted when the refresh token is in HttpOnly cookie',
+  })
+  @IsOptional()
   @IsString()
   @MinLength(32)
-  refreshToken: string;
+  refreshToken?: string;
 }
 
 export class TokenPairDto {
   @ApiProperty() accessToken: string;
-  @ApiProperty() refreshToken: string;
+  @ApiPropertyOptional({
+    description: 'Returned only in BODY transport; COOKIE transport uses an HttpOnly cookie',
+  })
+  refreshToken?: string;
   @ApiProperty({ example: 'Bearer' }) tokenType: 'Bearer';
   @ApiProperty({ example: 900 }) expiresIn: number;
+  @ApiProperty({ example: false }) mustChangePassword: boolean;
+}
+
+export class ChangePasswordDto {
+  @ApiProperty({ format: 'password', minLength: 8, maxLength: 128 })
+  @IsString()
+  @MinLength(8)
+  @MaxLength(128)
+  currentPassword: string;
+
+  @ApiProperty({ format: 'password', minLength: 8, maxLength: 128 })
+  @IsString()
+  @MinLength(8)
+  @MaxLength(128)
+  newPassword: string;
 }
 
 export class AuthScopeDto {
@@ -81,4 +102,5 @@ export class CurrentUserDto {
   @ApiProperty() displayName: string;
   @ApiProperty({ type: [String] }) permissions: string[];
   @ApiProperty({ type: [AuthScopeDto] }) scopes: AuthScopeDto[];
+  @ApiProperty({ example: false }) mustChangePassword: boolean;
 }

@@ -7,5 +7,6 @@
  */
 
 export interface RefreshTokenDto {
-  refreshToken: string;
+  /** Required in BODY transport; omitted when the refresh token is in HttpOnly cookie */
+  refreshToken?: string;
 }

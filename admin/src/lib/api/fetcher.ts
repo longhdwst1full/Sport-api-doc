@@ -4,6 +4,7 @@ import {
   getAccessToken,
   readAuthTokens,
   saveAuthTokens,
+  usesAuthCookieTransport,
 } from '@/core/auth/auth-token.store';
 import type { TokenPairDto } from '@/generated/api/auth/models';
 
@@ -31,12 +32,12 @@ let refreshPromise: Promise<TokenPairDto> | undefined;
 
 async function rotateTokens(): Promise<TokenPairDto> {
   const refreshToken = readAuthTokens()?.refreshToken;
-  if (!refreshToken) throw new Error('No refresh token is available');
+  if (!refreshToken && !usesAuthCookieTransport()) throw new Error('No refresh token is available');
   refreshPromise ??= axios
     .post<TokenPairDto>(
       '/api/v1/admin/auth/refresh',
-      { refreshToken },
-      { baseURL: API_URL, headers: { Accept: 'application/json' } },
+      refreshToken ? { refreshToken } : {},
+      { baseURL: API_URL, withCredentials: true, headers: { Accept: 'application/json' } },
     )
     .then(({ data }) => {
       saveAuthTokens(data);

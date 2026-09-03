@@ -196,6 +196,58 @@ describe('Admin v1 contract', () => {
     expect(typeof body.requestId).toBe('string');
   });
 
+  it('persists stock adjustments idempotently and writes audit evidence', async () => {
+    const idempotencyKey = `e2e-stock-${uuidv7()}`;
+    const payload = {
+      warehouseCode: 'KHO-HCM-01',
+      reason: 'E2E kiểm kê Sprint 1',
+      items: [{ sku: 'TA-CAO-SU-5KG', quantityDelta: 1 }],
+    };
+
+    const balancesBefore = await request(server())
+      .get('/api/v1/admin/inventory/balances')
+      .set('authorization', `Bearer ${accessToken}`)
+      .expect(200);
+    const before = (
+      balancesBefore.body as { items: Array<{ sku: string; onHand: number }> }
+    ).items.find(({ sku }) => sku === 'TA-CAO-SU-5KG');
+    expect(before).toBeDefined();
+
+    const posted = await request(server())
+      .post('/api/v1/admin/inventory/adjustments')
+      .set('authorization', `Bearer ${accessToken}`)
+      .set('Idempotency-Key', idempotencyKey)
+      .send(payload)
+      .expect(201);
+    expect(posted.body).toMatchObject({
+      status: 'POSTED',
+      reason: payload.reason,
+      balances: [expect.objectContaining({
+        sku: 'TA-CAO-SU-5KG',
+        onHand: (before?.onHand ?? 0) + 1,
+      })],
+    });
+
+    const replay = await request(server())
+      .post('/api/v1/admin/inventory/adjustments')
+      .set('authorization', `Bearer ${accessToken}`)
+      .set('Idempotency-Key', idempotencyKey)
+      .send(payload)
+      .expect(201);
+    expect(replay.body).toEqual(posted.body);
+
+    await request(server())
+      .post('/api/v1/admin/inventory/adjustments')
+      .set('authorization', `Bearer ${accessToken}`)
+      .set('Idempotency-Key', idempotencyKey)
+      .send({ ...payload, items: [{ sku: 'TA-CAO-SU-5KG', quantityDelta: 2 }] })
+      .expect(409);
+
+    await expect(prisma.auditLog.count({
+      where: { action: 'inventory.stock_adjustment.post', actorUserId: userId },
+    })).resolves.toBeGreaterThanOrEqual(1);
+  });
+
   it('serializes duplicate role assignment and revokes the winner atomically', async () => {
     const branch = await prisma.branch.findFirstOrThrow({ where: { status: 'ACTIVE' } });
     const sendAssignment = () =>
@@ -433,7 +485,7 @@ describe('Admin v1 contract', () => {
     const initialPrice = await request(server())
       .post(`/api/v1/admin/products/variants/${catalogFixture.variantId}/prices`)
       .set(authorization)
-      .send({ amount: '1490000.00', startsAt: '2026-01-01T00:00:00.000Z' })
+      .send({ amount: '1490000.00', startsAt: new Date(Date.now() - 1_000).toISOString() })
       .expect(201);
     const initialVariant = (
       initialPrice.body as {
@@ -449,7 +501,7 @@ describe('Admin v1 contract', () => {
     await request(server())
       .post(`/api/v1/admin/products/variants/${catalogFixture.variantId}/prices`)
       .set(authorization)
-      .send({ amount: '0.00', startsAt: '2026-02-01T00:00:00.000Z' })
+      .send({ amount: '0.00', startsAt: new Date(Date.now() - 1_000).toISOString() })
       .expect(400);
 
     await request(server())
@@ -457,7 +509,7 @@ describe('Admin v1 contract', () => {
       .set(authorization)
       .send({
         amount: '1590000.00',
-        startsAt: '2026-02-01T00:00:00.000Z',
+        startsAt: new Date(Date.now() - 1_000).toISOString(),
         expectedCurrentPriceId: initialVariant?.effectivePriceId,
         expectedCurrentPriceVersion: initialVariant?.effectivePriceVersion,
       })
@@ -475,7 +527,7 @@ describe('Admin v1 contract', () => {
     await request(server())
       .post(`/api/v1/admin/products/variants/${inactiveVariantId}/prices`)
       .set(authorization)
-      .send({ amount: '1.00', startsAt: '2026-01-01T00:00:00.000Z' })
+      .send({ amount: '1.00', startsAt: new Date(Date.now() - 1_000).toISOString() })
       .expect(201);
     await request(server())
       .post(`/api/v1/admin/products/variants/${inactiveVariantId}/archive`)
@@ -609,7 +661,7 @@ describe('Admin v1 contract', () => {
     await request(server())
       .post(`/api/v1/admin/products/variants/${comboVariantId}/prices`)
       .set(authorization)
-      .send({ amount: '900000.00', startsAt: '2026-01-01T00:00:00.000Z' })
+      .send({ amount: '900000.00', startsAt: new Date(Date.now() - 1_000).toISOString() })
       .expect(201);
     const bundleResponse = await request(server())
       .post(`/api/v1/admin/products/${comboProductId}/bundle`)

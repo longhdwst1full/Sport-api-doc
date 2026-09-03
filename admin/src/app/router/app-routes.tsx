@@ -7,6 +7,11 @@ import { AuthenticatedRoute } from '@/core/auth/authenticated-route';
 const LoginPage = lazy(() =>
   import('@/features/auth/login-page').then((module) => ({ default: module.LoginPage })),
 );
+const ChangePasswordPage = lazy(() =>
+  import('@/features/auth/change-password-page').then((module) => ({
+    default: module.ChangePasswordPage,
+  })),
+);
 
 const DashboardPage = lazy(() =>
   import('@/features/dashboard/dashboard-page').then((module) => ({
@@ -58,11 +63,22 @@ const AccessPage = lazy(() =>
     default: module.AccessPage,
   })),
 );
+const AuditPage = lazy(() =>
+  import('@/features/audit/audit-page').then((module) => ({ default: module.AuditPage })),
+);
 
 export function AppRoutes() {
   return (
     <Routes>
       <Route path="login" element={<LoginPage />} />
+      <Route
+        path="change-password"
+        element={
+          <AuthenticatedRoute>
+            <ChangePasswordPage />
+          </AuthenticatedRoute>
+        }
+      />
       <Route
         element={
           <AuthenticatedRoute>
@@ -147,6 +163,14 @@ export function AppRoutes() {
           element={
             <PermissionRoute permission="iam.user.view">
               <AccessPage />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="audit"
+          element={
+            <PermissionRoute permission="iam.audit.view">
+              <AuditPage />
             </PermissionRoute>
           }
         />

@@ -1,4 +1,4 @@
-import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { ExecutionContext, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { AUTHENTICATION_REQUIRED_KEY } from '../decorators/require-authentication.decorator';
@@ -40,7 +40,7 @@ function createGuard(
     switchToHttp: () => ({ getRequest: () => request }),
   } as unknown as ExecutionContext;
 
-  return { guard: new PermissionGuard(reflector, config, auth), context };
+  return { guard: new PermissionGuard(reflector, config, auth), context, auth };
 }
 
 describe('PermissionGuard development bypass', () => {
@@ -64,5 +64,23 @@ describe('PermissionGuard development bypass', () => {
 
     await expect(guard.canActivate(context)).rejects.toBeInstanceOf(UnauthorizedException);
     expect(request.auth).toBeUndefined();
+  });
+
+  it('allows authentication-only routes but blocks permission routes until password changes', async () => {
+    const request: TestRequest = {
+      header: jest.fn<string | undefined, [string]>().mockReturnValue('Bearer access'),
+    };
+    const { guard, context, auth } = createGuard('production', false, request);
+    jest.spyOn(auth, 'authorizeAccessToken').mockResolvedValue({
+      userId: 'user',
+      sessionId: 'session',
+      displayName: 'Staff',
+      permissionVersion: '1',
+      permissions: ['catalog.product.manage'],
+      scopes: [{ type: ScopeType.BRANCH, branchId: 'branch' }],
+      mustChangePassword: true,
+    });
+
+    await expect(guard.canActivate(context)).rejects.toBeInstanceOf(ForbiddenException);
   });
 });

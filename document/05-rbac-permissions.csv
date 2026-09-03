@@ -8,7 +8,7 @@ iam.user.manage,IAM,manage,GLOBAL;BRANCH,true,OWNER; BRANCH_MANAGER,Branch Manag
 iam.role.view,IAM,view,GLOBAL;BRANCH,false,OWNER; BRANCH_MANAGER,Branch Manager lookup chỉ nhận role STAFF
 iam.role.manage,IAM,manage,GLOBAL,true,Super Admin; Security Admin,Permission cache phải invalidate
 iam.assignment.manage,IAM,manage,GLOBAL;BRANCH,true,OWNER; BRANCH_MANAGER,OWNER gán/thu hồi assignment không phải OWNER; Branch Manager chỉ gán hoặc thu hồi STAFF trong branch được cấp; mọi thay đổi tăng permission_version và ghi audit
-iam.audit.view,IAM,view,GLOBAL;BRANCH;WAREHOUSE,true,Super Admin; Auditor,Không cho sửa/xóa
+iam.audit.view,IAM,view,GLOBAL,true,OWNER,API kiểm tra GLOBAL scope; chỉ đọc append-only; redact credential/hash/email/phone
 customer.view,Customer,view,GLOBAL;BRANCH;OWN,true,Customer Service; Order Operator,OWN cho customer portal
 customer.manage,Customer,manage,GLOBAL;BRANCH;OWN,true,Customer Service,Audit PII change
 catalog.brand.view,Catalog,view,GLOBAL;BRANCH,false,Catalog Manager; Order Operator; Warehouse Operator,
