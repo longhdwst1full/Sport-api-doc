@@ -26,6 +26,7 @@ import {
   ProductSummaryDto,
   ReplacePriceDto,
   UpdateProductDto,
+  UpdateVariantDto,
 } from '../dto/product.dto';
 import {
   PRODUCT_AUDIT_ACTION,
@@ -547,6 +548,55 @@ export class ProductsService {
     }
   }
 
+  async updateVariant(
+    variantId: string,
+    input: UpdateVariantDto,
+    context: MutationContext,
+  ): Promise<ProductDetailDto> {
+    const { expectedVersion, ...fields } = input;
+    if (Object.keys(fields).length === 0) {
+      throw new UnprocessableEntityException('At least one mutable variant field is required');
+    }
+    try {
+      const productId = await this.prisma.$transaction(async (transaction) => {
+        const candidate = await transaction.productVariant.findUnique({
+          where: { id: variantId },
+          select: { productId: true },
+        });
+        if (!candidate) throw new NotFoundException(PRODUCT_ERROR.VARIANT_NOT_FOUND);
+        await this.lockProductIds(transaction, [candidate.productId]);
+        const updated = await transaction.productVariant.updateMany({
+          where: {
+            id: variantId,
+            version: BigInt(expectedVersion),
+            product: { status: { not: PRODUCT_STATUS.ARCHIVED } },
+          },
+          data: { ...fields, version: { increment: 1 } },
+        });
+        if (updated.count !== 1) {
+          throw new ConflictException(PRODUCT_ERROR.VARIANT_VERSION_CONFLICT);
+        }
+        await this.audit.write(
+          {
+            requestId: context.requestId,
+            sequenceNo: 1,
+            actorType: 'USER',
+            actorUserId: context.actorUserId,
+            action: PRODUCT_AUDIT_ACTION.VARIANT_UPDATE,
+            entityType: 'PRODUCT_VARIANT',
+            entityId: variantId,
+            after: { ...fields, version: expectedVersion + 1 } as Prisma.InputJsonObject,
+          },
+          transaction,
+        );
+        return candidate.productId;
+      });
+      return this.getById(productId);
+    } catch (error) {
+      this.rethrowConstraint(error, 'Barcode already exists');
+    }
+  }
+
   async createPrice(
     variantId: string,
     input: CreatePriceDto,
@@ -913,7 +963,7 @@ export class ProductsService {
       media: {
         where: { status: PRODUCT_VARIANT_STATUS.ACTIVE },
         include: { mediaAsset: true },
-        orderBy: [{ isPrimary: 'desc' as const }, { sortOrder: 'asc' as const }],
+        orderBy: [{ sortOrder: 'asc' as const }, { id: 'asc' as const }],
       },
       variants: {
         ...(storefront
@@ -954,7 +1004,8 @@ export class ProductsService {
     );
     const minPrice = prices.sort((left, right) => left.comparedTo(right))[0];
     const primaryCategory = row.categories.find(({ isPrimary }) => isPrimary)?.category.name;
-    const imageUrl = row.media[0]?.mediaAsset.secureUrl;
+    const imageUrl = (row.media.find(({ isPrimary }) => isPrimary) ?? row.media[0])
+      ?.mediaAsset.secureUrl;
     return {
       id: row.id,
       productNo: row.productNo,
@@ -982,14 +1033,26 @@ export class ProductsService {
       : row.variants;
     return {
       ...this.toSummary(row, storefront),
+      brandId: row.brandId,
+      primaryCategoryId:
+        row.categories.find(({ isPrimary }) => isPrimary)?.categoryId ?? null,
       ...(row.shortDescription ? { shortDescription: row.shortDescription } : {}),
       ...(row.description ? { description: row.description } : {}),
       categoryIds: row.categories.map(({ categoryId }) => categoryId),
+      categories: row.categories.map(({ categoryId, category, isPrimary }) => ({
+        id: categoryId,
+        name: category.name,
+        isPrimary,
+      })),
       variants: variants.map((variant) => ({
         id: variant.id,
         sku: variant.sku,
         ...(variant.barcode ? { barcode: variant.barcode } : {}),
         name: variant.name,
+        weightGrams: variant.weightGrams,
+        lengthMm: variant.lengthMm,
+        widthMm: variant.widthMm,
+        heightMm: variant.heightMm,
         status: variant.status as ProductDetailDto['variants'][number]['status'],
         version: Number(variant.version),
         effectivePrice: variant.prices[0]?.amount.toFixed(2) ?? null,
@@ -1008,6 +1071,17 @@ export class ProductsService {
               })),
             }
           : null,
+      })),
+      media: row.media.map((item) => ({
+        id: item.id,
+        mediaAssetId: item.mediaAssetId,
+        variantId: item.variantId,
+        secureUrl: item.mediaAsset.secureUrl,
+        thumbnailUrl: item.mediaAsset.thumbnailUrl,
+        altText: item.altText,
+        sortOrder: item.sortOrder,
+        isPrimary: item.isPrimary,
+        status: item.status as ProductDetailDto['media'][number]['status'],
       })),
     };
   }
@@ -1111,7 +1185,7 @@ export class ProductsService {
 
   private async validateReferences(
     transaction: Prisma.TransactionClient,
-    brandId?: string,
+    brandId?: string | null,
     categoryIds?: string[],
   ): Promise<void> {
     if (brandId) {

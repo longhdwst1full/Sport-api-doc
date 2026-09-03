@@ -1,8 +1,9 @@
 import { Type } from 'class-transformer';
-import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, OmitType, PartialType } from '@nestjs/swagger';
 import {
   ArrayNotEmpty,
   IsArray,
+  IsBoolean,
   IsDateString,
   IsIn,
   IsInt,
@@ -21,10 +22,12 @@ import {
   PRODUCT_BUNDLE_STATUS,
   PRODUCT_BUNDLE_TYPE,
   PRODUCT_CURRENCY,
+  PRODUCT_MEDIA_STATUS,
   PRODUCT_STATUS,
   PRODUCT_TYPE,
   PRODUCT_VARIANT_STATUS,
   ProductStatus,
+  ProductMediaStatus,
   ProductType,
   ProductVariantStatus,
 } from '../product.constants';
@@ -34,12 +37,34 @@ export class ProductVariantDto {
   @ApiProperty() sku: string;
   @ApiPropertyOptional() barcode?: string;
   @ApiProperty() name: string;
+  @ApiProperty({ minimum: 0 }) weightGrams: number;
+  @ApiPropertyOptional({ type: Number, minimum: 1, nullable: true }) lengthMm?: number | null;
+  @ApiPropertyOptional({ type: Number, minimum: 1, nullable: true }) widthMm?: number | null;
+  @ApiPropertyOptional({ type: Number, minimum: 1, nullable: true }) heightMm?: number | null;
   @ApiProperty({ enum: Object.values(PRODUCT_VARIANT_STATUS) }) status: ProductVariantStatus;
   @ApiProperty({ example: 0 }) version: number;
   @ApiPropertyOptional({ type: String, example: '18990000.00', nullable: true }) effectivePrice?: string | null;
   @ApiPropertyOptional({ type: String, format: 'uuid', nullable: true }) effectivePriceId?: string | null;
   @ApiPropertyOptional({ type: Number, example: 0, nullable: true }) effectivePriceVersion?: number | null;
   @ApiPropertyOptional({ type: () => ProductBundleDto, nullable: true }) bundle?: ProductBundleDto | null;
+}
+
+export class ProductMediaDto {
+  @ApiProperty({ format: 'uuid' }) id: string;
+  @ApiProperty({ format: 'uuid' }) mediaAssetId: string;
+  @ApiPropertyOptional({ format: 'uuid', nullable: true }) variantId?: string | null;
+  @ApiProperty({ format: 'uri' }) secureUrl: string;
+  @ApiPropertyOptional({ type: String, format: 'uri', nullable: true }) thumbnailUrl?: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) altText?: string | null;
+  @ApiProperty({ minimum: 0 }) sortOrder: number;
+  @ApiProperty() isPrimary: boolean;
+  @ApiProperty({ enum: Object.values(PRODUCT_MEDIA_STATUS) }) status: ProductMediaStatus;
+}
+
+export class ProductCategoryDto {
+  @ApiProperty({ format: 'uuid' }) id: string;
+  @ApiProperty() name: string;
+  @ApiProperty() isPrimary: boolean;
 }
 
 export class BundleComponentDto {
@@ -71,9 +96,13 @@ export class ProductSummaryDto {
 }
 
 export class ProductDetailDto extends ProductSummaryDto {
+  @ApiPropertyOptional({ type: String, format: 'uuid', nullable: true }) brandId?: string | null;
+  @ApiPropertyOptional({ type: String, format: 'uuid', nullable: true }) primaryCategoryId?: string | null;
   @ApiPropertyOptional() shortDescription?: string;
   @ApiPropertyOptional() description?: string;
   @ApiProperty({ type: [ProductVariantDto] }) variants: ProductVariantDto[];
+  @ApiProperty({ type: [ProductMediaDto] }) media: ProductMediaDto[];
+  @ApiProperty({ type: [ProductCategoryDto] }) categories: ProductCategoryDto[];
   @ApiProperty({ type: [String], format: 'uuid' }) categoryIds: string[];
 }
 
@@ -118,7 +147,24 @@ export class CreateProductDto {
   @ApiProperty({ format: 'uuid' }) @IsUUID() primaryCategoryId: string;
 }
 
-export class UpdateProductFieldsDto extends PartialType(CreateProductDto) {}
+export class UpdateProductFieldsDto extends PartialType(
+  OmitType(CreateProductDto, ['brandId', 'shortDescription', 'description'] as const),
+) {
+  @ApiPropertyOptional({ type: String, format: 'uuid', nullable: true })
+  @IsUUID()
+  @IsOptional()
+  brandId?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  @IsString()
+  @IsOptional()
+  shortDescription?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  @IsString()
+  @IsOptional()
+  description?: string | null;
+}
 
 export class UpdateProductDto extends UpdateProductFieldsDto {
   @ApiProperty({ minimum: 0 }) @IsInt() @Min(0) expectedVersion: number;
@@ -132,6 +178,58 @@ export class CreateVariantDto {
   @ApiPropertyOptional() @IsInt() @Min(1) @IsOptional() lengthMm?: number;
   @ApiPropertyOptional() @IsInt() @Min(1) @IsOptional() widthMm?: number;
   @ApiPropertyOptional() @IsInt() @Min(1) @IsOptional() heightMm?: number;
+}
+
+export class UpdateVariantFieldsDto {
+  @ApiPropertyOptional() @IsString() @IsNotEmpty() @MaxLength(255) @IsOptional() name?: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) @IsString() @MaxLength(64) @IsOptional() barcode?: string | null;
+  @ApiPropertyOptional({ minimum: 0 }) @IsInt() @Min(0) @IsOptional() weightGrams?: number;
+  @ApiPropertyOptional({ type: Number, minimum: 1, nullable: true }) @IsInt() @Min(1) @IsOptional() lengthMm?: number | null;
+  @ApiPropertyOptional({ type: Number, minimum: 1, nullable: true }) @IsInt() @Min(1) @IsOptional() widthMm?: number | null;
+  @ApiPropertyOptional({ type: Number, minimum: 1, nullable: true }) @IsInt() @Min(1) @IsOptional() heightMm?: number | null;
+}
+
+export class UpdateVariantDto extends UpdateVariantFieldsDto {
+  @ApiProperty({ minimum: 0 }) @IsInt() @Min(0) expectedVersion: number;
+}
+
+export class AttachProductMediaDto {
+  @ApiProperty({ format: 'uuid' }) @IsUUID() mediaAssetId: string;
+  @ApiPropertyOptional({ format: 'uuid' }) @IsUUID() @IsOptional() variantId?: string;
+  @ApiPropertyOptional({ maxLength: 500 }) @IsString() @MaxLength(500) @IsOptional() altText?: string;
+  @ApiPropertyOptional({ type: Boolean, default: false }) @IsBoolean() @IsOptional() isPrimary = false;
+  @ApiProperty({ minimum: 0 }) @IsInt() @Min(0) expectedProductVersion: number;
+}
+
+export class UpdateProductMediaDto {
+  @ApiPropertyOptional({ type: String, maxLength: 500, nullable: true })
+  @IsString()
+  @MaxLength(500)
+  @IsOptional()
+  altText?: string | null;
+
+  @ApiPropertyOptional({ type: Boolean }) @IsBoolean() @IsOptional() isPrimary?: boolean;
+  @ApiProperty({ minimum: 0 }) @IsInt() @Min(0) expectedProductVersion: number;
+}
+
+export class ReorderProductMediaItemDto {
+  @ApiProperty({ format: 'uuid' }) @IsUUID() id: string;
+  @ApiProperty({ minimum: 0 }) @IsInt() @Min(0) sortOrder: number;
+}
+
+export class ReorderProductMediaDto {
+  @ApiProperty({ type: [ReorderProductMediaItemDto] })
+  @IsArray()
+  @ArrayNotEmpty()
+  @ValidateNested({ each: true })
+  @Type(() => ReorderProductMediaItemDto)
+  items: ReorderProductMediaItemDto[];
+
+  @ApiProperty({ minimum: 0 }) @IsInt() @Min(0) expectedProductVersion: number;
+}
+
+export class ChangeProductMediaStatusDto {
+  @ApiProperty({ minimum: 0 }) @IsInt() @Min(0) expectedProductVersion: number;
 }
 
 export class CreatePriceDto {

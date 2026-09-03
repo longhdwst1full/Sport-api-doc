@@ -36,6 +36,7 @@ import {
   AssignUserRoleDto,
   CreateStaffUserDto,
   LockStaffUserDto,
+  RevokeRoleAssignmentDto,
   PermissionListDto,
   RoleListDto,
   UserDto,
@@ -187,6 +188,35 @@ export class IamController {
   ): Promise<UserRoleAssignmentDto> {
     return this.iam.assignRole(
       userId,
+      input,
+      getMutationContext(request),
+      getAuthPrincipal(request),
+    );
+  }
+
+
+  @Post('users/:userId/role-assignments/:assignmentId/revoke')
+  @HttpCode(200)
+  @RequirePermissions('iam.assignment.manage')
+  @ApiOperation({
+    operationId: 'revokeAdminUserRoleAssignment',
+    summary: 'Revoke one active non-owner role assignment and refresh effective permissions',
+  })
+  @ApiOkResponse({ type: UserDto })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiUnauthorizedResponse({ type: ErrorResponseDto })
+  @ApiForbiddenResponse({ type: ErrorResponseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  revokeRoleAssignment(
+    @Param('userId', new ParseUUIDPipe()) userId: string,
+    @Param('assignmentId', new ParseUUIDPipe()) assignmentId: string,
+    @Body() input: RevokeRoleAssignmentDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<UserDto> {
+    return this.iam.revokeRoleAssignment(
+      userId,
+      assignmentId,
       input,
       getMutationContext(request),
       getAuthPrincipal(request),

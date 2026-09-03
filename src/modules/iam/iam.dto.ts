@@ -125,3 +125,12 @@ export class LockStaffUserDto {
   @MaxLength(255)
   reason: string;
 }
+
+export class RevokeRoleAssignmentDto {
+  @ApiProperty({ example: 'Nhân viên chuyển sang vai trò khác', minLength: 3, maxLength: 255 })
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(3)
+  @MaxLength(255)
+  reason: string;
+}

@@ -5,6 +5,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { AuditWriter } from '../audit/audit.writer';
 import {
   ROLE_ASSIGNMENT_STATUS,
+  IAM_AUDIT_ACTION,
   ROLE_STATUS,
   USER_STATUS,
   USER_TYPE,
@@ -167,7 +168,7 @@ export class PrismaIamRepository extends IamRepository {
           sequenceNo: 1,
           actorType: 'USER',
           actorUserId: context.actorUserId,
-          action: 'iam.assignment.create',
+          action: IAM_AUDIT_ACTION.ASSIGNMENT_CREATE,
           entityType: 'USER_ROLE_ASSIGNMENT',
           entityId: assignment.id,
           after: assignment as unknown as Prisma.InputJsonValue,
@@ -176,6 +177,56 @@ export class PrismaIamRepository extends IamRepository {
       );
       return assignment;
     });
+  }
+
+  async revokeAssignmentAndIncrementPermissionVersion(
+    assignmentId: string,
+    userId: string,
+    reason: string,
+    context: MutationContext,
+  ): Promise<UserWithAssignments | undefined> {
+    const revoked = await this.prisma.$transaction(async (transaction) => {
+      const now = new Date();
+      const updated = await transaction.userRoleAssignment.updateMany({
+        where: {
+          id: assignmentId,
+          userId,
+          status: ROLE_ASSIGNMENT_STATUS.ACTIVE,
+          validTo: null,
+        },
+        data: {
+          status: ROLE_ASSIGNMENT_STATUS.REVOKED,
+          validTo: now,
+          version: { increment: 1 },
+        },
+      });
+      if (updated.count !== 1) return false;
+      await transaction.user.update({
+        where: { id: userId },
+        data: { permissionVersion: { increment: 1 } },
+      });
+      await this.audit.write(
+        {
+          requestId: context.requestId,
+          sequenceNo: 1,
+          actorType: 'USER',
+          actorUserId: context.actorUserId,
+          action: IAM_AUDIT_ACTION.ASSIGNMENT_REVOKE,
+          entityType: 'USER_ROLE_ASSIGNMENT',
+          entityId: assignmentId,
+          before: { status: ROLE_ASSIGNMENT_STATUS.ACTIVE },
+          after: {
+            status: ROLE_ASSIGNMENT_STATUS.REVOKED,
+            validTo: now.toISOString(),
+          },
+          reason,
+        },
+        transaction,
+      );
+      return true;
+    });
+    if (!revoked) return undefined;
+    return this.findUser(userId);
   }
 
   async createStaffUser(
@@ -231,7 +282,7 @@ export class PrismaIamRepository extends IamRepository {
           sequenceNo: 1,
           actorType: 'USER',
           actorUserId: context.actorUserId,
-          action: 'iam.user.create',
+          action: IAM_AUDIT_ACTION.USER_CREATE,
           entityType: 'USER',
           entityId: user.id,
           after: {
@@ -277,7 +328,7 @@ export class PrismaIamRepository extends IamRepository {
           sequenceNo: 1,
           actorType: 'USER',
           actorUserId: context.actorUserId,
-          action: 'iam.user.lock',
+          action: IAM_AUDIT_ACTION.USER_LOCK,
           entityType: 'USER',
           entityId: userId,
           before: { status: USER_STATUS.ACTIVE },
@@ -324,7 +375,7 @@ export class PrismaIamRepository extends IamRepository {
           sequenceNo: 1,
           actorType: 'USER',
           actorUserId: context.actorUserId,
-          action: 'iam.user.unlock',
+          action: IAM_AUDIT_ACTION.USER_UNLOCK,
           entityType: 'USER',
           entityId: userId,
           before: { status: USER_STATUS.LOCKED },

@@ -60,6 +60,7 @@ export class FinalizeMediaUploadDto {
 }
 
 export class MediaAssetDto {
+  @ApiProperty({ format: 'uuid' }) id: string;
   @ApiProperty({ enum: ['CLOUDINARY'] }) provider: 'CLOUDINARY';
   @ApiProperty() providerAssetId: string;
   @ApiProperty() publicId: string;
@@ -70,5 +71,7 @@ export class MediaAssetDto {
   @ApiProperty() height: number;
   @ApiProperty() sizeBytes: number;
   @ApiProperty() format: string;
-  @ApiProperty() version: number;
+  @ApiProperty({ description: 'Cloudinary resource version used during provider verification' })
+  providerVersion: number;
+  @ApiProperty({ enum: ['ACTIVE'] }) status: 'ACTIVE';
 }

@@ -21,6 +21,14 @@ export const PRODUCT_VARIANT_STATUS = {
 export type ProductVariantStatus =
   (typeof PRODUCT_VARIANT_STATUS)[keyof typeof PRODUCT_VARIANT_STATUS];
 
+export const PRODUCT_MEDIA_STATUS = {
+  ACTIVE: 'ACTIVE',
+  INACTIVE: 'INACTIVE',
+} as const;
+
+export type ProductMediaStatus =
+  (typeof PRODUCT_MEDIA_STATUS)[keyof typeof PRODUCT_MEDIA_STATUS];
+
 export const PRODUCT_BUNDLE_STATUS = {
   ACTIVE: 'ACTIVE',
   INACTIVE: 'INACTIVE',
@@ -56,8 +64,13 @@ export const PRODUCT_AUDIT_ACTION = {
   ARCHIVE: 'catalog.product.archive',
   REACTIVATE: 'catalog.product.reactivate',
   VARIANT_CREATE: 'catalog.variant.create',
+  VARIANT_UPDATE: 'catalog.variant.update',
   VARIANT_ARCHIVE: 'catalog.variant.archive',
   VARIANT_REACTIVATE: 'catalog.variant.reactivate',
+  MEDIA_ATTACH: 'catalog.product-media.attach',
+  MEDIA_UPDATE: 'catalog.product-media.update',
+  MEDIA_REORDER: 'catalog.product-media.reorder',
+  MEDIA_ARCHIVE: 'catalog.product-media.archive',
   PRICE_CREATE: 'catalog.price.create',
   PRICE_REPLACE: 'catalog.price.replace',
   BUNDLE_CREATE: 'catalog.bundle.create',

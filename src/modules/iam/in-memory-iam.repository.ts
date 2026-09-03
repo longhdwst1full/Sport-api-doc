@@ -158,6 +158,25 @@ export class InMemoryIamRepository extends IamRepository {
     return Promise.resolve({ ...assignment });
   }
 
+  async revokeAssignmentAndIncrementPermissionVersion(
+    assignmentId: string,
+    userId: string,
+    reason: string,
+    context: MutationContext,
+  ): Promise<UserWithAssignments | undefined> {
+    const index = this.assignments.findIndex(
+      (assignment) => assignment.id === assignmentId && assignment.userId === userId,
+    );
+    if (index < 0) return undefined;
+    this.assignments.splice(index, 1);
+    const user = this.users.find((candidate) => candidate.id === userId);
+    if (!user) return undefined;
+    user.permissionVersion += 1;
+    void reason;
+    void context;
+    return this.findUser(userId);
+  }
+
   createStaffUser(
     input: CreateStaffUserInput,
     context: MutationContext,
