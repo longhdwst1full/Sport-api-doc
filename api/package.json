@@ -5,6 +5,7 @@
   "scripts": {
     "build": "yarn prisma:validate && yarn prisma:generate && nest build",
     "start": "node dist/main.js",
+    "prestart:dev": "yarn prisma:generate",
     "start:dev": "nest start --watch",
     "prisma:generate": "node scripts/run-prisma.cjs generate",
     "prisma:validate": "node scripts/run-prisma.cjs validate",
