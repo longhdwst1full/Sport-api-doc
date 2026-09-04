@@ -3,6 +3,7 @@ const { writeOpenApiArtifacts } = require('../dist/platform/openapi/openapi-arti
 
 async function generate() {
   process.env.AUTH_BYPASS = 'true';
+  process.env.DATABASE_ENABLED = 'false';
   const app = await createApplication({ logger: false, swagger: false });
   try {
     await writeOpenApiArtifacts(buildOpenApiDocument(app), process.cwd());

@@ -1,10 +1,10 @@
 # Admin CRUD coverage V1
 
-> **Document version:** 1.3.0
+> **Document version:** 1.4.0
 >
 > **Last updated:** 2026-09-04
 >
-> **Change summary:** Bổ sung slug sản phẩm tự sinh từ tên và mã khi tạo mới, không ghi đè giá trị người dùng sửa thủ công.
+> **Change summary:** Cập nhật lệnh seed dữ liệu Admin sử dụng Supabase online thay cho PostgreSQL Docker local.
 
 ## Đã có API thật và màn quản lý
 
@@ -38,7 +38,7 @@
 - Menu chia thành Tổng quan, Bán hàng, Sản phẩm & danh mục, Kho & vận hành, Nội dung & trải nghiệm, Tổ chức và Quản trị hệ thống.
 - Form tạo sản phẩm tự sinh slug theo mẫu `{tên-không-dấu}-{mã-sản-phẩm}`; dừng tự động khi người dùng sửa và có nút tạo lại. Form sửa không tự đổi slug để tránh làm thay đổi URL ngoài ý muốn.
 
-## Tài khoản quản trị local/dev
+## Tài khoản quản trị development
 
 - Foundation seed tạo đúng một bootstrap OWNER: `bootstrap-admin@example.invalid`.
 - Password khởi tạo là `Aa@123456`; bắt buộc đổi ngay sau lần đăng nhập đầu tiên.
@@ -50,7 +50,7 @@
 Chạy:
 
 ```bash
-yarn db:local:seed:demo
+yarn db:seed:demo
 ```
 
 Lệnh chạy foundation seed trước rồi upsert 3 chi nhánh/kho, 3 thương hiệu, 3 danh mục
@@ -65,3 +65,4 @@ và 3 sản phẩm/SKU/giá. Script không chứa credential thật, không xóa
 | 1.1.0 | 2026-09-04 | Bỏ custom Cloudinary uploader khỏi CKEditor 4 trong Product/CMS form. | User decision 2026-09-04 |
 | 1.2.0 | 2026-09-04 | Đồng bộ coverage hiện tại và ghi nhận bản ổn định login, CKEditor, required marker, menu Admin. | Admin stabilization review 2026-09-04 |
 | 1.3.0 | 2026-09-04 | Tự sinh slug sản phẩm từ tên và mã trong create flow, vẫn hỗ trợ chỉnh tay/tạo lại. | Product form UX 2026-09-04 |
+| 1.4.0 | 2026-09-04 | Chuyển lệnh seed/demo Admin sang workflow Supabase online. | Supabase workflow 2026-09-04 |

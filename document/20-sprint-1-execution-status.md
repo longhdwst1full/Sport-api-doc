@@ -1,10 +1,10 @@
 # Sprint 1 execution status
 
-> **Document version:** 1.2.0
+> **Document version:** 1.3.0
 >
 > **Last updated:** 2026-09-04
 >
-> **Change summary:** Bổ sung evidence ổn định Admin: login không còn bị permission bypass, CKEditor có timeout fallback, trường bắt buộc và menu nghiệp vụ được chuẩn hóa.
+> **Change summary:** Chuyển database development target sang Supabase online, loại bỏ Docker/local URL khỏi command và ghi rõ blocker connection string thật.
 
 ## Kết luận
 
@@ -184,7 +184,7 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 
 ### Trước khi chốt Sprint 1 DONE
 
-- [~] PostgreSQL local hoạt động; Supabase dev/staging vẫn cần pooler host thật mà không commit secret.
+- [~] Workflow development đã chuyển sang Supabase online; `api/.env.local` hiện vẫn là placeholder và cần pooler connection string thật mà không commit secret.
 - [x] 9 migration chạy từ zero, seed demo có 4 product gồm combo và chạy lặp; 21 PostgreSQL integration + 11 HTTP e2e pass.
 - [ ] Chạy full permission/branch-scope regression.
 - [x] Variant update, Product Media và Price scheduling/history UI đã hoàn thiện core.
@@ -246,7 +246,7 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 
 ## Blocker môi trường
 
-- `api/.env.local` được git-ignore và không bị track, nhưng Supabase host/tenant vẫn là placeholder; staging cần pooler host thật nhưng không được commit/in log credential. Việc này không chặn local Sprint evidence vì PostgreSQL 16 local đã pass toàn bộ migration/test.
+- `api/.env.local` được git-ignore và không bị track, nhưng Supabase host/tenant vẫn là placeholder. Runtime/migration/seed online chưa được xác minh cho đến khi cấu hình pooler URL thật; PostgreSQL 16 local chỉ còn là historical test evidence, không còn là development target.
 - PostgreSQL local đã chạy fresh **9 migrations**; integration **3 suites/21 cases** và HTTP e2e **2 suites/11 cases** pass với `AUTH_BYPASS=false`.
 - Runtime least-privilege DB role/RLS policy chưa được chốt; hiện migration owner có thể bypass RLS. Không được coi là production-ready cho đến khi có non-owner test.
 
@@ -257,3 +257,4 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 | 1.0.0 | 2026-09-04 | Cập nhật trạng thái và evidence mới nhất của Sprint 1. | Current worktree Sprint review |
 | 1.1.0 | 2026-09-04 | Chuyển rich-text editor sang cấu hình CKEditor 4 không phụ thuộc Cloudinary uploader. | User decision 2026-09-04 |
 | 1.2.0 | 2026-09-04 | Xác nhận Admin lint, 12 test files/21 tests và production build; sửa login dev, CKEditor fallback, required marker và menu. | Admin stabilization review 2026-09-04 |
+| 1.3.0 | 2026-09-04 | Chuyển database development workflow sang Supabase online; chờ connection string thật để verify migration/seed. | Supabase workflow 2026-09-04 |

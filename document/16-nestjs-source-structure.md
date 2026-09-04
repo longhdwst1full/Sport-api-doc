@@ -1,6 +1,10 @@
 # NestJS source structure V1
 
-Ngày cập nhật: 2026-08-29
+> **Document version:** 1.0.0
+>
+> **Last updated:** 2026-09-04
+>
+> **Change summary:** Loại bỏ Prisma URL local fallback và chuẩn hóa migration/seed dùng Supabase từ `api/.env.local`.
 
 ## Cấu trúc đã áp dụng
 
@@ -49,7 +53,7 @@ api/
 - Pin `prisma` và `@prisma/client` cùng phiên bản `6.19.3` trong `@dctd/api`.
 - `DATABASE_ENABLED=false` theo mặc định nên lint, unit test và OpenAPI generation không kết nối DB.
 - Nest đọc `.env.local` trước `.env`. Với Supabase, `DATABASE_URL` dùng transaction-mode pooler cho runtime và `DIRECT_URL` dùng session-mode pooler cho migration.
-- `prisma:validate` và `prisma:generate` dùng URL local fallback chỉ cho CLI nếu environment chưa cấp URL; runtime không lấy URL fallback này.
+- `prisma:validate`, `prisma:generate`, `prisma:migrate:status` và `prisma:migrate:deploy` đọc `.env.local` trước `.env`; thiếu `DATABASE_URL` hoặc `DIRECT_URL` thì fail fast, không âm thầm fallback về localhost.
 - `api/.env.local.example` là template Supabase không chứa password thật; copy sang `.env.local` và thay `[YOUR-PASSWORD]` trên máy/deployment tương ứng.
 - Schema hiện chưa có model. Model/migration được đưa vào theo delivery wave từ DBML, không sinh đồng loạt 74 bảng.
 
@@ -60,3 +64,9 @@ api/
 - Media import object-storage port; adapter hiện fail closed cho đến khi D27 chọn Cloudinary/ImageKit hoặc provider khác.
 
 Các boundary này là base code để phát triển tiếp, không được mô tả là tích hợp production hoàn chỉnh.
+
+## Revision history
+
+| Version | Date | Change summary | Source / Change ID |
+| --- | --- | --- | --- |
+| 1.0.0 | 2026-09-04 | Chuẩn hóa Prisma CLI và workflow Supabase online, loại bỏ local URL fallback. | Supabase workflow 2026-09-04 |
