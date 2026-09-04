@@ -1,14 +1,11 @@
 import { Skeleton } from 'antd';
 import { lazy, Suspense } from 'react';
 
-export type RichTextImageUploader = (file: File, signal: AbortSignal) => Promise<string>;
-
 export interface RichTextEditorProps {
   value?: string | null;
   onChange?: (html: string) => void;
   disabled?: boolean;
   placeholder?: string;
-  uploadImage?: RichTextImageUploader;
   editorUrl?: string;
 }
 

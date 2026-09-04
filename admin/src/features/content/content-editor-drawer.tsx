@@ -12,10 +12,6 @@ import {
 import { ImageUploadField } from '@/features/media/image-upload-field';
 import { RichTextEditor } from '@/foundation/inputs/rich-text-editor';
 import { getApiErrorMessage } from '@/lib/api/error';
-import { uploadImage } from '@/lib/media/upload-image';
-
-const uploadRichTextImage = async (file: File, signal: AbortSignal) =>
-  (await uploadImage(file, signal)).secureUrl;
 
 export function ContentEditorDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { message } = App.useApp();
@@ -120,11 +116,14 @@ export function ContentEditorDrawer({ open, onClose }: { open: boolean; onClose:
             onChange={(event) => setRelatedProducts(event.target.value)}
           />
         </Form.Item>
-        <Form.Item label="Nội dung" required>
+        <Form.Item
+          label="Nội dung (CKEditor 4)"
+          required
+          extra="Ảnh trong nội dung dùng công cụ Image tích hợp của CKEditor 4; editor có vùng nhập HTML dự phòng nếu CDN không khả dụng."
+        >
           <RichTextEditor
             value={body}
             onChange={setBody}
-            uploadImage={uploadRichTextImage}
             placeholder="Soạn nội dung bài viết..."
           />
         </Form.Item>

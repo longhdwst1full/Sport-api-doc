@@ -4,6 +4,7 @@ This file governs only monorepo orchestration. Application engineering rules are
 
 ## Scope routing
 
+- Work under `document/` or change a root project document: read `.agent/rules/00-document-versioning.md`. This document rule applies in addition to the owning application's local rules when one work item changes both code and documentation.
 - Work under `admin/`: read `admin/AGENTS.md`, then only `admin/.agent/rules` and `admin/.agent/skills`.
 - Work under `client/`: read `client/AGENTS.md`, then only `client/.agent/rules` and `client/.agent/skills`.
 - Work under `api/`: read `api/AGENTS.md`, then only `api/.agent/rules` and `api/.agent/skills`.

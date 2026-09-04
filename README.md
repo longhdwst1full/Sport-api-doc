@@ -1,5 +1,11 @@
 # DCTD-UTC Commerce
 
+> **Document version:** 1.0.0
+>
+> **Last updated:** 2026-09-04
+>
+> **Change summary:** Bổ sung hướng dẫn bootstrap môi trường local/dev và mô tả ownership rule/skill độc lập của Client, Admin và API.
+
 Base workspace for a sports equipment storefront, admin portal and API.
 
 ## Applications
@@ -32,6 +38,11 @@ yarn db:local:seed:demo
 3 chi nhánh/kho, 3 thương hiệu, 3 danh mục và 3 sản phẩm/SKU/giá. Lệnh có thể chạy
 lặp và không xóa dữ liệu ngoài các mã demo cố định.
 
+Foundation seed tạo đúng một tài khoản OWNER bootstrap cho local/dev:
+`bootstrap-admin@example.invalid` / `Aa@123456`. Lần đăng nhập đầu tiên bắt buộc
+đổi mật khẩu; chạy seed lại không reset mật khẩu đã đổi. Không dùng credential này
+cho staging/production.
+
 Local infrastructure mặc định dùng PostgreSQL `55432` và Redis `56379` để không
 xung đột với các service khác trong workspace. Có thể override bằng
 `DCTD_POSTGRES_PORT` và `DCTD_REDIS_PORT`.
@@ -57,3 +68,9 @@ The source-by-source frontend architecture review and inheritance decisions are 
 ## Non-negotiable contract rule
 
 Backend DTO/controller first, then OpenAPI export, then Orval generation. Frontends never hand-write API DTOs or endpoint URLs.
+
+## Revision history
+
+| Version | Date | Change summary | Source / Change ID |
+| --- | --- | --- | --- |
+| 1.0.0 | 2026-09-04 | Bổ sung bootstrap local/dev và ownership rule/skill theo từng ứng dụng. | Current worktree documentation update |

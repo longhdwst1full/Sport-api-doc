@@ -556,6 +556,64 @@
           }
         }
       ]
+    },
+    {
+      "id": "DB-20260903-BOOTSTRAP-OWNER",
+      "date": "2026-09-03",
+      "scope": "DATABASE+IAM+ADMIN",
+      "summary": "Foundation seed tạo đúng một bootstrap OWNER ACTIVE cho local/dev, bắt buộc đổi mật khẩu lần đầu và chỉ khởi tạo password khi record cũ chưa có; rerun seed không ghi đè password đã đổi.",
+      "sources": [
+        "seed:api/prisma/seed.ts",
+        "decision:D42",
+        "admin:login-page.tsx"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "users" },
+          "columns": ["Ý nghĩa", "Retention"],
+          "set": {
+            "Ý nghĩa": "Customer/staff account; local seed có đúng một bootstrap OWNER ACTIVE",
+            "Retention": "Bootstrap phải đổi password lần đầu; seed không reset password đã đổi; never hard-delete"
+          }
+        }
+      ]
+    },
+    {
+      "id": "DBAPI-20260903-INVENTORY-NUMBER-COLLISION",
+      "date": "2026-09-03",
+      "scope": "DATABASE+API+INVENTORY",
+      "summary": "Sửa adjustment_no từ date + 8 ký tự đầu UUIDv7 có thể trùng theo timestamp sang ADJ- + base36 mã hóa đủ 128-bit UUID trong varchar(32); giữ nguyên endpoint/DTO và bổ sung E2E tạo hai phiếu liên tiếp.",
+      "sources": [
+        "API:createStockAdjustment",
+        "test:admin-contract.e2e-spec.ts",
+        "source:api/src/modules/inventory/inventory.service.ts"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "stock_adjustments" },
+          "columns": ["Unique / CHECK"],
+          "set": {
+            "Unique / CHECK": "adjustment_no UQ mã hóa đủ UUID bằng base36; idempotency_key UQ; status POSTED"
+          }
+        }
+      ],
+      "upsertRows": [
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "stock_adjustments", "Tên cột": "adjustment_no" },
+          "values": {
+            "Tên bảng": "stock_adjustments",
+            "STT": "31D",
+            "Tên cột": "adjustment_no",
+            "Kiểu dữ liệu": "varchar(32)",
+            "Cho phép NULL": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "ADJ- + 25 ký tự base36 mã hóa đủ UUID; unique và không cắt timestamp prefix UUIDv7"
+          }
+        }
+      ]
     }
   ]
 }

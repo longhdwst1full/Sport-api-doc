@@ -7,6 +7,8 @@ description: Keep DCTD database and API changes traceable across Prisma migratio
 
 Use this skill together with the owning API implementation skill. Source code remains authoritative; documentation and generated contracts must describe the verified result.
 
+Before editing files under `document/`, read and apply the workspace rule `.agent/rules/00-document-versioning.md`. Every changed human-authored document must increment its version and include a concrete current change summary plus revision-history entry. Machine-readable and generated artifacts use the exception/trace mechanism defined by that rule.
+
 ## Required workflow
 
 1. Before editing, identify the affected tables, relationships, API operations, permissions, migrations and consumers. Run the repository's GitNexus impact analysis for existing symbols.
@@ -28,6 +30,7 @@ Use this skill together with the owning API implementation skill. Source code re
    - rebuild the workbook `Change Log` sheet;
    - fail if a requested sheet/header/row/cell cannot be resolved.
 7. Open/validate `document/DCTD-UTC-V1-database-model-review.xlsx`, run relevant API/frontend gates, then run GitNexus change detection.
+8. Verify all changed human-authored documents have a new version, current date, accurate summary and matching revision-history row before handoff.
 
 ## Trace rules
 
@@ -36,4 +39,3 @@ Use this skill together with the owning API implementation skill. Source code re
 - Use one change ID consistently across the JSON entry, Excel Notes and review/handoff text.
 - Never remove prior change-log entries. If a decision is superseded, add a new entry referencing the previous ID.
 - Do not mark a DB/API function Done when canonical docs, OpenAPI/codegen, change log or workbook annotation is stale.
-

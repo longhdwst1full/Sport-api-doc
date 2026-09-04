@@ -1,6 +1,10 @@
 # Sprint 1 execution status
 
-Ngày cập nhật: 2026-09-03
+> **Document version:** 1.1.0
+>
+> **Last updated:** 2026-09-04
+>
+> **Change summary:** Cập nhật CKEditor 4 theo base admin-client, bỏ custom Cloudinary uploader và bổ sung regression test cấu hình editor.
 
 ## Kết luận
 
@@ -88,6 +92,7 @@ Evidence bổ sung ngày 2026-09-03:
 - [x] Fresh database `dctd_verify_sprint1_20260903`: **9/9 migration**, foundation seed, demo seed chạy hai lần; database tạm đã được xóa.
 - [x] PostgreSQL integration sau closeout: **3 suites, 21/21 tests**; audit append-only được giữ đúng trong teardown.
 - [x] HTTP e2e `AUTH_BYPASS=false`: **2 suites, 11/11 tests**; bổ sung stock adjustment persist/replay/conflict/audit trên DB thật.
+- [x] Admin CKEditor regression: **11 test files, 19/19 tests**; CDN failure vẫn cho nhập HTML và retry; production build giữ editor ở lazy chunk riêng.
 - [x] API unit cuối: **23 suites, 81/81 tests**; API lint, Prisma validate và build pass.
 - [x] Inventory E2E phát hiện và sửa bind `uuid IN (text)` (`P2010/42883`) thành từng parameter `::uuid`; regression DB thật pass.
 - [x] Admin lint, **10 files/18 tests**, production build; Client typecheck, **3 files/4 tests**, Next.js production build.
@@ -155,6 +160,7 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 - [x] Điều chỉnh tạo balance đầu kỳ khi chưa có, khóa row theo thứ tự SKU, chặn `on_hand < reserved` và cập nhật optimistic version.
 - [x] `stock_adjustments`, items, append-only `inventory_movements` và audit được ghi trong cùng transaction Serializable.
 - [x] `Idempotency-Key` có payload hash; cùng key/cùng payload replay snapshot, cùng key/khác payload trả 409.
+- [x] `adjustment_no` mã hóa đủ UUID thành base36 trong varchar(32); regression E2E tạo hai phiếu liên tiếp để chặn collision từ UUIDv7 timestamp prefix.
 - [x] GLOBAL/BRANCH scope được kiểm tra theo warehouse server-side; combo virtual không có physical balance riêng.
 - [x] Demo seed có 3 balance SKU thường ở kho HCM; rerun không reset số lượng đã vận hành.
 - [x] Migration/integration/HTTP evidence chạy trên fresh PostgreSQL 16; request rỗng bị chặn, transaction conflict trả 409 có thể retry.
@@ -163,10 +169,11 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 ### Admin/Storefront
 
 - [x] Admin sidebar/header/menu và management page base.
+- [x] Admin login thật qua email/SĐT; local seed có đúng một bootstrap OWNER ACTIVE và bắt buộc đổi password ở lần đầu.
 - [x] IAM list/create/assign/lock/unlock UI.
 - [x] Branch + một warehouse CRUD/lifecycle UI.
 - [x] Brand/category/product/variant/combo core UI.
-- [x] CKEditor4 và Cloudinary adapter/base upload flow.
+- [x] CKEditor4 theo base admin-client, dùng Image dialog tích hợp; không gắn custom Cloudinary uploader; vẫn có loading/error/retry và HTML fallback khi CDN lỗi.
 - [x] Axios canonical fetcher/error mapping; loading/error patterns.
 - [x] Storefront Next.js và PWA base; Catalog list/detail generated API.
 - [~] UI states có ở flow chính, chưa có QA matrix toàn bộ màn.
@@ -183,6 +190,10 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 - [ ] BA acceptance và QA regression trên environment chung.
 - [ ] Không còn P0/P1 bug mở.
 - [ ] Lưu screenshot/API/test/log evidence và cập nhật Function Matrix.
+
+### Ngoài phạm vi Sprint 1
+
+- Order/POS tại cửa hàng, Customer persistence/CRUD, Payment và Fulfillment vẫn ở delivery wave sau. Không nâng màn fixture thành CRUD giả trước khi các aggregate, transition, transaction và OpenAPI contract tương ứng hoàn thành.
 
 ## Ưu tiên để tăng tỷ lệ
 
@@ -236,3 +247,10 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 - `api/.env.local` được git-ignore và không bị track, nhưng Supabase host/tenant vẫn là placeholder; staging cần pooler host thật nhưng không được commit/in log credential. Việc này không chặn local Sprint evidence vì PostgreSQL 16 local đã pass toàn bộ migration/test.
 - PostgreSQL local đã chạy fresh **9 migrations**; integration **3 suites/21 cases** và HTTP e2e **2 suites/11 cases** pass với `AUTH_BYPASS=false`.
 - Runtime least-privilege DB role/RLS policy chưa được chốt; hiện migration owner có thể bypass RLS. Không được coi là production-ready cho đến khi có non-owner test.
+
+## Revision history
+
+| Version | Date | Change summary | Source / Change ID |
+| --- | --- | --- | --- |
+| 1.0.0 | 2026-09-04 | Cập nhật trạng thái và evidence mới nhất của Sprint 1. | Current worktree Sprint review |
+| 1.1.0 | 2026-09-04 | Chuyển rich-text editor sang cấu hình CKEditor 4 không phụ thuộc Cloudinary uploader. | User decision 2026-09-04 |

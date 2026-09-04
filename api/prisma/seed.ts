@@ -1,5 +1,7 @@
 import { Prisma, PrismaClient } from '@prisma/client';
+import { hash } from 'argon2';
 import { v7 as uuidv7 } from 'uuid';
+import { IAM_SECURITY_DEFAULTS, USER_STATUS, USER_TYPE } from '../src/modules/iam/iam.constants';
 import { PERMISSION_CATALOG, V1_ROLE_PERMISSIONS } from '../src/modules/iam/iam.permissions';
 
 const prisma = new PrismaClient();
@@ -45,16 +47,38 @@ async function seed(transaction: Prisma.TransactionClient): Promise<void> {
     },
   });
 
+  const existingBootstrapUser = await transaction.user.findUnique({
+    where: { id: ids.bootstrapUser },
+    select: { passwordHash: true },
+  });
+  const bootstrapPasswordHash = existingBootstrapUser?.passwordHash
+    ?? await hash(IAM_SECURITY_DEFAULTS.INITIAL_STAFF_PASSWORD);
+  const initializeBootstrapCredential = !existingBootstrapUser?.passwordHash;
+
   await transaction.user.upsert({
     where: { id: ids.bootstrapUser },
-    update: { displayName: 'Bootstrap Administrator', status: 'INVITED' },
+    update: {
+      displayName: 'Bootstrap Administrator',
+      ...(initializeBootstrapCredential
+        ? {
+            passwordHash: bootstrapPasswordHash,
+            status: USER_STATUS.ACTIVE,
+            mustChangePassword: true,
+            failedLoginAttempts: 0,
+            lockedAt: null,
+            lockReason: null,
+          }
+        : {}),
+    },
     create: {
       id: ids.bootstrapUser,
-      userType: 'STAFF',
+      userType: USER_TYPE.STAFF,
       email: 'bootstrap-admin@example.invalid',
       normalizedEmail: 'bootstrap-admin@example.invalid',
+      passwordHash: bootstrapPasswordHash,
       displayName: 'Bootstrap Administrator',
-      status: 'INVITED',
+      status: USER_STATUS.ACTIVE,
+      mustChangePassword: true,
     },
   });
 

@@ -1,5 +1,11 @@
 # Frontend state and library decisions
 
+> **Document version:** 1.1.0
+>
+> **Last updated:** 2026-09-04
+>
+> **Change summary:** Kế thừa cấu hình CKEditor 4 từ admin-client và bỏ custom Cloudinary uploader khỏi rich-text editor.
+
 ## Ownership
 
 | Concern                         | Owner                 | Rule                                                                         |
@@ -12,7 +18,7 @@
 | Admin search                    | use-debounce          | Debounce server filters; generated query cancellation handles stale requests |
 | Admin reporting                 | Recharts              | Route-scoped decision-supporting charts                                      |
 | Large admin lists               | react-window          | Stable row key and predictable row height                                    |
-| Rich content                    | CKEditor 5            | Dynamic import and explicit license configuration                            |
+| Rich content                    | CKEditor 4 (`ckeditor4-react` 4.3.0) | Dynamic import; CDN loading/error state; HTML fallback; built-in Image dialog |
 
 ## Applied V1 examples
 
@@ -21,7 +27,7 @@
 - Product creation uses React Hook Form/Yup and the generated `useCreateAdminProduct` mutation.
 - Product search uses a 350 ms debounce.
 - Dashboard uses Recharts and a virtualized module list.
-- CMS editor is lazy-loaded and remains disabled until `VITE_CKEDITOR_LICENSE_KEY` is configured.
+- CKEditor 4 is lazy-loaded only inside Product/CMS forms. While the CDN loads the UI shows a skeleton; if loading fails it exposes a retry action and a plain HTML fallback so the form never becomes blank or unusable.
 
 ## Performance guardrails
 
@@ -30,3 +36,10 @@
 - Validate production bundles after dependency changes.
 - Storefront remains server-rendered by default; introduce client boundaries only for interaction.
 - API mutations are not auto-retried; payment/checkout data is never treated as offline-persistable state.
+
+## Revision history
+
+| Version | Date | Change summary | Source / Change ID |
+| --- | --- | --- | --- |
+| 1.0.0 | 2026-09-04 | Ghi nhận quyết định tích hợp CKEditor 4 và các trạng thái fallback của editor. | Current worktree frontend update |
+| 1.1.0 | 2026-09-04 | Bỏ custom Cloudinary uploader; dùng Image dialog có sẵn của CKEditor 4 theo base admin-client. | User decision 2026-09-04 |

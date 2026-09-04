@@ -19,10 +19,6 @@ import {
 } from '@/generated/api/catalog/models';
 import { RichTextEditor } from '@/foundation/inputs/rich-text-editor';
 import { getApiErrorMessage, getApiFieldErrors } from '@/lib/api/error';
-import { uploadImage } from '@/lib/media/upload-image';
-
-const uploadRichTextImage = async (file: File, signal: AbortSignal) =>
-  (await uploadImage(file, signal)).secureUrl;
 
 interface ProductFormValues {
   productType: ProductType;
@@ -285,7 +281,10 @@ export function ProductFormDrawer({
         <Form.Item label="Mô tả ngắn">
           <Controller name="shortDescription" control={form.control} render={({ field }) => <Input {...field} />} />
         </Form.Item>
-        <Form.Item label="Mô tả chi tiết">
+        <Form.Item
+          label="Mô tả chi tiết (CKEditor 4)"
+          extra="Có thể định dạng nội dung và chèn ảnh bằng công cụ Image tích hợp sẵn của CKEditor 4."
+        >
           <Controller
             name="description"
             control={form.control}
@@ -293,7 +292,6 @@ export function ProductFormDrawer({
               <RichTextEditor
                 value={field.value}
                 onChange={field.onChange}
-                uploadImage={uploadRichTextImage}
                 placeholder="Nhập mô tả, thông số và hướng dẫn sử dụng sản phẩm..."
               />
             )}

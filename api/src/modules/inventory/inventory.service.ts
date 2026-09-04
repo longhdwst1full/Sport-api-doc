@@ -131,7 +131,10 @@ export class InventoryService {
 
           const adjustmentId = uuidv7();
           const postedAt = new Date();
-          const adjustmentNo = `ADJ-${postedAt.toISOString().slice(0, 10).replaceAll('-', '')}-${adjustmentId.slice(0, 8).toUpperCase()}`;
+          const adjustmentNo = `ADJ-${BigInt(`0x${adjustmentId.replaceAll('-', '')}`)
+            .toString(36)
+            .toUpperCase()
+            .padStart(25, '0')}`;
           await transaction.stockAdjustment.create({
             data: {
               id: adjustmentId,

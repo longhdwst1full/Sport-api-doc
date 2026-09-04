@@ -57,7 +57,7 @@ Table users {
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
-  Note: '[P0] Public register chỉ tạo CUSTOMER ACTIVE và yêu cầu email hoặc phone; V1 tạm chưa verification. Sai mật khẩu lần 5 chuyển LOCKED, revoke session và audit atomic; staff mới/unlock bắt buộc đổi mật khẩu. Unique indexes cho normalized_email/phone khi khác null; INACTIVE rồi anonymize, không soft-delete.'
+  Note: '[P0] Public register chỉ tạo CUSTOMER ACTIVE và yêu cầu email hoặc phone; V1 tạm chưa verification. Sai mật khẩu lần 5 chuyển LOCKED, revoke session và audit atomic; staff mới/unlock bắt buộc đổi mật khẩu. Local seed có đúng một bootstrap OWNER, chỉ khởi tạo password khi còn thiếu và không reset password đã đổi. Unique indexes cho normalized_email/phone khi khác null; INACTIVE rồi anonymize, không soft-delete.'
 }
 
 Table auth_sessions {
@@ -586,7 +586,7 @@ Table inventory_reservations {
 
 Table stock_adjustments {
   id uuid [pk]
-  adjustment_no varchar(32) [not null, unique]
+  adjustment_no varchar(32) [not null, unique, note: 'ADJ- + 25 ký tự base36 mã hóa đủ 128-bit UUID; không cắt timestamp prefix UUIDv7']
   warehouse_id uuid [not null]
   adjustment_type varchar(32) [not null, default: 'CORRECTION']
   reason_code varchar(64) [not null, default: 'MANUAL']
