@@ -1,10 +1,10 @@
 # Sprint 1 execution status
 
-> **Document version:** 1.1.0
+> **Document version:** 1.2.0
 >
 > **Last updated:** 2026-09-04
 >
-> **Change summary:** Cập nhật CKEditor 4 theo base admin-client, bỏ custom Cloudinary uploader và bổ sung regression test cấu hình editor.
+> **Change summary:** Bổ sung evidence ổn định Admin: login không còn bị permission bypass, CKEditor có timeout fallback, trường bắt buộc và menu nghiệp vụ được chuẩn hóa.
 
 ## Kết luận
 
@@ -170,10 +170,12 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 
 - [x] Admin sidebar/header/menu và management page base.
 - [x] Admin login thật qua email/SĐT; local seed có đúng một bootstrap OWNER ACTIVE và bắt buộc đổi password ở lần đầu.
+- [x] Development permission bypass chỉ mở permission gate, không giả mạo trạng thái authenticated; route protected vẫn chuyển về `/login` khi chưa có session.
 - [x] IAM list/create/assign/lock/unlock UI.
 - [x] Branch + một warehouse CRUD/lifecycle UI.
 - [x] Brand/category/product/variant/combo core UI.
 - [x] CKEditor4 theo base admin-client, dùng Image dialog tích hợp; không gắn custom Cloudinary uploader; vẫn có loading/error/retry và HTML fallback khi CDN lỗi.
+- [x] CKEditor dùng component trực tiếp, timeout 10 giây để không treo skeleton; Admin form hiển thị dấu `*` theo validation bắt buộc và menu chia theo vùng nghiệp vụ.
 - [x] Axios canonical fetcher/error mapping; loading/error patterns.
 - [x] Storefront Next.js và PWA base; Catalog list/detail generated API.
 - [~] UI states có ở flow chính, chưa có QA matrix toàn bộ màn.
@@ -254,3 +256,4 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 | --- | --- | --- | --- |
 | 1.0.0 | 2026-09-04 | Cập nhật trạng thái và evidence mới nhất của Sprint 1. | Current worktree Sprint review |
 | 1.1.0 | 2026-09-04 | Chuyển rich-text editor sang cấu hình CKEditor 4 không phụ thuộc Cloudinary uploader. | User decision 2026-09-04 |
+| 1.2.0 | 2026-09-04 | Xác nhận Admin lint, 12 test files/21 tests và production build; sửa login dev, CKEditor fallback, required marker và menu. | Admin stabilization review 2026-09-04 |

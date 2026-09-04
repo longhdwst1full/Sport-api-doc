@@ -1,8 +1,8 @@
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useQueryClient } from '@tanstack/react-query';
 import { App, Button, Drawer, Form, Input, Select } from 'antd';
-import { useEffect, useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { useEffect, useRef, useState } from 'react';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useDebounce } from 'use-debounce';
 import * as yup from 'yup';
 import {
@@ -19,6 +19,7 @@ import {
 } from '@/generated/api/catalog/models';
 import { RichTextEditor } from '@/foundation/inputs/rich-text-editor';
 import { getApiErrorMessage, getApiFieldErrors } from '@/lib/api/error';
+import { createProductSlug } from './product-slug';
 
 interface ProductFormValues {
   productType: ProductType;
@@ -73,9 +74,12 @@ export function ProductFormDrawer({
   const queryClient = useQueryClient();
   const [brandSearch, setBrandSearch] = useState('');
   const [categorySearch, setCategorySearch] = useState('');
+  const slugManuallyEditedRef = useRef(false);
   const [debouncedBrand] = useDebounce(brandSearch.trim(), 300);
   const [debouncedCategory] = useDebounce(categorySearch.trim(), 300);
   const form = useForm<ProductFormValues>({ resolver: yupResolver(schema), defaultValues: defaults });
+  const watchedName = useWatch({ control: form.control, name: 'name' });
+  const watchedProductNo = useWatch({ control: form.control, name: 'productNo' });
   const isEdit = Boolean(product);
   const brands = useSearchActiveAdminBrands(
     { search: debouncedBrand || undefined, page: 1, limit: 20 },
@@ -120,6 +124,7 @@ export function ProductFormDrawer({
 
   useEffect(() => {
     if (!open) return;
+    slugManuallyEditedRef.current = false;
     form.reset(product ? {
       productType: product.productType,
       productNo: product.productNo,
@@ -132,6 +137,14 @@ export function ProductFormDrawer({
       description: product.description ?? '',
     } : defaults);
   }, [form, open, product]);
+
+  useEffect(() => {
+    if (!open || product || slugManuallyEditedRef.current) return;
+    form.setValue('slug', createProductSlug(watchedName, watchedProductNo), {
+      shouldDirty: false,
+      shouldValidate: Boolean(form.formState.errors.slug),
+    });
+  }, [form, open, product, watchedName, watchedProductNo]);
 
   const submit = form.handleSubmit((values) => {
     const fields = {
@@ -162,7 +175,7 @@ export function ProductFormDrawer({
     }
   });
 
-  const textField = (name: 'productNo' | 'name' | 'slug', label: string) => (
+  const textField = (name: 'productNo' | 'name', label: string) => (
     <Form.Item label={label} required validateStatus={form.formState.errors[name] ? 'error' : undefined} help={form.formState.errors[name]?.message}>
       <Controller name={name} control={form.control} render={({ field }) => <Input {...field} />} />
     </Form.Item>
@@ -210,7 +223,42 @@ export function ProductFormDrawer({
         </Form.Item>
         <div className="grid gap-4 sm:grid-cols-2">
           {textField('productNo', 'Mã sản phẩm')}
-          {textField('slug', 'Slug')}
+          <Form.Item
+            label="Slug"
+            required
+            validateStatus={form.formState.errors.slug ? 'error' : undefined}
+            help={form.formState.errors.slug?.message}
+            extra={product ? 'Slug hiện tại có thể ảnh hưởng URL sản phẩm.' : 'Tự tạo từ tên và mã sản phẩm; có thể chỉnh thủ công.'}
+          >
+            <Controller
+              name="slug"
+              control={form.control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  onChange={(event) => {
+                    slugManuallyEditedRef.current = true;
+                    field.onChange(event);
+                  }}
+                  addonAfter={!product ? (
+                    <Button
+                      type="link"
+                      size="small"
+                      onClick={() => {
+                        slugManuallyEditedRef.current = false;
+                        form.setValue('slug', createProductSlug(watchedName, watchedProductNo), {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        });
+                      }}
+                    >
+                      Tạo lại
+                    </Button>
+                  ) : undefined}
+                />
+              )}
+            />
+          </Form.Item>
         </div>
         {textField('name', 'Tên sản phẩm')}
         <div className="grid gap-4 sm:grid-cols-2">

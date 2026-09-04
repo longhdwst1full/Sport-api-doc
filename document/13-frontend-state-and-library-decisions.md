@@ -1,10 +1,10 @@
 # Frontend state and library decisions
 
-> **Document version:** 1.1.0
+> **Document version:** 1.2.0
 >
 > **Last updated:** 2026-09-04
 >
-> **Change summary:** Kế thừa cấu hình CKEditor 4 từ admin-client và bỏ custom Cloudinary uploader khỏi rich-text editor.
+> **Change summary:** Tách authentication khỏi permission bypass, chuyển CKEditor sang component trực tiếp có timeout fallback và chuẩn hóa trường bắt buộc/menu nghiệp vụ Admin.
 
 ## Ownership
 
@@ -27,7 +27,10 @@
 - Product creation uses React Hook Form/Yup and the generated `useCreateAdminProduct` mutation.
 - Product search uses a 350 ms debounce.
 - Dashboard uses Recharts and a virtualized module list.
-- CKEditor 4 is lazy-loaded only inside Product/CMS forms. While the CDN loads the UI shows a skeleton; if loading fails it exposes a retry action and a plain HTML fallback so the form never becomes blank or unusable.
+- CKEditor 4 is lazy-loaded only inside Product/CMS forms. Phần implementation dùng trực tiếp component `CKEditor` theo base `admin-client`; skeleton chỉ tồn tại trong lúc khởi tạo. Sau 10 giây chưa sẵn sàng, form tự chuyển sang HTML textarea có thể nhập và cho phép retry, tránh treo skeleton vô hạn.
+- Authentication và permission bypass là hai concern độc lập: development có thể mở permission gate nhưng người dùng vẫn phải đăng nhập và `/me` vẫn là nguồn xác thực.
+- Tất cả field bắt buộc theo Yup/server contract phải truyền `required` cho Ant Design `Form.Item`; field bắt buộc có điều kiện chỉ hiển thị dấu `*` khi điều kiện phát sinh.
+- Sidebar chia theo vùng nghiệp vụ (`sales`, `catalog`, `operations`, `experience`, `organization`, `system`); feature vẫn sở hữu page/form/query của chính nó.
 
 ## Performance guardrails
 
@@ -43,3 +46,4 @@
 | --- | --- | --- | --- |
 | 1.0.0 | 2026-09-04 | Ghi nhận quyết định tích hợp CKEditor 4 và các trạng thái fallback của editor. | Current worktree frontend update |
 | 1.1.0 | 2026-09-04 | Bỏ custom Cloudinary uploader; dùng Image dialog có sẵn của CKEditor 4 theo base admin-client. | User decision 2026-09-04 |
+| 1.2.0 | 2026-09-04 | Sửa auth/permission dev, CKEditor treo skeleton, dấu bắt buộc và phân vùng menu Admin. | Admin stabilization review 2026-09-04 |

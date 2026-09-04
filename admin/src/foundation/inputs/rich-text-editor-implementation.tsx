@@ -84,7 +84,7 @@ export function RichTextEditorImplementation({
 
   return (
     <div
-      className="dctd-rich-text-editor min-h-80"
+      className="dctd-rich-text-editor relative min-h-80"
       data-editor-state={disabled ? 'read-only' : 'editable'}
     >
       {!ready && !loadingTimedOut && <Skeleton active paragraph={{ rows: 7 }} title={false} />}
@@ -107,7 +107,10 @@ export function RichTextEditorImplementation({
           />
         </div>
       )}
-      <div className={ready ? undefined : 'h-0 overflow-hidden'} aria-busy={!ready}>
+      <div
+        className={ready ? undefined : 'pointer-events-none absolute inset-x-0 top-0 invisible'}
+        aria-busy={!ready}
+      >
         <CKEditor
           key={attempt}
           editorUrl={editorUrl}

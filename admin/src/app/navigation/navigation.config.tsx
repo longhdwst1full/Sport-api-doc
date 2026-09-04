@@ -17,16 +17,18 @@ export interface NavigationItem {
   path: string;
   label: string;
   icon: ReactNode;
-  group: 'overview' | 'sales' | 'catalog' | 'experience' | 'system';
+  group: 'overview' | 'sales' | 'catalog' | 'operations' | 'experience' | 'organization' | 'system';
   permission?: string;
 }
 
 export const NAVIGATION_GROUP_LABELS: Record<NavigationItem['group'], string> = {
   overview: 'Tổng quan',
   sales: 'Bán hàng',
-  catalog: 'Sản phẩm & kho',
+  catalog: 'Sản phẩm & danh mục',
+  operations: 'Kho & vận hành',
   experience: 'Nội dung & trải nghiệm',
-  system: 'Hệ thống',
+  organization: 'Tổ chức',
+  system: 'Quản trị hệ thống',
 };
 
 export const NAVIGATION_ITEMS: NavigationItem[] = [
@@ -68,7 +70,7 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
   {
     path: '/inventory',
     label: 'Kho hàng',
-    group: 'catalog',
+    group: 'operations',
     icon: <InboxOutlined />,
     permission: 'inventory.stock.view',
   },
@@ -89,7 +91,7 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
   {
     path: '/organization',
     label: 'Chi nhánh & kho',
-    group: 'system',
+    group: 'organization',
     icon: <BankOutlined />,
     permission: 'org.branch.view',
   },
