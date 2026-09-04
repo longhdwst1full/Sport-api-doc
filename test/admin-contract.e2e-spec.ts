@@ -236,6 +236,16 @@ describe('Admin v1 contract', () => {
       .expect(201);
     expect(replay.body).toEqual(posted.body);
 
+    const nextPosted = await request(server())
+      .post('/api/v1/admin/inventory/adjustments')
+      .set('authorization', `Bearer ${accessToken}`)
+      .set('Idempotency-Key', `e2e-stock-${uuidv7()}`)
+      .send(payload)
+      .expect(201);
+    const postedBody = posted.body as { adjustmentNo: string };
+    const nextPostedBody = nextPosted.body as { adjustmentNo: string };
+    expect(nextPostedBody.adjustmentNo).not.toBe(postedBody.adjustmentNo);
+
     await request(server())
       .post('/api/v1/admin/inventory/adjustments')
       .set('authorization', `Bearer ${accessToken}`)
@@ -245,7 +255,7 @@ describe('Admin v1 contract', () => {
 
     await expect(prisma.auditLog.count({
       where: { action: 'inventory.stock_adjustment.post', actorUserId: userId },
-    })).resolves.toBeGreaterThanOrEqual(1);
+    })).resolves.toBeGreaterThanOrEqual(2);
   });
 
   it('serializes duplicate role assignment and revokes the winner atomically', async () => {
