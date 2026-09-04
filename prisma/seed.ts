@@ -3,13 +3,14 @@ import { hash } from 'argon2';
 import { v7 as uuidv7 } from 'uuid';
 import { IAM_SECURITY_DEFAULTS, USER_STATUS, USER_TYPE } from '../src/modules/iam/iam.constants';
 import { PERMISSION_CATALOG, V1_ROLE_PERMISSIONS } from '../src/modules/iam/iam.permissions';
+import { BOOTSTRAP_ADMIN } from '../src/modules/iam/bootstrap-admin.constants';
 
 const prisma = new PrismaClient();
 
 const ids = {
   branch: '00000000-0000-7000-8000-000000000001',
   warehouse: '00000000-0000-7000-8000-000000000002',
-  bootstrapUser: '00000000-0000-7000-8000-000000000010',
+  bootstrapUser: BOOTSTRAP_ADMIN.ID,
   ownerRole: '00000000-0000-7000-8000-000000000120',
   branchManagerRole: '00000000-0000-7000-8000-000000000121',
   staffRole: '00000000-0000-7000-8000-000000000122',
@@ -58,7 +59,7 @@ async function seed(transaction: Prisma.TransactionClient): Promise<void> {
   await transaction.user.upsert({
     where: { id: ids.bootstrapUser },
     update: {
-      displayName: 'Bootstrap Administrator',
+      displayName: BOOTSTRAP_ADMIN.DISPLAY_NAME,
       ...(initializeBootstrapCredential
         ? {
             passwordHash: bootstrapPasswordHash,
@@ -73,10 +74,10 @@ async function seed(transaction: Prisma.TransactionClient): Promise<void> {
     create: {
       id: ids.bootstrapUser,
       userType: USER_TYPE.STAFF,
-      email: 'bootstrap-admin@example.invalid',
-      normalizedEmail: 'bootstrap-admin@example.invalid',
+      email: BOOTSTRAP_ADMIN.EMAIL,
+      normalizedEmail: BOOTSTRAP_ADMIN.EMAIL,
       passwordHash: bootstrapPasswordHash,
-      displayName: 'Bootstrap Administrator',
+      displayName: BOOTSTRAP_ADMIN.DISPLAY_NAME,
       status: USER_STATUS.ACTIVE,
       mustChangePassword: true,
     },
