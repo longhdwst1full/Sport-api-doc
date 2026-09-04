@@ -1,10 +1,10 @@
 # Sprint 1 execution status
 
-> **Document version:** 1.3.0
+> **Document version:** 1.4.0
 >
 > **Last updated:** 2026-09-04
 >
-> **Change summary:** Chuyển database development target sang Supabase online, loại bỏ Docker/local URL khỏi command và ghi rõ blocker connection string thật.
+> **Change summary:** Ghi nhận migration/seed Supabase online đã thành công và bổ sung command phục hồi bootstrap Admin bị auto-lock với audit/session revocation.
 
 ## Kết luận
 
@@ -184,7 +184,8 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 
 ### Trước khi chốt Sprint 1 DONE
 
-- [~] Workflow development đã chuyển sang Supabase online; `api/.env.local` hiện vẫn là placeholder và cần pooler connection string thật mà không commit secret.
+- [x] Workflow development đã chuyển sang Supabase online; operator xác nhận 9 migration up to date, foundation seed và demo seed 3 branch/kho, 3 brand, 3 category, 4 product chạy thành công ngày 2026-09-04.
+- [x] Có `yarn db:admin:reset` để phục hồi đúng bootstrap OWNER bị auto-lock; reset password tạm, bắt đổi mật khẩu, revoke session và ghi audit atomic; seed vẫn không ghi đè password hiện hữu.
 - [x] 9 migration chạy từ zero, seed demo có 4 product gồm combo và chạy lặp; 21 PostgreSQL integration + 11 HTTP e2e pass.
 - [ ] Chạy full permission/branch-scope regression.
 - [x] Variant update, Product Media và Price scheduling/history UI đã hoàn thiện core.
@@ -246,7 +247,8 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 
 ## Blocker môi trường
 
-- `api/.env.local` được git-ignore và không bị track, nhưng Supabase host/tenant vẫn là placeholder. Runtime/migration/seed online chưa được xác minh cho đến khi cấu hình pooler URL thật; PostgreSQL 16 local chỉ còn là historical test evidence, không còn là development target.
+- `api/.env.local` được git-ignore và không bị track. Trên môi trường operator, Supabase Session pooler đã xác nhận 9 migration up to date; foundation/demo seed chạy thành công. Secret không được đưa vào repository.
+- Bootstrap OWNER đã được xác nhận tồn tại nhưng `LOCKED` sau 5 lần sai; recovery command đã được bổ sung. Cần chạy command và login lại để đóng runtime auth evidence.
 - PostgreSQL local đã chạy fresh **9 migrations**; integration **3 suites/21 cases** và HTTP e2e **2 suites/11 cases** pass với `AUTH_BYPASS=false`.
 - Runtime least-privilege DB role/RLS policy chưa được chốt; hiện migration owner có thể bypass RLS. Không được coi là production-ready cho đến khi có non-owner test.
 
@@ -258,3 +260,4 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 | 1.1.0 | 2026-09-04 | Chuyển rich-text editor sang cấu hình CKEditor 4 không phụ thuộc Cloudinary uploader. | User decision 2026-09-04 |
 | 1.2.0 | 2026-09-04 | Xác nhận Admin lint, 12 test files/21 tests và production build; sửa login dev, CKEditor fallback, required marker và menu. | Admin stabilization review 2026-09-04 |
 | 1.3.0 | 2026-09-04 | Chuyển database development workflow sang Supabase online; chờ connection string thật để verify migration/seed. | Supabase workflow 2026-09-04 |
+| 1.4.0 | 2026-09-04 | Ghi nhận migration/seed Supabase pass và bổ sung recovery command cho bootstrap Admin bị auto-lock. | DBAPI-20260904-BOOTSTRAP-RECOVERY |

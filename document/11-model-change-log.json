@@ -614,6 +614,39 @@
           }
         }
       ]
+    },
+    {
+      "id": "DBAPI-20260904-BOOTSTRAP-RECOVERY",
+      "date": "2026-09-04",
+      "scope": "DATABASE+IAM+OPERATIONS",
+      "summary": "Bổ sung break-glass command chỉ phục hồi fixed bootstrap OWNER trong development: reset password tạm, ACTIVE, failed attempts, bắt đổi password, tăng permission/version, revoke session và ghi SYSTEM audit trong cùng transaction; foundation seed vẫn không reset credential hiện hữu.",
+      "sources": [
+        "command:yarn db:admin:reset",
+        "source:api/src/modules/iam/bootstrap-admin-recovery.ts",
+        "test:bootstrap-admin-recovery.spec.ts",
+        "decision:D42"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "users" },
+          "columns": ["Ý nghĩa", "Retention"],
+          "set": {
+            "Ý nghĩa": "Customer/staff account; development seed có đúng một bootstrap OWNER; break-glass chỉ phục hồi fixed identity",
+            "Retention": "Seed không reset password đã đổi; recovery reset password tạm, bắt đổi password, revoke session và audit; never hard-delete"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "auth_sessions" },
+          "columns": ["Ý nghĩa", "Retention"]
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "audit_logs" },
+          "columns": ["Ý nghĩa", "Retention"]
+        }
+      ]
     }
   ]
 }

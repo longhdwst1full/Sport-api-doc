@@ -1,10 +1,10 @@
 # DCTD-UTC Commerce
 
-> **Document version:** 1.1.0
+> **Document version:** 1.2.0
 >
 > **Last updated:** 2026-09-04
 >
-> **Change summary:** Chuyển workflow database từ Docker local sang Supabase online và chuẩn hóa lệnh migration/seed đọc `api/.env.local`.
+> **Change summary:** Bổ sung command break-glass phục hồi bootstrap Admin bị khóa trên database development, có revoke session và audit atomic.
 
 Base workspace for a sports equipment storefront, admin portal and API.
 
@@ -32,6 +32,7 @@ yarn db:status
 yarn db:migrate
 yarn db:seed
 yarn db:seed:demo
+yarn db:admin:reset
 ```
 
 `db:seed:demo` chạy foundation seed trước, sau đó upsert bộ dữ liệu nhỏ gồm
@@ -42,6 +43,12 @@ Foundation seed tạo đúng một tài khoản OWNER bootstrap cho môi trườ
 `bootstrap-admin@example.invalid` / `Aa@123456`. Lần đăng nhập đầu tiên bắt buộc
 đổi mật khẩu; chạy seed lại không reset mật khẩu đã đổi. Không dùng credential này
 cho staging/production.
+
+Nếu bootstrap Admin bị khóa do nhập sai mật khẩu 5 lần hoặc cần phục hồi credential
+development, chạy `yarn db:admin:reset`. Command chỉ tác động đúng bootstrap OWNER cố định,
+đưa tài khoản về `ACTIVE`, đặt lại mật khẩu tạm `Aa@123456`, bắt đổi mật khẩu, revoke
+session cũ và ghi audit trong cùng transaction. Command từ chối chạy khi
+`NODE_ENV=production`; không dùng `db:seed` như một cách reset mật khẩu.
 
 Không chạy `docker compose up` cho database. NestJS và Prisma dùng Supabase được cấu hình trong `api/.env.local`; file này bị Git ignore và không được commit. `DATABASE_URL` dùng runtime pooler, còn `DIRECT_URL` dùng Session pooler cổng `5432` cho migration.
 
@@ -73,3 +80,4 @@ Backend DTO/controller first, then OpenAPI export, then Orval generation. Fronte
 | --- | --- | --- | --- |
 | 1.0.0 | 2026-09-04 | Bổ sung bootstrap local/dev và ownership rule/skill theo từng ứng dụng. | Current worktree documentation update |
 | 1.1.0 | 2026-09-04 | Bỏ workflow Docker local; chuyển migration, seed và runtime database sang Supabase online. | Supabase workflow 2026-09-04 |
+| 1.2.0 | 2026-09-04 | Thêm command phục hồi bootstrap Admin bị khóa, revoke session và ghi audit atomic. | DBAPI-20260904-BOOTSTRAP-RECOVERY |

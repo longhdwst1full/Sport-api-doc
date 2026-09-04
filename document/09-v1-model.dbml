@@ -57,7 +57,7 @@ Table users {
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
-  Note: '[P0] Public register chỉ tạo CUSTOMER ACTIVE và yêu cầu email hoặc phone; V1 tạm chưa verification. Sai mật khẩu lần 5 chuyển LOCKED, revoke session và audit atomic; staff mới/unlock bắt buộc đổi mật khẩu. Local seed có đúng một bootstrap OWNER, chỉ khởi tạo password khi còn thiếu và không reset password đã đổi. Unique indexes cho normalized_email/phone khi khác null; INACTIVE rồi anonymize, không soft-delete.'
+  Note: '[P0] Public register chỉ tạo CUSTOMER ACTIVE và yêu cầu email hoặc phone; V1 tạm chưa verification. Sai mật khẩu lần 5 chuyển LOCKED, revoke session và audit atomic; staff mới/unlock bắt buộc đổi mật khẩu. Development seed có đúng một bootstrap OWNER, chỉ khởi tạo password khi còn thiếu và không reset password đã đổi. Break-glass recovery chỉ phục hồi fixed bootstrap identity, reset password tạm, revoke session, bắt đổi password và ghi audit atomic. Unique indexes cho normalized_email/phone khi khác null; INACTIVE rồi anonymize, không soft-delete.'
 }
 
 Table auth_sessions {

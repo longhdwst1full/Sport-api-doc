@@ -13,6 +13,7 @@
     "prisma:migrate:status": "node scripts/run-prisma.cjs migrate-status",
     "prisma:seed": "tsx --env-file-if-exists=.env.local prisma/seed.ts",
     "prisma:seed:demo": "tsx --env-file-if-exists=.env.local prisma/seed-demo.ts",
+    "prisma:admin:reset": "tsx --env-file-if-exists=.env.local scripts/reset-bootstrap-admin.ts",
     "openapi:generate": "yarn build && node scripts/generate-openapi.cjs",
     "docs:model:annotate": "node scripts/annotate-model-workbook.cjs",
     "lint": "eslint \"{src,scripts,test}/**/*.ts\"",
