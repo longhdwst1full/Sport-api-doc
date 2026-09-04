@@ -358,10 +358,10 @@ export function ProductWorkflowDrawer({ slug, onClose }: { slug?: string; onClos
               <div>
                 <Form layout="vertical" onFinish={() => void submitVariant()}>
                   <Typography.Title level={5}>Thêm SKU</Typography.Title>
-                  <Form.Item label="SKU" validateStatus={variantForm.formState.errors.sku ? 'error' : undefined} help={variantForm.formState.errors.sku?.message}>
+                  <Form.Item label="SKU" required validateStatus={variantForm.formState.errors.sku ? 'error' : undefined} help={variantForm.formState.errors.sku?.message}>
                     <Controller name="sku" control={variantForm.control} render={({ field }) => <Input {...field} />} />
                   </Form.Item>
-                  <Form.Item label="Tên phiên bản" validateStatus={variantForm.formState.errors.name ? 'error' : undefined} help={variantForm.formState.errors.name?.message}>
+                  <Form.Item label="Tên phiên bản" required validateStatus={variantForm.formState.errors.name ? 'error' : undefined} help={variantForm.formState.errors.name?.message}>
                     <Controller name="name" control={variantForm.control} render={({ field }) => <Input {...field} />} />
                   </Form.Item>
                   <Form.Item label="Barcode (không bắt buộc)" validateStatus={variantForm.formState.errors.barcode ? 'error' : undefined} help={variantForm.formState.errors.barcode?.message}>
@@ -380,6 +380,7 @@ export function ProductWorkflowDrawer({ slug, onClose }: { slug?: string; onClos
                 <Typography.Title level={5}>Khai báo thành phần combo theo SKU</Typography.Title>
                 <Form.Item
                   label="SKU combo"
+                  required
                   validateStatus={bundleForm.formState.errors.bundleVariantId ? 'error' : undefined}
                   help={bundleForm.formState.errors.bundleVariantId?.message}
                 >
@@ -401,6 +402,7 @@ export function ProductWorkflowDrawer({ slug, onClose }: { slug?: string; onClos
                     <div key={item.id} className="grid gap-3 rounded-lg border border-gray-200 p-3 sm:grid-cols-[1fr_140px_auto]">
                       <Form.Item
                         label={`Thành phần ${index + 1}`}
+                        required
                         validateStatus={bundleForm.formState.errors.items?.[index]?.componentVariantId ? 'error' : undefined}
                         help={bundleForm.formState.errors.items?.[index]?.componentVariantId?.message}
                         style={{ marginBottom: 0 }}
@@ -425,6 +427,7 @@ export function ProductWorkflowDrawer({ slug, onClose }: { slug?: string; onClos
                       </Form.Item>
                       <Form.Item
                         label="Số lượng"
+                        required
                         validateStatus={bundleForm.formState.errors.items?.[index]?.quantity ? 'error' : undefined}
                         help={bundleForm.formState.errors.items?.[index]?.quantity?.message}
                         style={{ marginBottom: 0 }}

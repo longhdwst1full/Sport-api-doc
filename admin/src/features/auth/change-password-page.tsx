@@ -65,6 +65,7 @@ export function ChangePasswordPage() {
             <Form.Item
               key={name}
               label={name === 'currentPassword' ? 'Mật khẩu hiện tại' : name === 'newPassword' ? 'Mật khẩu mới' : 'Nhập lại mật khẩu mới'}
+              required
               validateStatus={form.formState.errors[name] ? 'error' : undefined}
               help={form.formState.errors[name]?.message}
             >

@@ -1,34 +1,30 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { RichTextEditorImplementation } from './rich-text-editor-implementation';
 
-const { useCKEditorMock } = vi.hoisted(() => ({
-  useCKEditorMock: vi.fn((options: {
+const { ckEditorMock } = vi.hoisted(() => ({
+  ckEditorMock: vi.fn((options: {
     config?: Record<string, unknown>;
-    subscribeTo?: string[];
+    editorUrl?: string;
+    initData?: string;
   }) => {
     void options;
-    return {
-      editor: undefined,
-      error: true,
-      loading: false,
-      status: undefined,
-    };
+    return null;
   }),
 }));
 
 vi.mock('ckeditor4-react', () => ({
-  CKEditorEventAction: {
-    beforeLoad: '__CKE__beforeLoad',
-    change: '__CKE__change',
-    instanceReady: '__CKE__instanceReady',
-  },
-  useCKEditor: useCKEditorMock,
+  CKEditor: ckEditorMock,
 }));
 
 describe('RichTextEditorImplementation', () => {
-  it('keeps content editable through the HTML fallback when CKEditor CDN fails', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('keeps content editable through the HTML fallback when CKEditor loading times out', () => {
+    vi.useFakeTimers();
     const onChange = vi.fn();
 
     render(
@@ -38,6 +34,7 @@ describe('RichTextEditorImplementation', () => {
       />,
     );
 
+    act(() => vi.advanceTimersByTime(10_000));
     expect(screen.getByText('Không tải được CKEditor 4')).toBeTruthy();
     const fallback = screen.getByRole('textbox', {
       name: 'Nội dung HTML dự phòng',
@@ -52,9 +49,9 @@ describe('RichTextEditorImplementation', () => {
   it('uses CKEditor built-in configuration without the custom Cloudinary plugin', () => {
     render(<RichTextEditorImplementation value="" />);
 
-    const options = useCKEditorMock.mock.calls.at(-1)?.[0];
+    const options = ckEditorMock.mock.calls.at(-1)?.[0];
     expect(options?.config).not.toHaveProperty('dctdUploadImage');
     expect(options?.config).not.toHaveProperty('extraPlugins');
-    expect(options?.subscribeTo).toEqual(['instanceReady', 'change']);
+    expect(options?.editorUrl).toBe('https://cdn.ckeditor.com/4.25.1-lts/full-all/ckeditor.js');
   });
 });

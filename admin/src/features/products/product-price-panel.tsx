@@ -121,15 +121,15 @@ export function ProductPricePanel({
       <div className="grid gap-6 xl:grid-cols-[320px_1fr]">
         {canManage ? (
           <Form layout="vertical" onFinish={() => void submit()}>
-          <Form.Item label="SKU" validateStatus={form.formState.errors.variantId ? 'error' : undefined} help={form.formState.errors.variantId?.message}>
+          <Form.Item label="SKU" required validateStatus={form.formState.errors.variantId ? 'error' : undefined} help={form.formState.errors.variantId?.message}>
             <Controller name="variantId" control={form.control} render={({ field }) => (
               <Select {...field} options={product.variants.map((variant) => ({ value: variant.id, label: `${variant.sku} — ${variant.name}` }))} />
             )} />
           </Form.Item>
-          <Form.Item label="Giá bán đã VAT (VND)" validateStatus={form.formState.errors.amount ? 'error' : undefined} help={form.formState.errors.amount?.message}>
+          <Form.Item label="Giá bán đã VAT (VND)" required validateStatus={form.formState.errors.amount ? 'error' : undefined} help={form.formState.errors.amount?.message}>
             <Controller name="amount" control={form.control} render={({ field }) => <Input {...field} inputMode="decimal" prefix="₫" />} />
           </Form.Item>
-          <Form.Item label="Áp dụng từ" validateStatus={form.formState.errors.startsAt ? 'error' : undefined} help={form.formState.errors.startsAt?.message}>
+          <Form.Item label="Áp dụng từ" required validateStatus={form.formState.errors.startsAt ? 'error' : undefined} help={form.formState.errors.startsAt?.message}>
             <Controller name="startsAt" control={form.control} render={({ field }) => <Input {...field} type="datetime-local" prefix={<CalendarOutlined />} />} />
           </Form.Item>
           <Form.Item label="Lý do / ghi chú" validateStatus={form.formState.errors.reason ? 'error' : undefined} help={form.formState.errors.reason?.message ?? 'Bắt buộc nếu giá giảm trên 20%.'}>

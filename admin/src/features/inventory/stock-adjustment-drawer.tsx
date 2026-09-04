@@ -78,7 +78,7 @@ export function StockAdjustmentDrawer({
       extra={<Button type="primary" loading={mutation.isPending} onClick={() => void submit()}>Ghi điều chỉnh</Button>}
     >
       <Form layout="vertical" onFinish={() => void submit()}>
-        <Form.Item label="Kho" validateStatus={form.formState.errors.warehouseCode ? 'error' : undefined} help={form.formState.errors.warehouseCode?.message}>
+        <Form.Item label="Kho" required validateStatus={form.formState.errors.warehouseCode ? 'error' : undefined} help={form.formState.errors.warehouseCode?.message}>
           <Controller
             name="warehouseCode"
             control={form.control}
@@ -94,7 +94,7 @@ export function StockAdjustmentDrawer({
             )}
           />
         </Form.Item>
-        <Form.Item label="SKU" validateStatus={form.formState.errors.sku ? 'error' : undefined} help={form.formState.errors.sku?.message}>
+        <Form.Item label="SKU" required validateStatus={form.formState.errors.sku ? 'error' : undefined} help={form.formState.errors.sku?.message}>
           <Controller
             name="sku"
             control={form.control}
@@ -108,10 +108,10 @@ export function StockAdjustmentDrawer({
             )}
           />
         </Form.Item>
-        <Form.Item label="Số lượng thay đổi" extra="Dùng số dương để nhập thêm, số âm để giảm tồn." validateStatus={form.formState.errors.quantityDelta ? 'error' : undefined} help={form.formState.errors.quantityDelta?.message}>
+        <Form.Item label="Số lượng thay đổi" required extra="Dùng số dương để nhập thêm, số âm để giảm tồn." validateStatus={form.formState.errors.quantityDelta ? 'error' : undefined} help={form.formState.errors.quantityDelta?.message}>
           <Controller name="quantityDelta" control={form.control} render={({ field }) => <InputNumber {...field} precision={0} className="w-full" />} />
         </Form.Item>
-        <Form.Item label="Lý do" validateStatus={form.formState.errors.reason ? 'error' : undefined} help={form.formState.errors.reason?.message}>
+        <Form.Item label="Lý do" required validateStatus={form.formState.errors.reason ? 'error' : undefined} help={form.formState.errors.reason?.message}>
           <Controller name="reason" control={form.control} render={({ field }) => <Input.TextArea {...field} rows={4} />} />
         </Form.Item>
       </Form>

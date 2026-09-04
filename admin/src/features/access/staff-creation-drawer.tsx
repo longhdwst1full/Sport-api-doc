@@ -105,11 +105,12 @@ export function StaffCreationDrawer({ open, onClose }: { open: boolean; onClose:
         type="warning"
         showIcon
         message="Mật khẩu đăng nhập mặc định: Aa@123456"
-        description="Hệ thống chưa có luồng bắt buộc đổi mật khẩu ở lần đăng nhập đầu tiên. Không gửi mật khẩu qua email tự động."
+        description="Nhân viên bắt buộc đổi mật khẩu sau lần đăng nhập đầu tiên. Hệ thống không gửi mật khẩu qua email tự động."
       />
       <Form layout="vertical">
         <Form.Item
           label="Tên nhân viên"
+          required
           validateStatus={errors.displayName ? 'error' : undefined}
           help={errors.displayName?.message}
         >
@@ -117,6 +118,7 @@ export function StaffCreationDrawer({ open, onClose }: { open: boolean; onClose:
         </Form.Item>
         <Form.Item
           label="Email đăng nhập"
+          required
           validateStatus={errors.email ? 'error' : undefined}
           help={errors.email?.message}
         >
@@ -124,6 +126,7 @@ export function StaffCreationDrawer({ open, onClose }: { open: boolean; onClose:
         </Form.Item>
         <Form.Item
           label="Vai trò"
+          required
           validateStatus={errors.roleCode ? 'error' : undefined}
           help={errors.roleCode?.message}
         >
@@ -143,6 +146,7 @@ export function StaffCreationDrawer({ open, onClose }: { open: boolean; onClose:
         </Form.Item>
         <Form.Item
           label="Chi nhánh"
+          required
           validateStatus={errors.branchId ? 'error' : undefined}
           help={errors.branchId?.message}
         >

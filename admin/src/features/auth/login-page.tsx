@@ -56,6 +56,7 @@ export function LoginPage() {
         <Form layout="vertical" onFinish={() => void form.handleSubmit((data) => login.mutate({ data }))()}>
           <Form.Item
             label="Email hoặc số điện thoại"
+            required
             validateStatus={form.formState.errors.identifier ? 'error' : undefined}
             help={form.formState.errors.identifier?.message}
           >
@@ -67,6 +68,7 @@ export function LoginPage() {
           </Form.Item>
           <Form.Item
             label="Mật khẩu"
+            required
             validateStatus={form.formState.errors.password ? 'error' : undefined}
             help={form.formState.errors.password?.message}
           >

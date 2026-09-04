@@ -136,13 +136,18 @@ export function OrganizationFormDrawer({
     });
   });
   const pending = create.isPending || update.isPending;
-  const field = (name: keyof OrganizationFormValues, label: string, disabled = false) => (
+  const field = (
+    name: keyof OrganizationFormValues,
+    label: string,
+    options: { disabled?: boolean; required?: boolean } = {},
+  ) => (
     <Form.Item
       label={label}
+      required={options.required}
       validateStatus={form.formState.errors[name] ? 'error' : undefined}
       help={form.formState.errors[name]?.message}
     >
-      <Controller name={name} control={form.control} render={({ field: input }) => <Input {...input} disabled={disabled} />} />
+      <Controller name={name} control={form.control} render={({ field: input }) => <Input {...input} disabled={options.disabled} />} />
     </Form.Item>
   );
 
@@ -157,20 +162,20 @@ export function OrganizationFormDrawer({
     >
       <Form layout="vertical" onFinish={() => void submit()}>
         <div className="grid gap-4 sm:grid-cols-2">
-          {field('branchCode', 'Mã chi nhánh', Boolean(branch))}
-          {field('branchName', 'Tên chi nhánh')}
+          {field('branchCode', 'Mã chi nhánh', { disabled: Boolean(branch), required: true })}
+          {field('branchName', 'Tên chi nhánh', { required: true })}
           {field('phone', 'Điện thoại')}
           {field('email', 'Email')}
         </div>
-        {field('addressLine', 'Địa chỉ')}
+        {field('addressLine', 'Địa chỉ', { required: true })}
         <div className="grid gap-4 sm:grid-cols-2">
-          {field('district', 'Quận/Huyện')}
-          {field('province', 'Tỉnh/Thành phố')}
+          {field('district', 'Quận/Huyện', { required: true })}
+          {field('province', 'Tỉnh/Thành phố', { required: true })}
         </div>
         <TypographyTitle />
         <div className="grid gap-4 sm:grid-cols-2">
-          {field('warehouseCode', 'Mã kho', Boolean(branch))}
-          {field('warehouseName', 'Tên kho')}
+          {field('warehouseCode', 'Mã kho', { disabled: Boolean(branch), required: true })}
+          {field('warehouseName', 'Tên kho', { required: true })}
         </div>
       </Form>
     </Drawer>

@@ -116,14 +116,14 @@ export function BrandFormDrawer({
     >
       <Form layout="vertical" onFinish={() => void submit()}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Form.Item label="Mã" validateStatus={form.formState.errors.code ? 'error' : undefined} help={<FieldError message={form.formState.errors.code?.message} />}>
+          <Form.Item label="Mã" required validateStatus={form.formState.errors.code ? 'error' : undefined} help={<FieldError message={form.formState.errors.code?.message} />}>
             <Controller name="code" control={form.control} render={({ field }) => <Input {...field} disabled={Boolean(brand)} />} />
           </Form.Item>
-          <Form.Item label="Slug" validateStatus={form.formState.errors.slug ? 'error' : undefined} help={<FieldError message={form.formState.errors.slug?.message} />}>
+          <Form.Item label="Slug" required validateStatus={form.formState.errors.slug ? 'error' : undefined} help={<FieldError message={form.formState.errors.slug?.message} />}>
             <Controller name="slug" control={form.control} render={({ field }) => <Input {...field} />} />
           </Form.Item>
         </div>
-        <Form.Item label="Tên thương hiệu" validateStatus={form.formState.errors.name ? 'error' : undefined} help={<FieldError message={form.formState.errors.name?.message} />}>
+        <Form.Item label="Tên thương hiệu" required validateStatus={form.formState.errors.name ? 'error' : undefined} help={<FieldError message={form.formState.errors.name?.message} />}>
           <Controller name="name" control={form.control} render={({ field }) => <Input {...field} />} />
         </Form.Item>
         <Form.Item label="Mô tả">
@@ -220,14 +220,14 @@ export function CategoryFormDrawer({
     >
       <Form layout="vertical" onFinish={() => void submit()}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Form.Item label="Mã" validateStatus={form.formState.errors.code ? 'error' : undefined} help={<FieldError message={form.formState.errors.code?.message} />}>
+          <Form.Item label="Mã" required validateStatus={form.formState.errors.code ? 'error' : undefined} help={<FieldError message={form.formState.errors.code?.message} />}>
             <Controller name="code" control={form.control} render={({ field }) => <Input {...field} disabled={Boolean(category)} />} />
           </Form.Item>
-          <Form.Item label="Slug" validateStatus={form.formState.errors.slug ? 'error' : undefined} help={<FieldError message={form.formState.errors.slug?.message} />}>
+          <Form.Item label="Slug" required validateStatus={form.formState.errors.slug ? 'error' : undefined} help={<FieldError message={form.formState.errors.slug?.message} />}>
             <Controller name="slug" control={form.control} render={({ field }) => <Input {...field} />} />
           </Form.Item>
         </div>
-        <Form.Item label="Tên danh mục" validateStatus={form.formState.errors.name ? 'error' : undefined} help={<FieldError message={form.formState.errors.name?.message} />}>
+        <Form.Item label="Tên danh mục" required validateStatus={form.formState.errors.name ? 'error' : undefined} help={<FieldError message={form.formState.errors.name?.message} />}>
           <Controller name="name" control={form.control} render={({ field }) => <Input {...field} />} />
         </Form.Item>
         {!category && (
@@ -245,7 +245,7 @@ export function CategoryFormDrawer({
             />
           </Form.Item>
         )}
-        <Form.Item label="Thứ tự">
+        <Form.Item label="Thứ tự" required>
           <Controller name="sortOrder" control={form.control} render={({ field }) => <InputNumber {...field} min={0} className="w-full" />} />
         </Form.Item>
         <Form.Item label="Mô tả">

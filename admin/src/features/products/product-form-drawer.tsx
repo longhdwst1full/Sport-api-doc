@@ -163,7 +163,7 @@ export function ProductFormDrawer({
   });
 
   const textField = (name: 'productNo' | 'name' | 'slug', label: string) => (
-    <Form.Item label={label} validateStatus={form.formState.errors[name] ? 'error' : undefined} help={form.formState.errors[name]?.message}>
+    <Form.Item label={label} required validateStatus={form.formState.errors[name] ? 'error' : undefined} help={form.formState.errors[name]?.message}>
       <Controller name={name} control={form.control} render={({ field }) => <Input {...field} />} />
     </Form.Item>
   );
@@ -188,6 +188,7 @@ export function ProductFormDrawer({
       <Form layout="vertical" onFinish={() => void submit()}>
         <Form.Item
           label="Loại sản phẩm"
+          required
           validateStatus={form.formState.errors.productType ? 'error' : undefined}
           help={form.formState.errors.productType?.message}
           extra="STANDARD là sản phẩm thường; BUNDLE là combo cố định và mỗi SKU combo phải khai báo thành phần trước khi publish."
@@ -235,7 +236,7 @@ export function ProductFormDrawer({
               )}
             />
           </Form.Item>
-          <Form.Item label="Danh mục" validateStatus={form.formState.errors.categoryIds ? 'error' : undefined} help={form.formState.errors.categoryIds?.message}>
+          <Form.Item label="Danh mục" required validateStatus={form.formState.errors.categoryIds ? 'error' : undefined} help={form.formState.errors.categoryIds?.message}>
             <Controller
               name="categoryIds"
               control={form.control}
@@ -258,6 +259,7 @@ export function ProductFormDrawer({
         </div>
         <Form.Item
           label="Danh mục chính"
+          required
           validateStatus={form.formState.errors.primaryCategoryId ? 'error' : undefined}
           help={form.formState.errors.primaryCategoryId?.message}
         >

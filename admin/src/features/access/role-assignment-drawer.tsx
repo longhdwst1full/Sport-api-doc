@@ -145,6 +145,7 @@ export function RoleAssignmentDrawer({ user, open, onClose }: RoleAssignmentDraw
       <Form layout="vertical">
         <Form.Item
           label="Vai trò đang hoạt động"
+          required
           validateStatus={errors.roleCode ? 'error' : undefined}
           help={errors.roleCode?.message}
         >
@@ -171,6 +172,7 @@ export function RoleAssignmentDrawer({ user, open, onClose }: RoleAssignmentDraw
 
         <Form.Item
           label="Phạm vi dữ liệu"
+          required
           validateStatus={errors.scopeType ? 'error' : undefined}
           help={errors.scopeType?.message}
         >
@@ -184,6 +186,7 @@ export function RoleAssignmentDrawer({ user, open, onClose }: RoleAssignmentDraw
         {scopeType === AssignUserRoleDtoScopeType.BRANCH && (
           <Form.Item
             label="Chi nhánh đang hoạt động"
+            required
             validateStatus={errors.branchId ? 'error' : undefined}
             help={errors.branchId?.message}
           >

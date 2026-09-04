@@ -32,11 +32,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const developmentBypass =
     import.meta.env.DEV && (import.meta.env.VITE_DEV_BYPASS_PERMISSIONS ?? 'true') === 'true';
   const currentUserQuery = useGetAdminCurrentUser({
-    query: { enabled: !developmentBypass && hasTokens, retry: false },
+    query: { enabled: hasTokens, retry: false },
   });
 
   useEffect(() => {
-    if (developmentBypass || !usesAuthCookieTransport() || hasTokens) {
+    if (!usesAuthCookieTransport() || hasTokens) {
       setRestoringCookieSession(false);
       return;
     }
@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       active = false;
     };
-  }, [developmentBypass, hasTokens]);
+  }, [hasTokens]);
 
   const signOut = async () => {
     const refreshToken = readAuthTokens()?.refreshToken;
@@ -72,10 +72,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         currentUser: currentUserQuery.data,
-        authenticated: developmentBypass || Boolean(currentUserQuery.data),
+        authenticated: Boolean(currentUserQuery.data),
         loading:
-          !developmentBypass &&
-          (restoringCookieSession || (hasTokens && currentUserQuery.isPending)),
+          restoringCookieSession || (hasTokens && currentUserQuery.isPending),
         developmentBypass,
         signOut,
       }}

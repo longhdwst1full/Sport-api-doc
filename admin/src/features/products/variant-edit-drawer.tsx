@@ -81,7 +81,7 @@ export function VariantEditDrawer({
     >
       <Form layout="vertical">
         <Form.Item label="SKU (không thể đổi)"><Input value={variant?.sku} disabled /></Form.Item>
-        <Form.Item label="Tên phiên bản" validateStatus={errors.name ? 'error' : undefined} help={errors.name?.message}>
+        <Form.Item label="Tên phiên bản" required validateStatus={errors.name ? 'error' : undefined} help={errors.name?.message}>
           <Controller name="name" control={control} render={({ field }) => <Input {...field} />} />
         </Form.Item>
         <Form.Item label="Barcode" validateStatus={errors.barcode ? 'error' : undefined} help={errors.barcode?.message}>
@@ -94,7 +94,7 @@ export function VariantEditDrawer({
             ['widthMm', 'Rộng (mm)', 1],
             ['heightMm', 'Cao (mm)', 1],
           ] as const).map(([name, label, min]) => (
-            <Form.Item key={name} label={label} validateStatus={errors[name] ? 'error' : undefined} help={errors[name]?.message}>
+            <Form.Item key={name} label={label} required={name === 'weightGrams'} validateStatus={errors[name] ? 'error' : undefined} help={errors[name]?.message}>
               <Controller
                 name={name}
                 control={control}
