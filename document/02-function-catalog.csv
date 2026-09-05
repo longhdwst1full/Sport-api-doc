@@ -1,0 +1,72 @@
+id,module,channel,actor,priority,function,main_rule,acceptance_summary
+ORG-01,Organization,Admin,Super Admin,P0,Quản lý chi nhánh,Mã chi nhánh duy nhất và không xóa khi đã có giao dịch,Tạo sửa khóa/mở và lọc được theo trạng thái
+ORG-02,Organization,Admin,Super Admin,P0,Quản lý kho,Mỗi branch đúng một warehouse; branch phải có warehouse trước khi active,Không thể chuyển branch của warehouse đã có ledger
+IAM-01,IAM,Storefront,Customer/Guest,P0,Đăng ký đăng nhập đăng xuất,"Public register chỉ tạo CUSTOMER; email lowercase; SĐT Việt Nam validate và lưu E.164; V1 tạm bỏ verification","Đăng ký ACTIVE ngay; login bằng email hoặc phone; token rotation và revoke session hoạt động"
+IAM-02,IAM,Storefront,Customer,P0,Quên và đổi mật khẩu,OTP/token một lần có expiry,Không lộ tài khoản tồn tại qua response
+IAM-03,IAM,Admin,Super Admin,P0,Quản lý user nội bộ,Không tự khóa super admin cuối cùng,Tạo khóa/mở và thu hồi session
+IAM-04,IAM,Admin,Security Admin,P0,Quản lý role và permission,Permission code ổn định không sinh từ URL,Backend deny khi thiếu quyền
+IAM-05,IAM,Admin,Security Admin,P0,Gán role theo data scope,Scope GLOBAL/BRANCH/WAREHOUSE/OWN phải hợp lệ,Quyền chỉ thấy dữ liệu trong scope
+IAM-06,IAM,Admin,Auditor,P0,Xem audit log,Log append-only và che dữ liệu nhạy cảm,Lọc theo actor action entity request id
+CUS-01,Customer,Storefront,Guest,P0,Guest checkout,Tạo customer nội bộ với user_id null; bắt buộc normalized phone nhưng không tạo tài khoản,Tạo đơn và tra cứu qua signed link/OTP
+CUS-02,Customer,Storefront,Customer,P0,Quản lý hồ sơ và địa chỉ,Chỉ truy cập dữ liệu OWN,Thêm sửa chọn mặc định và xóa địa chỉ chưa snapshot
+CUS-03,Customer,Admin,Customer Service,P1,Tra cứu khách hàng,Che PII theo quyền và audit export,Tìm theo tên email số điện thoại
+CAT-01,Catalog,Admin,Catalog Manager,P0,Quản lý brand,Slug/code duy nhất,CRUD và khóa brand
+CAT-02,Catalog,Admin,Catalog Manager,P0,Quản lý category dạng cây,Không tạo vòng lặp và không xóa category đang dùng,Di chuyển node an toàn
+CAT-03,Catalog,Admin,Catalog Manager,P0,Quản lý product,Product là SPU; không giữ tồn trực tiếp,Draft publish unpublish archive
+CAT-04,Catalog,Admin,Catalog Manager,P0,Quản lý variant,Mỗi variant có SKU duy nhất và barcode optional unique,Tạo tổ hợp thuộc tính và khóa variant
+CAT-05,Catalog,Admin,Catalog Manager,P0,Media sản phẩm,Một ảnh chính mỗi product/variant,Upload sắp xếp alt text
+CAT-06,Catalog,Admin,Catalog Manager,P1,Thuộc tính động,Core field không lưu JSONB,Định nghĩa size color material và giá trị
+CAT-07,Catalog,Storefront,Guest/Customer,P0,Danh sách và chi tiết sản phẩm,Chỉ hiển thị published và variant active,SEO slug canonical metadata
+CAT-08,Catalog,Storefront,Guest/Customer,P0,Tìm kiếm lọc sắp xếp,Filter category brand price attribute và branch availability,Kết quả phân trang ổn định
+CAT-09,Review,Storefront,Customer,P1,Gửi đánh giá,Chỉ buyer đã nhận hàng; một review mỗi order item,Review ở trạng thái pending moderation
+CAT-10,Review,Admin,Content Moderator,P1,Duyệt đánh giá,Ẩn không xóa nội dung có lịch sử,Duyệt từ chối và ghi lý do
+CAT-11,Review,Storefront/Admin,Customer/Customer Service,P1,Phản hồi đánh giá,Chỉ buyer hoặc staff có quyền; V1 tối đa một cấp reply,Tạo sửa trong thời hạn và moderation đầy đủ
+CAT-12,Catalog,Admin,Catalog Manager,P0,Quản lý combo cố định,Combo là variant bán được; không chứa combo khác; component quantity>0,Tạo sửa archive và preview tồn khả dụng theo thành phần
+PRI-01,Pricing,Admin,Pricing Manager,P0,Quản lý giá hiệu lực,Không có hai giá regular active chồng thời gian cho một variant,Tạo lịch giá và xem lịch sử
+PRI-02,Pricing,Storefront,Guest/Customer,P0,Tính giá hiện tại,Flash sale hợp lệ override regular price,Server luôn tính lại tại checkout
+FLS-01,Flash Sale,Admin,Marketing Manager,P1,Tạo campaign,Có start/end timezone và state machine,Draft schedule pause end
+FLS-02,Flash Sale,Admin,Marketing Manager,P1,Gán item quota và purchase limit,Quota không âm và giá sale nhỏ hơn giá tham chiếu,Validate trùng variant trong campaign
+FLS-03,Flash Sale,Storefront,Guest/Customer,P1,Mua flash sale,Quota reserve atomic có TTL và limit theo customer,Không oversell khi concurrent checkout
+INV-01,Inventory,Admin,Inventory Viewer,P0,Xem tồn theo kho,available = on_hand - reserved,Tìm theo SKU kho và cảnh báo thấp
+INV-02,Inventory,Admin,Inventory Manager,P0,Nhập tồn cơ bản,OPENING_BALANCE chỉ khi chưa có movement; MANUAL_RECEIPT cần chứng từ tham chiếu,Ledger và balance khớp
+INV-03,Inventory,Admin,Inventory Manager,P0,Điều chỉnh tồn,Cần reason; vượt ngưỡng cần approval,Tạo movement immutable và không âm tồn
+INV-04,Inventory,System,System,P0,Reservation checkout,Atomic conditional update theo warehouse+variant,Tất cả item reserve hoặc rollback
+INV-05,Inventory,System,System,P0,Expire/release/commit reservation,Job idempotent; commit khi payment success,Không double release/commit
+INV-06,Inventory,Admin,Inventory Manager,P1,Kiểm kê kho,Snapshot counted qty rồi post variance một lần,Draft counting submitted approved posted
+INV-07,Inventory,Admin,Inventory Manager,P1,Chuyển kho,V1 chuyển thủ công không phục vụ đơn đang checkout,OUT và IN movements có cùng reference
+CRT-01,Cart,Storefront,Guest/Customer,P0,Quản lý giỏ,Cart không giữ tồn; giá/tồn chỉ mang tính preview,Add update remove và mini-cart
+CRT-02,Cart,Storefront,Customer,P0,Merge giỏ guest,Merge idempotent không vượt tồn/limit,Thông báo item bị giảm/xóa
+CHK-01,Checkout,Storefront,Guest/Customer,P0,Chọn chi nhánh phục vụ,Một order một branch một warehouse,Gợi ý branch khác nếu thiếu hàng
+CHK-02,Checkout,Storefront,Guest/Customer,P0,Tính phí giao hàng,Theo zone weight subtotal và branch,Quote có expiry và server tính lại
+CHK-03,Checkout,Storefront,Guest/Customer,P0,Tạo đơn,Snapshot customer address product price tax shipping và attribution,Idempotency key không tạo đơn trùng
+CHK-04,Checkout,System,System,P0,Tính và giữ tồn combo,Availability là min tồn thành phần chia quantity; reserve từng component,Không oversell và rollback toàn combo khi thiếu một component
+ORD-01,Order,Storefront,Customer/Guest,P0,Xem đơn và tra cứu guest,Guest dùng order_no + signed token/OTP,Không lộ đơn người khác
+ORD-02,Order,Storefront,Customer,P0,Hủy đơn trước thanh toán,Không hủy sau payment success,Release reservation và ghi history
+ORD-03,Order,Admin,Order Operator,P0,Danh sách và chi tiết đơn,Filter chịu data scope branch,Thấy timeline payment fulfillment
+ORD-04,Order,Admin,Order Manager,P0,Chuyển trạng thái đơn,Chỉ transition hợp lệ và có optimistic version,Không sửa trực tiếp status tùy ý
+PAY-01,Payment,Storefront,Guest/Customer,P0,Hiển thị hướng dẫn chuyển khoản,Mã tham chiếu duy nhất theo order,QR/nội dung/số tiền khớp snapshot
+PAY-02,Payment,Storefront,Guest/Customer,P0,Gửi bằng chứng thanh toán,Tệp an toàn và không tự đánh dấu success,Chuyển AWAITING_CONFIRMATION
+PAY-03,Payment,Admin,Finance Operator,P0,Xác nhận/từ chối thanh toán,Kiểm tra amount reference và trạng thái,Success commit reservation một lần
+PAY-04,Payment,System,System,P0,Xử lý giao dịch/webhook,Verify signature khi có provider; idempotent event,Duplicate event không đổi kết quả
+PAY-05,Payment,Admin,Finance Manager,P1,Hoàn tiền theo return request,Cần approval; tổng refund không vượt tiền đã nhận,Partial refund state/history/audit đầy đủ
+FUL-01,Fulfillment,Admin,Warehouse Operator,P0,Tạo picking list,Chỉ payment success và reservation committed,Kho chỉ thấy đơn trong scope
+FUL-02,Fulfillment,Admin,Warehouse Operator,P0,Pick pack ship,Mỗi bước có version và history,Ship trừ on_hand và reserved atomic
+FUL-03,Fulfillment,Admin,Order Operator,P0,Cập nhật giao hàng và giao thất bại,Delivered không tự đồng nghĩa completed; thất bại phải có reason và trả đúng kho,Tracking và kết quả kiểm tra hàng hoàn hiển thị trong timeline
+FUL-04,Fulfillment,System,System,P0,Hoàn tất đơn,Delivered + hết thời gian khiếu nại hoặc admin confirm,Revenue ghi nhận tại COMPLETED
+RET-01,Return,Storefront,Customer,P1,Tạo yêu cầu trả theo sản phẩm,Chọn order item/quantity; combo phải trả nguyên combo; áp policy tại request,Có lý do ảnh deadline và số tiền hoàn dự kiến
+RET-02,Return,Admin,Customer Service,P1,Duyệt/từ chối trả hàng,Maker-checker khi dẫn đến refund,History và lý do bắt buộc
+RET-03,Return,Admin,Warehouse Operator,P1,Nhận hàng trả,Phân loại RESTOCK/DAMAGED/REJECTED,Chỉ RESTOCK tạo movement IN
+CMS-01,CMS,Admin,Content Editor,P1,Quản lý page/post,Draft publish schedule archive,Slug/version/SEO metadata
+CMS-02,CMS,Admin,Content Editor,P1,Quản lý banner,Có vị trí thời gian và audience cơ bản,Không hiển thị ngoài hiệu lực
+CMS-03,CMS,Admin,Content Editor,P1,Quản lý danh mục tag và bài viết liên quan,Taxonomy độc lập product category; một primary category/post,Gắn nhiều tag và sản phẩm liên quan có thứ tự
+MED-01,Media,Storefront/Admin,Customer/Content Editor,P0,Upload trực tiếp lên provider,Backend cấp signed preset/token giới hạn MIME size folder,Finalize xác minh provider asset và không nhận URL tùy ý
+MED-02,Media,Admin,Content Editor,P1,Thư viện và tái sử dụng media,Asset dùng chung không bị xóa khi còn usage,Tìm preview chọn alt text và xem usage
+MED-03,Media,System/Admin,System/Content Editor,P1,Xóa và dọn media,Xóa hai bước qua job; verify provider webhook/signature,Chỉ xóa provider asset khi không còn active reference
+NOT-01,Notification,System,System,P1,Gửi email/SMS/in-app,Từ outbox và retry có backoff,Không gửi trùng theo dedup key
+NOT-02,Notification,Admin,Admin,P1,Quản lý template,Template versioned có preview/test send,Variable được whitelist
+RPT-01,Reporting,Admin,Manager,P0,Dashboard vận hành,Số đơn payment pending low stock theo scope,Dữ liệu gần realtime và drill-down
+RPT-02,Reporting,Admin,Finance Manager,P1,Báo cáo doanh thu,Chỉ tính order COMPLETED,Đối soát theo branch ngày variant
+RPT-03,Reporting,Admin,Inventory Manager,P1,Báo cáo tồn và movement,Opening + in - out = closing,Xuất CSV có audit
+SYS-01,Platform,System,System,P0,Idempotency API,Key gắn actor endpoint và request hash,Replay trả cùng response; hash khác bị reject
+SYS-02,Platform,System,System,P0,Outbox worker,Claim row an toàn và retry/dead-letter,Không mất event sau DB commit
+SYS-03,Platform,Admin,Approver,P1,Duyệt thao tác nhạy cảm,Maker không tự approve; payload snapshot bất biến,Approve reject expire và execution result

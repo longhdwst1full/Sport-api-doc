@@ -23,11 +23,11 @@ describe('Admin v1 contract', () => {
 
   let app: INestApplication;
   const prisma = new PrismaClient();
-  const userId = uuidv7();
-  const assignmentId = uuidv7();
-  const staffUserId = uuidv7();
+  const fixtureSuffix = uuidv7();
+  let userId: bigint;
+  let staffUserId: bigint;
   let createdStaffUserId = '';
-  const email = `e2e-${userId}@example.invalid`;
+  const email = `e2e-${fixtureSuffix}@example.invalid`;
   const password = 'Valid-password-123!';
   let accessToken: string;
   const catalogFixture = {
@@ -43,9 +43,8 @@ describe('Admin v1 contract', () => {
 
   beforeAll(async () => {
     const owner = await prisma.role.findUniqueOrThrow({ where: { code: 'OWNER' } });
-    await prisma.user.create({
+    const ownerUser = await prisma.user.create({
       data: {
-        id: userId,
         userType: 'STAFF',
         email,
         normalizedEmail: email,
@@ -55,25 +54,25 @@ describe('Admin v1 contract', () => {
         permissionVersion: 1,
       },
     });
+    userId = ownerUser.id;
     await prisma.userRoleAssignment.create({
       data: {
-        id: assignmentId,
         userId,
         roleId: owner.id,
         scopeType: 'GLOBAL',
         assignedBy: userId,
       },
     });
-    await prisma.user.create({
+    const staffUser = await prisma.user.create({
       data: {
-        id: staffUserId,
         userType: 'STAFF',
-        email: `staff-${staffUserId}@example.invalid`,
-        normalizedEmail: `staff-${staffUserId}@example.invalid`,
+        email: `staff-${fixtureSuffix}@example.invalid`,
+        normalizedEmail: `staff-${fixtureSuffix}@example.invalid`,
         displayName: 'E2E Staff',
         status: 'ACTIVE',
       },
     });
+    staffUserId = staffUser.id;
     app = await createApplication({ logger: false, swagger: false });
     const login = await request(server())
       .post('/api/v1/admin/auth/login')
@@ -86,19 +85,19 @@ describe('Admin v1 contract', () => {
     if (app) await app.close();
     if (catalogFixture.productId) {
       await prisma.productPrice.deleteMany({
-        where: { productVariant: { productId: catalogFixture.productId } },
+        where: { productVariant: { productId: BigInt(catalogFixture.productId) } },
       });
-      await prisma.productMedia.deleteMany({ where: { productId: catalogFixture.productId } });
-      await prisma.productCategory.deleteMany({ where: { productId: catalogFixture.productId } });
-      await prisma.productVariant.deleteMany({ where: { productId: catalogFixture.productId } });
-      await prisma.product.deleteMany({ where: { id: catalogFixture.productId } });
+      await prisma.productMedia.deleteMany({ where: { productId: BigInt(catalogFixture.productId) } });
+      await prisma.productCategory.deleteMany({ where: { productId: BigInt(catalogFixture.productId) } });
+      await prisma.productVariant.deleteMany({ where: { productId: BigInt(catalogFixture.productId) } });
+      await prisma.product.deleteMany({ where: { id: BigInt(catalogFixture.productId) } });
     }
     if (catalogFixture.mediaAssetId) {
-      await prisma.mediaAsset.deleteMany({ where: { id: catalogFixture.mediaAssetId } });
+      await prisma.mediaAsset.deleteMany({ where: { id: BigInt(catalogFixture.mediaAssetId) } });
     }
     if (concurrencyProductIds.length > 0) {
       const variants = await prisma.productVariant.findMany({
-        where: { productId: { in: concurrencyProductIds } },
+        where: { productId: { in: concurrencyProductIds.map(BigInt) } },
         select: { id: true },
       });
       const variantIds = variants.map(({ id }) => id);
@@ -111,34 +110,34 @@ describe('Admin v1 contract', () => {
         where: { productBundleId: { in: bundles.map(({ id }) => id) } },
       });
       await prisma.productBundle.deleteMany({ where: { id: { in: bundles.map(({ id }) => id) } } });
-      await prisma.productCategory.deleteMany({ where: { productId: { in: concurrencyProductIds } } });
+      await prisma.productCategory.deleteMany({ where: { productId: { in: concurrencyProductIds.map(BigInt) } } });
       await prisma.productVariant.deleteMany({ where: { id: { in: variantIds } } });
-      await prisma.product.deleteMany({ where: { id: { in: concurrencyProductIds } } });
+      await prisma.product.deleteMany({ where: { id: { in: concurrencyProductIds.map(BigInt) } } });
     }
     if (concurrencyCategoryId) {
-      await prisma.category.deleteMany({ where: { id: concurrencyCategoryId } });
+      await prisma.category.deleteMany({ where: { id: BigInt(concurrencyCategoryId) } });
     }
     if (catalogFixture.categoryId) {
-      await prisma.category.deleteMany({ where: { id: catalogFixture.categoryId } });
+      await prisma.category.deleteMany({ where: { id: BigInt(catalogFixture.categoryId) } });
     }
     if (catalogFixture.brandId) {
-      await prisma.brand.deleteMany({ where: { id: catalogFixture.brandId } });
+      await prisma.brand.deleteMany({ where: { id: BigInt(catalogFixture.brandId) } });
     }
     if (organizationFixture.warehouseId) {
-      await prisma.warehouse.deleteMany({ where: { id: organizationFixture.warehouseId } });
+      await prisma.warehouse.deleteMany({ where: { id: BigInt(organizationFixture.warehouseId) } });
     }
     if (organizationFixture.branchId) {
-      await prisma.branch.deleteMany({ where: { id: organizationFixture.branchId } });
+      await prisma.branch.deleteMany({ where: { id: BigInt(organizationFixture.branchId) } });
     }
     await prisma.authSession.deleteMany({ where: { userId } });
     if (createdStaffUserId) {
-      await prisma.authSession.deleteMany({ where: { userId: createdStaffUserId } });
+      await prisma.authSession.deleteMany({ where: { userId: BigInt(createdStaffUserId) } });
     }
     await prisma.userRoleAssignment.deleteMany({
-      where: { userId: { in: [userId, staffUserId, createdStaffUserId].filter(Boolean) } },
+      where: { userId: { in: [userId, staffUserId, ...(createdStaffUserId ? [BigInt(createdStaffUserId)] : [])] } },
     });
     await prisma.user.deleteMany({
-      where: { id: { in: [staffUserId, createdStaffUserId].filter(Boolean) } },
+      where: { id: { in: [staffUserId, ...(createdStaffUserId ? [BigInt(createdStaffUserId)] : [])] } },
     });
     await prisma.user.update({
       where: { id: userId },
@@ -294,7 +293,9 @@ describe('Admin v1 contract', () => {
     await expect(prisma.userRoleAssignment.findUniqueOrThrow({ where: { id: activeAssignment.id } }))
       .resolves.toMatchObject({ status: 'REVOKED' });
     await expect(
-      prisma.auditLog.count({ where: { action: 'iam.assignment.revoke', entityId: activeAssignment.id } }),
+      prisma.auditLog.count({
+        where: { action: 'iam.assignment.revoke', entityId: activeAssignment.id.toString() },
+      }),
     ).resolves.toBe(1);
   });
 
@@ -348,7 +349,7 @@ describe('Admin v1 contract', () => {
       .expect(401);
     await expect(
       prisma.authSession.count({
-        where: { userId: createdStaffUserId, revokedAt: null },
+        where: { userId: BigInt(createdStaffUserId), revokedAt: null },
       }),
     ).resolves.toBe(0);
 
@@ -457,19 +458,19 @@ describe('Admin v1 contract', () => {
       })],
     });
 
-    catalogFixture.mediaAssetId = uuidv7();
-    await prisma.mediaAsset.create({
+    const mediaSuffix = uuidv7();
+    const mediaAsset = await prisma.mediaAsset.create({
       data: {
-        id: catalogFixture.mediaAssetId,
         provider: 'CLOUDINARY',
-        providerAssetId: `e2e-${catalogFixture.mediaAssetId}`,
-        publicId: `sport-sys/sport/e2e-${catalogFixture.mediaAssetId}`,
+        providerAssetId: `e2e-${mediaSuffix}`,
+        publicId: `sport-sys/sport/e2e-${mediaSuffix}`,
         secureUrl: 'https://example.invalid/e2e-product.webp',
         thumbnailUrl: 'https://example.invalid/e2e-product-thumb.webp',
         status: 'ACTIVE',
         uploadedBy: userId,
       },
     });
+    catalogFixture.mediaAssetId = mediaAsset.id.toString();
     const attachedMedia = await request(server())
       .post(`/api/v1/admin/products/${catalogFixture.productId}/media`)
       .set(authorization)
@@ -702,8 +703,8 @@ describe('Admin v1 contract', () => {
     expect([publishResponse.status, archiveResponse.status].sort()).toEqual([200, 422]);
 
     const [combo, component] = await Promise.all([
-      prisma.product.findUniqueOrThrow({ where: { id: comboProductId } }),
-      prisma.productVariant.findUniqueOrThrow({ where: { id: componentVariantId } }),
+      prisma.product.findUniqueOrThrow({ where: { id: BigInt(comboProductId) } }),
+      prisma.productVariant.findUniqueOrThrow({ where: { id: BigInt(componentVariantId) } }),
     ]);
     expect(combo.status === 'PUBLISHED' && component.status === 'INACTIVE').toBe(false);
   });

@@ -6,7 +6,7 @@ import { ProductMediaService } from './product-media.service';
 describe('ProductMediaService', () => {
   const context = {
     requestId: 'request-1',
-    actorUserId: '00000000-0000-7000-8000-000000000002',
+    actorUserId: '2',
   };
 
   it('rejects attaching an asset that was not finalized as ACTIVE', async () => {
@@ -26,9 +26,9 @@ describe('ProductMediaService', () => {
     const service = new ProductMediaService(prisma, {} as AuditWriter);
 
     await expect(service.attach(
-      '00000000-0000-7000-8000-000000000010',
+      '10',
       {
-        mediaAssetId: '00000000-0000-7000-8000-000000000011',
+        mediaAssetId: '11',
         expectedProductVersion: 0,
         isPrimary: false,
       },
@@ -56,9 +56,9 @@ describe('ProductMediaService', () => {
     const service = new ProductMediaService(prisma, {} as AuditWriter);
 
     await expect(service.attach(
-      '00000000-0000-7000-8000-000000000010',
+      '10',
       {
-        mediaAssetId: '00000000-0000-7000-8000-000000000011',
+        mediaAssetId: '11',
         expectedProductVersion: 1,
         isPrimary: false,
       },

@@ -25,17 +25,16 @@ describe('Admin authentication', () => {
     config,
     new PrismaAuditWriter(prisma),
   );
-  const userId = uuidv7();
-  const assignmentId = uuidv7();
-  const email = `auth-${userId}@example.invalid`;
+  const suffix = uuidv7();
+  let userId: bigint;
+  const email = `auth-${suffix}@example.invalid`;
   const password = 'Valid-password-123!';
 
   beforeAll(async () => {
     await prisma.$connect();
     const owner = await prisma.role.findUniqueOrThrow({ where: { code: 'OWNER' } });
-    await prisma.user.create({
+    const user = await prisma.user.create({
       data: {
-        id: userId,
         userType: 'STAFF',
         email,
         normalizedEmail: email,
@@ -45,9 +44,9 @@ describe('Admin authentication', () => {
         permissionVersion: 1,
       },
     });
+    userId = user.id;
     await prisma.userRoleAssignment.create({
       data: {
-        id: assignmentId,
         userId,
         roleId: owner.id,
         scopeType: 'GLOBAL',
@@ -74,13 +73,15 @@ describe('Admin authentication', () => {
   it('rotates refresh tokens once and invalidates stale permission versions', async () => {
     const first = await auth.login({ identifier: email, password });
     const principal = await auth.authorizeAccessToken(first.accessToken);
-    expect(principal.userId).toBe(userId);
+    expect(principal.userId).toBe(userId.toString());
     expect(principal.permissions).toContain('iam.user.manage');
     expect(principal.scopes).toEqual([{ type: 'GLOBAL' }]);
 
     const second = await auth.refresh(first.refreshToken!);
     await expect(auth.refresh(first.refreshToken!)).rejects.toBeInstanceOf(UnauthorizedException);
-    await expect(auth.authorizeAccessToken(second.accessToken)).resolves.toMatchObject({ userId });
+    await expect(auth.authorizeAccessToken(second.accessToken)).resolves.toMatchObject({
+      userId: userId.toString(),
+    });
 
     await prisma.user.update({
       where: { id: userId },
@@ -115,7 +116,7 @@ describe('Admin authentication', () => {
     });
     await expect(prisma.authSession.count({ where: { userId, revokedAt: null } })).resolves.toBe(0);
     await expect(prisma.auditLog.count({
-      where: { entityId: userId, action: 'auth.account.auto_lock' },
+      where: { entityId: userId.toString(), action: 'auth.account.auto_lock' },
     })).resolves.toBe(1);
   });
 });

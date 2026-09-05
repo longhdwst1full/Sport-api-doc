@@ -4,7 +4,7 @@ import { PrismaService } from '../../../database/prisma.service';
 import { CatalogMasterService } from './catalog-master.service';
 
 describe('CatalogMasterService', () => {
-  const context = { requestId: 'catalog-master-test', actorUserId: 'actor-id' };
+  const context = { requestId: 'catalog-master-test', actorUserId: '99' };
 
   function createService(transaction: object): {
     service: CatalogMasterService;
@@ -22,7 +22,7 @@ describe('CatalogMasterService', () => {
 
   it('updates a brand with optimistic versioning and audit', async () => {
     const current = {
-      id: 'brand-id',
+      id: 1n,
       code: 'NIKE',
       name: 'Nike',
       slug: 'nike',
@@ -42,7 +42,7 @@ describe('CatalogMasterService', () => {
     const { service, auditWrite } = createService(transaction);
 
     const result = await service.updateBrand(
-      'brand-id',
+      '1',
       { name: 'Nike Việt Nam', expectedVersion: 0 },
       context,
     );
@@ -50,7 +50,7 @@ describe('CatalogMasterService', () => {
     expect(result.name).toBe('Nike Việt Nam');
     expect(result.version).toBe(1);
     expect(transaction.brand.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: 'brand-id', version: 0n } }),
+      expect.objectContaining({ where: { id: 1n, version: 0n } }),
     );
     expect(auditWrite).toHaveBeenCalledTimes(1);
   });
@@ -58,14 +58,14 @@ describe('CatalogMasterService', () => {
   it('rejects a stale brand update', async () => {
     const transaction = {
       brand: {
-        findUnique: jest.fn().mockResolvedValue({ id: 'brand-id', version: 1n }),
+        findUnique: jest.fn().mockResolvedValue({ id: 1n, version: 1n }),
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
     };
     const { service } = createService(transaction);
 
     await expect(
-      service.updateBrand('brand-id', { name: 'Stale', expectedVersion: 0 }, context),
+      service.updateBrand('1', { name: 'Stale', expectedVersion: 0 }, context),
     ).rejects.toThrow(ConflictException);
   });
 
@@ -73,7 +73,7 @@ describe('CatalogMasterService', () => {
     const transaction = {
       category: {
         findUnique: jest.fn().mockResolvedValue({
-          id: 'category-id',
+          id: 2n,
           parentId: null,
           status: 'ACTIVE',
           version: 0n,
@@ -85,7 +85,7 @@ describe('CatalogMasterService', () => {
 
     await expect(
       service.changeCategoryStatus(
-        'category-id',
+        '2',
         'INACTIVE',
         { expectedVersion: 0 },
         context,

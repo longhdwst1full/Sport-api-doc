@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsIn, IsInt, IsNotEmpty, IsString, Max, Min } from 'class-validator';
 import { CLOUDINARY_MAX_IMAGE_BYTES } from '../../config/cloudinary.config';
+import { ENTITY_ID_OPENAPI } from '../../common/identifiers/entity-id';
 
 export const ALLOWED_IMAGE_MIME_TYPES = [
   'image/jpeg',
@@ -60,7 +61,7 @@ export class FinalizeMediaUploadDto {
 }
 
 export class MediaAssetDto {
-  @ApiProperty({ format: 'uuid' }) id: string;
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) id: string;
   @ApiProperty({ enum: ['CLOUDINARY'] }) provider: 'CLOUDINARY';
   @ApiProperty() providerAssetId: string;
   @ApiProperty() publicId: string;

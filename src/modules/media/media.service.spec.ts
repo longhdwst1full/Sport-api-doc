@@ -24,7 +24,7 @@ describe('MediaService', () => {
     const createMediaAsset = jest.fn();
     const writeAudit = jest.fn();
     const created = {
-      id: '00000000-0000-7000-8000-000000000001',
+      id: 1n,
       ...verified,
       thumbnailUrl: verified.thumbnailUrl,
       sizeBytes: 1024n,
@@ -49,10 +49,10 @@ describe('MediaService', () => {
 
     const result = await service.finalizeUpload(
       { publicId: verified.publicId, version: 7, signature: 'provider-signature' },
-      { requestId: 'request-1', actorUserId: '00000000-0000-7000-8000-000000000002' },
+      { requestId: 'request-1', actorUserId: '2' },
     );
 
-    expect(result).toMatchObject({ id: created.id, providerVersion: 7, status: 'ACTIVE' });
+    expect(result).toMatchObject({ id: '1', providerVersion: 7, status: 'ACTIVE' });
     expect(createMediaAsset).toHaveBeenCalledTimes(1);
     expect(writeAudit).toHaveBeenCalledTimes(1);
   });
@@ -61,7 +61,7 @@ describe('MediaService', () => {
     const createMediaAsset = jest.fn();
     const writeAudit = jest.fn();
     const existing = {
-      id: '00000000-0000-7000-8000-000000000001',
+      id: 1n,
       ...verified,
       sizeBytes: 1024n,
       status: 'ACTIVE',
@@ -83,7 +83,7 @@ describe('MediaService', () => {
 
     await service.finalizeUpload(
       { publicId: verified.publicId, version: 7, signature: 'provider-signature' },
-      { requestId: 'request-2', actorUserId: '00000000-0000-7000-8000-000000000002' },
+      { requestId: 'request-2', actorUserId: '2' },
     );
 
     expect(createMediaAsset).not.toHaveBeenCalled();
@@ -92,7 +92,7 @@ describe('MediaService', () => {
 
   it('returns the winning asset when concurrent finalize hits the unique constraint', async () => {
     const existing = {
-      id: '00000000-0000-7000-8000-000000000001',
+      id: 1n,
       ...verified,
       sizeBytes: 1024n,
       status: 'ACTIVE',
@@ -118,7 +118,7 @@ describe('MediaService', () => {
 
     await expect(service.finalizeUpload(
       { publicId: verified.publicId, version: 7, signature: 'provider-signature' },
-      { requestId: 'request-3', actorUserId: '00000000-0000-7000-8000-000000000002' },
-    )).resolves.toMatchObject({ id: existing.id, providerVersion: 7 });
+      { requestId: 'request-3', actorUserId: '2' },
+    )).resolves.toMatchObject({ id: '1', providerVersion: 7 });
   });
 });

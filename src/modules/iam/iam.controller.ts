@@ -4,7 +4,6 @@ import {
   Get,
   HttpCode,
   Param,
-  ParseUUIDPipe,
   Post,
   Query,
   Req,
@@ -23,6 +22,7 @@ import {
 } from '@nestjs/swagger';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { ErrorResponseDto } from '../../common/exceptions/error-response.dto';
+import { ParseEntityIdPipe } from '../../common/identifiers/entity-id';
 import {
   AuthenticatedRequest,
   getAuthPrincipal,
@@ -96,7 +96,7 @@ export class IamController {
   @ApiNotFoundResponse({ type: ErrorResponseDto })
   @ApiConflictResponse({ type: ErrorResponseDto, description: 'User is no longer ACTIVE' })
   lockStaffUser(
-    @Param('userId', new ParseUUIDPipe()) userId: string,
+    @Param('userId', new ParseEntityIdPipe()) userId: string,
     @Body() input: LockStaffUserDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<UserDto> {
@@ -122,7 +122,7 @@ export class IamController {
   @ApiNotFoundResponse({ type: ErrorResponseDto })
   @ApiConflictResponse({ type: ErrorResponseDto, description: 'User is no longer LOCKED' })
   unlockStaffUser(
-    @Param('userId', new ParseUUIDPipe()) userId: string,
+    @Param('userId', new ParseEntityIdPipe()) userId: string,
     @Req() request: AuthenticatedRequest,
   ): Promise<UserDto> {
     return this.iam.unlockStaffUser(
@@ -182,7 +182,7 @@ export class IamController {
     description: 'The same assignment already exists',
   })
   assignRole(
-    @Param('userId', new ParseUUIDPipe()) userId: string,
+    @Param('userId', new ParseEntityIdPipe()) userId: string,
     @Body() input: AssignUserRoleDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<UserRoleAssignmentDto> {
@@ -209,8 +209,8 @@ export class IamController {
   @ApiNotFoundResponse({ type: ErrorResponseDto })
   @ApiConflictResponse({ type: ErrorResponseDto })
   revokeRoleAssignment(
-    @Param('userId', new ParseUUIDPipe()) userId: string,
-    @Param('assignmentId', new ParseUUIDPipe()) assignmentId: string,
+    @Param('userId', new ParseEntityIdPipe()) userId: string,
+    @Param('assignmentId', new ParseEntityIdPipe()) assignmentId: string,
     @Body() input: RevokeRoleAssignmentDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<UserDto> {

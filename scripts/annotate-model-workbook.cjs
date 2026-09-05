@@ -3,8 +3,7 @@ const path = require('node:path');
 const ExcelJS = require('exceljs');
 
 const apiDir = path.resolve(__dirname, '..');
-const workspaceDir = path.resolve(apiDir, '..');
-const documentDir = path.join(workspaceDir, 'document');
+const documentDir = path.join(apiDir, 'document');
 const workbookPath = path.join(documentDir, 'DCTD-UTC-V1-database-model-review.xlsx');
 const changeLogPath = path.join(documentDir, '11-model-change-log.json');
 

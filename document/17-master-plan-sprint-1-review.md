@@ -1,0 +1,119 @@
+# Master Plan review và Sprint 1 execution baseline
+
+> **Document version:** 1.0.0
+>
+> **Last updated:** 2026-09-04
+>
+> **Change summary:** Đồng bộ IAM-03 theo quyết định một Admin gốc duy nhất quản lý account cấp dưới.
+
+Ngày rà soát gốc: 2026-08-29
+Nguồn: Master Plan Sports Equipment E-commerce V1 và Global DoR/DoD do Product cung cấp.
+
+## 1. Kết luận
+
+Master Plan đúng về chuỗi dependency và ưu tiên correctness thay vì số màn CRUD. Tuy nhiên không nên đánh dấu Sprint 1 `READY` ngay từ baseline cũ: migration từ zero, seed lặp lại, durable audit skeleton, DB health và CI database gate chưa tồn tại.
+
+Sprint 1 được bắt đầu theo hai lane tuần tự:
+
+1. `S1-Foundation closure`: đóng blocker Sprint 0 bắt buộc cho IAM/Catalog.
+2. `S1-Feature delivery`: IAM/RBAC/scope rồi Catalog/SKU/Media/Price.
+
+Không đưa Cart, Inventory mutation, Order, Payment hoặc Shipping vào Sprint 1.
+
+## 2. Các điểm đã tái cấu trúc từ plan
+
+| Vấn đề | Quyết định áp dụng |
+| --- | --- |
+| Plan ghi 43 logical tables, model chuẩn đang có 74 bảng | 74 bảng trong DBML/table catalog là canonical; chỉ migrate theo wave, không tạo đồng loạt |
+| Sprint 1 cần Branch Scope nhưng roadmap đưa Branch sang Sprint 2 | Sprint 1 giữ `branches`/`warehouses` tối thiểu cho IAM scope; nghiệp vụ inventory kho vẫn ở Sprint 2 |
+| “Product → Variant → SKU” dễ hiểu thành ba entity | `product_variants` chính là sellable SKU; không tạo thêm bảng `skus` trùng nghĩa |
+| Specification được ghi chung với P0 | Dynamic `attributes/*` giữ P1; Sprint 1 P0 chỉ core product/variant fields, có thể kéo P1 khi P0 ổn |
+| Product form hiện nhận `price` và `availableQuantity` | Phải tách price sang `product_prices`; stock thuộc Sprint 2 và không nằm trên Product |
+| Sprint 1 hai tuần chứa cả auth, RBAC và full Catalog | Chia lane/gate; không chạy song song phần phụ thuộc DB/permission chưa đạt |
+
+## 3. Sprint 0 gate audit
+
+| ID | Capability | Trạng thái sau lần triển khai này | Bằng chứng/ghi chú |
+| --- | --- | --- | --- |
+| FND-01 | Health Check | DONE-CODE | `/health` trả trạng thái service và database enabled/up/down/disabled |
+| FND-02 | Config Validation | DONE | Env validation fail-fast đã có |
+| FND-03 | Migration Runner | DONE-LOCAL | Prisma migration Wave 1; phải chạy smoke từ empty DB trong CI |
+| FND-04 | Seed Runner | DONE-LOCAL | Seed branch/warehouse/user/roles/permissions; chạy lặp hai lần |
+| FND-05 | Global Error Contract | DONE-BASE | Filter/DTO thống nhất; domain error code cần tiếp tục chuẩn hóa |
+| FND-06 | Request Correlation | DONE | Request ID + structured log |
+| FND-07 | Audit Writer Skeleton | DONE-CODE | Append-only table + writer fail-closed khi DB disabled |
+| FND-08 | CI Gate | DONE-CODE | Workflow migration → seed x2 → lint/test/build/contract check |
+
+`DONE-CODE` không đồng nghĩa production-ready. Supabase migration, advisor, backup/restore và staging identity vẫn cần evidence riêng.
+
+## 4. Sprint 1 scope đã khóa
+
+### P0 — IAM/RBAC
+
+| ID | Function | DoR/Acceptance chính | Trạng thái |
+| --- | --- | --- | --- |
+| IAM-03 | Staff user lifecycle | Một fixed OWNER tạo/lock/unlock và phân quyền account cấp dưới; Branch Manager không có quyền IAM manage | DONE-CORE |
+| IAM-01 | Customer register/login | Public register chỉ CUSTOMER; email hoặc phone; phone E.164; tạm bỏ verification | DONE-CORE; thiếu DB e2e rerun và secure protected-API token transport |
+| IAM-04 | Role/permission | Unknown permission deny; stable code; role system không xóa | DONE-CORE; thiếu full permission matrix |
+| IAM-05 | Assignment scope | GLOBAL/BRANCH/WAREHOUSE/OWN đúng FK; duplicate fail; permission version tăng atomic | DONE-V1-CORE; assign/revoke atomic, giữ lịch sử REVOKED |
+| IAM-06 | Audit query | Append-only; che dữ liệu nhạy cảm; lọc actor/action/entity/request | DONE-WRITE; thiếu query API/UI |
+
+Customer registration/login (`IAM-01`) đã được kéo vào Sprint 1 theo quyết định D38. Forgot/change password (`IAM-02`), OTP/email verification và customer profile/address vẫn thuộc delivery wave sau.
+
+### P0 — Catalog/Pricing/Media
+
+| ID | Function | DoR/Acceptance chính | Trạng thái |
+| --- | --- | --- | --- |
+| CAT-01 | Brand | code/slug unique; archive master; logo media asset | DONE-CORE; logo workflow còn thiếu |
+| CAT-02 | Category tree | chặn cycle; path/depth nhất quán; không xóa khi đang dùng | DONE-V1-CORE; move subtree P1 |
+| CAT-03 | Product SPU | DRAFT → PUBLISHED → ARCHIVED; optimistic version; không có stock/price | DONE-CORE |
+| CAT-04 | Variant/SKU | SKU unique; barcode partial unique; archive thay hard delete | DONE-V1-CORE; SKU immutable, metadata update optimistic |
+| CAT-05 | Product media | một primary theo product/variant; asset đã finalize | DONE-V1-CORE; finalize persist, attach/update/reorder/archive |
+| CAT-07 | Storefront catalog | chỉ published product + active variant + effective regular price | DONE-CORE |
+| CAT-12 | Fixed combo | không nested; component quantity > 0 | DONE-LIFECYCLE-CORE |
+| PRI-01 | Effective price | decimal; thời gian không overlap; audit actor; optimistic version | DONE-CORE; thiếu management lifecycle UI/test |
+
+`CAT-06` dynamic specification/attribute là P1 và chỉ kéo vào khi các P0 trên đạt integration test.
+
+## 5. Thứ tự implementation
+
+1. Apply/verify Wave 1 migration trên empty PostgreSQL; seed hai lần; kiểm tra constraints/RLS/audit immutability.
+2. Thêm Prisma adapters cho Organization/IAM và switch bằng configuration; giữ in-memory cho unit test.
+3. Tích hợp AuditWriter vào create role, assignment và branch mutation trong cùng transaction.
+4. Thay permission header scaffold bằng verified staff identity trước staging.
+5. Tạo Wave 2 migration cho media metadata + brand/category/product/variant/media/price/bundle.
+6. Refactor Catalog contract: loại `availableQuantity` khỏi write DTO, tách price command, thêm publish transition/version.
+7. Export OpenAPI → generate Admin/Client SDK → hoàn thiện UI state và permission gates.
+
+## 6. Global DoD áp dụng cho Sprint 1
+
+- Không function nào được DONE nếu chỉ có in-memory test.
+- Mutation nhạy cảm phải có authorization, scope, transaction, audit và concurrency behavior.
+- Migration phải chạy từ empty DB; seed chạy lặp không tạo duplicate.
+- PostgreSQL integration test phải kiểm chứng FK/unique/check/partial index và audit append-only.
+- Storefront chỉ thấy published/effective data; Admin có loading/empty/error/disabled/success.
+- OpenAPI và generated SDK là một contract chain; không viết tay endpoint/DTO ở frontend.
+- Không secret trong migration, seed, log, generated SDK hoặc repository.
+
+## 7. Open decisions còn chặn production, không chặn schema Wave 1
+
+- D19 retention 10 năm: cần Legal/Finance xác nhận trước partition/archive policy.
+- D20 RPO 15 phút/RTO 4 giờ: cần backup/restore drill và chi phí được duyệt.
+- D12 price approval threshold và D14 global price scope phải chốt trước khi PRI-01 được DONE.
+- Production auth/session strategy và ingress trusted-proxy policy chưa chốt.
+
+## 8. Sprint evidence bắt buộc
+
+- Migration log từ empty database.
+- Seed lần 1 và lần 2 đều thành công, row count không tăng ngoài dự kiến.
+- SQL test scope CHECK, partial unique email/phone và assignment uniqueness.
+- Audit UPDATE/DELETE bị database từ chối.
+- API integration evidence cho permission/scope và Catalog published filtering.
+- OpenAPI diff, generated SDK diff, screenshots loading/empty/error/success.
+- GitNexus impact/change detection và danh sách bug P0/P1 còn mở.
+
+## Revision history
+
+| Version | Date | Change summary | Source / Change ID |
+| --- | --- | --- | --- |
+| 1.0.0 | 2026-09-04 | Chuẩn hóa metadata và đồng bộ IAM-03 với quyết định single root Admin. | DBAPI-20260904-SINGLE-ROOT-ADMIN |

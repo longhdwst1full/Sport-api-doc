@@ -5,7 +5,11 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { v7 as uuidv7 } from 'uuid';
+import {
+  toDatabaseId,
+  toEntityId,
+  toOptionalEntityId,
+} from '../../../../common/identifiers/entity-id';
 import { MutationContext } from '../../../../common/request/request-context';
 import { PrismaService } from '../../../../database/prisma.service';
 import { AuditWriter } from '../../../audit/audit.writer';
@@ -34,34 +38,37 @@ export class ProductMediaService {
     input: AttachProductMediaDto,
     context: MutationContext,
   ): Promise<ProductMediaDto[]> {
+    const databaseProductId = toDatabaseId(productId);
+    const databaseVariantId = input.variantId ? toDatabaseId(input.variantId) : undefined;
+    const databaseMediaAssetId = toDatabaseId(input.mediaAssetId);
     return this.prisma.$transaction(async (transaction) => {
-      await this.claimProductVersion(transaction, productId, input.expectedProductVersion);
+      await this.claimProductVersion(transaction, databaseProductId, input.expectedProductVersion);
       const [asset, variant, duplicate, targetMedia, maxSort] = await Promise.all([
         transaction.mediaAsset.findFirst({
-          where: { id: input.mediaAssetId, status: PRODUCT_MEDIA_STATUS.ACTIVE },
+          where: { id: databaseMediaAssetId, status: PRODUCT_MEDIA_STATUS.ACTIVE },
         }),
         input.variantId
           ? transaction.productVariant.findFirst({
-              where: { id: input.variantId, productId },
+              where: { id: databaseVariantId, productId: databaseProductId },
             })
           : Promise.resolve(undefined),
         transaction.productMedia.findFirst({
           where: {
-            productId,
-            variantId: input.variantId ?? null,
-            mediaAssetId: input.mediaAssetId,
+            productId: databaseProductId,
+            variantId: databaseVariantId ?? null,
+            mediaAssetId: databaseMediaAssetId,
             status: PRODUCT_MEDIA_STATUS.ACTIVE,
           },
         }),
         transaction.productMedia.count({
           where: {
-            productId,
-            variantId: input.variantId ?? null,
+            productId: databaseProductId,
+            variantId: databaseVariantId ?? null,
             status: PRODUCT_MEDIA_STATUS.ACTIVE,
           },
         }),
         transaction.productMedia.aggregate({
-          where: { productId, status: PRODUCT_MEDIA_STATUS.ACTIVE },
+          where: { productId: databaseProductId, status: PRODUCT_MEDIA_STATUS.ACTIVE },
           _max: { sortOrder: true },
         }),
       ]);
@@ -74,14 +81,13 @@ export class ProductMediaService {
       const sortOrder = (maxSort._max.sortOrder ?? -1) + 1;
       const isPrimary = input.isPrimary || targetMedia === 0;
       if (isPrimary) {
-        await this.clearPrimary(transaction, productId, input.variantId);
+        await this.clearPrimary(transaction, databaseProductId, databaseVariantId);
       }
       const media = await transaction.productMedia.create({
         data: {
-          id: uuidv7(),
-          productId,
-          variantId: input.variantId,
-          mediaAssetId: input.mediaAssetId,
+          productId: databaseProductId,
+          variantId: databaseVariantId,
+          mediaAssetId: databaseMediaAssetId,
           altText: input.altText?.trim() || null,
           sortOrder,
           isPrimary,
@@ -95,7 +101,7 @@ export class ProductMediaService {
         undefined,
         { mediaAssetId: input.mediaAssetId, variantId: input.variantId ?? null, sortOrder },
       );
-      return this.listActive(transaction, productId);
+      return this.listActive(transaction, databaseProductId);
     });
   }
 
@@ -105,14 +111,16 @@ export class ProductMediaService {
     input: UpdateProductMediaDto,
     context: MutationContext,
   ): Promise<ProductMediaDto[]> {
+    const databaseProductId = toDatabaseId(productId);
+    const databaseMediaId = toDatabaseId(mediaId);
     return this.prisma.$transaction(async (transaction) => {
       const current = await transaction.productMedia.findFirst({
-        where: { id: mediaId, productId, status: PRODUCT_MEDIA_STATUS.ACTIVE },
+        where: { id: databaseMediaId, productId: databaseProductId, status: PRODUCT_MEDIA_STATUS.ACTIVE },
       });
       if (!current) throw new NotFoundException('Product media not found');
-      await this.claimProductVersion(transaction, productId, input.expectedProductVersion);
+      await this.claimProductVersion(transaction, databaseProductId, input.expectedProductVersion);
       if (input.isPrimary === true) {
-        await this.clearPrimary(transaction, productId, current.variantId ?? undefined);
+        await this.clearPrimary(transaction, databaseProductId, current.variantId ?? undefined);
       }
       if (input.isPrimary === false && current.isPrimary) {
         throw new UnprocessableEntityException(
@@ -120,7 +128,7 @@ export class ProductMediaService {
         );
       }
       const updated = await transaction.productMedia.update({
-        where: { id: mediaId },
+        where: { id: databaseMediaId },
         data: {
           ...(input.altText !== undefined ? { altText: input.altText?.trim() || null } : {}),
           ...(input.isPrimary !== undefined ? { isPrimary: input.isPrimary } : {}),
@@ -130,11 +138,11 @@ export class ProductMediaService {
         transaction,
         context,
         PRODUCT_AUDIT_ACTION.MEDIA_UPDATE,
-        mediaId,
+        databaseMediaId,
         { altText: current.altText, isPrimary: current.isPrimary },
         { altText: updated.altText, isPrimary: updated.isPrimary },
       );
-      return this.listActive(transaction, productId);
+      return this.listActive(transaction, databaseProductId);
     });
   }
 
@@ -143,8 +151,10 @@ export class ProductMediaService {
     input: ReorderProductMediaDto,
     context: MutationContext,
   ): Promise<ProductMediaDto[]> {
+    const databaseProductId = toDatabaseId(productId);
     return this.prisma.$transaction(async (transaction) => {
       const ids = input.items.map(({ id }) => id);
+      const databaseIds = ids.map(toDatabaseId);
       const sortOrders = input.items.map(({ sortOrder }) => sortOrder).sort((a, b) => a - b);
       if (new Set(ids).size !== ids.length) {
         throw new UnprocessableEntityException('Media reorder items must be unique');
@@ -155,27 +165,31 @@ export class ProductMediaService {
         );
       }
       const activeCount = await transaction.productMedia.count({
-        where: { productId, status: PRODUCT_MEDIA_STATUS.ACTIVE },
+        where: { productId: databaseProductId, status: PRODUCT_MEDIA_STATUS.ACTIVE },
       });
       const matchedCount = await transaction.productMedia.count({
-        where: { productId, id: { in: ids }, status: PRODUCT_MEDIA_STATUS.ACTIVE },
+        where: {
+          productId: databaseProductId,
+          id: { in: databaseIds },
+          status: PRODUCT_MEDIA_STATUS.ACTIVE,
+        },
       });
       if (matchedCount !== ids.length || matchedCount !== activeCount) {
         throw new UnprocessableEntityException('Reorder must include every active product media item');
       }
-      await this.claimProductVersion(transaction, productId, input.expectedProductVersion);
+      await this.claimProductVersion(transaction, databaseProductId, input.expectedProductVersion);
       await Promise.all(input.items.map(({ id, sortOrder }) =>
-        transaction.productMedia.update({ where: { id }, data: { sortOrder } }),
+        transaction.productMedia.update({ where: { id: toDatabaseId(id) }, data: { sortOrder } }),
       ));
       await this.writeAudit(
         transaction,
         context,
         PRODUCT_AUDIT_ACTION.MEDIA_REORDER,
-        productId,
+        databaseProductId,
         undefined,
         { items: input.items.map(({ id, sortOrder }) => ({ id, sortOrder })) },
       );
-      return this.listActive(transaction, productId);
+      return this.listActive(transaction, databaseProductId);
     });
   }
 
@@ -185,20 +199,22 @@ export class ProductMediaService {
     expectedProductVersion: number,
     context: MutationContext,
   ): Promise<ProductMediaDto[]> {
+    const databaseProductId = toDatabaseId(productId);
+    const databaseMediaId = toDatabaseId(mediaId);
     return this.prisma.$transaction(async (transaction) => {
       const current = await transaction.productMedia.findFirst({
-        where: { id: mediaId, productId, status: PRODUCT_MEDIA_STATUS.ACTIVE },
+        where: { id: databaseMediaId, productId: databaseProductId, status: PRODUCT_MEDIA_STATUS.ACTIVE },
       });
       if (!current) throw new NotFoundException('Product media not found');
-      await this.claimProductVersion(transaction, productId, expectedProductVersion);
+      await this.claimProductVersion(transaction, databaseProductId, expectedProductVersion);
       await transaction.productMedia.update({
-        where: { id: mediaId },
+        where: { id: databaseMediaId },
         data: { status: PRODUCT_MEDIA_STATUS.INACTIVE, isPrimary: false },
       });
       if (current.isPrimary) {
         const replacement = await transaction.productMedia.findFirst({
           where: {
-            productId,
+            productId: databaseProductId,
             variantId: current.variantId,
             status: PRODUCT_MEDIA_STATUS.ACTIVE,
           },
@@ -215,17 +231,17 @@ export class ProductMediaService {
         transaction,
         context,
         PRODUCT_AUDIT_ACTION.MEDIA_ARCHIVE,
-        mediaId,
+        databaseMediaId,
         { status: current.status, isPrimary: current.isPrimary },
         { status: PRODUCT_MEDIA_STATUS.INACTIVE, isPrimary: false },
       );
-      return this.listActive(transaction, productId);
+      return this.listActive(transaction, databaseProductId);
     });
   }
 
   private async claimProductVersion(
     transaction: Prisma.TransactionClient,
-    productId: string,
+    productId: bigint,
     expectedVersion: number,
   ): Promise<void> {
     const updated = await transaction.product.updateMany({
@@ -247,8 +263,8 @@ export class ProductMediaService {
 
   private clearPrimary(
     transaction: Prisma.TransactionClient,
-    productId: string,
-    variantId?: string,
+    productId: bigint,
+    variantId?: bigint,
   ): Promise<Prisma.BatchPayload> {
     return transaction.productMedia.updateMany({
       where: {
@@ -263,7 +279,7 @@ export class ProductMediaService {
 
   private async listActive(
     transaction: Prisma.TransactionClient,
-    productId: string,
+    productId: bigint,
   ): Promise<ProductMediaDto[]> {
     const rows = await transaction.productMedia.findMany({
       where: { productId, status: PRODUCT_MEDIA_STATUS.ACTIVE },
@@ -271,9 +287,9 @@ export class ProductMediaService {
       orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
     });
     return rows.map((item) => ({
-      id: item.id,
-      mediaAssetId: item.mediaAssetId,
-      variantId: item.variantId,
+      id: toEntityId(item.id),
+      mediaAssetId: toEntityId(item.mediaAssetId),
+      variantId: toOptionalEntityId(item.variantId),
       secureUrl: item.mediaAsset.secureUrl,
       thumbnailUrl: item.mediaAsset.thumbnailUrl,
       altText: item.altText,
@@ -287,7 +303,7 @@ export class ProductMediaService {
     transaction: Prisma.TransactionClient,
     context: MutationContext,
     action: string,
-    entityId: string,
+    entityId: string | bigint,
     before?: Prisma.InputJsonValue,
     after?: Prisma.InputJsonValue,
   ): Promise<void> {
@@ -299,7 +315,7 @@ export class ProductMediaService {
         actorUserId: context.actorUserId,
         action,
         entityType: 'PRODUCT_MEDIA',
-        entityId,
+        entityId: typeof entityId === 'bigint' ? toEntityId(entityId) : entityId,
         before,
         after,
       },

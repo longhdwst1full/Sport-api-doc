@@ -1,7 +1,6 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { hash } from 'argon2';
-import { v7 as uuidv7 } from 'uuid';
 import { MutationContext } from '../../common/request/request-context';
 import { AuthPrincipal } from '../auth/auth.types';
 import { OrganizationService } from '../organization/organization.service';
@@ -97,7 +96,6 @@ export class IamService {
     try {
       return await this.iam.saveAssignmentAndIncrementPermissionVersion(
         {
-          id: uuidv7(),
           userId,
           roleId: role.id,
           roleCode: role.code,
@@ -176,14 +174,12 @@ export class IamService {
     try {
       return await this.iam.createStaffUser(
         {
-          id: uuidv7(),
           displayName: input.displayName.trim(),
           email: normalizedEmail,
           normalizedEmail,
           passwordHash: await hash(IAM_SECURITY_DEFAULTS.INITIAL_STAFF_PASSWORD),
           role,
           branchId: input.branchId,
-          assignmentId: uuidv7(),
         },
         context,
       );

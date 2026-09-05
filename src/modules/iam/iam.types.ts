@@ -84,15 +84,15 @@ export interface AssignUserRoleInput {
 }
 
 export interface CreateStaffUserInput {
-  id: string;
   displayName: string;
   email: string;
   normalizedEmail: string;
   passwordHash: string;
   role: Role;
   branchId: string;
-  assignmentId: string;
 }
+
+export type NewUserRoleAssignment = Omit<UserRoleAssignment, 'id'>;
 
 export interface LockStaffUserResult {
   user: UserWithAssignments;

@@ -2,7 +2,7 @@ import { ConflictException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
 import { Prisma } from '@prisma/client';
-import { v7 as uuidv7 } from 'uuid';
+import { toDatabaseId, toEntityId } from '../../common/identifiers/entity-id';
 import { MutationContext } from '../../common/request/request-context';
 import { PrismaService } from '../../database/prisma.service';
 import { ObjectStorageClient } from '../../integrations/object-storage/object-storage.client';
@@ -57,7 +57,6 @@ export class MediaService {
 
       const created = await transaction.mediaAsset.create({
         data: {
-          id: uuidv7(),
           provider: verified.provider,
           providerAssetId: verified.providerAssetId,
           publicId: verified.publicId,
@@ -72,7 +71,7 @@ export class MediaService {
           folder: verified.publicId.split('/').slice(0, -1).join('/') || null,
           metadataJson: { providerVersion: verified.version },
           status: 'ACTIVE',
-          uploadedBy: context.actorUserId,
+          uploadedBy: toDatabaseId(context.actorUserId),
         },
       });
       await this.audit.write(
@@ -83,7 +82,7 @@ export class MediaService {
           actorUserId: context.actorUserId,
           action: 'media.asset.finalize',
           entityType: 'MEDIA_ASSET',
-          entityId: created.id,
+          entityId: toEntityId(created.id),
           after: {
             provider: created.provider,
             providerAssetId: created.providerAssetId,
@@ -114,7 +113,7 @@ export class MediaService {
     });
 
     return {
-      id: asset.id,
+      id: toEntityId(asset.id),
       provider: 'CLOUDINARY',
       providerAssetId: asset.providerAssetId,
       publicId: asset.publicId,

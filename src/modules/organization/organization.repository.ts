@@ -2,6 +2,8 @@ import {
   Branch,
   BranchWithWarehouse,
   BranchWithWarehouseUpdate,
+  NewBranch,
+  NewWarehouse,
   OrganizationStatus,
   Warehouse,
 } from './organization.types';
@@ -15,8 +17,8 @@ export abstract class OrganizationRepository {
   abstract hasActiveBranch(id: string): Promise<boolean>;
   abstract hasActiveWarehouse(id: string): Promise<boolean>;
   abstract saveBranchWithWarehouse(
-    branch: Branch,
-    warehouse: Warehouse,
+    branch: NewBranch,
+    warehouse: NewWarehouse,
     context: MutationContext,
   ): Promise<BranchWithWarehouse>;
   abstract updateBranchWithWarehouse(

@@ -1,0 +1,779 @@
+{
+  "version": 1,
+  "changes": [
+    {
+      "id": "DB-20260829-AUTH-ROTATION",
+      "date": "2026-08-29",
+      "scope": "DATABASE+API",
+      "summary": "Refresh token rotation dùng liên kết rotated_from_id duy nhất; access token được kiểm tra session và permissionVersion từ PostgreSQL.",
+      "sources": [
+        "migration:20260829160000_auth_refresh_rotation_guard",
+        "OpenAPI:adminLogin/adminRefreshToken/adminLogout/getAdminCurrentUser"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "auth_sessions" },
+          "columns": ["Unique / CHECK", "Các cột chính"],
+          "set": { "Unique / CHECK": "refresh_token_hash UQ; rotated_from_id UQ" }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "auth_sessions", "Tên cột": "rotated_from_id" },
+          "columns": ["Unique", "Ý nghĩa / trạng thái cho phép"],
+          "set": {
+            "Unique": "YES",
+            "Ý nghĩa / trạng thái cho phép": "Một session nguồn chỉ được rotate thành công một lần"
+          }
+        }
+      ]
+    },
+    {
+      "id": "DB-20260829-AUDIT-HARDENING",
+      "date": "2026-08-29",
+      "scope": "DATABASE",
+      "summary": "Audit log append-only cho UPDATE/DELETE/TRUNCATE; actor USER bắt buộc có actor_user_id và lịch sử actor dùng FK RESTRICT.",
+      "sources": [
+        "migration:20260829170000_audit_log_hardening",
+        "test:database-foundation.integration-spec.ts"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "audit_logs" },
+          "columns": ["Khóa ngoại quan trọng", "Unique / CHECK", "Retention"],
+          "set": {
+            "Khóa ngoại quan trọng": "actor_user_id->users RESTRICT",
+            "Unique / CHECK": "request+sequence UQ; actor consistency CHECK; reject UPDATE/DELETE/TRUNCATE",
+            "Retention": "10 years proposed; no physical delete"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "audit_logs", "Tên cột": "actor_type" },
+          "columns": ["Cho phép NULL", "Ý nghĩa / trạng thái cho phép"],
+          "set": {
+            "Cho phép NULL": "NO",
+            "Ý nghĩa / trạng thái cho phép": "USER|SYSTEM|GUEST; USER bắt buộc actor_user_id"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "audit_logs", "Tên cột": "actor_user_id" },
+          "columns": ["Cho phép NULL", "Ý nghĩa / trạng thái cho phép"],
+          "set": {
+            "Cho phép NULL": "YES",
+            "Ý nghĩa / trạng thái cho phép": "FK RESTRICT; SYSTEM/GUEST phải null"
+          }
+        }
+      ]
+    },
+    {
+      "id": "DB-20260829-CATALOG-WAVE2",
+      "date": "2026-08-29",
+      "scope": "DATABASE+API",
+      "summary": "Catalog Wave 2 được persist: media, brand, category tree, SPU, SKU, product media, global VAT-included price và fixed combo; bổ sung constraint overlap/primary/ownership/no-nesting.",
+      "sources": [
+        "migration:20260829180000_catalog_pricing_wave_2",
+        "migration:20260829181000_fix_bundle_trigger_functions",
+        "OpenAPI:createAdminProduct/createAdminProductVariant/createAdminProductPrice/publishAdminProduct/createAdminProductBundle"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": ["media_assets", "brands", "categories", "products", "product_categories", "product_variants", "product_media", "product_prices", "product_bundles", "bundle_items"] },
+          "columns": ["Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính"]
+        },
+        {
+          "sheet": "Relationships",
+          "match": { "Bảng con": ["brands", "categories", "products", "product_categories", "product_variants", "product_media", "product_prices", "product_bundles", "bundle_items"] },
+          "columns": ["Bảng con", "Cột FK", "Bảng cha", "Cột PK", "ON DELETE"]
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "product_variants" },
+          "columns": ["Các cột chính"],
+          "set": {
+            "Các cột chính": "sku,barcode,name,weight_grams,length_mm,width_mm,height_mm,status,version"
+          }
+        }
+      ]
+    },
+    {
+      "id": "API-20260829-RBAC-V1",
+      "date": "2026-08-29",
+      "scope": "API+RBAC",
+      "summary": "API/UI V1 chỉ expose OWNER GLOBAL và BRANCH_MANAGER/STAFF BRANCH; database giữ WAREHOUSE/OWN dormant cho tương lai. Branch Manager chỉ gán STAFF trong branch được cấp.",
+      "sources": [
+        "OpenAPI:listAdminUsers/searchActiveAdminRoles/assignAdminUserRole",
+        "document:05-rbac-permissions.csv",
+        "test:iam.service.spec.ts"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "user_role_assignments" },
+          "columns": ["Ý nghĩa", "Khóa ngoại quan trọng", "Unique / CHECK"],
+          "set": {
+            "Ý nghĩa": "API V1 GLOBAL/BRANCH; DB giữ WAREHOUSE/OWN dormant",
+            "Unique / CHECK": "active assignment partial UQ theo scope; scope shape CHECK"
+          }
+        },
+        {
+          "sheet": "RBAC Permissions",
+          "match": { "Permission code": "iam.user.view" },
+          "columns": ["Allowed scopes", "Default roles", "Ghi chú"],
+          "set": {
+            "Allowed scopes": "GLOBAL;BRANCH",
+            "Default roles": "OWNER; BRANCH_MANAGER",
+            "Ghi chú": "Branch Manager chỉ thấy nhân sự có assignment trong branch của mình; che PII theo field policy"
+          }
+        },
+        {
+          "sheet": "RBAC Permissions",
+          "match": { "Permission code": "iam.user.manage" },
+          "columns": ["Allowed scopes", "Default roles", "Ghi chú"],
+          "set": {
+            "Allowed scopes": "GLOBAL;BRANCH",
+            "Default roles": "OWNER; BRANCH_MANAGER",
+            "Ghi chú": "Branch Manager chỉ quản lý STAFF trong branch; không khóa hoặc revoke OWNER cuối cùng"
+          }
+        },
+        {
+          "sheet": "RBAC Permissions",
+          "match": { "Permission code": "iam.role.view" },
+          "columns": ["Allowed scopes", "Default roles", "Ghi chú"],
+          "set": {
+            "Allowed scopes": "GLOBAL;BRANCH",
+            "Default roles": "OWNER; BRANCH_MANAGER",
+            "Ghi chú": "Branch Manager lookup chỉ nhận role STAFF"
+          }
+        },
+        {
+          "sheet": "RBAC Permissions",
+          "match": { "Permission code": "iam.assignment.manage" },
+          "columns": ["Allowed scopes", "Default roles", "Ghi chú"],
+          "set": {
+            "Allowed scopes": "GLOBAL;BRANCH",
+            "Default roles": "OWNER; BRANCH_MANAGER",
+            "Ghi chú": "OWNER gán role hợp lệ; Branch Manager chỉ gán STAFF vào branch được cấp"
+          }
+        }
+      ]
+    },
+    {
+      "id": "API-20260829-ERROR-CONTRACT-V1",
+      "date": "2026-08-29",
+      "scope": "API",
+      "summary": "Admin/storefront API dùng prefix /api/v1 và một error envelope thống nhất có code, details, requestId, path, method và timestamp.",
+      "sources": [
+        "OpenAPI:document/api/openapi-v1.yaml",
+        "document:19-admin-api-v1-contract-integration.md"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260829-DEV-CORS-AUTH-BYPASS",
+      "date": "2026-08-29",
+      "scope": "API+SECURITY-CONFIG",
+      "summary": "Development cho phép mọi CORS origin và bypass permission bằng principal OWNER bootstrap; production fail-fast khi cấu hình wildcard CORS hoặc AUTH_BYPASS=true.",
+      "sources": [
+        "config:CORS_ORIGINS/AUTH_BYPASS",
+        "test:permission.guard.spec.ts",
+        "test:env.validation.spec.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "DB-20260829-REMOVE-DELETED-AT-V1",
+      "date": "2026-08-29",
+      "scope": "DATABASE+API",
+      "summary": "Bỏ deleted_at khỏi 10 model P0 implemented; backfill lifecycle bằng status, thay partial unique index và giữ lịch sử qua audit/FK.",
+      "sources": [
+        "migration:20260829233000_remove_deleted_at_v1",
+        "document:D22",
+        "test:api-unit-and-prisma-validation"
+      ],
+      "targets": [
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": ["branches", "warehouses", "users", "roles", "media_assets", "brands", "categories", "products", "product_variants", "product_media"],
+            "Tên cột": "deleted_at"
+          },
+          "columns": "*",
+          "archiveRemovedRowsTo": "Removed Columns"
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": ["branches", "warehouses", "users", "roles", "media_assets", "brands", "categories", "products", "product_variants", "product_media"] },
+          "columns": ["Unique / CHECK", "Retention"]
+        }
+      ]
+    },
+    {
+      "id": "API-20260830-ADMIN-MASTER-CRUD",
+      "date": "2026-08-30",
+      "scope": "API+ADMIN+SEED",
+      "summary": "Hoàn thiện CRUD lifecycle cho brand/category và branch-one-warehouse: update optimistic version, activate/deactivate có audit; admin dùng generated SDK; bổ sung demo seed idempotent 3 bản ghi mỗi nhóm.",
+      "sources": [
+        "OpenAPI:updateAdminBrand/deactivateAdminBrand/activateAdminBrand/updateAdminCategory/deactivateAdminCategory/activateAdminCategory",
+        "OpenAPI:updateAdminBranchWithWarehouse/deactivateAdminBranchWithWarehouse/activateAdminBranchWithWarehouse",
+        "test:catalog-master.service.spec.ts",
+        "test:organization.service.spec.ts",
+        "script:prisma/seed-demo.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260830-STAFF-CATALOG-LIFECYCLE",
+      "date": "2026-08-30",
+      "scope": "API+ADMIN+PERSISTENCE-SEMANTICS",
+      "summary": "Chốt staff bootstrap bằng email/default password và bổ sung lifecycle archive/reactivate cho Product, Combo qua Product và Variant; Category move chuyển P1.",
+      "sources": [
+        "decision:D35/D36/D37",
+        "OpenAPI:createAdminStaffUser/archiveAdminProduct/reactivateAdminProduct/archiveAdminProductVariant/reactivateAdminProductVariant",
+        "test:iam.service.spec.ts/products.service.spec.ts/admin-contract.e2e-spec.ts",
+        "admin:staff-creation-drawer.tsx/product-workflow-drawer.tsx"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260901-STAFF-LOCK-UNLOCK",
+      "date": "2026-09-01",
+      "scope": "API+ADMIN+SECURITY",
+      "summary": "Khóa staff chuyển ACTIVE→LOCKED, tăng permissionVersion và revoke toàn bộ session atomic; mở khóa chuyển LOCKED→ACTIVE, reset Argon2 password về Aa@123456 nhưng không phục hồi session cũ. OWNER không được lock/unlock; Branch Manager chỉ quản lý STAFF trong branch được cấp.",
+      "sources": [
+        "OpenAPI:lockAdminStaffUser/unlockAdminStaffUser",
+        "test:iam.service.spec.ts/admin-contract.e2e-spec.ts",
+        "admin:staff-lifecycle-modal.tsx"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": ["users", "auth_sessions", "audit_logs"] },
+          "columns": ["Ý nghĩa", "Các cột chính"]
+        },
+        {
+          "sheet": "RBAC Permissions",
+          "match": { "Permission code": "iam.user.manage" },
+          "columns": ["Allowed scopes", "Default roles", "Ghi chú"],
+          "set": {
+            "Allowed scopes": "GLOBAL;BRANCH",
+            "Default roles": "OWNER; BRANCH_MANAGER",
+            "Ghi chú": "OWNER lock/unlock BRANCH_MANAGER và STAFF, không thao tác OWNER; Branch Manager chỉ lock/unlock STAFF trong branch; lock revoke all sessions, unlock reset default password"
+          }
+        }
+      ]
+    },
+    {
+      "id": "API-20260901-CUSTOMER-IDENTITY-V1",
+      "date": "2026-09-01",
+      "scope": "API+STOREFRONT+PERSISTENCE-SEMANTICS",
+      "summary": "Public register chỉ tạo CUSTOMER ACTIVE và tạm bỏ verification; yêu cầu email hoặc SĐT; login customer/staff nhận identifier email/phone; email lowercase và SĐT Việt Nam validate metadata đầy đủ rồi lưu E.164. User + GUEST audit + session được tạo atomic.",
+      "sources": [
+        "decision:D38",
+        "OpenAPI:registerCustomer/loginCustomer/refreshCustomerToken/logoutCustomer/getCustomerCurrentUser/loginAdmin",
+        "test:phone-normalization.spec.ts/customer-auth.e2e-spec.ts",
+        "client:customer-register-page.tsx/customer-login-page.tsx"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": ["users", "auth_sessions", "audit_logs"] },
+          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính"]
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "users", "Tên cột": "normalized_email" },
+          "columns": ["Ý nghĩa / trạng thái cho phép"],
+          "set": { "Ý nghĩa / trạng thái cho phép": "Email trim + lowercase; login identifier; unique khi khác null" }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "users", "Tên cột": "normalized_phone" },
+          "columns": ["Ý nghĩa / trạng thái cho phép"],
+          "set": { "Ý nghĩa / trạng thái cho phép": "SĐT Việt Nam được validate bằng metadata đầy đủ và lưu E.164; login identifier; unique khi khác null" }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "users", "Tên cột": ["status", "email_verified_at", "phone_verified_at"] },
+          "columns": ["Ý nghĩa / trạng thái cho phép"]
+        }
+      ]
+    },
+    {
+      "id": "DBAPI-20260902-PRODUCT-SELLABILITY",
+      "date": "2026-09-02",
+      "scope": "DB+API+ADMIN+STOREFRONT",
+      "summary": "Tách Product STANDARD/BUNDLE, bundle response theo từng variant, storefront chỉ trả sellable variant và minPrice hợp lệ; publish/combo/variant mutation khóa Product aggregate; giá REGULAR > 0 và có command replace atomic theo expected price id/version.",
+      "sources": [
+        "decision:D39/D40/D41",
+        "migration:20260902090000_product_sellability_hardening",
+        "OpenAPI:searchActiveAdminProductVariants/replaceAdminProductPrice/listCatalogProducts/getCatalogProduct/publishAdminProduct",
+        "test:products.service.spec.ts/catalog-schema.integration-spec.ts/admin-contract.e2e-spec.ts"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "products" },
+          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính"],
+          "set": {
+            "Ý nghĩa": "SPU chuẩn hoặc combo; không bán trực tiếp",
+            "Unique / CHECK": "slug UQ; product_no UQ; product_type CHECK STANDARD/BUNDLE",
+            "Các cột chính": "name,slug,product_type,brand_id,short_description,description,status,published_at,seo_json,version"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": ["product_variants", "product_bundles"] },
+          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính", "Retention"]
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "product_prices" },
+          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính", "Retention"],
+          "set": {
+            "Ý nghĩa": "Lịch sử giá VAT-included; replace atomic",
+            "Unique / CHECK": "no overlap active regular range; amount > 0",
+            "Các cột chính": "price_type,currency_code,amount,starts_at,ends_at,status,version",
+            "Retention": "immutable history after active; replace closes current open window atomically"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "product_prices", "Tên cột": "amount" },
+          "columns": ["Ý nghĩa / trạng thái cho phép"],
+          "set": { "Ý nghĩa / trạng thái cho phép": "VAT-included REGULAR VND amount; bắt buộc > 0" }
+        }
+      ],
+      "upsertRows": [
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "products", "Tên cột": "product_type" },
+          "values": {
+            "Tên bảng": "products",
+            "STT": "16",
+            "Tên cột": "product_type",
+            "Kiểu dữ liệu": "varchar(24)",
+            "Cho phép NULL": "NO",
+            "Default": "STANDARD",
+            "Ý nghĩa / trạng thái cho phép": "STANDARD|BUNDLE; không trộn SKU thường và combo trong cùng Product"
+          }
+        }
+      ]
+    },
+    {
+      "id": "API-20260903-SPRINT1-VARIANT-MEDIA-IAM",
+      "date": "2026-09-03",
+      "scope": "API+ADMIN+PERSISTENCE-SEMANTICS",
+      "summary": "Đóng phần quản trị Sprint 1: Product create/update/detail/lifecycle và server pagination; SKU metadata update optimistic với SKU bất biến; Cloudinary finalize persist idempotent và Product Media attach/update/reorder/archive; role assignment revoke giữ history, tăng permissionVersion và audit atomic.",
+      "sources": [
+        "OpenAPI:updateAdminProduct/updateAdminProductVariant/finalizeAdminMediaUpload/attachAdminProductMedia/updateAdminProductMedia/reorderAdminProductMedia/archiveAdminProductMedia/revokeAdminUserRoleAssignment",
+        "test:media.service.spec.ts/product-media.service.spec.ts/iam.service.spec.ts/admin-contract.e2e-spec.ts",
+        "admin:variant-edit-drawer.tsx/product-media-panel.tsx/role-assignment-revoke-modal.tsx"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "product_variants" },
+          "columns": ["Ý nghĩa", "Các cột chính", "Retention"]
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": ["media_assets", "product_media"] },
+          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính", "Retention"]
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "user_role_assignments" },
+          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính", "Retention"]
+        },
+        {
+          "sheet": "RBAC Permissions",
+          "match": { "Permission code": "iam.assignment.manage" },
+          "columns": ["Allowed scopes", "Default roles", "Ghi chú"],
+          "set": {
+            "Allowed scopes": "GLOBAL;BRANCH",
+            "Default roles": "OWNER; BRANCH_MANAGER",
+            "Ghi chú": "OWNER gán/thu hồi assignment không phải OWNER; Branch Manager chỉ gán/thu hồi STAFF trong branch; thay đổi tăng permissionVersion và audit atomic"
+          }
+        }
+      ]
+    },
+    {
+      "id": "DBAPI-20260903-AUTH-AUDIT-PRICE-CLOSEOUT",
+      "date": "2026-09-03",
+      "scope": "DB+API+ADMIN+STOREFRONT+SECURITY",
+      "summary": "Khóa tài khoản atomic ở lần sai mật khẩu thứ 5 và revoke session; staff mới/unlock bắt buộc đổi mật khẩu; refresh token hỗ trợ BODY dev và HttpOnly COOKIE production; audit cursor query GLOBAL owner-only có redaction; price future scheduling/history và rule giảm trên 20% cần reason + OWNER confirm.",
+      "sources": [
+        "migration:20260903173000_auth_lockout_and_audit_query",
+        "OpenAPI:changeAdminPassword/listAdminAuditLogs/getAdminProductPriceTimeline/createAdminProductPrice/replaceAdminProductPrice",
+        "test:auth.service.spec.ts/auth-token-transport.service.spec.ts/audit.service.spec.ts/products.service.spec.ts",
+        "admin:change-password-page.tsx/audit-page.tsx/product-price-panel.tsx"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "users" },
+          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính", "Retention"],
+          "set": {
+            "Ý nghĩa": "Customer/staff account; lockout 5 lần sai; staff forced password change",
+            "Unique / CHECK": "normalized email/phone partial UQ; failed_login_attempts >= 0",
+            "Các cột chính": "type,email,normalized_email,phone,normalized_phone,password_hash,status,failed_login_attempts,must_change_password,locked_at,lock_reason,permission_version,last_login_at,version",
+            "Retention": "LOCKED để bảo vệ; INACTIVE/anonymize theo lifecycle; never hard-delete"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "audit_logs" },
+          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính", "Retention"],
+          "set": {
+            "Ý nghĩa": "Append-only audit; cursor query GLOBAL owner-only; redacted output",
+            "Unique / CHECK": "request+sequence UQ; actor consistency CHECK; reject UPDATE/DELETE/TRUNCATE; created_at+id IDX",
+            "Các cột chính": "actor_type,actor_user_id,action,entity_type,entity_id,before_json,after_json,reason,ip_hash,created_at",
+            "Retention": "10 years proposed; no physical delete"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "product_prices" },
+          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính", "Retention"],
+          "set": {
+            "Ý nghĩa": "VAT-included SKU price windows; current/upcoming/history",
+            "Unique / CHECK": "no overlap active regular range; amount > 0; no retroactive",
+            "Các cột chính": "price_type,currency_code,amount,starts_at,ends_at,status,version",
+            "Retention": "immutable history; >20% reduction requires reason and OWNER confirmation"
+          }
+        },
+        {
+          "sheet": "RBAC Permissions",
+          "match": { "Permission code": "iam.audit.view" },
+          "columns": ["Allowed scopes", "Default roles", "Ghi chú"],
+          "set": {
+            "Allowed scopes": "GLOBAL",
+            "Default roles": "OWNER",
+            "Ghi chú": "API kiểm tra GLOBAL scope bổ sung; redaction password/token/secret/hash/email/phone; không expose ip/user-agent hash"
+          }
+        }
+      ],
+      "upsertRows": [
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "users", "Tên cột": "failed_login_attempts" },
+          "values": {
+            "Tên bảng": "users", "STT": "10A", "Tên cột": "failed_login_attempts", "Kiểu dữ liệu": "int", "Cho phép NULL": "NO", "Default": "0", "Ý nghĩa / trạng thái cho phép": "Số lần sai liên tiếp; lần 5 chuyển LOCKED; reset khi login thành công/unlock"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "users", "Tên cột": "must_change_password" },
+          "values": {
+            "Tên bảng": "users", "STT": "10B", "Tên cột": "must_change_password", "Kiểu dữ liệu": "boolean", "Cho phép NULL": "NO", "Default": "false", "Ý nghĩa / trạng thái cho phép": "true cho staff mới và sau Admin unlock/reset; chỉ me/change-password/logout được phép"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "users", "Tên cột": "locked_at" },
+          "values": {
+            "Tên bảng": "users", "STT": "10C", "Tên cột": "locked_at", "Kiểu dữ liệu": "timestamptz", "Cho phép NULL": "YES", "Default": "", "Ý nghĩa / trạng thái cho phép": "Thời điểm khóa manual hoặc auto lock"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "users", "Tên cột": "lock_reason" },
+          "values": {
+            "Tên bảng": "users", "STT": "10D", "Tên cột": "lock_reason", "Kiểu dữ liệu": "varchar(255)", "Cho phép NULL": "YES", "Default": "", "Ý nghĩa / trạng thái cho phép": "MAX_FAILED_LOGIN_ATTEMPTS hoặc lý do Admin nhập"
+          }
+        }
+      ]
+    },
+    {
+      "id": "DBAPI-20260903-INVENTORY-PERSISTENCE",
+      "date": "2026-09-03",
+      "scope": "DB+API+ADMIN+INVENTORY",
+      "summary": "Thay Inventory in-memory bằng PostgreSQL cho balance, stock adjustment, adjustment items và append-only movement; Idempotency-Key có request hash/result snapshot; branch scope, row lock, optimistic version và audit cùng transaction.",
+      "sources": [
+        "migration:20260903190000_inventory_adjustment_persistence",
+        "OpenAPI:listInventoryBalances/createStockAdjustment",
+        "test:inventory.service.spec.ts",
+        "seed:prisma/seed-demo.ts"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": ["inventory_balances", "inventory_movements", "stock_adjustments", "stock_adjustment_items"] },
+          "columns": ["Ý nghĩa", "Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính", "Retention"]
+        },
+        {
+          "sheet": "Relationships",
+          "match": { "Bảng con": ["inventory_balances", "inventory_movements", "stock_adjustments", "stock_adjustment_items"] },
+          "columns": ["Bảng con", "Cột FK", "Bảng cha", "Cột PK", "ON DELETE"]
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "inventory_movements" },
+          "columns": ["Ý nghĩa", "Unique / CHECK", "Retention"],
+          "set": {
+            "Ý nghĩa": "Sổ kho append-only cho mọi thay đổi balance",
+            "Unique / CHECK": "idempotency_key UQ; quantity_delta != 0; reject UPDATE/DELETE/TRUNCATE",
+            "Retention": "10 years proposed; no physical delete"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "stock_adjustments" },
+          "columns": ["Ý nghĩa", "Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính", "Retention"],
+          "set": {
+            "Ý nghĩa": "Phiếu điều chỉnh tồn cơ bản post trực tiếp Sprint 1",
+            "Khóa ngoại quan trọng": "warehouse_id->warehouses; created_by->users",
+            "Unique / CHECK": "adjustment_no UQ; idempotency_key UQ; status POSTED",
+            "Các cột chính": "adjustment_type,reason_code,reason,status,idempotency_key,request_hash,result_json,created_by,posted_at,version",
+            "Retention": "10 years proposed; immutable posted business record"
+          }
+        }
+      ],
+      "upsertRows": [
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "stock_adjustments", "Tên cột": "idempotency_key" },
+          "values": {
+            "Tên bảng": "stock_adjustments", "STT": "31A", "Tên cột": "idempotency_key", "Kiểu dữ liệu": "varchar(150)", "Cho phép NULL": "NO", "Default": "", "Ý nghĩa / trạng thái cho phép": "Unique command key; replay exact result for same payload"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "stock_adjustments", "Tên cột": "request_hash" },
+          "values": {
+            "Tên bảng": "stock_adjustments", "STT": "31B", "Tên cột": "request_hash", "Kiểu dữ liệu": "char(64)", "Cho phép NULL": "NO", "Default": "", "Ý nghĩa / trạng thái cho phép": "SHA-256 canonical payload; same key/different payload => 409"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "stock_adjustments", "Tên cột": "result_json" },
+          "values": {
+            "Tên bảng": "stock_adjustments", "STT": "31C", "Tên cột": "result_json", "Kiểu dữ liệu": "jsonb", "Cho phép NULL": "NO", "Default": "", "Ý nghĩa / trạng thái cho phép": "Immutable response snapshot for idempotent replay"
+          }
+        }
+      ]
+    },
+    {
+      "id": "DB-20260903-BOOTSTRAP-OWNER",
+      "date": "2026-09-03",
+      "scope": "DATABASE+IAM+ADMIN",
+      "summary": "Foundation seed tạo đúng một bootstrap OWNER ACTIVE cho local/dev, bắt buộc đổi mật khẩu lần đầu và chỉ khởi tạo password khi record cũ chưa có; rerun seed không ghi đè password đã đổi.",
+      "sources": [
+        "seed:api/prisma/seed.ts",
+        "decision:D42",
+        "admin:login-page.tsx"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "users" },
+          "columns": ["Ý nghĩa", "Retention"],
+          "set": {
+            "Ý nghĩa": "Customer/staff account; local seed có đúng một bootstrap OWNER ACTIVE",
+            "Retention": "Bootstrap phải đổi password lần đầu; seed không reset password đã đổi; never hard-delete"
+          }
+        }
+      ]
+    },
+    {
+      "id": "DBAPI-20260903-INVENTORY-NUMBER-COLLISION",
+      "date": "2026-09-03",
+      "scope": "DATABASE+API+INVENTORY",
+      "summary": "Sửa adjustment_no từ date + 8 ký tự đầu UUIDv7 có thể trùng theo timestamp sang ADJ- + base36 mã hóa đủ 128-bit UUID trong varchar(32); giữ nguyên endpoint/DTO và bổ sung E2E tạo hai phiếu liên tiếp.",
+      "sources": [
+        "API:createStockAdjustment",
+        "test:admin-contract.e2e-spec.ts",
+        "source:api/src/modules/inventory/inventory.service.ts"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "stock_adjustments" },
+          "columns": ["Unique / CHECK"],
+          "set": {
+            "Unique / CHECK": "adjustment_no UQ mã hóa đủ UUID bằng base36; idempotency_key UQ; status POSTED"
+          }
+        }
+      ],
+      "upsertRows": [
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "stock_adjustments", "Tên cột": "adjustment_no" },
+          "values": {
+            "Tên bảng": "stock_adjustments",
+            "STT": "31D",
+            "Tên cột": "adjustment_no",
+            "Kiểu dữ liệu": "varchar(32)",
+            "Cho phép NULL": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "ADJ- + 25 ký tự base36 mã hóa đủ UUID; unique và không cắt timestamp prefix UUIDv7"
+          }
+        }
+      ]
+    },
+    {
+      "id": "DBAPI-20260904-BOOTSTRAP-RECOVERY",
+      "date": "2026-09-04",
+      "scope": "DATABASE+IAM+OPERATIONS",
+      "summary": "Bổ sung break-glass command chỉ phục hồi fixed bootstrap OWNER trong development: reset password tạm, ACTIVE, failed attempts, bắt đổi password, tăng permission/version, revoke session và ghi SYSTEM audit trong cùng transaction; foundation seed vẫn không reset credential hiện hữu.",
+      "sources": [
+        "command:yarn db:admin:reset",
+        "source:api/src/modules/iam/bootstrap-admin-recovery.ts",
+        "test:bootstrap-admin-recovery.spec.ts",
+        "decision:D42"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "users" },
+          "columns": ["Ý nghĩa", "Retention"],
+          "set": {
+            "Ý nghĩa": "Customer/staff account; development seed có đúng một bootstrap OWNER; break-glass chỉ phục hồi fixed identity",
+            "Retention": "Seed không reset password đã đổi; recovery reset password tạm, bắt đổi password, revoke session và audit; never hard-delete"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "auth_sessions" },
+          "columns": ["Ý nghĩa", "Retention"]
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "audit_logs" },
+          "columns": ["Ý nghĩa", "Retention"]
+        }
+      ]
+    },
+    {
+      "id": "DBAPI-20260904-SINGLE-ROOT-ADMIN",
+      "date": "2026-09-04",
+      "scope": "DATABASE+API+IAM+ADMIN",
+      "summary": "Supersede API-20260829-RBAC-V1: một fixed bootstrap OWNER quản lý account cấp dưới; auto-lock rõ ràng, login reset attempts, Auth trim hai đầu identifier/password và toast Admin không hiện Request ID.",
+      "sources": [
+        "OpenAPI:createAdminStaffUser/assignAdminUserRole/revokeAdminUserRoleAssignment/loginAdmin",
+        "source:api/src/modules/iam/iam.service.ts",
+        "source:api/src/modules/auth/auth.service.ts",
+        "source:api/src/modules/auth/auth.dto.ts",
+        "seed:api/prisma/seed.ts",
+        "test:iam.service.spec.ts/iam.permissions.spec.ts/auth.service.spec.ts/auth.dto.spec.ts",
+        "decision:D42"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "users" },
+          "columns": ["Ý nghĩa", "Retention"],
+          "set": {
+            "Ý nghĩa": "Customer/staff account; development có đúng một fixed bootstrap Admin OWNER",
+            "Retention": "OWNER bất biến; Auth trim hai đầu identifier/password; lần sai thứ 5 trả ACCOUNT_LOCKED; login thành công reset attempts; never hard-delete"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "user_role_assignments" },
+          "columns": ["Ý nghĩa", "Retention"],
+          "set": {
+            "Ý nghĩa": "Một fixed OWNER GLOBAL; BRANCH_MANAGER/STAFF theo BRANCH; WAREHOUSE/OWN dormant",
+            "Retention": "API cấm gán/thu hồi OWNER; chỉ Admin gốc quản lý assignment cấp dưới; audit + expire not delete"
+          }
+        },
+        {
+          "sheet": "RBAC Permissions",
+          "match": { "Permission code": "iam.user.manage" },
+          "columns": ["Allowed scopes", "Default roles", "Ghi chú"],
+          "set": {
+            "Allowed scopes": "GLOBAL",
+            "Default roles": "OWNER",
+            "Ghi chú": "Chỉ Admin gốc tạo và khóa/mở BRANCH_MANAGER hoặc STAFF; OWNER bất biến"
+          }
+        },
+        {
+          "sheet": "RBAC Permissions",
+          "match": { "Permission code": "iam.role.view" },
+          "columns": ["Allowed scopes", "Default roles", "Ghi chú"],
+          "set": {
+            "Allowed scopes": "GLOBAL",
+            "Default roles": "OWNER",
+            "Ghi chú": "Chỉ Admin gốc lookup BRANCH_MANAGER hoặc STAFF để phân quyền"
+          }
+        },
+        {
+          "sheet": "RBAC Permissions",
+          "match": { "Permission code": "iam.assignment.manage" },
+          "columns": ["Allowed scopes", "Default roles", "Ghi chú"],
+          "set": {
+            "Allowed scopes": "GLOBAL",
+            "Default roles": "OWNER",
+            "Ghi chú": "Chỉ Admin gốc gán/thu hồi role cấp dưới theo branch; OWNER không thể gán hay thu hồi"
+          }
+        }
+      ]
+    },
+    {
+      "id": "API-20260905-LOGICAL-DELETE-V1",
+      "date": "2026-09-05",
+      "scope": "API+ADMIN+CATALOG+ORGANIZATION",
+      "summary": "Bổ sung sáu HTTP DELETE V1 dưới dạng lifecycle tương thích ngược: branch+warehouse/brand/category chuyển INACTIVE, product/combo chuyển ARCHIVED, variant và product-media chuyển INACTIVE; giữ optimistic version, permission, invariant và audit hiện hữu, không xóa vật lý.",
+      "sources": [
+        "OpenAPI:deleteAdminBranchWithWarehouse",
+        "OpenAPI:deleteAdminBrand",
+        "OpenAPI:deleteAdminCategory",
+        "OpenAPI:deleteAdminProduct",
+        "OpenAPI:deleteAdminProductVariant",
+        "OpenAPI:deleteAdminProductMedia",
+        "test:api/src/modules/catalog/logical-delete.controller.spec.ts",
+        "decision:D22/D36/D41"
+      ],
+      "targets": []
+    },
+    {
+      "id": "DBAPI-20260905-BIGINT-IDENTITY",
+      "date": "2026-09-05",
+      "scope": "DATABASE+API+ADMIN+STOREFRONT+OPERATIONS",
+      "summary": "Supersede D23 bằng D43: entity PK/FK chuyển từ UUIDv7 sang BIGINT IDENTITY do PostgreSQL sinh; API dùng chuỗi số; 21 bảng vật lý giữ UUID cũ ở legacy_id; migration chạy tự động và fail-fast trước khi NestJS listen.",
+      "sources": [
+        "decision:D43",
+        "migration:20260905120000_migrate_uuid_ids_to_bigint_identity",
+        "source:api/src/common/identifiers/entity-id.ts",
+        "source:api/scripts/migrate-on-start.cjs",
+        "document:23-id-migration-and-startup.md"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": ["branches", "warehouses", "users", "auth_sessions", "roles", "permissions", "user_role_assignments", "audit_logs", "media_assets", "brands", "categories", "products", "product_variants", "product_bundles", "bundle_items", "product_media", "product_prices", "inventory_balances", "inventory_movements", "stock_adjustments", "stock_adjustment_items"] },
+          "columns": ["Khóa chính", "Khóa ngoại quan trọng"],
+          "set": {
+            "Khóa chính": "id BIGINT IDENTITY; legacy_id UUID UNIQUE nullable cho dữ liệu migrate"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": ["branches", "warehouses", "users", "auth_sessions", "roles", "permissions", "user_role_assignments", "audit_logs", "media_assets", "brands", "categories", "products", "product_variants", "product_bundles", "bundle_items", "product_media", "product_prices", "inventory_balances", "inventory_movements", "stock_adjustments", "stock_adjustment_items"],
+            "Tên cột": "id"
+          },
+          "columns": ["Kiểu dữ liệu", "Default", "Ý nghĩa / trạng thái cho phép"],
+          "set": {
+            "Kiểu dữ liệu": "bigint",
+            "Default": "GENERATED BY DEFAULT AS IDENTITY",
+            "Ý nghĩa / trạng thái cho phép": "PK do PostgreSQL sinh; API serialize thành chuỗi số dương"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": ["audit_logs", "inventory_movements"], "Tên cột": ["entity_id", "reference_id"] },
+          "columns": ["Kiểu dữ liệu", "Ý nghĩa / trạng thái cho phép"],
+          "set": {
+            "Kiểu dữ liệu": "text",
+            "Ý nghĩa / trạng thái cho phép": "Reference đa hình: UUID lịch sử hoặc chuỗi ID số mới; không tạo FK"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -13,14 +13,14 @@ describe('Storefront customer authentication', () => {
   const phoneInput = `090${phoneDigits}`;
   const normalizedPhone = `+8490${phoneDigits}`;
   const password = 'Customer-password-123!';
-  let customerId = '';
+  let customerId: bigint | undefined;
 
   beforeAll(async () => {
     app = await createApplication({ logger: false, swagger: false });
   });
 
   afterAll(async () => {
-    if (customerId) {
+    if (customerId !== undefined) {
       await prisma.authSession.deleteMany({ where: { userId: customerId } });
       await prisma.user.deleteMany({ where: { id: customerId } });
     }

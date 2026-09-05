@@ -12,6 +12,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ENTITY_ID_OPENAPI } from '../../common/identifiers/entity-id';
 
 export class AddressDto {
   @ApiProperty({ example: '123 Nguyễn Văn Linh' })
@@ -34,7 +35,7 @@ export class AddressDto {
 }
 
 export class BranchDto {
-  @ApiProperty({ format: 'uuid' }) id: string;
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) id: string;
   @ApiProperty({ example: 'CN-HCM-01' }) code: string;
   @ApiProperty({ example: 'Chi nhánh Hồ Chí Minh' }) name: string;
   @ApiProperty({ enum: ['ACTIVE', 'INACTIVE'] }) status: 'ACTIVE' | 'INACTIVE';
@@ -46,8 +47,8 @@ export class BranchDto {
 }
 
 export class WarehouseDto {
-  @ApiProperty({ format: 'uuid' }) id: string;
-  @ApiProperty({ format: 'uuid' }) branchId: string;
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) id: string;
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) branchId: string;
   @ApiProperty({ example: 'KHO-HCM-01' }) code: string;
   @ApiProperty({ example: 'Kho bán hàng Hồ Chí Minh' }) name: string;
   @ApiProperty({ enum: ['ACTIVE', 'INACTIVE'] }) status: 'ACTIVE' | 'INACTIVE';

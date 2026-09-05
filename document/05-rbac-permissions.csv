@@ -1,0 +1,63 @@
+permission_code,module,action,allowed_scopes,sensitive,default_roles,notes
+org.branch.view,Organization,view,GLOBAL,false,Super Admin; Operations Manager,Branch user chỉ nhận branch qua assignment không tự cấp quản trị
+org.branch.manage,Organization,manage,GLOBAL,true,Super Admin,Thay đổi trạng thái cần audit reason
+org.warehouse.view,Organization,view,GLOBAL;BRANCH;WAREHOUSE,false,Super Admin; Inventory Manager; Warehouse Operator,
+org.warehouse.manage,Organization,manage,GLOBAL;BRANCH,true,Super Admin; Inventory Manager,
+iam.user.view,IAM,view,GLOBAL;BRANCH,true,OWNER; BRANCH_MANAGER,Branch Manager chỉ thấy nhân sự có assignment trong branch của mình; che PII theo field policy
+iam.user.manage,IAM,manage,GLOBAL,true,OWNER,Chỉ Admin gốc tạo và khóa/mở tài khoản BRANCH_MANAGER hoặc STAFF; OWNER bất biến
+iam.role.view,IAM,view,GLOBAL,false,OWNER,Chỉ Admin gốc xem danh mục quyền và lookup role BRANCH_MANAGER hoặc STAFF để phân quyền
+iam.role.manage,IAM,manage,GLOBAL,true,Super Admin; Security Admin,Permission cache phải invalidate
+iam.assignment.manage,IAM,manage,GLOBAL,true,OWNER,Chỉ Admin gốc gán/thu hồi BRANCH_MANAGER hoặc STAFF theo branch; OWNER không thể gán hay thu hồi; mọi thay đổi tăng permission_version và ghi audit
+iam.audit.view,IAM,view,GLOBAL,true,OWNER,API kiểm tra GLOBAL scope; chỉ đọc append-only; redact credential/hash/email/phone
+customer.view,Customer,view,GLOBAL;BRANCH;OWN,true,Customer Service; Order Operator,OWN cho customer portal
+customer.manage,Customer,manage,GLOBAL;BRANCH;OWN,true,Customer Service,Audit PII change
+catalog.brand.view,Catalog,view,GLOBAL;BRANCH,false,Catalog Manager; Order Operator; Warehouse Operator,
+catalog.brand.manage,Catalog,manage,GLOBAL,false,Catalog Manager,
+catalog.category.view,Catalog,view,GLOBAL;BRANCH,false,Catalog Manager; Order Operator,
+catalog.category.manage,Catalog,manage,GLOBAL,false,Catalog Manager,
+catalog.product.view,Catalog,view,GLOBAL;BRANCH;WAREHOUSE,false,Catalog Manager; Pricing Manager; Inventory Manager; Warehouse Operator; Order Operator,
+catalog.product.manage,Catalog,manage,GLOBAL,false,Catalog Manager,
+catalog.product.publish,Catalog,publish,GLOBAL,true,Catalog Manager,Tách publish khỏi edit nếu team lớn
+catalog.review.moderate,Catalog,moderate,GLOBAL;BRANCH,true,Content Moderator,
+catalog.review.reply,Catalog,reply,GLOBAL;BRANCH;OWN,true,Content Moderator; Customer Service; Customer,OWN chỉ review của customer
+catalog.price.view,Pricing,view,GLOBAL;BRANCH,false,Pricing Manager; Catalog Manager; Order Operator,
+catalog.price.manage,Pricing,manage,GLOBAL,true,Pricing Manager,Giá nhạy cảm có threshold approval
+catalog.flash_sale.view,Pricing,view,GLOBAL;BRANCH,false,Marketing Manager; Pricing Manager,
+catalog.flash_sale.manage,Pricing,manage,GLOBAL,true,Marketing Manager; Pricing Manager,Schedule/quota change phải audit
+inventory.stock.view,Inventory,view,GLOBAL;BRANCH;WAREHOUSE,false,Inventory Manager; Warehouse Operator; Order Operator,
+inventory.stock.adjust,Inventory,adjust,GLOBAL;BRANCH;WAREHOUSE,true,Inventory Manager,Vượt threshold cần approval
+inventory.stocktake.manage,Inventory,manage,GLOBAL;BRANCH;WAREHOUSE,true,Inventory Manager; Warehouse Operator,Submit/post có thể tách quyền ở V2
+inventory.transfer.view,Inventory,view,GLOBAL;BRANCH;WAREHOUSE,false,Inventory Manager; Warehouse Operator,
+inventory.transfer.create,Inventory,create,GLOBAL;BRANCH;WAREHOUSE,true,Inventory Manager; Warehouse Operator,
+inventory.transfer.ship,Inventory,ship,GLOBAL;WAREHOUSE,true,Inventory Manager; Warehouse Operator,Chỉ kho nguồn
+inventory.transfer.receive,Inventory,receive,GLOBAL;WAREHOUSE,true,Inventory Manager; Warehouse Operator,Chỉ kho đích
+order.view,Order,view,GLOBAL;BRANCH;WAREHOUSE;OWN,true,Order Manager; Order Operator; Warehouse Operator; Customer Service,OWN cho customer
+order.create,Order,create,OWN,false,Customer/Guest,Guest access bằng signed checkout context
+order.manage,Order,manage,GLOBAL;BRANCH,true,Order Manager; Order Operator,Transition qua command không patch status
+order.cancel,Order,cancel,GLOBAL;BRANCH;OWN,true,Order Manager; Order Operator; Customer,OWN chỉ trước payment success
+payment.view,Payment,view,GLOBAL;BRANCH;OWN,true,Finance Manager; Finance Operator; Order Manager,Che evidence/bank data
+payment.confirm,Payment,confirm,GLOBAL;BRANCH,true,Finance Manager; Finance Operator,Cannot confirm own fabricated evidence policy
+payment.refund.request,Payment,request,GLOBAL;BRANCH,true,Finance Operator; Customer Service,Refund theo return items; combo nguyên bộ
+payment.refund.approve,Payment,approve,GLOBAL,true,Finance Manager,Maker != approver
+fulfillment.view,Fulfillment,view,GLOBAL;BRANCH;WAREHOUSE;OWN,false,Order Manager; Order Operator; Inventory Manager; Warehouse Operator,
+fulfillment.pick,Fulfillment,pick,GLOBAL;WAREHOUSE,true,Warehouse Operator; Inventory Manager,
+fulfillment.pack,Fulfillment,pack,GLOBAL;WAREHOUSE,true,Warehouse Operator; Inventory Manager,
+fulfillment.ship,Fulfillment,ship,GLOBAL;WAREHOUSE,true,Warehouse Operator; Inventory Manager,Trừ on_hand tại command này
+fulfillment.delivery_update,Fulfillment,update,GLOBAL;BRANCH,true,Order Manager; Order Operator,Webhook carrier dùng system principal
+return.view,Return,view,GLOBAL;BRANCH;WAREHOUSE;OWN,true,Customer Service; Order Manager; Warehouse Operator,
+return.request,Return,request,OWN,false,Customer,Policy evaluation server-side
+return.decide,Return,decide,GLOBAL;BRANCH,true,Customer Service; Order Manager,Refund vẫn cần Finance approve
+return.receive,Return,receive,GLOBAL;WAREHOUSE,true,Warehouse Operator; Inventory Manager,RESTOCK mới tăng tồn
+cms.content.view,CMS,view,GLOBAL;BRANCH,false,Content Editor; Marketing Manager,
+cms.content.manage,CMS,manage,GLOBAL,true,Content Editor; Marketing Manager,
+media.asset.upload,Media,upload,GLOBAL;BRANCH;OWN,true,Content Editor; Marketing Manager; Catalog Manager; Customer,Customer chỉ upload review media qua restricted preset
+media.asset.view,Media,view,GLOBAL;BRANCH;OWN,false,Content Editor; Marketing Manager; Catalog Manager; Content Moderator,
+media.asset.manage,Media,manage,GLOBAL,true,Content Editor,Delete provider asset là two-step và cần audit
+notification.template.manage,Notification,manage,GLOBAL,true,Super Admin; Content Editor,Test send có audit
+report.operation.view,Reporting,view,GLOBAL;BRANCH;WAREHOUSE,false,Operations Manager; Order Manager; Inventory Manager,
+report.revenue.view,Reporting,view,GLOBAL;BRANCH,true,Finance Manager; Operations Manager,Chỉ COMPLETED
+report.inventory.view,Reporting,view,GLOBAL;BRANCH;WAREHOUSE,false,Inventory Manager; Auditor,
+report.export,Reporting,export,GLOBAL;BRANCH;WAREHOUSE,true,Finance Manager; Inventory Manager; Auditor,Export PII phải audit
+approval.view,Approval,view,GLOBAL;BRANCH;WAREHOUSE,true,Approver; Auditor,Scope của approval không vượt assignment
+approval.decide,Approval,decide,GLOBAL;BRANCH;WAREHOUSE,true,Approver,Maker != approver và permission mục tiêu bắt buộc
+system.setting.manage,Platform,manage,GLOBAL,true,Super Admin,Không lưu secret trong bảng settings

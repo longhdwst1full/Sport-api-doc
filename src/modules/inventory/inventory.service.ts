@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import {
   BadRequestException,
   ConflictException,
@@ -7,7 +7,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { v7 as uuidv7 } from 'uuid';
+import { toDatabaseId, toEntityId } from '../../common/identifiers/entity-id';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditWriter } from '../audit/audit.writer';
 import type { AuthPrincipal } from '../auth/auth.types';
@@ -39,7 +39,7 @@ export class InventoryService {
     if (!global && branchIds.length === 0) return { items: [], total: 0 };
     const where: Prisma.InventoryBalanceWhereInput = global
       ? {}
-      : { warehouse: { branchId: { in: branchIds } } };
+      : { warehouse: { branchId: { in: branchIds.map(toDatabaseId) } } };
     const rows = await this.prisma.inventoryBalance.findMany({
       where,
       include: { warehouse: true, productVariant: { include: { product: true } } },
@@ -97,18 +97,18 @@ export class InventoryService {
 
           await transaction.inventoryBalance.createMany({
             data: variants.map((variant) => ({
-              id: uuidv7(),
               warehouseId: warehouse.id,
               productVariantId: variant.id,
             })),
             skipDuplicates: true,
           });
-          const variantIds = variants.map(({ id }) => id).sort();
-          const variantUuidParameters = variantIds.map((id) => Prisma.sql`${id}::uuid`);
+          const variantIds = variants.map(({ id }) => id).sort((left, right) =>
+            left < right ? -1 : left > right ? 1 : 0,
+          );
           await transaction.$queryRaw(Prisma.sql`
             SELECT "id" FROM "inventory_balances"
-            WHERE "warehouse_id" = ${warehouse.id}::uuid
-              AND "product_variant_id" IN (${Prisma.join(variantUuidParameters)})
+            WHERE "warehouse_id" = ${warehouse.id}
+              AND "product_variant_id" IN (${Prisma.join(variantIds)})
             ORDER BY "product_variant_id" FOR UPDATE
           `);
           const balances = await transaction.inventoryBalance.findMany({
@@ -129,22 +129,21 @@ export class InventoryService {
             return { item, sku, variant, balance, nextOnHand };
           });
 
-          const adjustmentId = uuidv7();
           const postedAt = new Date();
-          const adjustmentNo = `ADJ-${BigInt(`0x${adjustmentId.replaceAll('-', '')}`)
+          const adjustmentToken = randomUUID();
+          const adjustmentNo = `ADJ-${BigInt(`0x${adjustmentToken.replaceAll('-', '')}`)
             .toString(36)
             .toUpperCase()
             .padStart(25, '0')}`;
-          await transaction.stockAdjustment.create({
+          const adjustment = await transaction.stockAdjustment.create({
             data: {
-              id: adjustmentId,
               adjustmentNo,
               warehouseId: warehouse.id,
               reason: input.reason.trim(),
               idempotencyKey: key,
               requestHash,
               resultJson: {},
-              createdBy: principal.userId,
+              createdBy: toDatabaseId(principal.userId),
               postedAt,
             },
           });
@@ -160,8 +159,7 @@ export class InventoryService {
             }
             await transaction.stockAdjustmentItem.create({
               data: {
-                id: uuidv7(),
-                stockAdjustmentId: adjustmentId,
+                stockAdjustmentId: adjustment.id,
                 productVariantId: change.variant.id,
                 quantityDelta: change.item.quantityDelta,
                 expectedOnHand: change.balance.onHand,
@@ -170,23 +168,22 @@ export class InventoryService {
             });
             await transaction.inventoryMovement.create({
               data: {
-                id: uuidv7(),
                 warehouseId: warehouse.id,
                 productVariantId: change.variant.id,
                 movementType: 'ADJUST',
                 quantityDelta: change.item.quantityDelta,
                 balanceAfter: change.nextOnHand,
                 referenceType: 'STOCK_ADJUSTMENT',
-                referenceId: adjustmentId,
+                referenceId: toEntityId(adjustment.id),
                 idempotencyKey: `${key}:${change.sku}`,
                 reason: input.reason.trim(),
                 occurredAt: postedAt,
-                createdBy: principal.userId,
+                createdBy: toDatabaseId(principal.userId),
               },
             });
             const available = change.nextOnHand - change.balance.reserved;
             resultBalances.push({
-              id: change.balance.id,
+              id: toEntityId(change.balance.id),
               warehouseCode: warehouse.code,
               sku: change.variant.sku,
               productName: change.variant.product.name,
@@ -205,7 +202,7 @@ export class InventoryService {
             postedAt: postedAt.toISOString(),
           };
           await transaction.stockAdjustment.update({
-            where: { id: adjustmentId },
+            where: { id: adjustment.id },
             data: { resultJson: result as unknown as Prisma.InputJsonValue },
           });
           await this.audit.write(
@@ -216,10 +213,10 @@ export class InventoryService {
               actorUserId: principal.userId,
               action: INVENTORY_AUDIT_ACTION.STOCK_ADJUSTMENT_POST,
               entityType: 'STOCK_ADJUSTMENT',
-              entityId: adjustmentId,
+              entityId: toEntityId(adjustment.id),
               after: {
                 adjustmentNo,
-                warehouseId: warehouse.id,
+                warehouseId: toEntityId(warehouse.id),
                 itemCount: changes.length,
                 status: 'POSTED',
               },
@@ -273,16 +270,17 @@ export class InventoryService {
     return createHash('sha256').update(JSON.stringify(canonical)).digest('hex');
   }
 
-  private assertWarehouseScope(principal: AuthPrincipal, branchId: string): void {
+  private assertWarehouseScope(principal: AuthPrincipal, branchId: bigint): void {
+    const publicBranchId = toEntityId(branchId);
     const allowed = principal.scopes.some(
       (scope) => scope.type === ScopeType.GLOBAL
-        || (scope.type === ScopeType.BRANCH && scope.branchId === branchId),
+        || (scope.type === ScopeType.BRANCH && scope.branchId === publicBranchId),
     );
     if (!allowed) throw new ForbiddenException('Warehouse is outside the assigned branch scope');
   }
 
   private toDto(row: {
-    id: string;
+    id: bigint;
     onHand: number;
     reserved: number;
     reorderPoint: number;
@@ -291,7 +289,7 @@ export class InventoryService {
   }): InventoryBalanceDto {
     const available = row.onHand - row.reserved;
     return {
-      id: row.id,
+      id: toEntityId(row.id),
       warehouseCode: row.warehouse.code,
       sku: row.productVariant.sku,
       productName: row.productVariant.product.name,

@@ -6,7 +6,6 @@ import {
   HttpCode,
   HttpStatus,
   Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -27,6 +26,7 @@ import {
 } from '@nestjs/swagger';
 import { RequirePermissions } from '../../../common/decorators/require-permissions.decorator';
 import { ErrorResponseDto } from '../../../common/exceptions/error-response.dto';
+import { ParseEntityIdPipe } from '../../../common/identifiers/entity-id';
 import { ActiveLookupResponseDto, ActiveSearchQueryDto } from '../../../common/pagination/active-search.dto';
 import { AuthenticatedRequest, getMutationContext } from '../../../common/request/request-context';
 import {
@@ -107,7 +107,7 @@ export class CatalogMasterController {
   @ApiNotFoundResponse({ type: ErrorResponseDto })
   @ApiConflictResponse({ type: ErrorResponseDto })
   deleteBrand(
-    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('id', new ParseEntityIdPipe()) id: string,
     @Body() input: ChangeMasterStatusDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<BrandDto> {
@@ -188,7 +188,7 @@ export class CatalogMasterController {
   @ApiConflictResponse({ type: ErrorResponseDto })
   @ApiUnprocessableEntityResponse({ type: ErrorResponseDto })
   deleteCategory(
-    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('id', new ParseEntityIdPipe()) id: string,
     @Body() input: ChangeMasterStatusDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<CategoryDto> {

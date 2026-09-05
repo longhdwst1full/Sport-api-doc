@@ -1,6 +1,6 @@
 # API application instructions
 
-Scope: `api/` only. Do not load storefront rendering/PWA rules or admin UI rules for backend work.
+Scope: this API repository only. Do not load Storefront rendering/PWA rules or Admin UI rules for backend work.
 
 ## Stack and boundaries
 
@@ -9,7 +9,7 @@ Scope: `api/` only. Do not load storefront rendering/PWA rules or admin UI rules
 - Controllers map HTTP, application services execute use cases, domain policy owns transitions, and persistence adapters remain replaceable.
 - Catalog, Inventory, CMS and Reviews are active in-memory vertical slices; other registered modules are intentionally scaffolded until their delivery wave.
 - The API owns authorization, validation, idempotency and audit requirements.
-- Add backend dependencies with `yarn workspace @dctd/api add <package>` (or `--dev`), never at the workspace root.
+- Add backend dependencies from this repository with `yarn add <package>` (or `--dev`).
 
 ## Required routing
 
@@ -23,14 +23,14 @@ Scope: `api/` only. Do not load storefront rendering/PWA rules or admin UI rules
 
 ## Quality gate
 
-Run from the repository root:
+Run from this repository root:
 
 ```bash
-yarn workspace @dctd/api lint
-yarn workspace @dctd/api test
-yarn workspace @dctd/api prisma:validate
-yarn workspace @dctd/api openapi:generate
-yarn workspace @dctd/api build
+yarn lint
+yarn test
+yarn prisma:validate
+yarn openapi:generate
+yarn build
 ```
 
 Do not change frontend code while following an API-only skill. SDK regeneration is a separate consumer step governed by each frontend's instructions.

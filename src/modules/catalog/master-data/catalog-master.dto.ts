@@ -4,19 +4,19 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  IsUUID,
   Matches,
   MaxLength,
   Min,
 } from 'class-validator';
+import { ENTITY_ID_OPENAPI, IsEntityId } from '../../../common/identifiers/entity-id';
 
 export class BrandDto {
-  @ApiProperty({ format: 'uuid' }) id: string;
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) id: string;
   @ApiProperty() code: string;
   @ApiProperty() name: string;
   @ApiProperty() slug: string;
   @ApiPropertyOptional() description?: string;
-  @ApiPropertyOptional({ format: 'uuid' }) logoAssetId?: string;
+  @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI }) logoAssetId?: string;
   @ApiProperty({ enum: ['ACTIVE', 'INACTIVE'] }) status: 'ACTIVE' | 'INACTIVE';
   @ApiProperty() version: number;
 }
@@ -27,15 +27,15 @@ export class BrandListDto {
 }
 
 export class CategoryDto {
-  @ApiProperty({ format: 'uuid' }) id: string;
-  @ApiPropertyOptional({ format: 'uuid' }) parentId?: string;
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) id: string;
+  @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI }) parentId?: string;
   @ApiProperty() code: string;
   @ApiProperty() name: string;
   @ApiProperty() slug: string;
   @ApiProperty() path: string;
   @ApiProperty() depth: number;
   @ApiPropertyOptional() description?: string;
-  @ApiPropertyOptional({ format: 'uuid' }) imageAssetId?: string;
+  @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI }) imageAssetId?: string;
   @ApiProperty() sortOrder: number;
   @ApiProperty({ enum: ['ACTIVE', 'INACTIVE'] }) status: 'ACTIVE' | 'INACTIVE';
   @ApiProperty() version: number;
@@ -51,16 +51,16 @@ export class CreateBrandDto {
   @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(255) name: string;
   @ApiProperty() @IsString() @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/) @MaxLength(255) slug: string;
   @ApiPropertyOptional() @IsString() @IsOptional() description?: string;
-  @ApiPropertyOptional({ format: 'uuid' }) @IsUUID() @IsOptional() logoAssetId?: string;
+  @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI }) @IsEntityId() @IsOptional() logoAssetId?: string;
 }
 
 export class CreateCategoryDto {
-  @ApiPropertyOptional({ format: 'uuid' }) @IsUUID() @IsOptional() parentId?: string;
+  @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI }) @IsEntityId() @IsOptional() parentId?: string;
   @ApiProperty() @IsString() @Matches(/^[A-Z0-9-]+$/) @MaxLength(32) code: string;
   @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(255) name: string;
   @ApiProperty() @IsString() @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/) @MaxLength(255) slug: string;
   @ApiPropertyOptional() @IsString() @IsOptional() description?: string;
-  @ApiPropertyOptional({ format: 'uuid' }) @IsUUID() @IsOptional() imageAssetId?: string;
+  @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI }) @IsEntityId() @IsOptional() imageAssetId?: string;
   @ApiPropertyOptional({ minimum: 0, default: 0 }) @IsInt() @Min(0) @IsOptional() sortOrder?: number;
 }
 
@@ -73,7 +73,7 @@ export class UpdateBrandDto {
   @IsOptional()
   slug?: string;
   @ApiPropertyOptional() @IsString() @IsOptional() description?: string;
-  @ApiPropertyOptional({ format: 'uuid' }) @IsUUID() @IsOptional() logoAssetId?: string;
+  @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI }) @IsEntityId() @IsOptional() logoAssetId?: string;
   @ApiProperty({ minimum: 0 }) @IsInt() @Min(0) expectedVersion: number;
 }
 
@@ -86,7 +86,7 @@ export class UpdateCategoryDto {
   @IsOptional()
   slug?: string;
   @ApiPropertyOptional() @IsString() @IsOptional() description?: string;
-  @ApiPropertyOptional({ format: 'uuid' }) @IsUUID() @IsOptional() imageAssetId?: string;
+  @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI }) @IsEntityId() @IsOptional() imageAssetId?: string;
   @ApiPropertyOptional({ minimum: 0 }) @IsInt() @Min(0) @IsOptional() sortOrder?: number;
   @ApiProperty({ minimum: 0 }) @IsInt() @Min(0) expectedVersion: number;
 }

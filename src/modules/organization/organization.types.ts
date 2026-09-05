@@ -33,6 +33,9 @@ export interface BranchWithWarehouse {
   warehouse: Warehouse;
 }
 
+export type NewBranch = Omit<Branch, 'id'>;
+export type NewWarehouse = Omit<Warehouse, 'id' | 'branchId'>;
+
 export interface BranchWithWarehouseUpdate {
   name: string;
   phone?: string;

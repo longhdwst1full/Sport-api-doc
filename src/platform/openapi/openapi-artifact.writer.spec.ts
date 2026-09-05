@@ -73,11 +73,11 @@ describe('writeOpenApiArtifacts', () => {
 
     await writeOpenApiArtifacts(document, join(temporaryRoot, 'api'));
     const organizationContract = await readFile(
-      join(temporaryRoot, 'document', 'api', 'admin', 'organization.yaml'),
+      join(temporaryRoot, 'api', 'document', 'api', 'admin', 'organization.yaml'),
       'utf8',
     );
     const authContract = await readFile(
-      join(temporaryRoot, 'document', 'api', 'admin', 'auth.yaml'),
+      join(temporaryRoot, 'api', 'document', 'api', 'admin', 'auth.yaml'),
       'utf8',
     );
 
@@ -114,7 +114,7 @@ describe('writeOpenApiArtifacts', () => {
 
     await writeOpenApiArtifacts(document, join(temporaryRoot, 'api'));
     const storefrontAuthContract = await readFile(
-      join(temporaryRoot, 'document', 'api', 'storefront', 'auth.yaml'),
+      join(temporaryRoot, 'api', 'document', 'api', 'storefront', 'auth.yaml'),
       'utf8',
     );
 

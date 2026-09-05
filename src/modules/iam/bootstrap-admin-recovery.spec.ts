@@ -6,7 +6,7 @@ function createPrisma(user: Record<string, unknown> | null) {
   const captured: { userUpdate?: unknown; auditCreate?: unknown } = {};
   const transaction = {
     user: {
-      findUnique: jest.fn().mockResolvedValue(user),
+      findFirst: jest.fn().mockResolvedValue(user),
       update: jest.fn((input: unknown) => {
         captured.userUpdate = input;
         return Promise.resolve({});
@@ -31,7 +31,7 @@ function createPrisma(user: Record<string, unknown> | null) {
 
 describe('resetBootstrapAdmin', () => {
   const lockedOwner = {
-    id: BOOTSTRAP_ADMIN.ID,
+    id: 10n,
     userType: 'STAFF',
     normalizedEmail: BOOTSTRAP_ADMIN.EMAIL,
     status: 'LOCKED',
@@ -50,7 +50,7 @@ describe('resetBootstrapAdmin', () => {
       revokedSessionCount: 2,
     });
     expect(captured.userUpdate).toMatchObject({
-      where: { id: BOOTSTRAP_ADMIN.ID },
+      where: { id: 10n },
       data: {
         passwordHash: 'argon2-hash',
         status: 'ACTIVE',
@@ -61,13 +61,13 @@ describe('resetBootstrapAdmin', () => {
       },
     });
     expect(transaction.authSession.updateMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { userId: BOOTSTRAP_ADMIN.ID, revokedAt: null },
+      where: { userId: 10n, revokedAt: null },
     }));
     expect(captured.auditCreate).toMatchObject({
       data: {
         actorType: 'SYSTEM',
         action: BOOTSTRAP_ADMIN.AUDIT_ACTION,
-        entityId: BOOTSTRAP_ADMIN.ID,
+        entityId: '10',
       },
     });
   });

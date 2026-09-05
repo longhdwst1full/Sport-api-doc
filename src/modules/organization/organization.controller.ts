@@ -6,7 +6,6 @@ import {
   HttpCode,
   HttpStatus,
   Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -27,6 +26,7 @@ import {
 } from '@nestjs/swagger';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { ErrorResponseDto } from '../../common/exceptions/error-response.dto';
+import { ParseEntityIdPipe } from '../../common/identifiers/entity-id';
 import {
   ActiveLookupResponseDto,
   ActiveSearchQueryDto,
@@ -166,7 +166,7 @@ export class OrganizationController {
   @ApiNotFoundResponse({ type: ErrorResponseDto })
   @ApiConflictResponse({ type: ErrorResponseDto })
   deleteBranch(
-    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('id', new ParseEntityIdPipe()) id: string,
     @Body() input: ChangeBranchStatusDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<BranchWithWarehouseDto> {

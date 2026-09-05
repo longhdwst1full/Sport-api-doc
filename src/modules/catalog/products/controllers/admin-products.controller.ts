@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Req } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -14,6 +14,7 @@ import {
 } from '@nestjs/swagger';
 import { RequirePermissions } from '../../../../common/decorators/require-permissions.decorator';
 import { ErrorResponseDto } from '../../../../common/exceptions/error-response.dto';
+import { ParseEntityIdPipe } from '../../../../common/identifiers/entity-id';
 import {
   ActiveLookupResponseDto,
   ActiveSearchQueryDto,
@@ -97,7 +98,7 @@ export class AdminProductsController {
   @ApiOperation({ operationId: 'updateAdminProduct', summary: 'Update product' })
   @ApiOkResponse({ type: ProductDetailDto })
   updateAdminProduct(
-    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('id', new ParseEntityIdPipe()) id: string,
     @Body() input: UpdateProductDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<ProductDetailDto> {
@@ -110,7 +111,7 @@ export class AdminProductsController {
   @ApiOperation({ operationId: 'createAdminProductVariant', summary: 'Create a sellable SKU variant' })
   @ApiCreatedResponse({ type: ProductDetailDto })
   createVariant(
-    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('id', new ParseEntityIdPipe()) id: string,
     @Body() input: CreateVariantDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<ProductDetailDto> {
@@ -126,7 +127,7 @@ export class AdminProductsController {
   @ApiConflictResponse({ type: ErrorResponseDto })
   @ApiUnprocessableEntityResponse({ type: ErrorResponseDto })
   updateVariant(
-    @Param('variantId', new ParseUUIDPipe()) variantId: string,
+    @Param('variantId', new ParseEntityIdPipe()) variantId: string,
     @Body() input: UpdateVariantDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<ProductDetailDto> {
@@ -142,7 +143,7 @@ export class AdminProductsController {
   @ApiConflictResponse({ type: ErrorResponseDto })
   @ApiUnprocessableEntityResponse({ type: ErrorResponseDto })
   attachMedia(
-    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('id', new ParseEntityIdPipe()) id: string,
     @Body() input: AttachProductMediaDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<ProductMediaDto[]> {
@@ -158,7 +159,7 @@ export class AdminProductsController {
   @ApiConflictResponse({ type: ErrorResponseDto })
   @ApiUnprocessableEntityResponse({ type: ErrorResponseDto })
   reorderMedia(
-    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('id', new ParseEntityIdPipe()) id: string,
     @Body() input: ReorderProductMediaDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<ProductMediaDto[]> {
@@ -174,8 +175,8 @@ export class AdminProductsController {
   @ApiConflictResponse({ type: ErrorResponseDto })
   @ApiUnprocessableEntityResponse({ type: ErrorResponseDto })
   updateMedia(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @Param('mediaId', new ParseUUIDPipe()) mediaId: string,
+    @Param('id', new ParseEntityIdPipe()) id: string,
+    @Param('mediaId', new ParseEntityIdPipe()) mediaId: string,
     @Body() input: UpdateProductMediaDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<ProductMediaDto[]> {
@@ -192,8 +193,8 @@ export class AdminProductsController {
   @ApiConflictResponse({ type: ErrorResponseDto })
   @ApiUnprocessableEntityResponse({ type: ErrorResponseDto })
   archiveMedia(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @Param('mediaId', new ParseUUIDPipe()) mediaId: string,
+    @Param('id', new ParseEntityIdPipe()) id: string,
+    @Param('mediaId', new ParseEntityIdPipe()) mediaId: string,
     @Body() input: ChangeProductMediaStatusDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<ProductMediaDto[]> {
@@ -218,8 +219,8 @@ export class AdminProductsController {
   @ApiConflictResponse({ type: ErrorResponseDto })
   @ApiUnprocessableEntityResponse({ type: ErrorResponseDto })
   deleteMedia(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @Param('mediaId', new ParseUUIDPipe()) mediaId: string,
+    @Param('id', new ParseEntityIdPipe()) id: string,
+    @Param('mediaId', new ParseEntityIdPipe()) mediaId: string,
     @Body() input: ChangeProductMediaStatusDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<ProductMediaDto[]> {
@@ -239,7 +240,7 @@ export class AdminProductsController {
   @ApiNotFoundResponse({ type: ErrorResponseDto })
   @ApiConflictResponse({ type: ErrorResponseDto })
   createPrice(
-    @Param('variantId', new ParseUUIDPipe()) variantId: string,
+    @Param('variantId', new ParseEntityIdPipe()) variantId: string,
     @Body() input: CreatePriceDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<ProductDetailDto> {
@@ -255,7 +256,7 @@ export class AdminProductsController {
   @ApiOkResponse({ type: ProductPriceTimelineDto })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
   getPriceTimeline(
-    @Param('variantId', new ParseUUIDPipe()) variantId: string,
+    @Param('variantId', new ParseEntityIdPipe()) variantId: string,
   ): Promise<ProductPriceTimelineDto> {
     return this.products.getPriceTimeline(variantId);
   }
@@ -272,7 +273,7 @@ export class AdminProductsController {
   @ApiConflictResponse({ type: ErrorResponseDto })
   @ApiUnprocessableEntityResponse({ type: ErrorResponseDto })
   replacePrice(
-    @Param('variantId', new ParseUUIDPipe()) variantId: string,
+    @Param('variantId', new ParseEntityIdPipe()) variantId: string,
     @Body() input: ReplacePriceDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<ProductDetailDto> {
@@ -288,7 +289,7 @@ export class AdminProductsController {
   @ApiConflictResponse({ type: ErrorResponseDto })
   @ApiUnprocessableEntityResponse({ type: ErrorResponseDto })
   publish(
-    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('id', new ParseEntityIdPipe()) id: string,
     @Body() input: ChangeProductStatusDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<ProductDetailDto> {
@@ -304,7 +305,7 @@ export class AdminProductsController {
   })
   @ApiOkResponse({ type: ProductDetailDto })
   archiveProduct(
-    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('id', new ParseEntityIdPipe()) id: string,
     @Body() input: ChangeProductStatusDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<ProductDetailDto> {
@@ -324,7 +325,7 @@ export class AdminProductsController {
   @ApiConflictResponse({ type: ErrorResponseDto })
   @ApiUnprocessableEntityResponse({ type: ErrorResponseDto })
   deleteProduct(
-    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('id', new ParseEntityIdPipe()) id: string,
     @Body() input: ChangeProductStatusDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<ProductDetailDto> {
@@ -340,7 +341,7 @@ export class AdminProductsController {
   })
   @ApiOkResponse({ type: ProductDetailDto })
   reactivateProduct(
-    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('id', new ParseEntityIdPipe()) id: string,
     @Body() input: ChangeProductStatusDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<ProductDetailDto> {
@@ -353,7 +354,7 @@ export class AdminProductsController {
   @ApiOperation({ operationId: 'archiveAdminProductVariant', summary: 'Archive one sellable SKU variant' })
   @ApiOkResponse({ type: ProductDetailDto })
   archiveVariant(
-    @Param('variantId', new ParseUUIDPipe()) variantId: string,
+    @Param('variantId', new ParseEntityIdPipe()) variantId: string,
     @Body() input: ChangeProductStatusDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<ProductDetailDto> {
@@ -373,7 +374,7 @@ export class AdminProductsController {
   @ApiConflictResponse({ type: ErrorResponseDto })
   @ApiUnprocessableEntityResponse({ type: ErrorResponseDto })
   deleteVariant(
-    @Param('variantId', new ParseUUIDPipe()) variantId: string,
+    @Param('variantId', new ParseEntityIdPipe()) variantId: string,
     @Body() input: ChangeProductStatusDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<ProductDetailDto> {
@@ -386,7 +387,7 @@ export class AdminProductsController {
   @ApiOperation({ operationId: 'reactivateAdminProductVariant', summary: 'Reactivate one archived SKU variant' })
   @ApiOkResponse({ type: ProductDetailDto })
   reactivateVariant(
-    @Param('variantId', new ParseUUIDPipe()) variantId: string,
+    @Param('variantId', new ParseEntityIdPipe()) variantId: string,
     @Body() input: ChangeProductStatusDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<ProductDetailDto> {
@@ -398,7 +399,7 @@ export class AdminProductsController {
   @ApiOperation({ operationId: 'createAdminProductBundle', summary: 'Create a fixed non-nested virtual combo' })
   @ApiCreatedResponse({ type: ProductDetailDto })
   createBundle(
-    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('id', new ParseEntityIdPipe()) id: string,
     @Body() input: CreateBundleDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<ProductDetailDto> {

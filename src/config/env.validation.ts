@@ -20,9 +20,17 @@ enum NodeEnvironment {
   PRODUCTION = 'production',
 }
 
+enum AppMode {
+  SERVE = 'serve',
+  MIGRATE = 'migrate',
+}
+
 const toBoolean = ({ value }: { value: unknown }) => value === true || value === 'true';
 
 class EnvironmentVariables {
+  @IsEnum(AppMode)
+  APP_MODE: AppMode = AppMode.SERVE;
+
   @IsEnum(NodeEnvironment)
   NODE_ENV: NodeEnvironment = NodeEnvironment.DEVELOPMENT;
 
@@ -72,6 +80,10 @@ class EnvironmentVariables {
   @Transform(toBoolean)
   @IsBoolean()
   DATABASE_ENABLED = false;
+
+  @Transform(toBoolean)
+  @IsBoolean()
+  DB_MIGRATE_ON_START = true;
 
   @ValidateIf((environment: EnvironmentVariables) => environment.DATABASE_ENABLED)
   @IsString()

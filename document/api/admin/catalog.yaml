@@ -1,0 +1,2837 @@
+# Generated from NestJS decorators. Do not edit by hand.
+openapi: 3.0.0
+info:
+  title: DCTD-UTC Commerce API
+  description: Contract for storefront and admin applications
+  version: 1.0.0
+  contact: {}
+servers:
+  - url: http://localhost:4000
+    description: Local
+paths:
+  /api/v1/admin/catalog/brands:
+    get:
+      operationId: listAdminBrands
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BrandListDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: ""
+      tags:
+        - Admin Catalog
+    post:
+      operationId: createAdminBrand
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBrandDto"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BrandDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: ""
+      tags:
+        - Admin Catalog
+  /api/v1/admin/catalog/brands/active:
+    get:
+      operationId: searchActiveAdminBrands
+      parameters:
+        - name: search
+          required: false
+          in: query
+          description: Search by business code or display label
+          schema:
+            maxLength: 100
+            type: string
+        - name: page
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            default: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            maximum: 50
+            default: 20
+            type: number
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActiveLookupResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: ""
+      tags:
+        - Admin Catalog
+  /api/v1/admin/catalog/brands/{id}:
+    patch:
+      operationId: updateAdminBrand
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBrandDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BrandDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Update mutable brand fields
+      tags:
+        - Admin Catalog
+    delete:
+      operationId: deleteAdminBrand
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeMasterStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BrandDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Logically delete a brand by changing its status to INACTIVE
+      tags:
+        - Admin Catalog
+  /api/v1/admin/catalog/brands/{id}/deactivate:
+    post:
+      operationId: deactivateAdminBrand
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeMasterStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BrandDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Deactivate a brand
+      tags:
+        - Admin Catalog
+  /api/v1/admin/catalog/brands/{id}/activate:
+    post:
+      operationId: activateAdminBrand
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeMasterStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BrandDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Reactivate a brand
+      tags:
+        - Admin Catalog
+  /api/v1/admin/catalog/categories:
+    get:
+      operationId: listAdminCategories
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryListDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: ""
+      tags:
+        - Admin Catalog
+    post:
+      operationId: createAdminCategory
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCategoryDto"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: ""
+      tags:
+        - Admin Catalog
+  /api/v1/admin/catalog/categories/active:
+    get:
+      operationId: searchActiveAdminCategories
+      parameters:
+        - name: search
+          required: false
+          in: query
+          description: Search by business code or display label
+          schema:
+            maxLength: 100
+            type: string
+        - name: page
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            default: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            maximum: 50
+            default: 20
+            type: number
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActiveLookupResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: ""
+      tags:
+        - Admin Catalog
+  /api/v1/admin/catalog/categories/{id}:
+    patch:
+      operationId: updateAdminCategory
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCategoryDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Update mutable category fields
+      tags:
+        - Admin Catalog
+    delete:
+      operationId: deleteAdminCategory
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeMasterStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "422":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Logically delete a leaf category by changing its status to INACTIVE
+      tags:
+        - Admin Catalog
+  /api/v1/admin/catalog/categories/{id}/deactivate:
+    post:
+      operationId: deactivateAdminCategory
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeMasterStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "422":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Deactivate a leaf category
+      tags:
+        - Admin Catalog
+  /api/v1/admin/catalog/categories/{id}/activate:
+    post:
+      operationId: activateAdminCategory
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeMasterStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "422":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Reactivate a category
+      tags:
+        - Admin Catalog
+  /api/v1/admin/products:
+    get:
+      operationId: listAdminProducts
+      parameters:
+        - name: page
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            default: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 12
+            type: number
+        - name: search
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: category
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: status
+          required: false
+          in: query
+          schema:
+            type: string
+            enum:
+              - DRAFT
+              - PUBLISHED
+              - ARCHIVED
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductListResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: List products for admin
+      tags:
+        - Admin Products
+    post:
+      operationId: createAdminProduct
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProductDto"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Create product
+      tags:
+        - Admin Products
+  /api/v1/admin/products/variants/active:
+    get:
+      operationId: searchActiveAdminProductVariants
+      parameters:
+        - name: search
+          required: false
+          in: query
+          description: Search by business code or display label
+          schema:
+            maxLength: 100
+            type: string
+        - name: page
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            default: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            maximum: 50
+            default: 20
+            type: number
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActiveLookupResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Search active standard SKU variants for selectors and combo components
+      tags:
+        - Admin Products
+  /api/v1/admin/products/{slug}:
+    get:
+      operationId: getAdminProduct
+      parameters:
+        - name: slug
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Get product detail for admin
+      tags:
+        - Admin Products
+  /api/v1/admin/products/{id}:
+    patch:
+      operationId: updateAdminProduct
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProductDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Update product
+      tags:
+        - Admin Products
+    delete:
+      operationId: deleteAdminProduct
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeProductStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetailDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "422":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Logically delete a product or combo by changing its status to ARCHIVED
+      tags:
+        - Admin Products
+  /api/v1/admin/products/{id}/variants:
+    post:
+      operationId: createAdminProductVariant
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateVariantDto"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Create a sellable SKU variant
+      tags:
+        - Admin Products
+  /api/v1/admin/products/variants/{variantId}:
+    patch:
+      operationId: updateAdminProductVariant
+      parameters:
+        - name: variantId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateVariantDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetailDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "422":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Update mutable SKU metadata
+      tags:
+        - Admin Products
+    delete:
+      operationId: deleteAdminProductVariant
+      parameters:
+        - name: variantId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeProductStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetailDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "422":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Logically delete one sellable SKU variant by changing its status to INACTIVE
+      tags:
+        - Admin Products
+  /api/v1/admin/products/{id}/media:
+    post:
+      operationId: attachAdminProductMedia
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttachProductMediaDto"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductMediaDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "422":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Attach one finalized media asset to a product or SKU
+      tags:
+        - Admin Products
+  /api/v1/admin/products/{id}/media/reorder:
+    patch:
+      operationId: reorderAdminProductMedia
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReorderProductMediaDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductMediaDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "422":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Replace the order of all active product media
+      tags:
+        - Admin Products
+  /api/v1/admin/products/{id}/media/{mediaId}:
+    patch:
+      operationId: updateAdminProductMedia
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: mediaId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProductMediaDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductMediaDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "422":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Update product media alt text or primary flag
+      tags:
+        - Admin Products
+    delete:
+      operationId: deleteAdminProductMedia
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: mediaId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeProductMediaStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductMediaDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "422":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Logically delete a product media link without deleting its provider asset
+      tags:
+        - Admin Products
+  /api/v1/admin/products/{id}/media/{mediaId}/archive:
+    post:
+      operationId: archiveAdminProductMedia
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: mediaId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeProductMediaStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductMediaDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "422":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Archive a product media link without deleting its asset
+      tags:
+        - Admin Products
+  /api/v1/admin/products/variants/{variantId}/prices:
+    post:
+      operationId: createAdminProductPrice
+      parameters:
+        - name: variantId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePriceDto"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetailDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Create a global VAT-included price window
+      tags:
+        - Admin Products
+    get:
+      operationId: getAdminProductPriceTimeline
+      parameters:
+        - name: variantId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductPriceTimelineDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Get the current, upcoming, and immutable price history of a SKU
+      tags:
+        - Admin Products
+  /api/v1/admin/products/variants/{variantId}/prices/replace:
+    post:
+      operationId: replaceAdminProductPrice
+      parameters:
+        - name: variantId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReplacePriceDto"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetailDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "422":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Atomically close the current open price and create its replacement
+      tags:
+        - Admin Products
+  /api/v1/admin/products/{id}/publish:
+    post:
+      operationId: publishAdminProduct
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeProductStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "422":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Publish a complete draft product
+      tags:
+        - Admin Products
+  /api/v1/admin/products/{id}/archive:
+    post:
+      operationId: archiveAdminProduct
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeProductStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Archive a product or combo and remove it from storefront sales
+      tags:
+        - Admin Products
+  /api/v1/admin/products/{id}/reactivate:
+    post:
+      operationId: reactivateAdminProduct
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeProductStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Reactivate an archived product or combo as DRAFT for review
+      tags:
+        - Admin Products
+  /api/v1/admin/products/variants/{variantId}/archive:
+    post:
+      operationId: archiveAdminProductVariant
+      parameters:
+        - name: variantId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeProductStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Archive one sellable SKU variant
+      tags:
+        - Admin Products
+  /api/v1/admin/products/variants/{variantId}/reactivate:
+    post:
+      operationId: reactivateAdminProductVariant
+      parameters:
+        - name: variantId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeProductStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Reactivate one archived SKU variant
+      tags:
+        - Admin Products
+  /api/v1/admin/products/{id}/bundle:
+    post:
+      operationId: createAdminProductBundle
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBundleDto"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Create a fixed non-nested virtual combo
+      tags:
+        - Admin Products
+components:
+  schemas:
+    BrandListDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BrandDto"
+        total:
+          type: number
+      required:
+        - items
+        - total
+    ErrorResponseDto:
+      type: object
+      properties:
+        statusCode:
+          type: number
+          example: 400
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: Request validation failed
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorDetailDto"
+        path:
+          type: string
+          example: /api/v1/catalog/products
+        method:
+          type: string
+          example: POST
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+      required:
+        - statusCode
+        - code
+        - message
+        - path
+        - method
+        - timestamp
+    CreateBrandDto:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        logoAssetId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+      required:
+        - code
+        - name
+        - slug
+    BrandDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        code:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        logoAssetId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+        version:
+          type: number
+      required:
+        - id
+        - code
+        - name
+        - slug
+        - status
+        - version
+    ActiveLookupResponseDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActiveLookupOptionDto"
+        meta:
+          $ref: "#/components/schemas/ActiveLookupMetaDto"
+      required:
+        - items
+        - meta
+    UpdateBrandDto:
+      type: object
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        logoAssetId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        expectedVersion:
+          type: number
+          minimum: 0
+      required:
+        - expectedVersion
+    ChangeMasterStatusDto:
+      type: object
+      properties:
+        expectedVersion:
+          type: number
+          minimum: 0
+      required:
+        - expectedVersion
+    CategoryListDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryDto"
+        total:
+          type: number
+      required:
+        - items
+        - total
+    CreateCategoryDto:
+      type: object
+      properties:
+        parentId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        code:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        imageAssetId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        sortOrder:
+          type: number
+          minimum: 0
+          default: 0
+      required:
+        - code
+        - name
+        - slug
+    CategoryDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        parentId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        code:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        path:
+          type: string
+        depth:
+          type: number
+        description:
+          type: string
+        imageAssetId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        sortOrder:
+          type: number
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+        version:
+          type: number
+      required:
+        - id
+        - code
+        - name
+        - slug
+        - path
+        - depth
+        - sortOrder
+        - status
+        - version
+    UpdateCategoryDto:
+      type: object
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        imageAssetId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        sortOrder:
+          type: number
+          minimum: 0
+        expectedVersion:
+          type: number
+          minimum: 0
+      required:
+        - expectedVersion
+    ProductListResponseDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductSummaryDto"
+        meta:
+          $ref: "#/components/schemas/ProductListMetaDto"
+      required:
+        - items
+        - meta
+    CreateProductDto:
+      type: object
+      properties:
+        productType:
+          type: string
+          enum:
+            - STANDARD
+            - BUNDLE
+          default: STANDARD
+        productNo:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        brandId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        shortDescription:
+          type: string
+        description:
+          type: string
+        categoryIds:
+          example:
+            - "1"
+          type: array
+          items:
+            type: string
+            pattern: ^[1-9][0-9]*$
+        primaryCategoryId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+      required:
+        - productNo
+        - name
+        - slug
+        - categoryIds
+        - primaryCategoryId
+    ProductDetailDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        productNo:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        brand:
+          type: string
+        primaryCategory:
+          type: string
+        productType:
+          type: string
+          enum:
+            - STANDARD
+            - BUNDLE
+        status:
+          type: string
+          enum:
+            - DRAFT
+            - PUBLISHED
+            - ARCHIVED
+        version:
+          type: number
+          example: 0
+        minPrice:
+          type: string
+          example: "18990000.00"
+          nullable: true
+        currency:
+          type: string
+          enum:
+            - VND
+          example: VND
+        imageUrl:
+          type: string
+          format: uri
+          nullable: true
+        brandId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+          nullable: true
+        primaryCategoryId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+          nullable: true
+        shortDescription:
+          type: string
+        description:
+          type: string
+        variants:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductVariantDto"
+        media:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductMediaDto"
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductCategoryDto"
+        categoryIds:
+          example:
+            - "1"
+          type: array
+          items:
+            type: string
+            pattern: ^[1-9][0-9]*$
+      required:
+        - id
+        - productNo
+        - name
+        - slug
+        - productType
+        - status
+        - version
+        - currency
+        - variants
+        - media
+        - categories
+        - categoryIds
+    UpdateProductDto:
+      type: object
+      properties:
+        productType:
+          type: string
+          enum:
+            - STANDARD
+            - BUNDLE
+          default: STANDARD
+        productNo:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        categoryIds:
+          example:
+            - "1"
+          type: array
+          items:
+            type: string
+            pattern: ^[1-9][0-9]*$
+        primaryCategoryId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        brandId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+          nullable: true
+        shortDescription:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        expectedVersion:
+          type: number
+          minimum: 0
+      required:
+        - expectedVersion
+    ChangeProductStatusDto:
+      type: object
+      properties:
+        expectedVersion:
+          type: number
+          minimum: 0
+      required:
+        - expectedVersion
+    CreateVariantDto:
+      type: object
+      properties:
+        sku:
+          type: string
+        barcode:
+          type: string
+        name:
+          type: string
+        weightGrams:
+          type: object
+          default: 0
+        lengthMm:
+          type: number
+        widthMm:
+          type: number
+        heightMm:
+          type: number
+      required:
+        - sku
+        - name
+    UpdateVariantDto:
+      type: object
+      properties:
+        name:
+          type: string
+        barcode:
+          type: string
+          nullable: true
+        weightGrams:
+          type: number
+          minimum: 0
+        lengthMm:
+          type: number
+          minimum: 1
+          nullable: true
+        widthMm:
+          type: number
+          minimum: 1
+          nullable: true
+        heightMm:
+          type: number
+          minimum: 1
+          nullable: true
+        expectedVersion:
+          type: number
+          minimum: 0
+      required:
+        - expectedVersion
+    AttachProductMediaDto:
+      type: object
+      properties:
+        mediaAssetId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        variantId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        altText:
+          type: string
+          maxLength: 500
+        isPrimary:
+          type: boolean
+          default: false
+        expectedProductVersion:
+          type: number
+          minimum: 0
+      required:
+        - mediaAssetId
+        - expectedProductVersion
+    ProductMediaDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        mediaAssetId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        variantId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+          nullable: true
+        secureUrl:
+          type: string
+          format: uri
+        thumbnailUrl:
+          type: string
+          format: uri
+          nullable: true
+        altText:
+          type: string
+          nullable: true
+        sortOrder:
+          type: number
+          minimum: 0
+        isPrimary:
+          type: boolean
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+      required:
+        - id
+        - mediaAssetId
+        - secureUrl
+        - sortOrder
+        - isPrimary
+        - status
+    ReorderProductMediaDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReorderProductMediaItemDto"
+        expectedProductVersion:
+          type: number
+          minimum: 0
+      required:
+        - items
+        - expectedProductVersion
+    UpdateProductMediaDto:
+      type: object
+      properties:
+        altText:
+          type: string
+          maxLength: 500
+          nullable: true
+        isPrimary:
+          type: boolean
+        expectedProductVersion:
+          type: number
+          minimum: 0
+      required:
+        - expectedProductVersion
+    ChangeProductMediaStatusDto:
+      type: object
+      properties:
+        expectedProductVersion:
+          type: number
+          minimum: 0
+      required:
+        - expectedProductVersion
+    CreatePriceDto:
+      type: object
+      properties:
+        amount:
+          type: string
+          example: "18990000.00"
+          description: VAT-included VND amount greater than zero
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+        reason:
+          type: string
+          maxLength: 500
+          description: Business reason; mandatory when reducing the reference price by more than 20%
+      required:
+        - amount
+        - startsAt
+    ProductPriceTimelineDto:
+      type: object
+      properties:
+        productVariantId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        current:
+          nullable: true
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/ProductPriceWindowDto"
+        upcoming:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductPriceWindowDto"
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductPriceWindowDto"
+      required:
+        - productVariantId
+        - upcoming
+        - history
+    ReplacePriceDto:
+      type: object
+      properties:
+        amount:
+          type: string
+          example: "18990000.00"
+          description: VAT-included VND amount greater than zero
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+        reason:
+          type: string
+          maxLength: 500
+          description: Business reason; mandatory when reducing the reference price by more than 20%
+        expectedCurrentPriceId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        expectedCurrentPriceVersion:
+          type: number
+          minimum: 0
+      required:
+        - amount
+        - startsAt
+        - expectedCurrentPriceId
+        - expectedCurrentPriceVersion
+    CreateBundleDto:
+      type: object
+      properties:
+        bundleVariantId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreateBundleItemDto"
+      required:
+        - bundleVariantId
+        - items
+    ErrorDetailDto:
+      type: object
+      properties:
+        field:
+          type: string
+          example: name
+        code:
+          type: string
+          example: INVALID_VALUE
+        message:
+          type: string
+          example: name should not be empty
+      required:
+        - code
+        - message
+    ActiveLookupOptionDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        code:
+          type: string
+          example: CN-HCM-01
+        label:
+          type: string
+          example: Chi nhánh Hồ Chí Minh
+      required:
+        - id
+        - code
+        - label
+    ActiveLookupMetaDto:
+      type: object
+      properties:
+        page:
+          type: number
+          example: 1
+        limit:
+          type: number
+          example: 20
+        total:
+          type: number
+          example: 1
+        hasMore:
+          type: boolean
+          example: false
+      required:
+        - page
+        - limit
+        - total
+        - hasMore
+    ProductSummaryDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        productNo:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        brand:
+          type: string
+        primaryCategory:
+          type: string
+        productType:
+          type: string
+          enum:
+            - STANDARD
+            - BUNDLE
+        status:
+          type: string
+          enum:
+            - DRAFT
+            - PUBLISHED
+            - ARCHIVED
+        version:
+          type: number
+          example: 0
+        minPrice:
+          type: string
+          example: "18990000.00"
+          nullable: true
+        currency:
+          type: string
+          enum:
+            - VND
+          example: VND
+        imageUrl:
+          type: string
+          format: uri
+          nullable: true
+      required:
+        - id
+        - productNo
+        - name
+        - slug
+        - productType
+        - status
+        - version
+        - currency
+    ProductListMetaDto:
+      type: object
+      properties:
+        page:
+          type: number
+          example: 1
+        limit:
+          type: number
+          example: 12
+        total:
+          type: number
+          example: 2
+        totalPages:
+          type: number
+          example: 1
+      required:
+        - page
+        - limit
+        - total
+        - totalPages
+    ProductVariantDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        sku:
+          type: string
+        barcode:
+          type: string
+        name:
+          type: string
+        weightGrams:
+          type: number
+          minimum: 0
+        lengthMm:
+          type: number
+          minimum: 1
+          nullable: true
+        widthMm:
+          type: number
+          minimum: 1
+          nullable: true
+        heightMm:
+          type: number
+          minimum: 1
+          nullable: true
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+        version:
+          type: number
+          example: 0
+        effectivePrice:
+          type: string
+          example: "18990000.00"
+          nullable: true
+        effectivePriceId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+          nullable: true
+        effectivePriceVersion:
+          type: number
+          example: 0
+          nullable: true
+        bundle:
+          nullable: true
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/ProductBundleDto"
+      required:
+        - id
+        - sku
+        - name
+        - weightGrams
+        - status
+        - version
+    ProductCategoryDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        name:
+          type: string
+        isPrimary:
+          type: boolean
+      required:
+        - id
+        - name
+        - isPrimary
+    ReorderProductMediaItemDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        sortOrder:
+          type: number
+          minimum: 0
+      required:
+        - id
+        - sortOrder
+    ProductPriceWindowDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        amount:
+          type: string
+          example: "18990000.00"
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: object
+          format: date-time
+          nullable: true
+        status:
+          type: string
+        version:
+          type: number
+          minimum: 0
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - amount
+        - startsAt
+        - status
+        - version
+        - createdAt
+    CreateBundleItemDto:
+      type: object
+      properties:
+        componentVariantId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        quantity:
+          type: number
+          minimum: 1
+      required:
+        - componentVariantId
+        - quantity
+    ProductBundleDto:
+      type: object
+      properties:
+        bundleType:
+          type: string
+          enum:
+            - FIXED_VIRTUAL
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+        components:
+          type: array
+          items:
+            $ref: "#/components/schemas/BundleComponentDto"
+      required:
+        - bundleType
+        - status
+        - components
+    BundleComponentDto:
+      type: object
+      properties:
+        componentVariantId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        componentSku:
+          type: string
+        componentName:
+          type: string
+        quantity:
+          type: number
+          minimum: 1
+      required:
+        - componentVariantId
+        - componentSku
+        - componentName
+        - quantity
+  securitySchemes:
+    bearer:
+      scheme: bearer
+      bearerFormat: JWT
+      type: http

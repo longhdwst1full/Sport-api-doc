@@ -3,4 +3,4 @@ alwaysApply: true
 description: DCTD NestJS API project routing
 ---
 
-For files under `api/`, read `api/AGENTS.md` and use only `api/.agent/rules` and `api/.agent/skills`. Do not apply storefront PWA or Ant Design admin rules to backend code.
+Read `AGENTS.md` and use only this repository's `.agent/rules` and `.agent/skills`. Do not apply Storefront PWA or Ant Design Admin rules to backend code.

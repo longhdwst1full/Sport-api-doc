@@ -1,6 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { v7 as uuidv7 } from 'uuid';
 import { MutationContext } from '../../common/request/request-context';
 import {
   ActiveLookupResponseDto,
@@ -71,11 +70,9 @@ export class OrganizationService {
       throw new ConflictException('Warehouse code already exists');
     }
 
-    const branchId = uuidv7();
     try {
       return await this.organizations.saveBranchWithWarehouse(
       {
-        id: branchId,
         code: input.code,
         name: input.name,
         status: 'ACTIVE',
@@ -86,8 +83,6 @@ export class OrganizationService {
         version: 0,
       },
       {
-        id: uuidv7(),
-        branchId,
         code: input.warehouse.code,
         name: input.warehouse.name,
         status: 'ACTIVE',

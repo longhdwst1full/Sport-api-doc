@@ -5,11 +5,15 @@ import {
   IsInt,
   IsOptional,
   IsString,
-  IsUUID,
   Max,
   MaxLength,
   Min,
 } from 'class-validator';
+import {
+  ENTITY_ID_OPENAPI,
+  ENTITY_REFERENCE_OPENAPI,
+  IsEntityId,
+} from '../../common/identifiers/entity-id';
 
 export class AuditQueryDto {
   @ApiPropertyOptional({ type: Number, default: 25, minimum: 1, maximum: 100 })
@@ -27,23 +31,27 @@ export class AuditQueryDto {
 
   @ApiPropertyOptional({ maxLength: 150 }) @IsString() @MaxLength(150) @IsOptional() action?: string;
   @ApiPropertyOptional({ maxLength: 100 }) @IsString() @MaxLength(100) @IsOptional() entityType?: string;
-  @ApiPropertyOptional({ format: 'uuid' }) @IsUUID() @IsOptional() entityId?: string;
-  @ApiPropertyOptional({ format: 'uuid' }) @IsUUID() @IsOptional() actorUserId?: string;
+  @ApiPropertyOptional({ ...ENTITY_REFERENCE_OPENAPI })
+  @IsString()
+  @MaxLength(100)
+  @IsOptional()
+  entityId?: string;
+  @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI }) @IsEntityId() @IsOptional() actorUserId?: string;
   @ApiPropertyOptional({ maxLength: 100 }) @IsString() @MaxLength(100) @IsOptional() requestId?: string;
   @ApiPropertyOptional({ format: 'date-time' }) @IsDateString() @IsOptional() from?: string;
   @ApiPropertyOptional({ format: 'date-time' }) @IsDateString() @IsOptional() to?: string;
 }
 
 export class AuditLogDto {
-  @ApiProperty({ format: 'uuid' }) id: string;
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) id: string;
   @ApiProperty() requestId: string;
   @ApiProperty() sequenceNo: number;
   @ApiProperty() actorType: string;
-  @ApiPropertyOptional({ type: String, format: 'uuid', nullable: true }) actorUserId?: string | null;
+  @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI, nullable: true }) actorUserId?: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) actorDisplayName?: string | null;
   @ApiProperty() action: string;
   @ApiProperty() entityType: string;
-  @ApiPropertyOptional({ type: String, format: 'uuid', nullable: true }) entityId?: string | null;
+  @ApiPropertyOptional({ ...ENTITY_REFERENCE_OPENAPI, nullable: true }) entityId?: string | null;
   @ApiPropertyOptional({ type: Object, nullable: true }) before?: object | null;
   @ApiPropertyOptional({ type: Object, nullable: true }) after?: object | null;
   @ApiPropertyOptional({ type: String, nullable: true }) reason?: string | null;

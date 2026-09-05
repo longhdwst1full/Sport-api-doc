@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
+import { toDatabaseId, toEntityId, toOptionalEntityId } from '../../common/identifiers/entity-id';
 import { ScopeType } from '../iam/iam.types';
 import type { AuthPrincipal } from '../auth/auth.types';
 import { AuditListDto, AuditQueryDto } from './audit.dto';
@@ -26,7 +27,7 @@ export class AuditService {
         : {}),
       ...(query.entityType ? { entityType: query.entityType.trim().toUpperCase() } : {}),
       ...(query.entityId ? { entityId: query.entityId } : {}),
-      ...(query.actorUserId ? { actorUserId: query.actorUserId } : {}),
+      ...(query.actorUserId ? { actorUserId: toDatabaseId(query.actorUserId) } : {}),
       ...(query.requestId
         ? { requestId: { contains: query.requestId.trim(), mode: 'insensitive' } }
         : {}),
@@ -39,7 +40,7 @@ export class AuditService {
       ...(cursor && {
         OR: [
           { createdAt: { lt: new Date(cursor.createdAt) } },
-          { createdAt: new Date(cursor.createdAt), id: { lt: cursor.id } },
+          { createdAt: new Date(cursor.createdAt), id: { lt: toDatabaseId(cursor.id) } },
         ],
       }),
     };
@@ -54,11 +55,11 @@ export class AuditService {
     const last = page.at(-1);
     return {
       items: page.map((row) => ({
-        id: row.id,
+        id: toEntityId(row.id),
         requestId: row.requestId,
         sequenceNo: row.sequenceNo,
         actorType: row.actorType,
-        actorUserId: row.actorUserId,
+        actorUserId: toOptionalEntityId(row.actorUserId),
         actorDisplayName: row.actor?.displayName ?? null,
         action: row.action,
         entityType: row.entityType,
@@ -69,7 +70,7 @@ export class AuditService {
         createdAt: row.createdAt.toISOString(),
       })),
       nextCursor: hasMore && last
-        ? Buffer.from(JSON.stringify({ createdAt: last.createdAt.toISOString(), id: last.id }))
+        ? Buffer.from(JSON.stringify({ createdAt: last.createdAt.toISOString(), id: toEntityId(last.id) }))
             .toString('base64url')
         : null,
     };

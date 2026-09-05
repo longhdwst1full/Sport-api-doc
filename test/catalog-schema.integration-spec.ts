@@ -3,63 +3,69 @@ import { v7 as uuidv7 } from 'uuid';
 
 describe('Catalog Wave 2 PostgreSQL invariants', () => {
   const prisma = new PrismaClient();
-  const productId = uuidv7();
-  const otherProductId = uuidv7();
-  const bundleVariantId = uuidv7();
-  const componentVariantId = uuidv7();
-  const otherVariantId = uuidv7();
-  const bundleId = uuidv7();
-  const mediaAssetIds = [uuidv7(), uuidv7()];
-  const actorId = '00000000-0000-7000-8000-000000000010';
+  const suffix = uuidv7();
+  let productId: bigint;
+  let otherProductId: bigint;
+  let bundleVariantId: bigint;
+  let componentVariantId: bigint;
+  let otherVariantId: bigint;
+  let bundleId: bigint;
+  let actorId: bigint;
+  let invalidCategoryId: bigint | undefined;
+  const mediaAssetIds: bigint[] = [];
 
   beforeAll(async () => {
-    await prisma.product.createMany({
-      data: [
-        {
-          id: productId,
-          productNo: `P-${productId.slice(-8)}`,
+    const actor = await prisma.user.findFirstOrThrow({
+      where: { normalizedEmail: 'bootstrap-admin@example.invalid' },
+    });
+    actorId = actor.id;
+    const product = await prisma.product.create({
+      data: {
+          productNo: `P-${suffix.slice(-8)}`,
           name: 'Catalog integration product',
-          slug: `catalog-${productId}`,
+          slug: `catalog-${suffix}`,
           productType: 'BUNDLE',
           status: 'DRAFT',
           createdBy: actorId,
           updatedBy: actorId,
-        },
-        {
-          id: otherProductId,
-          productNo: `P-${otherProductId.slice(-8)}`,
+      },
+    });
+    productId = product.id;
+    const otherProduct = await prisma.product.create({
+      data: {
+          productNo: `O-${suffix.slice(-8)}`,
           name: 'Other integration product',
-          slug: `catalog-${otherProductId}`,
+          slug: `other-catalog-${suffix}`,
           status: 'DRAFT',
           createdBy: actorId,
           updatedBy: actorId,
-        },
-      ],
-    });
-    await prisma.productVariant.createMany({
-      data: [
-        { id: bundleVariantId, productId, sku: `SKU-${bundleVariantId}`, name: 'Bundle SKU' },
-        { id: componentVariantId, productId, sku: `SKU-${componentVariantId}`, name: 'Component SKU' },
-        { id: otherVariantId, productId: otherProductId, sku: `SKU-${otherVariantId}`, name: 'Other SKU' },
-      ],
-    });
-    await prisma.productBundle.create({
-      data: {
-        id: bundleId,
-        bundleVariantId,
-        createdBy: actorId,
-        updatedBy: actorId,
       },
     });
-    await prisma.mediaAsset.createMany({
-      data: mediaAssetIds.map((id, index) => ({
-        id,
-        provider: 'CLOUDINARY',
-        providerAssetId: `integration-${id}`,
-        publicId: `sport-sys/sport/integration-${id}`,
-        secureUrl: `https://example.invalid/${index}.jpg`,
-      })),
+    otherProductId = otherProduct.id;
+    bundleVariantId = (await prisma.productVariant.create({
+      data: { productId, sku: `BUNDLE-${suffix}`, name: 'Bundle SKU' },
+    })).id;
+    componentVariantId = (await prisma.productVariant.create({
+      data: { productId, sku: `COMPONENT-${suffix}`, name: 'Component SKU' },
+    })).id;
+    otherVariantId = (await prisma.productVariant.create({
+      data: { productId: otherProductId, sku: `OTHER-${suffix}`, name: 'Other SKU' },
+    })).id;
+    const bundle = await prisma.productBundle.create({
+      data: { bundleVariantId, createdBy: actorId, updatedBy: actorId },
     });
+    bundleId = bundle.id;
+    for (const index of [0, 1]) {
+      const asset = await prisma.mediaAsset.create({
+        data: {
+        provider: 'CLOUDINARY',
+        providerAssetId: `integration-${suffix}-${index}`,
+        publicId: `sport-sys/sport/integration-${suffix}-${index}`,
+        secureUrl: `https://example.invalid/${index}.jpg`,
+        },
+      });
+      mediaAssetIds.push(asset.id);
+    }
   });
 
   afterAll(async () => {
@@ -70,6 +76,7 @@ describe('Catalog Wave 2 PostgreSQL invariants', () => {
     await prisma.productVariant.deleteMany({ where: { id: { in: [bundleVariantId, componentVariantId, otherVariantId] } } });
     await prisma.product.deleteMany({ where: { id: { in: [productId, otherProductId] } } });
     await prisma.mediaAsset.deleteMany({ where: { id: { in: mediaAssetIds } } });
+    if (invalidCategoryId) await prisma.category.delete({ where: { id: invalidCategoryId } });
     await prisma.$disconnect();
   });
 
@@ -77,7 +84,6 @@ describe('Catalog Wave 2 PostgreSQL invariants', () => {
     const start = new Date('2026-01-01T00:00:00.000Z');
     await prisma.productPrice.create({
       data: {
-        id: uuidv7(),
         productVariantId: componentVariantId,
         amount: '100000.00',
         startsAt: start,
@@ -90,7 +96,6 @@ describe('Catalog Wave 2 PostgreSQL invariants', () => {
     await expect(
       prisma.productPrice.create({
         data: {
-          id: uuidv7(),
           productVariantId: componentVariantId,
           amount: '120000.00',
           startsAt: new Date('2026-06-01T00:00:00.000Z'),
@@ -106,7 +111,6 @@ describe('Catalog Wave 2 PostgreSQL invariants', () => {
     await expect(
       prisma.productPrice.create({
         data: {
-          id: uuidv7(),
           productVariantId: otherVariantId,
           amount: '0.00',
           startsAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -130,7 +134,6 @@ describe('Catalog Wave 2 PostgreSQL invariants', () => {
   it('allows only one active primary image at each product level', async () => {
     await prisma.productMedia.create({
       data: {
-        id: uuidv7(),
         productId,
         mediaAssetId: mediaAssetIds[0],
         isPrimary: true,
@@ -139,7 +142,6 @@ describe('Catalog Wave 2 PostgreSQL invariants', () => {
     await expect(
       prisma.productMedia.create({
         data: {
-          id: uuidv7(),
           productId,
           mediaAssetId: mediaAssetIds[1],
           isPrimary: true,
@@ -152,7 +154,6 @@ describe('Catalog Wave 2 PostgreSQL invariants', () => {
     await expect(
       prisma.productMedia.create({
         data: {
-          id: uuidv7(),
           productId,
           variantId: otherVariantId,
           mediaAssetId: mediaAssetIds[1],
@@ -165,7 +166,6 @@ describe('Catalog Wave 2 PostgreSQL invariants', () => {
     await expect(
       prisma.bundleItem.create({
         data: {
-          id: uuidv7(),
           productBundleId: bundleId,
           componentVariantId: bundleVariantId,
           quantity: 1,
@@ -175,16 +175,21 @@ describe('Catalog Wave 2 PostgreSQL invariants', () => {
   });
 
   it('rejects a category that points to itself', async () => {
-    const categoryId = uuidv7();
+    const category = await prisma.category.create({
+      data: {
+        code: `CAT-${suffix.slice(-8)}`,
+        name: 'Invalid category',
+        slug: `invalid-${suffix}`,
+        path: 'PENDING',
+      },
+    });
+    invalidCategoryId = category.id;
     await expect(
-      prisma.category.create({
+      prisma.category.update({
+        where: { id: category.id },
         data: {
-          id: categoryId,
-          parentId: categoryId,
-          code: `CAT-${categoryId.slice(-8)}`,
-          name: 'Invalid category',
-          slug: `invalid-${categoryId}`,
-          path: categoryId,
+          parentId: category.id,
+          path: category.id.toString(),
         },
       }),
     ).rejects.toThrow();

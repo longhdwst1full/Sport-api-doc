@@ -103,7 +103,7 @@ export async function writeOpenApiArtifacts(
   apiRoot: string,
 ): Promise<void> {
   const apiOutputDirectory = resolve(apiRoot, 'openapi');
-  const documentationDirectory = resolve(apiRoot, '..', 'document', 'api');
+  const documentationDirectory = resolve(apiRoot, 'document', 'api');
   const sliceDirectories = new Set(
     CONTRACT_SLICES.map(({ relativePath }) =>
       resolve(documentationDirectory, relativePath.split('/')[0]),

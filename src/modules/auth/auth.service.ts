@@ -10,6 +10,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Prisma, User } from '@prisma/client';
 import { hash, verify } from 'argon2';
 import { v7 as uuidv7 } from 'uuid';
+import { toDatabaseId, toEntityId } from '../../common/identifiers/entity-id';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditWriter } from '../audit/audit.writer';
 import {
@@ -94,7 +95,9 @@ export class AuthService {
     requestId: string,
   ): Promise<void> {
     this.ensureDatabaseEnabled();
-    const user = await this.prisma.user.findUnique({ where: { id: principal.userId } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: toDatabaseId(principal.userId) },
+    });
     if (!user?.passwordHash || user.status !== USER_STATUS.ACTIVE) {
       throw new UnauthorizedException('Account is unavailable');
     }
@@ -133,10 +136,10 @@ export class AuthService {
           requestId,
           sequenceNo: 1,
           actorType: 'USER',
-          actorUserId: user.id,
+          actorUserId: toEntityId(user.id),
           action: AUTH_AUDIT_ACTION.PASSWORD_CHANGE,
           entityType: 'USER',
-          entityId: user.id,
+          entityId: toEntityId(user.id),
           before: { mustChangePassword: user.mustChangePassword },
           after: { mustChangePassword: false },
         },
@@ -162,13 +165,11 @@ export class AuthService {
       });
     }
 
-    const userId = uuidv7();
     const passwordHash = await hash(input.password.trim());
     try {
       return await this.prisma.$transaction(async (transaction) => {
         const user = await transaction.user.create({
           data: {
-            id: userId,
             userType: USER_TYPE.CUSTOMER,
             email: normalizedEmail,
             normalizedEmail,
@@ -186,7 +187,7 @@ export class AuthService {
             actorType: 'GUEST',
             action: 'auth.customer.register',
             entityType: 'USER',
-            entityId: user.id,
+            entityId: toEntityId(user.id),
             after: {
               userType: USER_TYPE.CUSTOMER,
               status: USER_STATUS.ACTIVE,
@@ -269,8 +270,8 @@ export class AuthService {
     const now = new Date();
     const session = await this.prisma.authSession.findFirst({
       where: {
-        id: payload.sid,
-        userId: payload.sub,
+        id: toDatabaseId(payload.sid),
+        userId: toDatabaseId(payload.sub),
         revokedAt: null,
         expiresAt: { gt: now },
       },
@@ -305,8 +306,8 @@ export class AuthService {
       ({ role }) => role.status === ROLE_STATUS.ACTIVE,
     );
     return {
-      userId: session.user.id,
-      sessionId: session.id,
+      userId: toEntityId(session.user.id),
+      sessionId: toEntityId(session.id),
       displayName: session.user.displayName,
       permissionVersion: session.user.permissionVersion.toString(),
       permissions: [
@@ -318,7 +319,7 @@ export class AuthService {
       ],
       scopes: activeAssignments.map((assignment) => ({
         type: assignment.scopeType as ScopeType,
-        ...(assignment.branchId ? { branchId: assignment.branchId } : {}),
+        ...(assignment.branchId ? { branchId: toEntityId(assignment.branchId) } : {}),
       })),
       mustChangePassword: session.user.mustChangePassword,
     };
@@ -327,14 +328,12 @@ export class AuthService {
   private async createSession(
     transaction: Prisma.TransactionClient,
     user: User,
-    rotatedFromId?: string,
+    rotatedFromId?: bigint,
   ): Promise<TokenPairDto> {
-    const sessionId = uuidv7();
     const refreshToken = randomBytes(48).toString('base64url');
     const refreshTtlSeconds = this.config.get<number>('app.jwt.refreshTtlSeconds') ?? 2_592_000;
-    await transaction.authSession.create({
+    const session = await transaction.authSession.create({
       data: {
-        id: sessionId,
         userId: user.id,
         refreshTokenHash: this.hashRefreshToken(refreshToken),
         rotatedFromId,
@@ -343,7 +342,12 @@ export class AuthService {
     });
     const accessTtlSeconds = this.config.get<number>('app.jwt.accessTtlSeconds') ?? 900;
     const accessToken = await this.jwt.signAsync(
-      { sub: user.id, sid: sessionId, pv: user.permissionVersion.toString(), typ: 'access' },
+      {
+        sub: toEntityId(user.id),
+        sid: toEntityId(session.id),
+        pv: user.permissionVersion.toString(),
+        typ: 'access',
+      },
       { expiresIn: accessTtlSeconds },
     );
     return {
@@ -385,7 +389,7 @@ export class AuthService {
           END,
           "version" = "version" + 1,
           "updated_at" = NOW()
-        WHERE "id" = ${user.id}::uuid AND "status" = ${USER_STATUS.ACTIVE}
+        WHERE "id" = ${user.id}::bigint AND "status" = ${USER_STATUS.ACTIVE}
         RETURNING
           "status",
           "failed_login_attempts" AS "failedLoginAttempts",
@@ -405,7 +409,7 @@ export class AuthService {
           actorType: 'GUEST',
           action: AUTH_AUDIT_ACTION.ACCOUNT_AUTO_LOCK,
           entityType: 'USER',
-          entityId: user.id,
+          entityId: toEntityId(user.id),
           before: {
             status: USER_STATUS.ACTIVE,
             failedLoginAttempts: AUTH_SECURITY.MAX_FAILED_LOGIN_ATTEMPTS - 1,

@@ -4,10 +4,10 @@ import {
   IsIn,
   IsNotEmpty,
   IsString,
-  IsUUID,
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { ENTITY_ID_OPENAPI, IsEntityId } from '../../common/identifiers/entity-id';
 import {
   ROLE_ASSIGNMENT_STATUS,
   ROLE_STATUS,
@@ -31,7 +31,7 @@ export class PermissionDto {
 }
 
 export class RoleDto {
-  @ApiProperty({ format: 'uuid' }) id: string;
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) id: string;
   @ApiProperty({ example: 'BRANCH_MANAGER' }) code: string;
   @ApiProperty({ example: 'Branch Manager' }) name: string;
   @ApiPropertyOptional() description?: string;
@@ -42,19 +42,19 @@ export class RoleDto {
 }
 
 export class UserRoleAssignmentDto {
-  @ApiProperty({ format: 'uuid' }) id: string;
-  @ApiProperty({ format: 'uuid' }) userId: string;
-  @ApiProperty({ format: 'uuid' }) roleId: string;
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) id: string;
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) userId: string;
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) roleId: string;
   @ApiProperty() roleCode: string;
   @ApiProperty({ enum: ScopeType }) scopeType: ScopeType;
-  @ApiPropertyOptional({ format: 'uuid' }) branchId?: string;
+  @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI }) branchId?: string;
   @ApiProperty({ enum: [ROLE_ASSIGNMENT_STATUS.ACTIVE] })
   status: typeof ROLE_ASSIGNMENT_STATUS.ACTIVE;
   @ApiProperty({ format: 'date-time' }) validFrom: string;
 }
 
 export class UserDto {
-  @ApiProperty({ format: 'uuid' }) id: string;
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) id: string;
   @ApiProperty({ example: 'Long Hoàng' }) displayName: string;
   @ApiProperty({ example: 'lo***@dctd.vn' }) maskedEmail: string;
   @ApiProperty({ enum: [USER_TYPE.STAFF, USER_TYPE.SYSTEM] })
@@ -93,8 +93,8 @@ export class AssignUserRoleDto {
   @IsIn([ScopeType.BRANCH])
   scopeType: typeof ScopeType.BRANCH;
 
-  @ApiProperty({ format: 'uuid' })
-  @IsUUID()
+  @ApiProperty({ ...ENTITY_ID_OPENAPI })
+  @IsEntityId()
   branchId: string;
 }
 
@@ -116,8 +116,8 @@ export class CreateStaffUserDto {
     | typeof SystemRoleCode.BRANCH_MANAGER
     | typeof SystemRoleCode.STAFF;
 
-  @ApiProperty({ format: 'uuid' })
-  @IsUUID()
+  @ApiProperty({ ...ENTITY_ID_OPENAPI })
+  @IsEntityId()
   branchId: string;
 }
 

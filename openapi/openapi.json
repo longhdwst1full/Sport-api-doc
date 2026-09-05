@@ -339,7 +339,8 @@
             "in": "query",
             "description": "Restrict lookup to one branch",
             "schema": {
-              "format": "uuid",
+              "pattern": "^[1-9][0-9]*$",
+              "example": "1",
               "type": "string"
             }
           }
@@ -795,8 +796,10 @@
             "name": "entityId",
             "required": false,
             "in": "query",
+            "description": "Numeric entity ID, or a historical UUID retained by migrated audit/ledger data",
             "schema": {
-              "format": "uuid",
+              "pattern": "^(?:[1-9][0-9]*|[0-9a-fA-F]{8}-[0-9a-fA-F-]{27,})$",
+              "example": "1",
               "type": "string"
             }
           },
@@ -805,7 +808,8 @@
             "required": false,
             "in": "query",
             "schema": {
-              "format": "uuid",
+              "pattern": "^[1-9][0-9]*$",
+              "example": "1",
               "type": "string"
             }
           },
@@ -5785,7 +5789,8 @@
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "code": {
             "type": "string",
@@ -5856,11 +5861,13 @@
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "branchId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "code": {
             "type": "string",
@@ -5920,7 +5927,8 @@
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "code": {
             "type": "string",
@@ -6119,7 +6127,8 @@
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "requestId": {
             "type": "string"
@@ -6132,7 +6141,8 @@
           },
           "actorUserId": {
             "type": "string",
-            "format": "uuid",
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1",
             "nullable": true
           },
           "actorDisplayName": {
@@ -6147,7 +6157,9 @@
           },
           "entityId": {
             "type": "string",
-            "format": "uuid",
+            "pattern": "^(?:[1-9][0-9]*|[0-9a-fA-F]{8}-[0-9a-fA-F-]{27,})$",
+            "example": "1",
+            "description": "Numeric entity ID, or a historical UUID retained by migrated audit/ledger data",
             "nullable": true
           },
           "before": {
@@ -6200,15 +6212,18 @@
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "userId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "roleId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "roleCode": {
             "type": "string"
@@ -6222,7 +6237,8 @@
           },
           "branchId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "status": {
             "type": "string",
@@ -6250,7 +6266,8 @@
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "displayName": {
             "type": "string",
@@ -6354,7 +6371,8 @@
           },
           "branchId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           }
         },
         "required": [
@@ -6383,7 +6401,8 @@
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "code": {
             "type": "string",
@@ -6509,7 +6528,8 @@
           },
           "branchId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           }
         },
         "required": [
@@ -6628,7 +6648,8 @@
           },
           "branchId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           }
         },
         "required": [
@@ -6640,7 +6661,8 @@
         "properties": {
           "userId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "displayName": {
             "type": "string"
@@ -6707,7 +6729,8 @@
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "code": {
             "type": "string"
@@ -6723,7 +6746,8 @@
           },
           "logoAssetId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "status": {
             "type": "string",
@@ -6780,7 +6804,8 @@
           },
           "logoAssetId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           }
         },
         "required": [
@@ -6803,7 +6828,8 @@
           },
           "logoAssetId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "expectedVersion": {
             "type": "number",
@@ -6831,11 +6857,13 @@
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "parentId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "code": {
             "type": "string"
@@ -6857,7 +6885,8 @@
           },
           "imageAssetId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "sortOrder": {
             "type": "number"
@@ -6908,7 +6937,8 @@
         "properties": {
           "parentId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "code": {
             "type": "string"
@@ -6924,7 +6954,8 @@
           },
           "imageAssetId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "sortOrder": {
             "type": "number",
@@ -6952,7 +6983,8 @@
           },
           "imageAssetId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "sortOrder": {
             "type": "number",
@@ -6972,7 +7004,8 @@
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "productNo": {
             "type": "string"
@@ -7087,7 +7120,8 @@
         "properties": {
           "componentVariantId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "componentSku": {
             "type": "string"
@@ -7141,7 +7175,8 @@
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "sku": {
             "type": "string"
@@ -7189,7 +7224,8 @@
           },
           "effectivePriceId": {
             "type": "string",
-            "format": "uuid",
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1",
             "nullable": true
           },
           "effectivePriceVersion": {
@@ -7221,15 +7257,18 @@
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "mediaAssetId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "variantId": {
-            "type": "object",
-            "format": "uuid",
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1",
             "nullable": true
           },
           "secureUrl": {
@@ -7274,7 +7313,8 @@
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "name": {
             "type": "string"
@@ -7294,7 +7334,8 @@
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "productNo": {
             "type": "string"
@@ -7349,12 +7390,14 @@
           },
           "brandId": {
             "type": "string",
-            "format": "uuid",
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1",
             "nullable": true
           },
           "primaryCategoryId": {
             "type": "string",
-            "format": "uuid",
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1",
             "nullable": true
           },
           "shortDescription": {
@@ -7382,10 +7425,13 @@
             }
           },
           "categoryIds": {
+            "example": [
+              "1"
+            ],
             "type": "array",
             "items": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]*$"
             }
           }
         },
@@ -7426,7 +7472,8 @@
           },
           "brandId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "shortDescription": {
             "type": "string"
@@ -7435,15 +7482,19 @@
             "type": "string"
           },
           "categoryIds": {
+            "example": [
+              "1"
+            ],
             "type": "array",
             "items": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]*$"
             }
           },
           "primaryCategoryId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           }
         },
         "required": [
@@ -7475,19 +7526,24 @@
             "type": "string"
           },
           "categoryIds": {
+            "example": [
+              "1"
+            ],
             "type": "array",
             "items": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]*$"
             }
           },
           "primaryCategoryId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "brandId": {
             "type": "string",
-            "format": "uuid",
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1",
             "nullable": true
           },
           "shortDescription": {
@@ -7581,11 +7637,13 @@
         "properties": {
           "mediaAssetId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "variantId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "altText": {
             "type": "string",
@@ -7610,7 +7668,8 @@
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "sortOrder": {
             "type": "number",
@@ -7705,7 +7764,8 @@
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "amount": {
             "type": "string",
@@ -7746,7 +7806,8 @@
         "properties": {
           "productVariantId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "current": {
             "nullable": true,
@@ -7799,7 +7860,8 @@
           },
           "expectedCurrentPriceId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "expectedCurrentPriceVersion": {
             "type": "number",
@@ -7830,7 +7892,8 @@
         "properties": {
           "componentVariantId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "quantity": {
             "type": "number",
@@ -7847,7 +7910,8 @@
         "properties": {
           "bundleVariantId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "items": {
             "type": "array",
@@ -8375,7 +8439,8 @@
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
           },
           "provider": {
             "type": "string",

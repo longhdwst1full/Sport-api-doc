@@ -13,13 +13,13 @@ describe('AuthService login protection', () => {
     let attempts = 0;
     let status = 'ACTIVE';
     const user = {
-      id: '00000000-0000-7000-8000-000000000101',
+      id: 101n,
       userType: 'STAFF',
       normalizedEmail: 'staff@example.com',
       passwordHash: await hash('Correct-password-123!'),
       displayName: 'Staff',
       status,
-    } as User;
+    } as unknown as User;
     const transaction = {
       $queryRaw: jest.fn().mockImplementation(() => {
         attempts += 1;
@@ -92,7 +92,7 @@ describe('AuthService login protection', () => {
 
   it('resets failed attempts and lock metadata after a successful login', async () => {
     const user = {
-      id: '00000000-0000-7000-8000-000000000102',
+      id: 102n,
       userType: 'STAFF',
       normalizedEmail: 'staff.success@example.com',
       passwordHash: await hash('Correct-password-123!'),
@@ -101,7 +101,7 @@ describe('AuthService login protection', () => {
       failedLoginAttempts: 3,
       permissionVersion: 7n,
       mustChangePassword: false,
-    } as User;
+    } as unknown as User;
     const updateMany = jest.fn((input: unknown) => {
       void input;
       return Promise.resolve({ count: 1 });

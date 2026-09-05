@@ -30,8 +30,8 @@ export async function resetBootstrapAdmin(
   const requestId = `bootstrap-reset-${uuidv7()}`;
 
   return prisma.$transaction(async (transaction) => {
-    const user = await transaction.user.findUnique({
-      where: { id: BOOTSTRAP_ADMIN.ID },
+    const user = await transaction.user.findFirst({
+      where: { normalizedEmail: BOOTSTRAP_ADMIN.EMAIL },
       include: {
         roleAssignments: {
           where: {
@@ -82,13 +82,12 @@ export async function resetBootstrapAdmin(
     });
     await transaction.auditLog.create({
       data: {
-        id: uuidv7(),
         requestId,
         sequenceNo: 1,
         actorType: 'SYSTEM',
         action: BOOTSTRAP_ADMIN.AUDIT_ACTION,
         entityType: 'USER',
-        entityId: user.id,
+        entityId: user.id.toString(),
         beforeJson: before,
         afterJson: {
           status: USER_STATUS.ACTIVE,

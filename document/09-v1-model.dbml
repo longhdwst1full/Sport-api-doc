@@ -1,0 +1,1402 @@
+Project dctd_utc_v1 {
+  database_type: 'PostgreSQL'
+  Note: 'V1 unified model. Entity IDs are BIGINT IDENTITY; APIs expose decimal strings. Migrated physical tables keep old UUID in nullable unique legacy_id. Tables marked [P0] are launch core; [P1] are V1 extensions.'
+}
+
+// ORGANIZATION + IAM
+Table branches {
+  id bigint [pk, increment]
+  legacy_id uuid [unique, note: 'UUID lịch sử; NULL cho bản ghi mới']
+  code varchar(32) [not null, unique]
+  name varchar(255) [not null]
+  status varchar(24) [not null, default: 'ACTIVE']
+  failed_login_attempts int [not null, default: 0, note: 'Số lần sai liên tiếp; reset về 0 khi login thành công hoặc Admin unlock']
+  must_change_password boolean [not null, default: false, note: 'true cho staff mới và sau unlock/reset']
+  locked_at timestamptz
+  lock_reason varchar(255)
+  phone varchar(32)
+  email varchar(255)
+  address_json jsonb [not null]
+  timezone varchar(64) [not null, default: 'Asia/Ho_Chi_Minh']
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  created_by uuid
+  updated_at timestamptz [not null]
+  updated_by uuid
+  Note: '[P0] Chi nhánh bán hàng; dùng status ACTIVE|INACTIVE, không soft-delete.'
+}
+
+Table warehouses {
+  id bigint [pk, increment]
+  legacy_id uuid [unique, note: 'UUID lịch sử; NULL cho bản ghi mới']
+  branch_id bigint [not null, unique]
+  code varchar(32) [not null, unique]
+  name varchar(255) [not null]
+  status varchar(24) [not null, default: 'ACTIVE']
+  is_primary boolean [not null, default: true]
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  created_by uuid
+  updated_at timestamptz [not null]
+  updated_by uuid
+  Note: '[P0] V1 chỉ một warehouse ACTIVE/primary mỗi branch; dùng status ACTIVE|INACTIVE, không soft-delete.'
+}
+
+Table users {
+  id bigint [pk, increment]
+  legacy_id uuid [unique, note: 'UUID lịch sử; NULL cho bản ghi mới']
+  user_type varchar(24) [not null, note: 'CUSTOMER|STAFF|SYSTEM']
+  email varchar(255)
+  normalized_email varchar(255) [note: 'lowercase trimmed; login identifier email']
+  phone varchar(32)
+  normalized_phone varchar(32) [note: 'Vietnam V1 validated then stored E.164, e.g. +84912345678; login identifier phone']
+  password_hash varchar(255)
+  display_name varchar(255) [not null]
+  status varchar(24) [not null, default: 'ACTIVE']
+  email_verified_at timestamptz
+  phone_verified_at timestamptz
+  permission_version bigint [not null, default: 0]
+  last_login_at timestamptz
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  Note: '[P0] Public register chỉ tạo CUSTOMER ACTIVE và yêu cầu email hoặc phone; V1 tạm chưa verification. Sai mật khẩu lần 5 chuyển LOCKED, revoke session và audit atomic; staff mới/unlock bắt buộc đổi mật khẩu. Development seed có đúng một bootstrap OWNER, chỉ khởi tạo password khi còn thiếu và không reset password đã đổi. Break-glass recovery chỉ phục hồi fixed bootstrap identity, reset password tạm, revoke session, bắt đổi password và ghi audit atomic. Unique indexes cho normalized_email/phone khi khác null; INACTIVE rồi anonymize, không soft-delete.'
+}
+
+Table auth_sessions {
+  id bigint [pk, increment]
+  legacy_id uuid [unique, note: 'UUID lịch sử; NULL cho bản ghi mới']
+  user_id bigint [not null]
+  refresh_token_hash varchar(255) [not null, unique]
+  rotated_from_id bigint [unique]
+  device_id varchar(128)
+  device_info jsonb
+  ip_hash varchar(128)
+  user_agent_hash varchar(128)
+  expires_at timestamptz [not null]
+  last_used_at timestamptz
+  revoked_at timestamptz
+  revoke_reason varchar(255)
+  created_at timestamptz [not null]
+  Note: '[P0] Refresh-token rotation; rotated_from_id unique để một session chỉ rotate một lần; không lưu raw token.'
+}
+
+Table roles {
+  id bigint [pk, increment]
+  legacy_id uuid [unique, note: 'UUID lịch sử; NULL cho bản ghi mới']
+  code varchar(100) [not null, unique]
+  name varchar(255) [not null]
+  description text
+  status varchar(24) [not null, default: 'ACTIVE']
+  is_system boolean [not null, default: false]
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  created_by uuid
+  updated_at timestamptz [not null]
+  updated_by uuid
+  Note: '[P0] Role là bundle quyền; data scope nằm ở assignment; dùng ACTIVE|INACTIVE.'
+}
+
+Table permissions {
+  id bigint [pk, increment]
+  legacy_id uuid [unique, note: 'UUID lịch sử; NULL cho bản ghi mới']
+  code varchar(150) [not null, unique]
+  module varchar(64) [not null]
+  action varchar(64) [not null]
+  description text
+  is_sensitive boolean [not null, default: false]
+  created_at timestamptz [not null]
+  Note: '[P0] Business code ổn định; không suy ra từ URL.'
+}
+
+Table role_permissions {
+  role_id bigint [not null]
+  permission_id bigint [not null]
+  granted_by uuid
+  created_at timestamptz [not null]
+  indexes { (role_id, permission_id) [pk] }
+  Note: '[P0] Role n-n Permission.'
+}
+
+Table user_role_assignments {
+  id bigint [pk, increment]
+  legacy_id uuid [unique, note: 'UUID lịch sử; NULL cho bản ghi mới']
+  user_id bigint [not null]
+  role_id bigint [not null]
+  scope_type varchar(24) [not null, note: 'GLOBAL|BRANCH|WAREHOUSE|OWN']
+  branch_id bigint
+  warehouse_id bigint
+  valid_from timestamptz [not null]
+  valid_to timestamptz
+  status varchar(24) [not null, default: 'ACTIVE']
+  assigned_by uuid [not null]
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  indexes { (user_id, role_id, scope_type, branch_id, warehouse_id) [unique] }
+  Note: '[P0] V1 có đúng một OWNER GLOBAL gắn fixed bootstrap Admin; API cấm gán/thu hồi OWNER. Chỉ Admin gốc quản lý BRANCH_MANAGER/STAFF theo BRANCH; DB giữ WAREHOUSE/OWN dormant để mở rộng.'
+}
+
+Table audit_logs {
+  id bigint [pk, increment]
+  legacy_id uuid [unique, note: 'UUID lịch sử; NULL cho bản ghi mới']
+  request_id varchar(100) [not null]
+  sequence_no int [not null]
+  actor_type varchar(24) [not null, note: 'USER|SYSTEM|GUEST; USER bắt buộc actor_user_id']
+  actor_user_id bigint [note: 'FK RESTRICT; SYSTEM/GUEST phải null']
+  action varchar(150) [not null]
+  entity_type varchar(100) [not null]
+  entity_id text
+  before_json jsonb
+  after_json jsonb
+  reason text
+  ip_hash varchar(128)
+  user_agent_hash varchar(128)
+  created_at timestamptz [not null]
+  indexes {
+    (request_id, sequence_no) [unique]
+    (created_at, id)
+  }
+  Note: '[P0] Append-only UPDATE/DELETE/TRUNCATE; actor consistency CHECK; entity_id polymorphic nên không tạo FK; query cursor mới nhất trước, chỉ GLOBAL owner và redact credential/PII.'
+}
+
+Table approval_requests {
+  id bigint [pk, increment]
+  approval_type varchar(64) [not null]
+  entity_type varchar(100) [not null]
+  entity_id text
+  business_key varchar(150) [not null, unique]
+  proposed_payload jsonb [not null]
+  reason text [not null]
+  status varchar(24) [not null, default: 'DRAFT']
+  maker_id bigint [not null]
+  submitted_at timestamptz
+  approver_id bigint
+  decided_at timestamptz
+  decision_reason text
+  expires_at timestamptz
+  execution_status varchar(24)
+  execution_error text
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  Note: '[P1] Generic maker-checker; maker_id != approver_id.'
+}
+
+// CUSTOMER
+Table customers {
+  id bigint [pk, increment]
+  user_id bigint [unique]
+  customer_no varchar(32) [not null, unique]
+  full_name varchar(255) [not null]
+  email varchar(255)
+  normalized_email varchar(255)
+  phone varchar(32) [not null]
+  normalized_phone varchar(32) [not null]
+  status varchar(24) [not null, default: 'ACTIVE']
+  marketing_consent boolean [not null, default: false]
+  consent_at timestamptz
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  deleted_at timestamptz
+  Note: '[P0] Customer tồn tại độc lập; guest có user_id null.'
+}
+
+Table customer_addresses {
+  id bigint [pk, increment]
+  customer_id bigint [not null]
+  address_type varchar(24) [not null, default: 'SHIPPING']
+  recipient_name varchar(255) [not null]
+  recipient_phone varchar(32) [not null]
+  address_line varchar(500) [not null]
+  ward_code varchar(32)
+  ward_name varchar(255)
+  district_code varchar(32)
+  district_name varchar(255)
+  province_code varchar(32) [not null]
+  province_name varchar(255) [not null]
+  postal_code varchar(20)
+  country_code char(2) [not null, default: 'VN']
+  is_default boolean [not null, default: false]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  deleted_at timestamptz
+  Note: '[P0] Partial unique một default active/customer/address_type.'
+}
+
+// EXTERNAL MEDIA
+Table media_assets {
+  id bigint [pk, increment]
+  legacy_id uuid [unique, note: 'UUID lịch sử; NULL cho bản ghi mới']
+  provider varchar(32) [not null, note: 'CLOUDINARY|IMAGEKIT|S3_COMPATIBLE|OTHER']
+  provider_asset_id varchar(255) [not null]
+  public_id varchar(500) [not null]
+  resource_type varchar(24) [not null, default: 'IMAGE']
+  secure_url text [not null]
+  thumbnail_url text
+  format varchar(32)
+  mime_type varchar(100)
+  width int
+  height int
+  size_bytes bigint
+  checksum varchar(128)
+  folder varchar(255)
+  alt_text varchar(500)
+  metadata_json jsonb
+  status varchar(24) [not null, default: 'ACTIVE']
+  uploaded_by uuid
+  provider_created_at timestamptz
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  indexes { (provider, provider_asset_id) [unique] }
+  Note: '[P0] Chỉ lưu metadata/URL provider; không lưu binary. Status điều phối provider cleanup; DB row được giữ lại.'
+}
+
+Table media_usages {
+  id bigint [pk, increment]
+  media_asset_id bigint [not null]
+  owner_type varchar(64) [not null, note: 'PAGE|POST|PRODUCT_DESCRIPTION|OTHER']
+  owner_id bigint [not null]
+  field_name varchar(64) [not null]
+  sort_order int [not null, default: 0]
+  created_at timestamptz [not null]
+  indexes { (media_asset_id, owner_type, owner_id, field_name) [unique] }
+  Note: '[P1] Theo dõi ảnh nhúng trong rich content; owner polymorphic nên không FK.'
+}
+
+// CATALOG
+Table brands {
+  id bigint [pk, increment]
+  legacy_id uuid [unique, note: 'UUID lịch sử; NULL cho bản ghi mới']
+  code varchar(32) [not null, unique]
+  name varchar(255) [not null]
+  slug varchar(255) [not null, unique]
+  description text
+  logo_asset_id bigint
+  status varchar(24) [not null, default: 'ACTIVE']
+  seo_json jsonb
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  Note: '[P0] Master data; dùng status ACTIVE|INACTIVE.'
+}
+
+Table categories {
+  id bigint [pk, increment]
+  legacy_id uuid [unique, note: 'UUID lịch sử; NULL cho bản ghi mới']
+  parent_id bigint
+  code varchar(32) [not null, unique]
+  name varchar(255) [not null]
+  slug varchar(255) [not null, unique]
+  path varchar(1000) [not null]
+  depth int [not null, default: 0]
+  description text
+  image_asset_id bigint
+  sort_order int [not null, default: 0]
+  status varchar(24) [not null, default: 'ACTIVE']
+  seo_json jsonb
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  Note: '[P0] Cây category; service phải chặn cycle; dùng status ACTIVE|INACTIVE.'
+}
+
+Table products {
+  id bigint [pk, increment]
+  legacy_id uuid [unique, note: 'UUID lịch sử; NULL cho bản ghi mới']
+  brand_id bigint
+  product_type varchar(24) [not null, default: 'STANDARD']
+  product_no varchar(32) [not null, unique]
+  name varchar(255) [not null]
+  slug varchar(255) [not null, unique]
+  short_description text
+  description text
+  status varchar(24) [not null, default: 'DRAFT']
+  published_at timestamptz
+  seo_json jsonb
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  created_by uuid
+  updated_at timestamptz [not null]
+  updated_by uuid
+  Note: '[P0] SPU; product_type STANDARD|BUNDLE; không trộn SKU thường/combo trong cùng product; không chứa price/stock; ngừng dùng bằng status ARCHIVED.'
+}
+
+Table product_categories {
+  product_id bigint [not null]
+  category_id bigint [not null]
+  is_primary boolean [not null, default: false]
+  sort_order int [not null, default: 0]
+  indexes { (product_id, category_id) [pk] }
+  Note: '[P0] Product n-n Category; partial unique một primary/product.'
+}
+
+Table product_variants {
+  id bigint [pk, increment]
+  legacy_id uuid [unique, note: 'UUID lịch sử; NULL cho bản ghi mới']
+  product_id bigint [not null]
+  sku varchar(64) [not null, unique]
+  barcode varchar(64) [unique]
+  name varchar(255) [not null]
+  weight_grams int [not null, default: 0]
+  length_mm int
+  width_mm int
+  height_mm int
+  status varchar(24) [not null, default: 'ACTIVE']
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  Note: '[P0] Sellable SKU; price/stock đều tham chiếu variant; bundle gắn theo từng variant; storefront chỉ trả ACTIVE có giá effective và đủ điều kiện combo; ngừng bán bằng status INACTIVE.'
+}
+
+Table product_bundles {
+  id bigint [pk, increment]
+  legacy_id uuid [unique, note: 'UUID lịch sử; NULL cho bản ghi mới']
+  bundle_variant_id bigint [not null, unique]
+  bundle_type varchar(24) [not null, default: 'FIXED_VIRTUAL']
+  status varchar(24) [not null, default: 'ACTIVE']
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  created_by uuid [not null]
+  updated_at timestamptz [not null]
+  updated_by uuid [not null]
+  Note: '[P0] Combo ảo cố định theo bundle_variant_id; không giữ tồn riêng, không chứa combo khác; publish yêu cầu status ACTIVE, có item và mọi component ACTIVE thuộc product chưa ARCHIVED.'
+}
+
+Table bundle_items {
+  id bigint [pk, increment]
+  legacy_id uuid [unique, note: 'UUID lịch sử; NULL cho bản ghi mới']
+  product_bundle_id bigint [not null]
+  component_variant_id bigint [not null]
+  quantity int [not null]
+  sort_order int [not null, default: 0]
+  indexes { (product_bundle_id, component_variant_id) [unique] }
+  Note: '[P0] quantity>0; component variant không được là bundle.'
+}
+
+Table product_media {
+  id bigint [pk, increment]
+  legacy_id uuid [unique, note: 'UUID lịch sử; NULL cho bản ghi mới']
+  product_id bigint [not null]
+  variant_id bigint
+  media_asset_id bigint [not null]
+  media_type varchar(24) [not null, default: 'IMAGE']
+  alt_text varchar(500)
+  sort_order int [not null, default: 0]
+  is_primary boolean [not null, default: false]
+  status varchar(24) [not null, default: 'ACTIVE']
+  created_at timestamptz [not null]
+  Note: '[P0] variant_id null nghĩa media cấp product; ẩn bằng status INACTIVE.'
+}
+
+Table attributes {
+  id bigint [pk, increment]
+  code varchar(64) [not null, unique]
+  name varchar(255) [not null]
+  data_type varchar(24) [not null]
+  is_variant_axis boolean [not null, default: false]
+  status varchar(24) [not null, default: 'ACTIVE']
+  sort_order int [not null, default: 0]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  Note: '[P1] Size/color/material hoặc specification.'
+}
+
+Table attribute_values {
+  id bigint [pk, increment]
+  attribute_id bigint [not null]
+  code varchar(64) [not null]
+  label varchar(255) [not null]
+  color_hex varchar(16)
+  sort_order int [not null, default: 0]
+  status varchar(24) [not null, default: 'ACTIVE']
+  indexes { (attribute_id, code) [unique] }
+  Note: '[P1] Giá trị lựa chọn.'
+}
+
+Table product_attribute_values {
+  id bigint [pk, increment]
+  product_id bigint [not null]
+  attribute_id bigint [not null]
+  attribute_value_id bigint
+  value_text text
+  value_number decimal(19,4)
+  value_boolean boolean
+  created_at timestamptz [not null]
+  Note: '[P1] CHECK đúng một loại value; unique theo product+attribute+value.'
+}
+
+Table variant_attribute_values {
+  variant_id bigint [not null]
+  attribute_id bigint [not null]
+  attribute_value_id bigint [not null]
+  indexes { (variant_id, attribute_id) [pk] }
+  Note: '[P1] Mỗi variant chỉ một value cho mỗi variant axis.'
+}
+
+Table product_reviews {
+  id bigint [pk, increment]
+  product_id bigint [not null]
+  customer_id bigint [not null]
+  order_item_id bigint [not null, unique]
+  rating smallint [not null]
+  title varchar(255)
+  content text
+  status varchar(24) [not null, default: 'PENDING']
+  moderated_by uuid
+  moderated_at timestamptz
+  moderation_reason text
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  Note: '[P1] CHECK rating 1..5; verified purchase qua order_item.'
+}
+
+Table product_review_media {
+  id bigint [pk, increment]
+  product_review_id bigint [not null]
+  media_asset_id bigint [not null]
+  sort_order int [not null, default: 0]
+  status varchar(24) [not null, default: 'ACTIVE']
+  created_at timestamptz [not null]
+  indexes { (product_review_id, media_asset_id) [unique] }
+  Note: '[P1] Ảnh/video review; giới hạn số lượng và moderation tại service.'
+}
+
+Table product_review_comments {
+  id bigint [pk, increment]
+  product_review_id bigint [not null]
+  parent_comment_id bigint
+  author_type varchar(24) [not null, note: 'CUSTOMER|STAFF']
+  author_user_id bigint
+  content text [not null]
+  status varchar(24) [not null, default: 'PUBLISHED']
+  moderated_by uuid
+  moderated_at timestamptz
+  moderation_reason text
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  deleted_at timestamptz
+  Note: '[P1] Shop reply hoặc customer follow-up; V1 chỉ tối đa một cấp reply.'
+}
+
+// PRICING + FLASH SALE
+Table product_prices {
+  id bigint [pk, increment]
+  legacy_id uuid [unique, note: 'UUID lịch sử; NULL cho bản ghi mới']
+  product_variant_id bigint [not null]
+  price_type varchar(24) [not null, default: 'REGULAR']
+  channel varchar(24) [not null, default: 'ONLINE']
+  currency_code char(3) [not null, default: 'VND']
+  amount decimal(19,2) [not null]
+  starts_at timestamptz [not null]
+  ends_at timestamptz
+  status varchar(24) [not null, default: 'SCHEDULED']
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  created_by uuid [not null]
+  updated_at timestamptz [not null]
+  updated_by uuid [not null]
+  Note: '[P0] CHECK amount>0 và end>start; exclusion constraint chống overlap; không tạo giá retroactive; future scheduling được phép; history không sửa/xóa; giảm trên 20% bắt buộc reason và OWNER xác nhận; replace atomic với optimistic version.'
+}
+
+Table flash_sale_campaigns {
+  id bigint [pk, increment]
+  code varchar(32) [not null, unique]
+  name varchar(255) [not null]
+  starts_at timestamptz [not null]
+  ends_at timestamptz [not null]
+  status varchar(24) [not null, default: 'DRAFT']
+  priority int [not null, default: 0]
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  created_by uuid [not null]
+  updated_at timestamptz [not null]
+  updated_by uuid [not null]
+  Note: '[P1] CHECK end>start.'
+}
+
+Table flash_sale_items {
+  id bigint [pk, increment]
+  campaign_id bigint [not null]
+  product_variant_id bigint [not null]
+  sale_price decimal(19,2) [not null]
+  global_quota int [not null]
+  sold_qty int [not null, default: 0]
+  reserved_qty int [not null, default: 0]
+  limit_per_customer int [not null, default: 1]
+  status varchar(24) [not null, default: 'ACTIVE']
+  version bigint [not null, default: 0]
+  indexes { (campaign_id, product_variant_id) [unique] }
+  Note: '[P1] CHECK sold+reserved<=quota; atomic conditional update.'
+}
+
+Table flash_sale_quota_reservations {
+  id bigint [pk, increment]
+  flash_sale_item_id bigint [not null]
+  order_id bigint
+  token varchar(100) [not null, unique]
+  customer_key varchar(255) [not null]
+  quantity int [not null]
+  status varchar(24) [not null, default: 'ACTIVE']
+  expires_at timestamptz [not null]
+  committed_at timestamptz
+  released_at timestamptz
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  Note: '[P1] Quota reservation riêng inventory reservation.'
+}
+
+// INVENTORY
+Table inventory_balances {
+  id bigint [pk, increment]
+  legacy_id uuid [unique, note: 'UUID lịch sử; NULL cho bản ghi mới']
+  warehouse_id bigint [not null]
+  product_variant_id bigint [not null]
+  on_hand int [not null, default: 0]
+  reserved int [not null, default: 0]
+  reorder_point int [not null, default: 0]
+  version bigint [not null, default: 0]
+  updated_at timestamptz [not null]
+  indexes { (warehouse_id, product_variant_id) [unique] }
+  Note: '[P0] CHECK on_hand>=0, reserved>=0, reserved<=on_hand.'
+}
+
+Table inventory_movements {
+  id bigint [pk, increment]
+  legacy_id uuid [unique, note: 'UUID lịch sử; NULL cho bản ghi mới']
+  warehouse_id bigint [not null]
+  product_variant_id bigint [not null]
+  movement_type varchar(40) [not null]
+  quantity_delta int [not null]
+  balance_after int [not null]
+  reference_type varchar(64) [not null]
+  reference_id text [not null]
+  idempotency_key varchar(150) [not null, unique]
+  reason text
+  occurred_at timestamptz [not null]
+  created_at timestamptz [not null]
+  created_by uuid [not null]
+  Note: '[P0] Append-only ledger; reject UPDATE/DELETE/TRUNCATE; mỗi dòng adjustment có idempotency key riêng.'
+}
+
+Table inventory_reservations {
+  id bigint [pk, increment]
+  warehouse_id bigint [not null]
+  product_variant_id bigint [not null]
+  order_id bigint
+  order_item_id bigint
+  order_item_component_id bigint
+  token varchar(100) [not null]
+  quantity int [not null]
+  status varchar(32) [not null, default: 'ACTIVE']
+  expires_at timestamptz [not null]
+  committed_at timestamptz
+  released_at timestamptz
+  release_reason varchar(255)
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  indexes { (token, warehouse_id, product_variant_id) [unique] }
+  Note: '[P0] ACTIVE|COMMITTED|RELEASED|EXPIRED|RELEASED_AFTER_SHIP.'
+}
+
+Table stock_adjustments {
+  id bigint [pk, increment]
+  legacy_id uuid [unique, note: 'UUID lịch sử; NULL cho bản ghi mới']
+  adjustment_no varchar(32) [not null, unique, note: 'ADJ- + 25 ký tự base36 mã hóa đủ 128-bit UUID; không cắt timestamp prefix UUIDv7']
+  warehouse_id bigint [not null]
+  adjustment_type varchar(32) [not null, default: 'CORRECTION']
+  reason_code varchar(64) [not null, default: 'MANUAL']
+  reason text [not null]
+  status varchar(24) [not null, default: 'POSTED']
+  idempotency_key varchar(150) [not null, unique]
+  request_hash char(64) [not null]
+  result_json jsonb [not null, note: 'Snapshot response để replay idempotent chính xác']
+  created_by uuid [not null]
+  posted_at timestamptz [not null]
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  Note: '[P0] Sprint 1 post trực tiếp CORRECTION/POSTED; transaction khóa balance, ghi items + movements + audit atomic. Workflow approval/receipt mở rộng ở sprint sau.'
+}
+
+Table stock_adjustment_items {
+  id bigint [pk, increment]
+  legacy_id uuid [unique, note: 'UUID lịch sử; NULL cho bản ghi mới']
+  stock_adjustment_id bigint [not null]
+  product_variant_id bigint [not null]
+  quantity_delta int [not null]
+  expected_on_hand int [not null]
+  actual_on_hand int [not null]
+  note text
+  indexes { (stock_adjustment_id, product_variant_id) [unique] }
+  Note: '[P0] quantity_delta != 0.'
+}
+
+Table stocktakes {
+  id bigint [pk, increment]
+  stocktake_no varchar(32) [not null, unique]
+  warehouse_id bigint [not null]
+  status varchar(24) [not null, default: 'DRAFT']
+  scope_json jsonb [not null]
+  snapshot_at timestamptz
+  created_by uuid [not null]
+  submitted_at timestamptz
+  approved_by uuid
+  approved_at timestamptz
+  posted_at timestamptz
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  Note: '[P1] Snapshot trước khi đếm; post variance một lần.'
+}
+
+Table stocktake_items {
+  id bigint [pk, increment]
+  stocktake_id bigint [not null]
+  product_variant_id bigint [not null]
+  system_qty int [not null]
+  counted_qty int
+  variance_qty int
+  note text
+  counted_by uuid
+  counted_at timestamptz
+  indexes { (stocktake_id, product_variant_id) [unique] }
+  Note: '[P1] variance=counted-system.'
+}
+
+Table stock_transfers {
+  id bigint [pk, increment]
+  transfer_no varchar(32) [not null, unique]
+  from_warehouse_id bigint [not null]
+  to_warehouse_id bigint [not null]
+  status varchar(24) [not null, default: 'DRAFT']
+  reason text
+  created_by uuid [not null]
+  submitted_at timestamptz
+  shipped_by uuid
+  shipped_at timestamptz
+  received_by uuid
+  received_at timestamptz
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  Note: '[P1] CHECK source != destination; OUT và IN dùng cùng transfer ref.'
+}
+
+Table stock_transfer_items {
+  id bigint [pk, increment]
+  stock_transfer_id bigint [not null]
+  product_variant_id bigint [not null]
+  requested_qty int [not null]
+  shipped_qty int [not null, default: 0]
+  received_qty int [not null, default: 0]
+  damaged_qty int [not null, default: 0]
+  indexes { (stock_transfer_id, product_variant_id) [unique] }
+  Note: '[P1] Các quantity >=0.'
+}
+
+// CART + ORDER
+Table carts {
+  id bigint [pk, increment]
+  user_id bigint
+  anonymous_token varchar(100)
+  branch_id bigint
+  status varchar(24) [not null, default: 'ACTIVE']
+  currency_code char(3) [not null, default: 'VND']
+  expires_at timestamptz
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  Note: '[P0] CHECK user hoặc anonymous token; partial unique một ACTIVE cart mỗi owner.'
+}
+
+Table cart_items {
+  id bigint [pk, increment]
+  cart_id bigint [not null]
+  product_variant_id bigint [not null]
+  quantity int [not null]
+  unit_price_preview decimal(19,2)
+  price_seen_at timestamptz
+  metadata_json jsonb
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  indexes { (cart_id, product_variant_id) [unique] }
+  Note: '[P0] Cart không reserve tồn; quantity>0.'
+}
+
+Table orders {
+  id bigint [pk, increment]
+  order_no varchar(32) [not null, unique]
+  idempotency_key varchar(150) [not null, unique]
+  customer_id bigint [not null]
+  branch_id bigint [not null]
+  warehouse_id bigint [not null]
+  channel varchar(24) [not null, default: 'WEB']
+  status varchar(32) [not null, default: 'PENDING_PAYMENT']
+  payment_status varchar(32) [not null, default: 'PENDING']
+  fulfillment_status varchar(32) [not null, default: 'PENDING']
+  currency_code char(3) [not null, default: 'VND']
+  prices_include_tax boolean [not null, default: true]
+  subtotal decimal(19,2) [not null]
+  discount_total decimal(19,2) [not null, default: 0]
+  shipping_total decimal(19,2) [not null, default: 0]
+  tax_total decimal(19,2) [not null, default: 0]
+  grand_total decimal(19,2) [not null]
+  customer_note text
+  internal_note text
+  utm_json jsonb
+  placed_at timestamptz [not null]
+  cancelled_at timestamptz
+  cancel_reason text
+  completed_at timestamptz
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  Note: '[P0] Một branch + warehouse; giá đã gồm VAT; tax_total chỉ để báo cáo và không cộng thêm.'
+}
+
+Table order_items {
+  id bigint [pk, increment]
+  order_id bigint [not null]
+  line_no int [not null]
+  product_variant_id bigint [not null]
+  product_bundle_id bigint
+  item_type varchar(24) [not null, default: 'STANDARD']
+  sku_snapshot varchar(64) [not null]
+  product_name_snapshot varchar(255) [not null]
+  variant_name_snapshot varchar(255) [not null]
+  attributes_snapshot jsonb
+  image_url_snapshot text
+  quantity int [not null]
+  list_unit_price decimal(19,2) [not null]
+  discount_amount decimal(19,2) [not null, default: 0]
+  final_unit_price decimal(19,2) [not null]
+  tax_amount decimal(19,2) [not null, default: 0]
+  line_total decimal(19,2) [not null]
+  unit_cost_snapshot decimal(19,2)
+  created_at timestamptz [not null]
+  indexes { (order_id, line_no) [unique] }
+  Note: '[P0] Snapshot bất biến; quantity>0.'
+}
+
+Table order_item_components {
+  id bigint [pk, increment]
+  order_item_id bigint [not null]
+  bundle_item_id bigint
+  component_variant_id bigint [not null]
+  sku_snapshot varchar(64) [not null]
+  name_snapshot varchar(255) [not null]
+  quantity_per_bundle int [not null]
+  total_quantity int [not null]
+  unit_cost_snapshot decimal(19,2)
+  created_at timestamptz [not null]
+  indexes { (order_item_id, component_variant_id) [unique] }
+  Note: '[P0] Snapshot thành phần combo; total_quantity = order_item.quantity * quantity_per_bundle.'
+}
+
+Table order_addresses {
+  id bigint [pk, increment]
+  order_id bigint [not null]
+  address_type varchar(24) [not null, default: 'SHIPPING']
+  recipient_name varchar(255) [not null]
+  recipient_phone varchar(32) [not null]
+  address_line varchar(500) [not null]
+  ward_code varchar(32)
+  ward_name varchar(255)
+  district_code varchar(32)
+  district_name varchar(255)
+  province_code varchar(32) [not null]
+  province_name varchar(255) [not null]
+  postal_code varchar(20)
+  country_code char(2) [not null, default: 'VN']
+  indexes { (order_id, address_type) [unique] }
+  Note: '[P0] Snapshot; không FK customer_address.'
+}
+
+Table order_status_history {
+  id bigint [pk, increment]
+  order_id bigint [not null]
+  sequence_no int [not null]
+  from_status varchar(32)
+  to_status varchar(32) [not null]
+  reason text
+  actor_type varchar(24) [not null]
+  actor_id bigint
+  request_id varchar(100) [not null]
+  created_at timestamptz [not null]
+  indexes { (order_id, sequence_no) [unique] }
+  Note: '[P0] Append-only transition history.'
+}
+
+// PAYMENT
+Table payments {
+  id bigint [pk, increment]
+  order_id bigint [not null, unique]
+  payment_ref varchar(64) [not null, unique]
+  method varchar(32) [not null, default: 'BANK_TRANSFER']
+  status varchar(32) [not null, default: 'PENDING']
+  expected_amount decimal(19,2) [not null]
+  received_amount decimal(19,2) [not null, default: 0]
+  currency_code char(3) [not null, default: 'VND']
+  expires_at timestamptz [not null]
+  confirmed_by uuid
+  confirmed_at timestamptz
+  failure_reason text
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  Note: '[P0] V1 một payment/order; nhiều transaction attempt.'
+}
+
+Table payment_transactions {
+  id bigint [pk, increment]
+  payment_id bigint [not null]
+  transaction_type varchar(32) [not null]
+  provider varchar(64)
+  external_id varchar(255)
+  external_event_id varchar(255)
+  idempotency_key varchar(150) [not null, unique]
+  amount decimal(19,2) [not null]
+  currency_code char(3) [not null]
+  status varchar(32) [not null]
+  raw_payload_redacted jsonb
+  occurred_at timestamptz [not null]
+  created_at timestamptz [not null]
+  Note: '[P0] Partial unique provider+external_event_id khi có.'
+}
+
+Table payment_evidences {
+  id bigint [pk, increment]
+  payment_id bigint [not null]
+  uploaded_by uuid
+  guest_access_id varchar(100)
+  file_url text [not null]
+  file_hash varchar(128) [not null]
+  file_type varchar(64) [not null]
+  file_size_bytes bigint [not null]
+  note text
+  status varchar(24) [not null, default: 'PENDING_SCAN']
+  reviewed_by uuid
+  reviewed_at timestamptz
+  review_reason text
+  created_at timestamptz [not null]
+  indexes { (payment_id, file_hash) [unique] }
+  Note: '[P0] Evidence không tự xác nhận payment.'
+}
+
+Table refunds {
+  id bigint [pk, increment]
+  refund_no varchar(32) [not null, unique]
+  payment_id bigint [not null]
+  return_request_id bigint [not null, unique]
+  approval_request_id bigint [not null]
+  idempotency_key varchar(150) [not null, unique]
+  amount decimal(19,2) [not null]
+  currency_code char(3) [not null]
+  reason text [not null]
+  status varchar(32) [not null, default: 'REQUESTED']
+  requested_by uuid [not null]
+  approved_by uuid
+  processed_at timestamptz
+  external_ref varchar(255)
+  failure_reason text
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  Note: '[P1] Cho phép partial refund theo return request; tổng refund thành công không vượt payment received_amount.'
+}
+
+// FULFILLMENT + SHIPPING
+Table fulfillments {
+  id bigint [pk, increment]
+  fulfillment_no varchar(32) [not null, unique]
+  order_id bigint [not null, unique]
+  warehouse_id bigint [not null]
+  status varchar(32) [not null, default: 'PENDING']
+  carrier_code varchar(64)
+  tracking_no varchar(255)
+  shipping_label_url text
+  picked_at timestamptz
+  picked_by uuid
+  packed_at timestamptz
+  packed_by uuid
+  shipped_at timestamptz
+  shipped_by uuid
+  delivered_at timestamptz
+  failed_at timestamptz
+  delivery_failure_reason_code varchar(64)
+  failure_reason text
+  returned_to_warehouse_at timestamptz
+  returned_to_warehouse_by uuid
+  return_condition varchar(32)
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  Note: '[P0] V1 one fulfillment/order; giao thất bại trả đúng warehouse xuất và phải có lý do/inspection.'
+}
+
+Table fulfillment_status_history {
+  id bigint [pk, increment]
+  fulfillment_id bigint [not null]
+  sequence_no int [not null]
+  from_status varchar(32)
+  to_status varchar(32) [not null]
+  reason text
+  actor_id bigint
+  metadata_json jsonb
+  request_id varchar(100) [not null]
+  created_at timestamptz [not null]
+  indexes { (fulfillment_id, sequence_no) [unique] }
+  Note: '[P0] Append-only.'
+}
+
+Table shipping_zones {
+  id bigint [pk, increment]
+  code varchar(32) [not null, unique]
+  name varchar(255) [not null]
+  priority int [not null, default: 0]
+  status varchar(24) [not null, default: 'ACTIVE']
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  deleted_at timestamptz
+  Note: '[P0] Zone theo tỉnh/thành.'
+}
+
+Table shipping_zone_provinces {
+  zone_id bigint [not null]
+  province_code varchar(32) [not null]
+  province_name varchar(255) [not null]
+  indexes { (zone_id, province_code) [pk] }
+  Note: '[P0] province_code chỉ thuộc một active zone; enforce partial/business rule.'
+}
+
+Table shipping_rates {
+  id bigint [pk, increment]
+  zone_id bigint [not null]
+  branch_id bigint
+  min_weight_grams int [not null, default: 0]
+  max_weight_grams int
+  min_subtotal decimal(19,2) [not null, default: 0]
+  max_subtotal decimal(19,2)
+  base_fee decimal(19,2) [not null]
+  per_kg_fee decimal(19,2) [not null, default: 0]
+  free_shipping_threshold decimal(19,2)
+  eta_min_days int [not null]
+  eta_max_days int [not null]
+  starts_at timestamptz [not null]
+  ends_at timestamptz
+  status varchar(24) [not null, default: 'ACTIVE']
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  Note: '[P0] branch null là rate mặc định; chống overlap cùng rule dimension.'
+}
+
+// RETURN
+Table return_policies {
+  id bigint [pk, increment]
+  code varchar(32) [not null]
+  version_no int [not null]
+  name varchar(255) [not null]
+  return_window_days int [not null]
+  conditions_json jsonb [not null]
+  effective_from timestamptz [not null]
+  effective_to timestamptz
+  status varchar(24) [not null, default: 'DRAFT']
+  created_at timestamptz [not null]
+  created_by uuid [not null]
+  indexes { (code, version_no) [unique] }
+  Note: '[P1] Version immutable sau khi active.'
+}
+
+Table return_requests {
+  id bigint [pk, increment]
+  return_no varchar(32) [not null, unique]
+  order_id bigint [not null]
+  customer_id bigint [not null]
+  policy_id bigint [not null]
+  status varchar(32) [not null, default: 'REQUESTED']
+  reason_code varchar(64) [not null]
+  description text
+  evidence_urls jsonb
+  requested_at timestamptz [not null]
+  reviewed_by uuid
+  reviewed_at timestamptz
+  decision_reason text
+  received_by uuid
+  received_at timestamptz
+  received_condition varchar(32)
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  Note: '[P1] Một active return/order; cho chọn order items/quantity. Combo phải trả nguyên combo.'
+}
+
+Table return_items {
+  id bigint [pk, increment]
+  return_request_id bigint [not null]
+  order_item_id bigint [not null]
+  quantity int [not null]
+  item_condition varchar(32)
+  disposition varchar(32)
+  restock_qty int [not null, default: 0]
+  note text
+  indexes { (return_request_id, order_item_id) [unique] }
+  Note: '[P1] RESTOCK mới tạo inventory movement IN.'
+}
+
+// CMS + NOTIFICATION + PLATFORM
+Table content_categories {
+  id bigint [pk, increment]
+  parent_id bigint
+  code varchar(64) [not null, unique]
+  name varchar(255) [not null]
+  slug varchar(255) [not null, unique]
+  description text
+  sort_order int [not null, default: 0]
+  status varchar(24) [not null, default: 'ACTIVE']
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  deleted_at timestamptz
+  Note: '[P1] Danh mục bài viết; cây độc lập product category.'
+}
+
+Table content_tags {
+  id bigint [pk, increment]
+  code varchar(64) [not null, unique]
+  name varchar(255) [not null]
+  slug varchar(255) [not null, unique]
+  status varchar(24) [not null, default: 'ACTIVE']
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  deleted_at timestamptz
+  Note: '[P1] Tag bài viết.'
+}
+
+Table pages {
+  id bigint [pk, increment]
+  page_type varchar(32) [not null, note: 'ABOUT|CONTACT|POLICY|GUIDE|LANDING|CUSTOM']
+  slug varchar(255) [not null, unique]
+  title varchar(255) [not null]
+  body text [not null]
+  hero_asset_id bigint
+  seo_json jsonb
+  status varchar(24) [not null, default: 'DRAFT']
+  published_at timestamptz
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  created_by uuid [not null]
+  updated_at timestamptz [not null]
+  updated_by uuid [not null]
+  deleted_at timestamptz
+  Note: '[P1] CMS page.'
+}
+
+Table posts {
+  id bigint [pk, increment]
+  post_type varchar(32) [not null, note: 'NEWS|GUIDE|TRAINING_TIP|PRODUCT_REVIEW|OTHER']
+  slug varchar(255) [not null, unique]
+  title varchar(255) [not null]
+  excerpt text
+  body text [not null]
+  cover_asset_id bigint
+  seo_json jsonb
+  status varchar(24) [not null, default: 'DRAFT']
+  published_at timestamptz
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  created_by uuid [not null]
+  updated_at timestamptz [not null]
+  updated_by uuid [not null]
+  deleted_at timestamptz
+  Note: '[P1] Blog/news.'
+}
+
+Table post_categories {
+  post_id bigint [not null]
+  content_category_id bigint [not null]
+  is_primary boolean [not null, default: false]
+  indexes { (post_id, content_category_id) [pk] }
+  Note: '[P1] Post n-n content category; một primary/post.'
+}
+
+Table post_tags {
+  post_id bigint [not null]
+  content_tag_id bigint [not null]
+  indexes { (post_id, content_tag_id) [pk] }
+  Note: '[P1] Post n-n tag.'
+}
+
+Table post_products {
+  post_id bigint [not null]
+  product_id bigint [not null]
+  relation_type varchar(24) [not null, default: 'RELATED']
+  sort_order int [not null, default: 0]
+  indexes { (post_id, product_id) [pk] }
+  Note: '[P1] Bài viết liên quan sản phẩm và sản phẩm liên quan bài viết.'
+}
+
+Table banners {
+  id bigint [pk, increment]
+  code varchar(32) [not null, unique]
+  placement varchar(64) [not null]
+  title varchar(255)
+  desktop_asset_id bigint [not null]
+  mobile_asset_id bigint
+  target_url text
+  starts_at timestamptz
+  ends_at timestamptz
+  status varchar(24) [not null, default: 'DRAFT']
+  sort_order int [not null, default: 0]
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  created_by uuid [not null]
+  updated_at timestamptz [not null]
+  updated_by uuid [not null]
+  Note: '[P1] Timed banner.'
+}
+
+Table notification_templates {
+  id bigint [pk, increment]
+  code varchar(64) [not null]
+  channel varchar(24) [not null]
+  version_no int [not null]
+  subject_template text
+  body_template text [not null]
+  allowed_variables jsonb [not null]
+  status varchar(24) [not null, default: 'DRAFT']
+  created_at timestamptz [not null]
+  created_by uuid [not null]
+  indexes { (code, channel, version_no) [unique] }
+  Note: '[P1] Immutable active version.'
+}
+
+Table notifications {
+  id bigint [pk, increment]
+  user_id bigint
+  customer_id bigint
+  template_id bigint
+  channel varchar(24) [not null]
+  dedup_key varchar(150) [not null]
+  recipient_masked varchar(255) [not null]
+  payload_json jsonb [not null]
+  status varchar(24) [not null, default: 'PENDING']
+  attempt_count int [not null, default: 0]
+  next_attempt_at timestamptz
+  sent_at timestamptz
+  error_code varchar(100)
+  created_at timestamptz [not null]
+  indexes { (channel, dedup_key) [unique] }
+  Note: '[P1] Delivery log; worker đọc từ outbox.'
+}
+
+Table idempotency_keys {
+  id bigint [pk, increment]
+  actor_type varchar(24) [not null]
+  actor_id bigint
+  endpoint varchar(255) [not null]
+  idempotency_key varchar(150) [not null]
+  request_hash varchar(128) [not null]
+  response_status int
+  response_body_redacted jsonb
+  locked_at timestamptz
+  completed_at timestamptz
+  expires_at timestamptz [not null]
+  created_at timestamptz [not null]
+  indexes { (actor_type, actor_id, endpoint, idempotency_key) [unique] }
+  Note: '[P0] actor_id null cho signed guest context.'
+}
+
+Table outbox_events {
+  id bigint [pk, increment]
+  aggregate_type varchar(100) [not null]
+  aggregate_id bigint [not null]
+  event_type varchar(150) [not null]
+  event_version int [not null, default: 1]
+  payload_json jsonb [not null]
+  status varchar(24) [not null, default: 'PENDING']
+  attempts int [not null, default: 0]
+  available_at timestamptz [not null]
+  locked_at timestamptz
+  locked_by varchar(100)
+  processed_at timestamptz
+  last_error text
+  created_at timestamptz [not null]
+  indexes { (aggregate_type, aggregate_id, id) [unique] }
+  Note: '[P0] aggregate_id polymorphic; append in same transaction.'
+}
+
+Table system_settings {
+  id bigint [pk, increment]
+  setting_key varchar(150) [not null, unique]
+  value_json jsonb [not null]
+  description text
+  is_public boolean [not null, default: false]
+  version bigint [not null, default: 0]
+  updated_by uuid [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  Note: '[P1] Không lưu secret.'
+}
+
+// RELATIONSHIPS
+Ref: warehouses.branch_id > branches.id [delete: restrict]
+Ref: auth_sessions.user_id > users.id [delete: cascade]
+Ref: auth_sessions.rotated_from_id > auth_sessions.id [delete: set null]
+Ref: role_permissions.role_id > roles.id [delete: cascade]
+Ref: role_permissions.permission_id > permissions.id [delete: cascade]
+Ref: role_permissions.granted_by > users.id [delete: set null]
+Ref: user_role_assignments.user_id > users.id [delete: restrict]
+Ref: user_role_assignments.role_id > roles.id [delete: restrict]
+Ref: user_role_assignments.branch_id > branches.id [delete: restrict]
+Ref: user_role_assignments.warehouse_id > warehouses.id [delete: restrict]
+Ref: user_role_assignments.assigned_by > users.id [delete: restrict]
+Ref: audit_logs.actor_user_id > users.id [delete: set null]
+Ref: approval_requests.maker_id > users.id [delete: restrict]
+Ref: approval_requests.approver_id > users.id [delete: restrict]
+Ref: customers.user_id > users.id [delete: set null]
+Ref: customer_addresses.customer_id > customers.id [delete: cascade]
+Ref: media_assets.uploaded_by > users.id [delete: set null]
+Ref: media_usages.media_asset_id > media_assets.id [delete: restrict]
+Ref: categories.parent_id > categories.id [delete: restrict]
+Ref: brands.logo_asset_id > media_assets.id [delete: set null]
+Ref: categories.image_asset_id > media_assets.id [delete: set null]
+Ref: products.brand_id > brands.id [delete: restrict]
+Ref: product_categories.product_id > products.id [delete: cascade]
+Ref: product_categories.category_id > categories.id [delete: restrict]
+Ref: product_variants.product_id > products.id [delete: restrict]
+Ref: product_bundles.bundle_variant_id > product_variants.id [delete: restrict]
+Ref: product_bundles.created_by > users.id [delete: restrict]
+Ref: product_bundles.updated_by > users.id [delete: restrict]
+Ref: bundle_items.product_bundle_id > product_bundles.id [delete: cascade]
+Ref: bundle_items.component_variant_id > product_variants.id [delete: restrict]
+Ref: product_media.product_id > products.id [delete: cascade]
+Ref: product_media.variant_id > product_variants.id [delete: cascade]
+Ref: product_media.media_asset_id > media_assets.id [delete: restrict]
+Ref: attribute_values.attribute_id > attributes.id [delete: cascade]
+Ref: product_attribute_values.product_id > products.id [delete: cascade]
+Ref: product_attribute_values.attribute_id > attributes.id [delete: restrict]
+Ref: product_attribute_values.attribute_value_id > attribute_values.id [delete: restrict]
+Ref: variant_attribute_values.variant_id > product_variants.id [delete: cascade]
+Ref: variant_attribute_values.attribute_id > attributes.id [delete: restrict]
+Ref: variant_attribute_values.attribute_value_id > attribute_values.id [delete: restrict]
+Ref: product_reviews.product_id > products.id [delete: restrict]
+Ref: product_reviews.customer_id > customers.id [delete: restrict]
+Ref: product_reviews.order_item_id > order_items.id [delete: restrict]
+Ref: product_reviews.moderated_by > users.id [delete: set null]
+Ref: product_review_media.product_review_id > product_reviews.id [delete: cascade]
+Ref: product_review_media.media_asset_id > media_assets.id [delete: restrict]
+Ref: product_review_comments.product_review_id > product_reviews.id [delete: cascade]
+Ref: product_review_comments.parent_comment_id > product_review_comments.id [delete: restrict]
+Ref: product_review_comments.author_user_id > users.id [delete: set null]
+Ref: product_review_comments.moderated_by > users.id [delete: set null]
+Ref: product_prices.product_variant_id > product_variants.id [delete: restrict]
+Ref: product_prices.created_by > users.id [delete: restrict]
+Ref: product_prices.updated_by > users.id [delete: restrict]
+Ref: flash_sale_campaigns.created_by > users.id [delete: restrict]
+Ref: flash_sale_campaigns.updated_by > users.id [delete: restrict]
+Ref: flash_sale_items.campaign_id > flash_sale_campaigns.id [delete: cascade]
+Ref: flash_sale_items.product_variant_id > product_variants.id [delete: restrict]
+Ref: flash_sale_quota_reservations.flash_sale_item_id > flash_sale_items.id [delete: restrict]
+Ref: flash_sale_quota_reservations.order_id > orders.id [delete: restrict]
+Ref: inventory_balances.warehouse_id > warehouses.id [delete: restrict]
+Ref: inventory_balances.product_variant_id > product_variants.id [delete: restrict]
+Ref: inventory_movements.warehouse_id > warehouses.id [delete: restrict]
+Ref: inventory_movements.product_variant_id > product_variants.id [delete: restrict]
+Ref: inventory_movements.created_by > users.id [delete: restrict]
+Ref: inventory_reservations.warehouse_id > warehouses.id [delete: restrict]
+Ref: inventory_reservations.product_variant_id > product_variants.id [delete: restrict]
+Ref: inventory_reservations.order_id > orders.id [delete: restrict]
+Ref: inventory_reservations.order_item_id > order_items.id [delete: restrict]
+Ref: inventory_reservations.order_item_component_id > order_item_components.id [delete: restrict]
+Ref: stock_adjustments.warehouse_id > warehouses.id [delete: restrict]
+Ref: stock_adjustments.created_by > users.id [delete: restrict]
+Ref: stock_adjustment_items.stock_adjustment_id > stock_adjustments.id [delete: restrict]
+Ref: stock_adjustment_items.product_variant_id > product_variants.id [delete: restrict]
+Ref: stocktakes.warehouse_id > warehouses.id [delete: restrict]
+Ref: stocktakes.created_by > users.id [delete: restrict]
+Ref: stocktakes.approved_by > users.id [delete: restrict]
+Ref: stocktake_items.stocktake_id > stocktakes.id [delete: cascade]
+Ref: stocktake_items.product_variant_id > product_variants.id [delete: restrict]
+Ref: stocktake_items.counted_by > users.id [delete: set null]
+Ref: stock_transfers.from_warehouse_id > warehouses.id [delete: restrict]
+Ref: stock_transfers.to_warehouse_id > warehouses.id [delete: restrict]
+Ref: stock_transfers.created_by > users.id [delete: restrict]
+Ref: stock_transfers.shipped_by > users.id [delete: restrict]
+Ref: stock_transfers.received_by > users.id [delete: restrict]
+Ref: stock_transfer_items.stock_transfer_id > stock_transfers.id [delete: cascade]
+Ref: stock_transfer_items.product_variant_id > product_variants.id [delete: restrict]
+Ref: carts.user_id > users.id [delete: cascade]
+Ref: carts.branch_id > branches.id [delete: set null]
+Ref: cart_items.cart_id > carts.id [delete: cascade]
+Ref: cart_items.product_variant_id > product_variants.id [delete: restrict]
+Ref: orders.customer_id > customers.id [delete: restrict]
+Ref: orders.branch_id > branches.id [delete: restrict]
+Ref: orders.warehouse_id > warehouses.id [delete: restrict]
+Ref: order_items.order_id > orders.id [delete: restrict]
+Ref: order_items.product_variant_id > product_variants.id [delete: restrict]
+Ref: order_items.product_bundle_id > product_bundles.id [delete: restrict]
+Ref: order_item_components.order_item_id > order_items.id [delete: restrict]
+Ref: order_item_components.bundle_item_id > bundle_items.id [delete: restrict]
+Ref: order_item_components.component_variant_id > product_variants.id [delete: restrict]
+Ref: order_addresses.order_id > orders.id [delete: restrict]
+Ref: order_status_history.order_id > orders.id [delete: restrict]
+Ref: payments.order_id > orders.id [delete: restrict]
+Ref: payments.confirmed_by > users.id [delete: restrict]
+Ref: payment_transactions.payment_id > payments.id [delete: restrict]
+Ref: payment_evidences.payment_id > payments.id [delete: restrict]
+Ref: payment_evidences.uploaded_by > users.id [delete: set null]
+Ref: payment_evidences.reviewed_by > users.id [delete: set null]
+Ref: refunds.payment_id > payments.id [delete: restrict]
+Ref: refunds.return_request_id > return_requests.id [delete: restrict]
+Ref: refunds.approval_request_id > approval_requests.id [delete: restrict]
+Ref: refunds.requested_by > users.id [delete: restrict]
+Ref: refunds.approved_by > users.id [delete: restrict]
+Ref: fulfillments.order_id > orders.id [delete: restrict]
+Ref: fulfillments.warehouse_id > warehouses.id [delete: restrict]
+Ref: fulfillments.picked_by > users.id [delete: restrict]
+Ref: fulfillments.packed_by > users.id [delete: restrict]
+Ref: fulfillments.shipped_by > users.id [delete: restrict]
+Ref: fulfillments.returned_to_warehouse_by > users.id [delete: restrict]
+Ref: fulfillment_status_history.fulfillment_id > fulfillments.id [delete: restrict]
+Ref: fulfillment_status_history.actor_id > users.id [delete: set null]
+Ref: shipping_zone_provinces.zone_id > shipping_zones.id [delete: cascade]
+Ref: shipping_rates.zone_id > shipping_zones.id [delete: restrict]
+Ref: shipping_rates.branch_id > branches.id [delete: restrict]
+Ref: return_policies.created_by > users.id [delete: restrict]
+Ref: return_requests.order_id > orders.id [delete: restrict]
+Ref: return_requests.customer_id > customers.id [delete: restrict]
+Ref: return_requests.policy_id > return_policies.id [delete: restrict]
+Ref: return_requests.reviewed_by > users.id [delete: restrict]
+Ref: return_requests.received_by > users.id [delete: restrict]
+Ref: return_items.return_request_id > return_requests.id [delete: restrict]
+Ref: return_items.order_item_id > order_items.id [delete: restrict]
+Ref: content_categories.parent_id > content_categories.id [delete: restrict]
+Ref: pages.hero_asset_id > media_assets.id [delete: set null]
+Ref: pages.created_by > users.id [delete: restrict]
+Ref: pages.updated_by > users.id [delete: restrict]
+Ref: posts.cover_asset_id > media_assets.id [delete: set null]
+Ref: posts.created_by > users.id [delete: restrict]
+Ref: posts.updated_by > users.id [delete: restrict]
+Ref: post_categories.post_id > posts.id [delete: cascade]
+Ref: post_categories.content_category_id > content_categories.id [delete: restrict]
+Ref: post_tags.post_id > posts.id [delete: cascade]
+Ref: post_tags.content_tag_id > content_tags.id [delete: restrict]
+Ref: post_products.post_id > posts.id [delete: cascade]
+Ref: post_products.product_id > products.id [delete: restrict]
+Ref: banners.desktop_asset_id > media_assets.id [delete: restrict]
+Ref: banners.mobile_asset_id > media_assets.id [delete: set null]
+Ref: banners.created_by > users.id [delete: restrict]
+Ref: banners.updated_by > users.id [delete: restrict]
+Ref: notification_templates.created_by > users.id [delete: restrict]
+Ref: notifications.user_id > users.id [delete: set null]
+Ref: notifications.customer_id > customers.id [delete: set null]
+Ref: notifications.template_id > notification_templates.id [delete: set null]
+Ref: system_settings.updated_by > users.id [delete: restrict]

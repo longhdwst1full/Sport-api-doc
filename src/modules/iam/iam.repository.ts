@@ -1,6 +1,7 @@
 import {
   CreateStaffUserInput,
   LockStaffUserResult,
+  NewUserRoleAssignment,
   Role,
   ScopeType,
   UserRoleAssignment,
@@ -22,7 +23,7 @@ export abstract class IamRepository {
     branchId?: string,
   ): Promise<boolean>;
   abstract saveAssignmentAndIncrementPermissionVersion(
-    assignment: UserRoleAssignment,
+    assignment: NewUserRoleAssignment,
     context: MutationContext,
   ): Promise<UserRoleAssignment>;
   abstract revokeAssignmentAndIncrementPermissionVersion(

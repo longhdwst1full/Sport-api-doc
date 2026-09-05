@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import {
+  toDatabaseId,
+  toEntityId,
+  toOptionalDatabaseId,
+} from '../../common/identifiers/entity-id';
 import { MutationContext } from '../../common/request/request-context';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditWriter } from '../audit/audit.writer';
@@ -14,6 +19,7 @@ import { IamRepository } from './iam.repository';
 import {
   CreateStaffUserInput,
   LockStaffUserResult,
+  NewUserRoleAssignment,
   Role,
   ScopeType,
   UserRoleAssignment,
@@ -42,7 +48,10 @@ export class PrismaIamRepository extends IamRepository {
         ...(branchIds
           ? {
               roleAssignments: {
-                some: { status: ROLE_ASSIGNMENT_STATUS.ACTIVE, branchId: { in: branchIds } },
+                some: {
+                  status: ROLE_ASSIGNMENT_STATUS.ACTIVE,
+                  branchId: { in: branchIds.map(toDatabaseId) },
+                },
               },
             }
           : {}),
@@ -57,7 +66,7 @@ export class PrismaIamRepository extends IamRepository {
       orderBy: [{ displayName: 'asc' }, { id: 'asc' }],
     });
     return rows.map((row) => ({
-      id: row.id,
+      id: toEntityId(row.id),
       displayName: row.displayName,
       maskedEmail: maskEmail(row.email),
       userType: row.userType as UserWithAssignments['userType'],
@@ -68,12 +77,12 @@ export class PrismaIamRepository extends IamRepository {
       ...(row.lockedAt ? { lockedAt: row.lockedAt.toISOString() } : {}),
       ...(row.lockReason ? { lockReason: row.lockReason } : {}),
       assignments: row.roleAssignments.map((assignment) => ({
-        id: assignment.id,
-        userId: assignment.userId,
-        roleId: assignment.roleId,
+        id: toEntityId(assignment.id),
+        userId: toEntityId(assignment.userId),
+        roleId: toEntityId(assignment.roleId),
         roleCode: assignment.role.code,
         scopeType: assignment.scopeType as ScopeType,
-        ...(assignment.branchId ? { branchId: assignment.branchId } : {}),
+        ...(assignment.branchId ? { branchId: toEntityId(assignment.branchId) } : {}),
         status: ROLE_ASSIGNMENT_STATUS.ACTIVE,
         validFrom: assignment.validFrom.toISOString(),
       })),
@@ -91,7 +100,7 @@ export class PrismaIamRepository extends IamRepository {
       orderBy: { code: 'asc' },
     });
     return rows.map((row) => ({
-      id: row.id,
+      id: toEntityId(row.id),
       code: row.code,
       name: row.name,
       ...(row.description ? { description: row.description } : {}),
@@ -110,7 +119,7 @@ export class PrismaIamRepository extends IamRepository {
     return (
       (await this.prisma.user.count({
         where: {
-          id,
+          id: toDatabaseId(id),
           userType: USER_TYPE.STAFF,
           status: { not: USER_STATUS.INACTIVE },
         },
@@ -135,10 +144,10 @@ export class PrismaIamRepository extends IamRepository {
     return (
       (await this.prisma.userRoleAssignment.count({
         where: {
-          userId,
-          roleId,
+          userId: toDatabaseId(userId),
+          roleId: toDatabaseId(roleId),
           scopeType,
-          branchId: branchId ?? null,
+          branchId: toOptionalDatabaseId(branchId) ?? null,
           status: ROLE_ASSIGNMENT_STATUS.ACTIVE,
         },
       })) > 0
@@ -146,24 +155,23 @@ export class PrismaIamRepository extends IamRepository {
   }
 
   async saveAssignmentAndIncrementPermissionVersion(
-    assignment: UserRoleAssignment,
+    assignment: NewUserRoleAssignment,
     context: MutationContext,
   ): Promise<UserRoleAssignment> {
     return this.prisma.$transaction(async (transaction) => {
-      await transaction.userRoleAssignment.create({
+      const created = await transaction.userRoleAssignment.create({
         data: {
-          id: assignment.id,
-          userId: assignment.userId,
-          roleId: assignment.roleId,
+          userId: toDatabaseId(assignment.userId),
+          roleId: toDatabaseId(assignment.roleId),
           scopeType: assignment.scopeType,
-          branchId: assignment.branchId,
+          branchId: toOptionalDatabaseId(assignment.branchId),
           status: assignment.status,
           validFrom: new Date(assignment.validFrom),
-          assignedBy: context.actorUserId,
+          assignedBy: toDatabaseId(context.actorUserId),
         },
       });
       await transaction.user.update({
-        where: { id: assignment.userId },
+        where: { id: toDatabaseId(assignment.userId) },
         data: { permissionVersion: { increment: 1 } },
       });
       await this.audit.write(
@@ -174,12 +182,12 @@ export class PrismaIamRepository extends IamRepository {
           actorUserId: context.actorUserId,
           action: IAM_AUDIT_ACTION.ASSIGNMENT_CREATE,
           entityType: 'USER_ROLE_ASSIGNMENT',
-          entityId: assignment.id,
+          entityId: toEntityId(created.id),
           after: assignment as unknown as Prisma.InputJsonValue,
         },
         transaction,
       );
-      return assignment;
+      return { ...assignment, id: toEntityId(created.id) };
     });
   }
 
@@ -193,8 +201,8 @@ export class PrismaIamRepository extends IamRepository {
       const now = new Date();
       const updated = await transaction.userRoleAssignment.updateMany({
         where: {
-          id: assignmentId,
-          userId,
+          id: toDatabaseId(assignmentId),
+          userId: toDatabaseId(userId),
           status: ROLE_ASSIGNMENT_STATUS.ACTIVE,
           validTo: null,
         },
@@ -206,7 +214,7 @@ export class PrismaIamRepository extends IamRepository {
       });
       if (updated.count !== 1) return false;
       await transaction.user.update({
-        where: { id: userId },
+        where: { id: toDatabaseId(userId) },
         data: { permissionVersion: { increment: 1 } },
       });
       await this.audit.write(
@@ -240,7 +248,6 @@ export class PrismaIamRepository extends IamRepository {
     return this.prisma.$transaction(async (transaction) => {
       const user = await transaction.user.create({
         data: {
-          id: input.id,
           userType: USER_TYPE.STAFF,
           email: input.email,
           normalizedEmail: input.normalizedEmail,
@@ -253,18 +260,17 @@ export class PrismaIamRepository extends IamRepository {
       });
       const assignment = await transaction.userRoleAssignment.create({
         data: {
-          id: input.assignmentId,
-          userId: input.id,
-          roleId: input.role.id,
+          userId: user.id,
+          roleId: toDatabaseId(input.role.id),
           scopeType: ScopeType.BRANCH,
-          branchId: input.branchId,
+          branchId: toDatabaseId(input.branchId),
           status: ROLE_ASSIGNMENT_STATUS.ACTIVE,
           validFrom: new Date(),
-          assignedBy: context.actorUserId,
+          assignedBy: toDatabaseId(context.actorUserId),
         },
       });
       const result: UserWithAssignments = {
-        id: user.id,
+        id: toEntityId(user.id),
         displayName: user.displayName,
         maskedEmail: maskEmail(user.email),
         userType: USER_TYPE.STAFF,
@@ -273,8 +279,8 @@ export class PrismaIamRepository extends IamRepository {
         failedLoginAttempts: 0,
         mustChangePassword: true,
         assignments: [{
-          id: assignment.id,
-          userId: user.id,
+          id: toEntityId(assignment.id),
+          userId: toEntityId(user.id),
           roleId: input.role.id,
           roleCode: input.role.code,
           scopeType: ScopeType.BRANCH,
@@ -291,7 +297,7 @@ export class PrismaIamRepository extends IamRepository {
           actorUserId: context.actorUserId,
           action: IAM_AUDIT_ACTION.USER_CREATE,
           entityType: 'USER',
-          entityId: user.id,
+          entityId: toEntityId(user.id),
           after: {
             displayName: result.displayName,
             maskedEmail: result.maskedEmail,
@@ -313,7 +319,7 @@ export class PrismaIamRepository extends IamRepository {
     const revokedSessionCount = await this.prisma.$transaction(async (transaction) => {
       const updated = await transaction.user.updateMany({
         where: {
-          id: userId,
+          id: toDatabaseId(userId),
           userType: USER_TYPE.STAFF,
           status: USER_STATUS.ACTIVE,
         },
@@ -328,7 +334,7 @@ export class PrismaIamRepository extends IamRepository {
       if (updated.count !== 1) return undefined;
 
       const revoked = await transaction.authSession.updateMany({
-        where: { userId, revokedAt: null },
+        where: { userId: toDatabaseId(userId), revokedAt: null },
         data: { revokedAt: new Date(), revokeReason: 'ACCOUNT_LOCKED' },
       });
       await this.audit.write(
@@ -365,7 +371,7 @@ export class PrismaIamRepository extends IamRepository {
     const unlocked = await this.prisma.$transaction(async (transaction) => {
       const updated = await transaction.user.updateMany({
         where: {
-          id: userId,
+          id: toDatabaseId(userId),
           userType: USER_TYPE.STAFF,
           status: USER_STATUS.LOCKED,
         },

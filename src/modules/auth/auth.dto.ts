@@ -8,6 +8,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { ENTITY_ID_OPENAPI } from '../../common/identifiers/entity-id';
 
 export class LoginDto {
   @ApiProperty({
@@ -120,11 +121,11 @@ export class ChangePasswordDto {
 
 export class AuthScopeDto {
   @ApiProperty({ enum: ['GLOBAL', 'BRANCH'] }) type: 'GLOBAL' | 'BRANCH';
-  @ApiProperty({ required: false, format: 'uuid' }) branchId?: string;
+  @ApiProperty({ required: false, ...ENTITY_ID_OPENAPI }) branchId?: string;
 }
 
 export class CurrentUserDto {
-  @ApiProperty({ format: 'uuid' }) userId: string;
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) userId: string;
   @ApiProperty() displayName: string;
   @ApiProperty({ type: [String] }) permissions: string[];
   @ApiProperty({ type: [AuthScopeDto] }) scopes: AuthScopeDto[];

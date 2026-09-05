@@ -13,11 +13,11 @@ describe('Wave 1 PostgreSQL foundation', () => {
     const [branches, warehouses, users, roles, assignments, retiredActiveRoles, retiredActiveAssignments] = await Promise.all([
       prisma.branch.count({ where: { code: 'CN-HCM-01' } }),
       prisma.warehouse.count({ where: { code: 'KHO-HCM-01' } }),
-      prisma.user.count({ where: { id: '00000000-0000-7000-8000-000000000010' } }),
+      prisma.user.count({ where: { normalizedEmail: 'bootstrap-admin@example.invalid' } }),
       prisma.role.count({ where: { status: 'ACTIVE' } }),
       prisma.userRoleAssignment.count({
         where: {
-          userId: '00000000-0000-7000-8000-000000000010',
+          user: { normalizedEmail: 'bootstrap-admin@example.invalid' },
           role: { code: 'OWNER' },
           status: 'ACTIVE',
         },
@@ -71,7 +71,6 @@ describe('Wave 1 PostgreSQL foundation', () => {
     await expect(
       prisma.userRoleAssignment.create({
         data: {
-          id: uuidv7(),
           userId: user.id,
           roleId: role.id,
           scopeType: 'GLOBAL',
@@ -88,7 +87,6 @@ describe('Wave 1 PostgreSQL foundation', () => {
       prisma.$transaction(async (transaction) => {
         await transaction.user.create({
           data: {
-            id: uuidv7(),
             userType: 'STAFF',
             email: normalizedEmail,
             normalizedEmail,
@@ -98,7 +96,6 @@ describe('Wave 1 PostgreSQL foundation', () => {
         });
         await transaction.user.create({
           data: {
-            id: uuidv7(),
             userType: 'STAFF',
             email: normalizedEmail,
             normalizedEmail,
@@ -116,7 +113,6 @@ describe('Wave 1 PostgreSQL foundation', () => {
       prisma.$transaction(async (transaction) => {
         await transaction.auditLog.create({
           data: {
-            id: uuidv7(),
             requestId,
             sequenceNo: 1,
             actorType: 'SYSTEM',
@@ -138,7 +134,6 @@ describe('Wave 1 PostgreSQL foundation', () => {
     const requestId = `immutable-${operation.toLowerCase()}-${uuidv7()}`;
     await prisma.auditLog.create({
       data: {
-        id: uuidv7(),
         requestId,
         sequenceNo: 1,
         actorType: 'SYSTEM',
@@ -158,7 +153,6 @@ describe('Wave 1 PostgreSQL foundation', () => {
     await expect(
       prisma.auditLog.create({
         data: {
-          id: uuidv7(),
           requestId: `actor-${uuidv7()}`,
           sequenceNo: 1,
           actorType: 'USER',
@@ -204,7 +198,7 @@ describe('Wave 1 PostgreSQL foundation', () => {
             actorType: 'USER',
             action: 'branch.update',
             entityType: 'BRANCH',
-            entityId: branch.id,
+            entityId: branch.id.toString(),
           },
           transaction,
         );

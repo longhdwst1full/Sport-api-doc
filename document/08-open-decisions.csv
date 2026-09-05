@@ -1,0 +1,44 @@
+id,topic,proposed_decision,why_it_matters,owner,blocking_wave,status
+D01,Điểm trừ tồn,Trừ on_hand khi SHIPPED và giữ reserved từ checkout đến ship,Quyết định ledger và available stock,Business+Tech,3,PROPOSED
+D02,Reservation checkout,30 phút,Tác động conversion và tồn bị giữ,Business,3,PROPOSED
+D03,Reservation flash sale,10 phút,Tác động quota và fairness,Business,7,PROPOSED
+D04,Late payment,NEED_REVIEW không tự phục hồi reservation,Tránh oversell và sai đối soát,Finance+Ops,5,PROPOSED
+D05,Order completion,Auto sau DELIVERED cộng hold window 3 ngày hoặc admin confirm,Chốt thời điểm ghi doanh thu,Finance+Ops,5,PROPOSED
+D06,Shipping provider,V1 dùng rate table nội bộ và tracking nhập tay/sandbox,Quyết định tích hợp và timeline,Business,4,PROPOSED
+D07,Payment integration,V1 chuyển khoản thủ công hoặc sandbox QR không production gateway,Quyết định webhook và compliance,Business+Finance,5,PROPOSED
+D08,Guest order access,Order number cộng signed token gửi email/SMS; OTP cho thao tác nhạy cảm,Chống IDOR nhưng vẫn hỗ trợ guest,Security+Product,4,PROPOSED
+D09,Return scope,V1 trả theo order item/quantity; combo phải trả nguyên combo; refund được partial,Đúng trải nghiệm mua hàng nhưng vẫn giữ combo nhất quán,Product+Ops,7,DECIDED
+D10,Return window,Mặc định 7 ngày và version theo category/policy,Ảnh hưởng UX/pháp lý/chi phí,Business+Legal,7,PROPOSED
+D11,Approval stock threshold,Cần duyệt khi giảm tồn vượt 10 đơn vị hoặc 5 triệu VND cost,Maker-checker cần rule cụ thể,Ops+Finance,3,PROPOSED
+D12,Approval price threshold,"V1 không maker-checker; cấm retroactive; giảm quá 20% hiển thị cảnh báo, bắt buộc reason và OWNER xác nhận",Tránh sai giá nhưng không tăng workflow phê duyệt trong V1,Business+Tech,1,DECIDED
+D13,Warehouse cardinality,V1 đúng một warehouse mỗi branch; branch_id unique,Đơn giản hóa routing và kho vận V1,Ops,1,DECIDED
+D14,Price scope,Một giá VAT-included toàn hệ thống theo SKU; shipping khác theo vùng,Giảm price matrix và đồng bộ storefront,Business,1,DECIDED
+D15,Tax,Giá niêm yết và shipping đã gồm VAT; tax_total chỉ để báo cáo không cộng thêm,Khách thanh toán đúng giá hiển thị,Finance+Legal,4,DECIDED
+D16,Invoice,V1 xuất chứng từ/receipt cơ bản; e-invoice integration để phase sau,Ảnh hưởng compliance,Finance+Legal,5,PROPOSED
+D17,Customer identity,Guest vẫn tạo customer nội bộ user_id null bằng normalized phone; đăng ký sau mới link user sau xác minh,Lưu lịch sử mua mà không bắt tạo tài khoản,Product+Security,1,DECIDED
+D18,PWA offline,Offline app shell và catalog cache; không offline checkout,Tránh tạo đơn từ dữ liệu tồn cũ,Product+Tech,8,PROPOSED
+D19,Retention giao dịch,10 năm cho order/payment/inventory/audit tài chính,Cần đúng quy định và chi phí lưu trữ,Legal+Finance,0,PROPOSED
+D20,RPO RTO,RPO 15 phút và RTO 4 giờ,Quyết định backup/infra cost,Business+Tech,0,PROPOSED
+D21,Flash sale release,V1 core flash sale phát hành sau luồng bán thường,Giảm rủi ro concurrency khi go-live,Product,7,PROPOSED
+D22,Deletion lifecycle,10 model P0 implemented không dùng deleted_at; master dùng status INACTIVE/ARCHIVED; ledger/transaction reverse hoặc cancel,Bảo toàn audit/FK và tránh hai nguồn trạng thái; P1 review khi triển khai,Tech,0,DECIDED
+D23,Primary keys,"SUPERSEDED bởi D43; trước đây dùng UUIDv7 app-generated",Yêu cầu mới chuyển toàn hệ thống sang database-generated identity,Tech,0,SUPERSEDED
+D24,Search,V1 PostgreSQL FTS/trigram; chỉ thêm OpenSearch khi đo thấy cần,Giảm vận hành hạ tầng,Tech,2,PROPOSED
+D25,Serial và IMEI,V1 không quản lý từng đơn vị; chỉ quản lý số lượng theo SKU/kho,Giảm phạm vi kho và thao tác scan; xem xét lại ở V2,Product+Ops,3,DECIDED
+D26,Procurement,V1 chưa có supplier purchase order goods receipt; nhập tồn qua adjustment có loại và chứng từ tham chiếu,Ưu tiên hoàn thiện luồng bán và tồn cơ bản; procurement để V2,Product+Ops,3,DECIDED
+D27,Media provider,Chọn Cloudinary cho V1 qua adapter object-storage provider-agnostic; upload trực tiếp bằng chữ ký ngắn hạn và finalize xác minh asset,Không khóa domain vào nhà cung cấp nhưng deployment V1 có adapter cụ thể và secret chỉ nằm ở API,Product+Tech,2,DECIDED
+D28,Review comment depth,V1 chỉ một cấp phản hồi dưới review,Giảm moderation và truy vấn cây comment,Product,7,DECIDED
+D29,CMS scope,V1 có page post content category tag và post-product relation; chưa có comment bài viết,Đủ giới thiệu tin tức hướng dẫn SEO mà không biến thành social platform,Product+Marketing,7,DECIDED
+D30,Payment frequency,Một order chỉ thanh toán đủ một lần; thiếu thừa hoặc lặp chuyển NEED_REVIEW,Đơn giản hóa đối soát và không hỗ trợ split payment,Finance+Product,5,DECIDED
+D31,Delivery failure,Hàng giao thất bại về đúng warehouse xuất; bắt buộc reason và inspection trước restock,Bảo toàn lịch sử và không nhập lại hàng hỏng vào sellable stock,Ops,5,DECIDED
+D32,Combo,V1 combo ảo cố định không nested; reserve/ship component; return nguyên combo,Đủ bán bộ sản phẩm nhưng giữ tồn chính xác,Product+Ops,4,DECIDED
+D33,ORM và migration,Prisma 6.19 cho client và migration; dùng SQL migration bổ sung cho CHECK partial index trigger hoặc locking đặc thù PostgreSQL,Chốt database foundation nhưng chưa khóa schema khi D19 D20 D22 D23 còn mở,Tech,0,DECIDED
+D34,COD trong V1,Đã có provider boundary nhưng chưa kích hoạt endpoint; cần chốt state machine COD trước khi cho phép ship khi payment chưa success,Tránh mâu thuẫn rule ship sau payment success và đối soát một lần,Product+Finance+Ops,4,PROPOSED
+D35,Staff bootstrap credential,"Chỉ Admin gốc tạo account cấp dưới bằng email, gán BRANCH_MANAGER hoặc STAFF theo branch và đặt mật khẩu mặc định Aa@123456; không gửi invite link",Đủ vận hành V1; account mới hoặc unlock bắt buộc đổi mật khẩu,Product+Security,1,DECIDED
+D42,Single root Admin,"Hệ thống có đúng một OWNER bootstrap ACTIVE là bootstrap-admin@example.invalid / Aa@123456; OWNER không thể tạo/gán/thu hồi/khóa; chỉ Admin gốc tạo, quản lý và phân quyền BRANCH_MANAGER hoặc STAFF theo branch; sai lần 5 trả ACCOUNT_LOCKED; login thành công reset attempts; seed fail-fast nếu phát hiện OWNER active khác",Giữ root-of-trust đơn giản cho V1 và ngăn phân quyền leo thang từ quản lý chi nhánh,Product+Security,1,DECIDED
+D43,Primary key migration,"Toàn bộ entity mới dùng BIGINT IDENTITY do PostgreSQL sinh; API trả chuỗi số; 21 bảng vật lý hiện hữu giữ UUID cũ ở legacy_id UNIQUE nullable; FK đổi sang BIGINT; migrate tự động trước startup và fail-fast",Giảm code sinh ID và thống nhất với convention Java BE nhưng vẫn bảo toàn dữ liệu/correlation lịch sử,Tech,0,DECIDED
+D36,Catalog archive lifecycle,"Product hoặc combo archive ẩn storefront ngay và giữ snapshot đơn lịch sử; reactivate quay về DRAFT; variant dùng ACTIVE/INACTIVE và optimistic version",Không hard delete và buộc kiểm tra lại giá SKU trước khi publish lại,Product+Tech,1,DECIDED
+D37,Category move,"Sprint 1 không cho đổi parent_id sau khi tạo; di chuyển subtree và cycle/path/depth update chuyển sang P1",Giảm rủi ro transaction cây trong V1; vẫn cho sửa metadata và activate/deactivate,Product+Tech,1,DECIDED
+D38,Customer registration identity,"Public register chỉ tạo CUSTOMER ACTIVE; login nhận email/phone; email lowercase; SĐT Việt Nam lưu E.164; identifier và mọi password input trim khoảng trắng hai đầu trước validation/hash/verify; tạm bỏ verification trong V1 dev",Chuẩn hóa đồng nhất register/login/change-password và tránh credential lệch do khoảng trắng vô ý,Product+Security+Tech,1,DECIDED
+D39,Product sellability,"Product có product_type STANDARD hoặc BUNDLE và không trộn hai loại SKU; bundle nằm theo từng variant; storefront chỉ trả variant ACTIVE có giá effective, combo ACTIVE có item và mọi component ACTIVE thuộc product chưa ARCHIVED",Loại bỏ SKU ngừng bán khỏi response/minPrice và tránh combo bán được khi linh kiện không hợp lệ,Product+Tech,1,DECIDED
+D40,Price replacement,"Giá REGULAR V1 phải lớn hơn 0; thay giá là một command atomic đóng open window hiện tại rồi tạo window mới, kiểm tra expected price id/version",Không dùng hai request close/create gây khoảng trống hoặc last-write-wins; bảo toàn lịch sử giá VAT-included,Product+Finance+Tech,1,DECIDED
+D41,Brand and category inactive semantics,"Brand INACTIVE không tự ẩn Product đã PUBLISHED nhưng không được chọn cho liên kết mới; Category INACTIVE không hiện trong navigation/filter storefront và không tự archive Product",Tách lifecycle master-data khỏi quyết định ngừng bán Product,Product+Tech,1,DECIDED

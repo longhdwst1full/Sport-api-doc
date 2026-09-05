@@ -1,6 +1,6 @@
 import { ServiceUnavailableException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { v7 as uuidv7 } from 'uuid';
+import { toEntityId, toOptionalDatabaseId } from '../../common/identifiers/entity-id';
 import { PrismaService } from '../../database/prisma.service';
 import { WriteAuditLogInput, WrittenAuditLog } from './audit.types';
 
@@ -25,11 +25,10 @@ export class PrismaAuditWriter extends AuditWriter {
     }
     const result = await (transaction ?? this.prisma).auditLog.create({
       data: {
-        id: uuidv7(),
         requestId: input.requestId,
         sequenceNo: input.sequenceNo,
         actorType: input.actorType,
-        actorUserId: input.actorUserId,
+        actorUserId: toOptionalDatabaseId(input.actorUserId),
         action: input.action,
         entityType: input.entityType,
         entityId: input.entityId,
@@ -41,6 +40,6 @@ export class PrismaAuditWriter extends AuditWriter {
       },
       select: { id: true, createdAt: true },
     });
-    return { id: result.id, createdAt: result.createdAt.toISOString() };
+    return { id: toEntityId(result.id), createdAt: result.createdAt.toISOString() };
   }
 }

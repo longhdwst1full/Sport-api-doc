@@ -13,7 +13,8 @@ datasource db {
 // dependency wave is verified from an empty PostgreSQL database.
 
 model Branch {
-  id          String   @id @db.Uuid
+  id          BigInt   @id @default(autoincrement())
+  legacyId    String?  @unique @map("legacy_id") @db.Uuid
   code        String   @unique @db.VarChar(32)
   name        String   @db.VarChar(255)
   status      String   @default("ACTIVE") @db.VarChar(24)
@@ -23,9 +24,9 @@ model Branch {
   timezone    String   @default("Asia/Ho_Chi_Minh") @db.VarChar(64)
   version     BigInt   @default(0)
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  createdBy   String?  @map("created_by") @db.Uuid
+  createdBy   BigInt?  @map("created_by")
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-  updatedBy   String?  @map("updated_by") @db.Uuid
+  updatedBy   BigInt?  @map("updated_by")
 
   warehouses     Warehouse[]
   roleAssignments UserRoleAssignment[]
@@ -34,17 +35,18 @@ model Branch {
 }
 
 model Warehouse {
-  id        String   @id @db.Uuid
-  branchId  String   @unique @map("branch_id") @db.Uuid
+  id        BigInt   @id @default(autoincrement())
+  legacyId  String?  @unique @map("legacy_id") @db.Uuid
+  branchId  BigInt   @unique @map("branch_id")
   code      String   @unique @db.VarChar(32)
   name      String   @db.VarChar(255)
   status    String   @default("ACTIVE") @db.VarChar(24)
   isPrimary Boolean  @default(true) @map("is_primary")
   version   BigInt   @default(0)
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  createdBy String?  @map("created_by") @db.Uuid
+  createdBy BigInt?  @map("created_by")
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedBy BigInt?  @map("updated_by")
 
   branch          Branch               @relation(fields: [branchId], references: [id], onDelete: Restrict)
   roleAssignments UserRoleAssignment[]
@@ -56,7 +58,8 @@ model Warehouse {
 }
 
 model User {
-  id                String   @id @db.Uuid
+  id                BigInt   @id @default(autoincrement())
+  legacyId          String?  @unique @map("legacy_id") @db.Uuid
   userType          String   @map("user_type") @db.VarChar(24)
   email             String?  @db.VarChar(255)
   normalizedEmail   String?  @map("normalized_email") @db.VarChar(255)
@@ -96,10 +99,11 @@ model User {
 }
 
 model AuthSession {
-  id                String   @id @db.Uuid
-  userId            String   @map("user_id") @db.Uuid
+  id                BigInt   @id @default(autoincrement())
+  legacyId          String?  @unique @map("legacy_id") @db.Uuid
+  userId            BigInt   @map("user_id")
   refreshTokenHash  String   @unique @map("refresh_token_hash") @db.VarChar(255)
-  rotatedFromId     String?  @unique @map("rotated_from_id") @db.Uuid
+  rotatedFromId     BigInt?  @unique @map("rotated_from_id")
   deviceId          String?  @map("device_id") @db.VarChar(128)
   deviceInfo        Json?    @map("device_info") @db.JsonB
   ipHash            String?  @map("ip_hash") @db.VarChar(128)
@@ -120,7 +124,8 @@ model AuthSession {
 }
 
 model Role {
-  id          String   @id @db.Uuid
+  id          BigInt   @id @default(autoincrement())
+  legacyId    String?  @unique @map("legacy_id") @db.Uuid
   code        String   @unique @db.VarChar(100)
   name        String   @db.VarChar(255)
   description String?
@@ -128,9 +133,9 @@ model Role {
   isSystem    Boolean  @default(false) @map("is_system")
   version     BigInt   @default(0)
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  createdBy   String?  @map("created_by") @db.Uuid
+  createdBy   BigInt?  @map("created_by")
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-  updatedBy   String?  @map("updated_by") @db.Uuid
+  updatedBy   BigInt?  @map("updated_by")
 
   permissions RolePermission[]
   assignments UserRoleAssignment[]
@@ -139,7 +144,8 @@ model Role {
 }
 
 model Permission {
-  id          String   @id @db.Uuid
+  id          BigInt   @id @default(autoincrement())
+  legacyId    String?  @unique @map("legacy_id") @db.Uuid
   code        String   @unique @db.VarChar(150)
   module      String   @db.VarChar(64)
   action      String   @db.VarChar(64)
@@ -153,9 +159,9 @@ model Permission {
 }
 
 model RolePermission {
-  roleId       String   @map("role_id") @db.Uuid
-  permissionId String   @map("permission_id") @db.Uuid
-  grantedBy    String?  @map("granted_by") @db.Uuid
+  roleId       BigInt   @map("role_id")
+  permissionId BigInt   @map("permission_id")
+  grantedBy    BigInt?  @map("granted_by")
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
@@ -169,16 +175,17 @@ model RolePermission {
 }
 
 model UserRoleAssignment {
-  id          String   @id @db.Uuid
-  userId      String   @map("user_id") @db.Uuid
-  roleId      String   @map("role_id") @db.Uuid
+  id          BigInt   @id @default(autoincrement())
+  legacyId    String?  @unique @map("legacy_id") @db.Uuid
+  userId      BigInt   @map("user_id")
+  roleId      BigInt   @map("role_id")
   scopeType   String   @map("scope_type") @db.VarChar(24)
-  branchId    String?  @map("branch_id") @db.Uuid
-  warehouseId String?  @map("warehouse_id") @db.Uuid
+  branchId    BigInt?  @map("branch_id")
+  warehouseId BigInt?  @map("warehouse_id")
   validFrom   DateTime @default(now()) @map("valid_from") @db.Timestamptz(6)
   validTo     DateTime? @map("valid_to") @db.Timestamptz(6)
   status      String   @default("ACTIVE") @db.VarChar(24)
-  assignedBy  String   @map("assigned_by") @db.Uuid
+  assignedBy  BigInt   @map("assigned_by")
   version     BigInt   @default(0)
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -199,14 +206,15 @@ model UserRoleAssignment {
 }
 
 model AuditLog {
-  id            String   @id @db.Uuid
+  id            BigInt   @id @default(autoincrement())
+  legacyId      String?  @unique @map("legacy_id") @db.Uuid
   requestId     String   @map("request_id") @db.VarChar(100)
   sequenceNo    Int      @map("sequence_no")
   actorType     String   @map("actor_type") @db.VarChar(24)
-  actorUserId   String?  @map("actor_user_id") @db.Uuid
+  actorUserId   BigInt?  @map("actor_user_id")
   action        String   @db.VarChar(150)
   entityType    String   @map("entity_type") @db.VarChar(100)
-  entityId      String?  @map("entity_id") @db.Uuid
+  entityId      String?  @map("entity_id")
   beforeJson    Json?    @map("before_json") @db.JsonB
   afterJson     Json?    @map("after_json") @db.JsonB
   reason        String?
@@ -225,7 +233,8 @@ model AuditLog {
 }
 
 model MediaAsset {
-  id                String    @id @db.Uuid
+  id                BigInt    @id @default(autoincrement())
+  legacyId          String?   @unique @map("legacy_id") @db.Uuid
   provider          String    @db.VarChar(32)
   providerAssetId   String    @map("provider_asset_id") @db.VarChar(255)
   publicId          String    @map("public_id") @db.VarChar(500)
@@ -242,7 +251,7 @@ model MediaAsset {
   altText           String?   @map("alt_text") @db.VarChar(500)
   metadataJson      Json?     @map("metadata_json") @db.JsonB
   status            String    @default("ACTIVE") @db.VarChar(24)
-  uploadedBy        String?   @map("uploaded_by") @db.Uuid
+  uploadedBy        BigInt?   @map("uploaded_by")
   providerCreatedAt DateTime? @map("provider_created_at") @db.Timestamptz(6)
   version           BigInt    @default(0)
   createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -260,12 +269,13 @@ model MediaAsset {
 }
 
 model Brand {
-  id          String    @id @db.Uuid
+  id          BigInt    @id @default(autoincrement())
+  legacyId    String?   @unique @map("legacy_id") @db.Uuid
   code        String    @unique @db.VarChar(32)
   name        String    @db.VarChar(255)
   slug        String    @unique @db.VarChar(255)
   description String?
-  logoAssetId String?   @map("logo_asset_id") @db.Uuid
+  logoAssetId BigInt?   @map("logo_asset_id")
   status      String    @default("ACTIVE") @db.VarChar(24)
   seoJson     Json?     @map("seo_json") @db.JsonB
   version     BigInt    @default(0)
@@ -281,15 +291,16 @@ model Brand {
 }
 
 model Category {
-  id           String    @id @db.Uuid
-  parentId     String?   @map("parent_id") @db.Uuid
+  id           BigInt    @id @default(autoincrement())
+  legacyId     String?   @unique @map("legacy_id") @db.Uuid
+  parentId     BigInt?   @map("parent_id")
   code         String    @unique @db.VarChar(32)
   name         String    @db.VarChar(255)
   slug         String    @unique @db.VarChar(255)
   path         String    @db.VarChar(1000)
   depth        Int       @default(0)
   description  String?
-  imageAssetId String?   @map("image_asset_id") @db.Uuid
+  imageAssetId BigInt?   @map("image_asset_id")
   sortOrder    Int       @default(0) @map("sort_order")
   status       String    @default("ACTIVE") @db.VarChar(24)
   seoJson      Json?     @map("seo_json") @db.JsonB
@@ -309,8 +320,9 @@ model Category {
 }
 
 model Product {
-  id               String    @id @db.Uuid
-  brandId          String?   @map("brand_id") @db.Uuid
+  id               BigInt    @id @default(autoincrement())
+  legacyId         String?   @unique @map("legacy_id") @db.Uuid
+  brandId          BigInt?   @map("brand_id")
   productType      String    @default("STANDARD") @map("product_type") @db.VarChar(24)
   productNo        String    @unique @map("product_no") @db.VarChar(32)
   name             String    @db.VarChar(255)
@@ -322,9 +334,9 @@ model Product {
   seoJson          Json?     @map("seo_json") @db.JsonB
   version          BigInt    @default(0)
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  createdBy        String?   @map("created_by") @db.Uuid
+  createdBy        BigInt?   @map("created_by")
   updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
-  updatedBy        String?   @map("updated_by") @db.Uuid
+  updatedBy        BigInt?   @map("updated_by")
 
   brand      Brand?            @relation(fields: [brandId], references: [id], onDelete: Restrict)
   creator    User?             @relation("ProductCreator", fields: [createdBy], references: [id], onDelete: Restrict)
@@ -340,8 +352,8 @@ model Product {
 }
 
 model ProductCategory {
-  productId  String  @map("product_id") @db.Uuid
-  categoryId String  @map("category_id") @db.Uuid
+  productId  BigInt  @map("product_id")
+  categoryId BigInt  @map("category_id")
   isPrimary  Boolean @default(false) @map("is_primary")
   sortOrder  Int     @default(0) @map("sort_order")
 
@@ -354,8 +366,9 @@ model ProductCategory {
 }
 
 model ProductVariant {
-  id          String    @id @db.Uuid
-  productId   String    @map("product_id") @db.Uuid
+  id          BigInt    @id @default(autoincrement())
+  legacyId    String?   @unique @map("legacy_id") @db.Uuid
+  productId   BigInt    @map("product_id")
   sku         String    @unique @db.VarChar(64)
   barcode     String?   @db.VarChar(64)
   name        String    @db.VarChar(255)
@@ -382,15 +395,16 @@ model ProductVariant {
 }
 
 model ProductBundle {
-  id              String   @id @db.Uuid
-  bundleVariantId String   @unique @map("bundle_variant_id") @db.Uuid
+  id              BigInt   @id @default(autoincrement())
+  legacyId        String?  @unique @map("legacy_id") @db.Uuid
+  bundleVariantId BigInt   @unique @map("bundle_variant_id")
   bundleType      String   @default("FIXED_VIRTUAL") @map("bundle_type") @db.VarChar(24)
   status          String   @default("ACTIVE") @db.VarChar(24)
   version         BigInt   @default(0)
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  createdBy       String   @map("created_by") @db.Uuid
+  createdBy       BigInt   @map("created_by")
   updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-  updatedBy       String   @map("updated_by") @db.Uuid
+  updatedBy       BigInt   @map("updated_by")
 
   bundleVariant ProductVariant @relation("BundleVariant", fields: [bundleVariantId], references: [id], onDelete: Restrict)
   creator       User           @relation("BundleCreator", fields: [createdBy], references: [id], onDelete: Restrict)
@@ -401,9 +415,10 @@ model ProductBundle {
 }
 
 model BundleItem {
-  id                 String @id @db.Uuid
-  productBundleId    String @map("product_bundle_id") @db.Uuid
-  componentVariantId String @map("component_variant_id") @db.Uuid
+  id                 BigInt @id @default(autoincrement())
+  legacyId           String? @unique @map("legacy_id") @db.Uuid
+  productBundleId    BigInt @map("product_bundle_id")
+  componentVariantId BigInt @map("component_variant_id")
   quantity           Int
   sortOrder          Int    @default(0) @map("sort_order")
 
@@ -416,10 +431,11 @@ model BundleItem {
 }
 
 model ProductMedia {
-  id           String    @id @db.Uuid
-  productId    String    @map("product_id") @db.Uuid
-  variantId    String?   @map("variant_id") @db.Uuid
-  mediaAssetId String    @map("media_asset_id") @db.Uuid
+  id           BigInt    @id @default(autoincrement())
+  legacyId     String?   @unique @map("legacy_id") @db.Uuid
+  productId    BigInt    @map("product_id")
+  variantId    BigInt?   @map("variant_id")
+  mediaAssetId BigInt    @map("media_asset_id")
   mediaType    String    @default("IMAGE") @map("media_type") @db.VarChar(24)
   altText      String?   @map("alt_text") @db.VarChar(500)
   sortOrder    Int       @default(0) @map("sort_order")
@@ -438,8 +454,9 @@ model ProductMedia {
 }
 
 model ProductPrice {
-  id               String    @id @db.Uuid
-  productVariantId String    @map("product_variant_id") @db.Uuid
+  id               BigInt    @id @default(autoincrement())
+  legacyId         String?   @unique @map("legacy_id") @db.Uuid
+  productVariantId BigInt    @map("product_variant_id")
   priceType        String    @default("REGULAR") @map("price_type") @db.VarChar(24)
   channel          String    @default("ONLINE") @db.VarChar(24)
   currencyCode     String    @default("VND") @map("currency_code") @db.Char(3)
@@ -449,9 +466,9 @@ model ProductPrice {
   status           String    @default("SCHEDULED") @db.VarChar(24)
   version          BigInt    @default(0)
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  createdBy        String    @map("created_by") @db.Uuid
+  createdBy        BigInt    @map("created_by")
   updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
-  updatedBy        String    @map("updated_by") @db.Uuid
+  updatedBy        BigInt    @map("updated_by")
 
   productVariant ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Restrict)
   creator        User           @relation("PriceCreator", fields: [createdBy], references: [id], onDelete: Restrict)
@@ -462,9 +479,10 @@ model ProductPrice {
 }
 
 model InventoryBalance {
-  id               String   @id @db.Uuid
-  warehouseId      String   @map("warehouse_id") @db.Uuid
-  productVariantId String   @map("product_variant_id") @db.Uuid
+  id               BigInt   @id @default(autoincrement())
+  legacyId         String?  @unique @map("legacy_id") @db.Uuid
+  warehouseId      BigInt   @map("warehouse_id")
+  productVariantId BigInt   @map("product_variant_id")
   onHand           Int      @default(0) @map("on_hand")
   reserved         Int      @default(0)
   reorderPoint     Int      @default(0) @map("reorder_point")
@@ -480,19 +498,20 @@ model InventoryBalance {
 }
 
 model InventoryMovement {
-  id               String   @id @db.Uuid
-  warehouseId      String   @map("warehouse_id") @db.Uuid
-  productVariantId String   @map("product_variant_id") @db.Uuid
+  id               BigInt   @id @default(autoincrement())
+  legacyId         String?  @unique @map("legacy_id") @db.Uuid
+  warehouseId      BigInt   @map("warehouse_id")
+  productVariantId BigInt   @map("product_variant_id")
   movementType     String   @map("movement_type") @db.VarChar(40)
   quantityDelta    Int      @map("quantity_delta")
   balanceAfter     Int      @map("balance_after")
   referenceType    String   @map("reference_type") @db.VarChar(64)
-  referenceId      String   @map("reference_id") @db.Uuid
+  referenceId      String   @map("reference_id")
   idempotencyKey   String   @unique @map("idempotency_key") @db.VarChar(200)
   reason           String
   occurredAt       DateTime @map("occurred_at") @db.Timestamptz(6)
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  createdBy        String   @map("created_by") @db.Uuid
+  createdBy        BigInt   @map("created_by")
 
   warehouse      Warehouse      @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
   productVariant ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Restrict)
@@ -504,9 +523,10 @@ model InventoryMovement {
 }
 
 model StockAdjustment {
-  id               String   @id @db.Uuid
+  id               BigInt   @id @default(autoincrement())
+  legacyId         String?  @unique @map("legacy_id") @db.Uuid
   adjustmentNo     String   @unique @map("adjustment_no") @db.VarChar(32)
-  warehouseId      String   @map("warehouse_id") @db.Uuid
+  warehouseId      BigInt   @map("warehouse_id")
   adjustmentType   String   @default("CORRECTION") @map("adjustment_type") @db.VarChar(32)
   reasonCode       String   @default("MANUAL") @map("reason_code") @db.VarChar(64)
   reason           String
@@ -514,7 +534,7 @@ model StockAdjustment {
   idempotencyKey   String   @unique @map("idempotency_key") @db.VarChar(150)
   requestHash      String   @map("request_hash") @db.Char(64)
   resultJson       Json     @map("result_json") @db.JsonB
-  createdBy        String   @map("created_by") @db.Uuid
+  createdBy        BigInt   @map("created_by")
   postedAt         DateTime @map("posted_at") @db.Timestamptz(6)
   version          BigInt   @default(0)
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -529,9 +549,10 @@ model StockAdjustment {
 }
 
 model StockAdjustmentItem {
-  id                String @id @db.Uuid
-  stockAdjustmentId String @map("stock_adjustment_id") @db.Uuid
-  productVariantId  String @map("product_variant_id") @db.Uuid
+  id                BigInt @id @default(autoincrement())
+  legacyId          String? @unique @map("legacy_id") @db.Uuid
+  stockAdjustmentId BigInt @map("stock_adjustment_id")
+  productVariantId  BigInt @map("product_variant_id")
   quantityDelta     Int    @map("quantity_delta")
   expectedOnHand    Int    @map("expected_on_hand")
   actualOnHand      Int    @map("actual_on_hand")

@@ -5,7 +5,12 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { v7 as uuidv7 } from 'uuid';
+import {
+  toDatabaseId,
+  toEntityId,
+  toOptionalDatabaseId,
+  toOptionalEntityId,
+} from '../../../common/identifiers/entity-id';
 import { MutationContext } from '../../../common/request/request-context';
 import {
   ActiveLookupResponseDto,
@@ -65,9 +70,10 @@ export class CatalogMasterService {
 
   async createBrand(input: CreateBrandDto, context: MutationContext): Promise<BrandDto> {
     try {
-      const id = uuidv7();
       const row = await this.prisma.$transaction(async (transaction) => {
-        const created = await transaction.brand.create({ data: { id, ...input } });
+        const created = await transaction.brand.create({
+          data: { ...input, logoAssetId: toOptionalDatabaseId(input.logoAssetId) },
+        });
         await this.audit.write(
           {
             requestId: context.requestId,
@@ -76,7 +82,7 @@ export class CatalogMasterService {
             actorUserId: context.actorUserId,
             action: 'catalog.brand.create',
             entityType: 'BRAND',
-            entityId: id,
+            entityId: toEntityId(created.id),
             after: input as unknown as Prisma.InputJsonValue,
           },
           transaction,
@@ -94,27 +100,31 @@ export class CatalogMasterService {
 
   async createCategory(input: CreateCategoryDto, context: MutationContext): Promise<CategoryDto> {
     try {
-      const id = uuidv7();
       const row = await this.prisma.$transaction(async (transaction) => {
+        const parentId = toOptionalDatabaseId(input.parentId);
         const parent = input.parentId
           ? await transaction.category.findFirst({
-              where: { id: input.parentId, status: 'ACTIVE' },
+              where: { id: toDatabaseId(input.parentId), status: 'ACTIVE' },
             })
           : null;
         if (input.parentId && !parent) throw new UnprocessableEntityException('Parent category is not active');
         const created = await transaction.category.create({
           data: {
-            id,
-            parentId: input.parentId,
+            parentId,
             code: input.code,
             name: input.name,
             slug: input.slug,
             description: input.description,
-            imageAssetId: input.imageAssetId,
+            imageAssetId: toOptionalDatabaseId(input.imageAssetId),
             sortOrder: input.sortOrder ?? 0,
-            path: parent ? `${parent.path}/${id}` : id,
+            path: 'PENDING',
             depth: parent ? parent.depth + 1 : 0,
           },
+        });
+        const entityId = toEntityId(created.id);
+        const completed = await transaction.category.update({
+          where: { id: created.id },
+          data: { path: parent ? `${parent.path}/${entityId}` : entityId },
         });
         await this.audit.write(
           {
@@ -124,12 +134,12 @@ export class CatalogMasterService {
             actorUserId: context.actorUserId,
             action: 'catalog.category.create',
             entityType: 'CATEGORY',
-            entityId: id,
+            entityId,
             after: input as unknown as Prisma.InputJsonValue,
           },
           transaction,
         );
-        return created;
+        return completed;
       });
       return this.toCategory(row);
     } catch (error) {
@@ -145,17 +155,22 @@ export class CatalogMasterService {
     input: UpdateBrandDto,
     context: MutationContext,
   ): Promise<BrandDto> {
+    const databaseId = toDatabaseId(id);
     const { expectedVersion, ...fields } = input;
     try {
       return await this.prisma.$transaction(async (transaction) => {
-        const current = await transaction.brand.findUnique({ where: { id } });
+        const current = await transaction.brand.findUnique({ where: { id: databaseId } });
         if (!current) throw new NotFoundException('Brand not found');
         const result = await transaction.brand.updateMany({
-          where: { id, version: BigInt(expectedVersion) },
-          data: { ...fields, version: { increment: 1 } },
+          where: { id: databaseId, version: BigInt(expectedVersion) },
+          data: {
+            ...fields,
+            logoAssetId: toOptionalDatabaseId(fields.logoAssetId),
+            version: { increment: 1 },
+          },
         });
         if (result.count !== 1) throw new ConflictException('Brand version conflict');
-        const updated = await transaction.brand.findUniqueOrThrow({ where: { id } });
+        const updated = await transaction.brand.findUniqueOrThrow({ where: { id: databaseId } });
         await this.audit.write(
           {
             requestId: context.requestId,
@@ -169,7 +184,7 @@ export class CatalogMasterService {
               name: current.name,
               slug: current.slug,
               description: current.description,
-              logoAssetId: current.logoAssetId,
+              logoAssetId: toOptionalEntityId(current.logoAssetId),
               status: current.status,
               version: Number(current.version),
             },
@@ -190,15 +205,16 @@ export class CatalogMasterService {
     input: ChangeMasterStatusDto,
     context: MutationContext,
   ): Promise<BrandDto> {
+    const databaseId = toDatabaseId(id);
     return this.prisma.$transaction(async (transaction) => {
-      const current = await transaction.brand.findUnique({ where: { id } });
+      const current = await transaction.brand.findUnique({ where: { id: databaseId } });
       if (!current) throw new NotFoundException('Brand not found');
       const result = await transaction.brand.updateMany({
-        where: { id, version: BigInt(input.expectedVersion) },
+        where: { id: databaseId, version: BigInt(input.expectedVersion) },
         data: { status, version: { increment: 1 } },
       });
       if (result.count !== 1) throw new ConflictException('Brand version conflict');
-      const updated = await transaction.brand.findUniqueOrThrow({ where: { id } });
+      const updated = await transaction.brand.findUniqueOrThrow({ where: { id: databaseId } });
       await this.audit.write(
         {
           requestId: context.requestId,
@@ -222,17 +238,22 @@ export class CatalogMasterService {
     input: UpdateCategoryDto,
     context: MutationContext,
   ): Promise<CategoryDto> {
+    const databaseId = toDatabaseId(id);
     const { expectedVersion, ...fields } = input;
     try {
       return await this.prisma.$transaction(async (transaction) => {
-        const current = await transaction.category.findUnique({ where: { id } });
+        const current = await transaction.category.findUnique({ where: { id: databaseId } });
         if (!current) throw new NotFoundException('Category not found');
         const result = await transaction.category.updateMany({
-          where: { id, version: BigInt(expectedVersion) },
-          data: { ...fields, version: { increment: 1 } },
+          where: { id: databaseId, version: BigInt(expectedVersion) },
+          data: {
+            ...fields,
+            imageAssetId: toOptionalDatabaseId(fields.imageAssetId),
+            version: { increment: 1 },
+          },
         });
         if (result.count !== 1) throw new ConflictException('Category version conflict');
-        const updated = await transaction.category.findUniqueOrThrow({ where: { id } });
+        const updated = await transaction.category.findUniqueOrThrow({ where: { id: databaseId } });
         await this.audit.write(
           {
             requestId: context.requestId,
@@ -246,7 +267,7 @@ export class CatalogMasterService {
               name: current.name,
               slug: current.slug,
               description: current.description,
-              imageAssetId: current.imageAssetId,
+              imageAssetId: toOptionalEntityId(current.imageAssetId),
               sortOrder: current.sortOrder,
               status: current.status,
               version: Number(current.version),
@@ -268,8 +289,9 @@ export class CatalogMasterService {
     input: ChangeMasterStatusDto,
     context: MutationContext,
   ): Promise<CategoryDto> {
+    const databaseId = toDatabaseId(id);
     return this.prisma.$transaction(async (transaction) => {
-      const current = await transaction.category.findUnique({ where: { id } });
+      const current = await transaction.category.findUnique({ where: { id: databaseId } });
       if (!current) throw new NotFoundException('Category not found');
       if (status === 'ACTIVE' && current.parentId) {
         const parent = await transaction.category.findFirst({
@@ -279,7 +301,7 @@ export class CatalogMasterService {
       }
       if (status === 'INACTIVE') {
         const activeChildren = await transaction.category.count({
-          where: { parentId: id, status: 'ACTIVE' },
+          where: { parentId: databaseId, status: 'ACTIVE' },
         });
         if (activeChildren > 0) {
           throw new UnprocessableEntityException(
@@ -288,11 +310,11 @@ export class CatalogMasterService {
         }
       }
       const result = await transaction.category.updateMany({
-        where: { id, version: BigInt(input.expectedVersion) },
+        where: { id: databaseId, version: BigInt(input.expectedVersion) },
         data: { status, version: { increment: 1 } },
       });
       if (result.count !== 1) throw new ConflictException('Category version conflict');
-      const updated = await transaction.category.findUniqueOrThrow({ where: { id } });
+      const updated = await transaction.category.findUniqueOrThrow({ where: { id: databaseId } });
       await this.audit.write(
         {
           requestId: context.requestId,
@@ -313,42 +335,42 @@ export class CatalogMasterService {
   }
 
   private toBrand(row: {
-    id: string;
+    id: bigint;
     code: string;
     name: string;
     slug: string;
     description: string | null;
-    logoAssetId: string | null;
+    logoAssetId: bigint | null;
     status: string;
     version: bigint;
   }): BrandDto {
     return {
-      id: row.id,
+      id: toEntityId(row.id),
       code: row.code,
       name: row.name,
       slug: row.slug,
       ...(row.description ? { description: row.description } : {}),
-      ...(row.logoAssetId ? { logoAssetId: row.logoAssetId } : {}),
+      ...(row.logoAssetId ? { logoAssetId: toEntityId(row.logoAssetId) } : {}),
       status: row.status as BrandDto['status'],
       version: Number(row.version),
     };
   }
 
   private toCategory(row: {
-    id: string; parentId: string | null; code: string; name: string; slug: string;
-    path: string; depth: number; description: string | null; imageAssetId: string | null;
+    id: bigint; parentId: bigint | null; code: string; name: string; slug: string;
+    path: string; depth: number; description: string | null; imageAssetId: bigint | null;
     sortOrder: number; status: string; version: bigint;
   }): CategoryDto {
     return {
-      id: row.id,
-      ...(row.parentId ? { parentId: row.parentId } : {}),
+      id: toEntityId(row.id),
+      ...(row.parentId ? { parentId: toEntityId(row.parentId) } : {}),
       code: row.code,
       name: row.name,
       slug: row.slug,
       path: row.path,
       depth: row.depth,
       ...(row.description ? { description: row.description } : {}),
-      ...(row.imageAssetId ? { imageAssetId: row.imageAssetId } : {}),
+      ...(row.imageAssetId ? { imageAssetId: toEntityId(row.imageAssetId) } : {}),
       sortOrder: row.sortOrder,
       status: row.status as CategoryDto['status'],
       version: Number(row.version),

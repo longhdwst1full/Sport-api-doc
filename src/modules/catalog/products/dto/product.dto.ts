@@ -11,13 +11,13 @@ import {
   IsNumberString,
   IsOptional,
   IsString,
-  IsUUID,
   Matches,
   Max,
   MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
+import { ENTITY_ID_OPENAPI, IsEntityId } from '../../../../common/identifiers/entity-id';
 import {
   PRODUCT_BUNDLE_STATUS,
   PRODUCT_BUNDLE_TYPE,
@@ -33,7 +33,7 @@ import {
 } from '../product.constants';
 
 export class ProductVariantDto {
-  @ApiProperty({ format: 'uuid' }) id: string;
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) id: string;
   @ApiProperty() sku: string;
   @ApiPropertyOptional() barcode?: string;
   @ApiProperty() name: string;
@@ -44,15 +44,15 @@ export class ProductVariantDto {
   @ApiProperty({ enum: Object.values(PRODUCT_VARIANT_STATUS) }) status: ProductVariantStatus;
   @ApiProperty({ example: 0 }) version: number;
   @ApiPropertyOptional({ type: String, example: '18990000.00', nullable: true }) effectivePrice?: string | null;
-  @ApiPropertyOptional({ type: String, format: 'uuid', nullable: true }) effectivePriceId?: string | null;
+  @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI, nullable: true }) effectivePriceId?: string | null;
   @ApiPropertyOptional({ type: Number, example: 0, nullable: true }) effectivePriceVersion?: number | null;
   @ApiPropertyOptional({ type: () => ProductBundleDto, nullable: true }) bundle?: ProductBundleDto | null;
 }
 
 export class ProductMediaDto {
-  @ApiProperty({ format: 'uuid' }) id: string;
-  @ApiProperty({ format: 'uuid' }) mediaAssetId: string;
-  @ApiPropertyOptional({ format: 'uuid', nullable: true }) variantId?: string | null;
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) id: string;
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) mediaAssetId: string;
+  @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI, nullable: true }) variantId?: string | null;
   @ApiProperty({ format: 'uri' }) secureUrl: string;
   @ApiPropertyOptional({ type: String, format: 'uri', nullable: true }) thumbnailUrl?: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) altText?: string | null;
@@ -62,13 +62,13 @@ export class ProductMediaDto {
 }
 
 export class ProductCategoryDto {
-  @ApiProperty({ format: 'uuid' }) id: string;
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) id: string;
   @ApiProperty() name: string;
   @ApiProperty() isPrimary: boolean;
 }
 
 export class BundleComponentDto {
-  @ApiProperty({ format: 'uuid' }) componentVariantId: string;
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) componentVariantId: string;
   @ApiProperty() componentSku: string;
   @ApiProperty() componentName: string;
   @ApiProperty({ minimum: 1 }) quantity: number;
@@ -81,7 +81,7 @@ export class ProductBundleDto {
 }
 
 export class ProductSummaryDto {
-  @ApiProperty({ format: 'uuid' }) id: string;
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) id: string;
   @ApiProperty() productNo: string;
   @ApiProperty() name: string;
   @ApiProperty() slug: string;
@@ -96,14 +96,14 @@ export class ProductSummaryDto {
 }
 
 export class ProductDetailDto extends ProductSummaryDto {
-  @ApiPropertyOptional({ type: String, format: 'uuid', nullable: true }) brandId?: string | null;
-  @ApiPropertyOptional({ type: String, format: 'uuid', nullable: true }) primaryCategoryId?: string | null;
+  @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI, nullable: true }) brandId?: string | null;
+  @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI, nullable: true }) primaryCategoryId?: string | null;
   @ApiPropertyOptional() shortDescription?: string;
   @ApiPropertyOptional() description?: string;
   @ApiProperty({ type: [ProductVariantDto] }) variants: ProductVariantDto[];
   @ApiProperty({ type: [ProductMediaDto] }) media: ProductMediaDto[];
   @ApiProperty({ type: [ProductCategoryDto] }) categories: ProductCategoryDto[];
-  @ApiProperty({ type: [String], format: 'uuid' }) categoryIds: string[];
+  @ApiProperty({ ...ENTITY_ID_OPENAPI, type: [String], example: ['1'] }) categoryIds: string[];
 }
 
 export class ProductListMetaDto {
@@ -140,18 +140,18 @@ export class CreateProductDto {
   @ApiProperty() @IsString() @Matches(/^[A-Z0-9-]+$/) @MaxLength(32) productNo: string;
   @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(255) name: string;
   @ApiProperty() @IsString() @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/) @MaxLength(255) slug: string;
-  @ApiPropertyOptional({ format: 'uuid' }) @IsUUID() @IsOptional() brandId?: string;
+  @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI }) @IsEntityId() @IsOptional() brandId?: string;
   @ApiPropertyOptional() @IsString() @MaxLength(1000) @IsOptional() shortDescription?: string;
   @ApiPropertyOptional() @IsString() @IsOptional() description?: string;
-  @ApiProperty({ type: [String], format: 'uuid' }) @IsArray() @ArrayNotEmpty() @IsUUID('all', { each: true }) categoryIds: string[];
-  @ApiProperty({ format: 'uuid' }) @IsUUID() primaryCategoryId: string;
+  @ApiProperty({ ...ENTITY_ID_OPENAPI, type: [String], example: ['1'] }) @IsArray() @ArrayNotEmpty() @IsEntityId({ each: true }) categoryIds: string[];
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) @IsEntityId() primaryCategoryId: string;
 }
 
 export class UpdateProductFieldsDto extends PartialType(
   OmitType(CreateProductDto, ['brandId', 'shortDescription', 'description'] as const),
 ) {
-  @ApiPropertyOptional({ type: String, format: 'uuid', nullable: true })
-  @IsUUID()
+  @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI, nullable: true })
+  @IsEntityId()
   @IsOptional()
   brandId?: string | null;
 
@@ -194,8 +194,8 @@ export class UpdateVariantDto extends UpdateVariantFieldsDto {
 }
 
 export class AttachProductMediaDto {
-  @ApiProperty({ format: 'uuid' }) @IsUUID() mediaAssetId: string;
-  @ApiPropertyOptional({ format: 'uuid' }) @IsUUID() @IsOptional() variantId?: string;
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) @IsEntityId() mediaAssetId: string;
+  @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI }) @IsEntityId() @IsOptional() variantId?: string;
   @ApiPropertyOptional({ maxLength: 500 }) @IsString() @MaxLength(500) @IsOptional() altText?: string;
   @ApiPropertyOptional({ type: Boolean, default: false }) @IsBoolean() @IsOptional() isPrimary = false;
   @ApiProperty({ minimum: 0 }) @IsInt() @Min(0) expectedProductVersion: number;
@@ -213,7 +213,7 @@ export class UpdateProductMediaDto {
 }
 
 export class ReorderProductMediaItemDto {
-  @ApiProperty({ format: 'uuid' }) @IsUUID() id: string;
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) @IsEntityId() id: string;
   @ApiProperty({ minimum: 0 }) @IsInt() @Min(0) sortOrder: number;
 }
 
@@ -250,12 +250,12 @@ export class CreatePriceDto {
 }
 
 export class ReplacePriceDto extends CreatePriceDto {
-  @ApiProperty({ format: 'uuid' }) @IsUUID() expectedCurrentPriceId: string;
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) @IsEntityId() expectedCurrentPriceId: string;
   @ApiProperty({ minimum: 0 }) @IsInt() @Min(0) expectedCurrentPriceVersion: number;
 }
 
 export class ProductPriceWindowDto {
-  @ApiProperty({ format: 'uuid' }) id: string;
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) id: string;
   @ApiProperty({ example: '18990000.00' }) amount: string;
   @ApiProperty({ format: 'date-time' }) startsAt: string;
   @ApiPropertyOptional({ format: 'date-time', nullable: true }) endsAt?: string | null;
@@ -265,7 +265,7 @@ export class ProductPriceWindowDto {
 }
 
 export class ProductPriceTimelineDto {
-  @ApiProperty({ format: 'uuid' }) productVariantId: string;
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) productVariantId: string;
   @ApiPropertyOptional({ type: ProductPriceWindowDto, nullable: true })
   current?: ProductPriceWindowDto | null;
   @ApiProperty({ type: [ProductPriceWindowDto] }) upcoming: ProductPriceWindowDto[];
@@ -277,12 +277,12 @@ export class ChangeProductStatusDto {
 }
 
 export class CreateBundleItemDto {
-  @ApiProperty({ format: 'uuid' }) @IsUUID() componentVariantId: string;
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) @IsEntityId() componentVariantId: string;
   @ApiProperty({ minimum: 1 }) @IsInt() @Min(1) quantity: number;
 }
 
 export class CreateBundleDto {
-  @ApiProperty({ format: 'uuid' }) @IsUUID() bundleVariantId: string;
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) @IsEntityId() bundleVariantId: string;
   @ApiProperty({ type: [CreateBundleItemDto] })
   @IsArray()
   @ArrayNotEmpty()

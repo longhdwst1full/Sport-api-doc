@@ -5,7 +5,12 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { v7 as uuidv7 } from 'uuid';
+import {
+  toDatabaseId,
+  toEntityId,
+  toOptionalDatabaseId,
+  toOptionalEntityId,
+} from '../../../../common/identifiers/entity-id';
 import { MutationContext } from '../../../../common/request/request-context';
 import {
   ActiveLookupResponseDto,
@@ -89,7 +94,7 @@ export class ProductsService {
       this.prisma.productVariant.count({ where }),
     ]);
     return {
-      items: rows.map(({ id, sku, name }) => ({ id, code: sku, label: name })),
+      items: rows.map(({ id, sku, name }) => ({ id: toEntityId(id), code: sku, label: name })),
       meta: {
         page: query.page,
         limit: query.limit,
@@ -173,27 +178,25 @@ export class ProductsService {
   async create(input: CreateProductDto, context: MutationContext): Promise<ProductDetailDto> {
     this.validateCategorySelection(input.categoryIds, input.primaryCategoryId);
     try {
-      const productId = uuidv7();
-      await this.prisma.$transaction(async (transaction) => {
+      const productId = await this.prisma.$transaction(async (transaction) => {
         await this.validateReferences(transaction, input.brandId, input.categoryIds);
-        await transaction.product.create({
+        const product = await transaction.product.create({
           data: {
-            id: productId,
             productType: input.productType ?? PRODUCT_TYPE.STANDARD,
             productNo: input.productNo,
             name: input.name,
             slug: input.slug,
-            brandId: input.brandId,
+            brandId: toOptionalDatabaseId(input.brandId),
             shortDescription: input.shortDescription,
             description: input.description,
-            createdBy: context.actorUserId,
-            updatedBy: context.actorUserId,
+            createdBy: toOptionalDatabaseId(context.actorUserId),
+            updatedBy: toOptionalDatabaseId(context.actorUserId),
           },
         });
         await transaction.productCategory.createMany({
           data: input.categoryIds.map((categoryId, sortOrder) => ({
-            productId,
-            categoryId,
+            productId: product.id,
+            categoryId: toDatabaseId(categoryId),
             isPrimary: categoryId === input.primaryCategoryId,
             sortOrder,
           })),
@@ -206,11 +209,12 @@ export class ProductsService {
             actorUserId: context.actorUserId,
             action: PRODUCT_AUDIT_ACTION.CREATE,
             entityType: 'PRODUCT',
-            entityId: productId,
+            entityId: toEntityId(product.id),
             after: input as unknown as Prisma.InputJsonValue,
           },
           transaction,
         );
+        return product.id;
       });
       return this.getById(productId);
     } catch (error) {
@@ -223,16 +227,17 @@ export class ProductsService {
     input: UpdateProductDto,
     context: MutationContext,
   ): Promise<ProductDetailDto> {
-    const { expectedVersion, categoryIds, primaryCategoryId, ...fields } = input;
+    const databaseId = toDatabaseId(id);
+    const { expectedVersion, categoryIds, primaryCategoryId, brandId, ...fields } = input;
     if ((categoryIds && !primaryCategoryId) || (!categoryIds && primaryCategoryId)) {
       throw new UnprocessableEntityException('categoryIds and primaryCategoryId must be sent together');
     }
     if (categoryIds && primaryCategoryId) this.validateCategorySelection(categoryIds, primaryCategoryId);
     try {
       await this.prisma.$transaction(async (transaction) => {
-        await this.lockProductIds(transaction, [id]);
+        await this.lockProductIds(transaction, [databaseId]);
         const current = await transaction.product.findUnique({
-          where: { id },
+          where: { id: databaseId },
           select: { productType: true, _count: { select: { variants: true } } },
         });
         if (!current) throw new NotFoundException(PRODUCT_ERROR.NOT_FOUND);
@@ -245,26 +250,27 @@ export class ProductsService {
             'Product type cannot change after variants have been created',
           );
         }
-        await this.validateReferences(transaction, fields.brandId, categoryIds);
+        await this.validateReferences(transaction, brandId, categoryIds);
         const updated = await transaction.product.updateMany({
           where: {
-            id,
+            id: databaseId,
             version: BigInt(expectedVersion),
             status: { not: PRODUCT_STATUS.ARCHIVED },
           },
           data: {
             ...fields,
+            ...(brandId !== undefined ? { brandId: toOptionalDatabaseId(brandId) } : {}),
             version: { increment: 1 },
-            updatedBy: context.actorUserId,
+            updatedBy: toOptionalDatabaseId(context.actorUserId),
           },
         });
         if (updated.count !== 1) throw new ConflictException('Product version conflict or product is archived');
         if (categoryIds && primaryCategoryId) {
-          await transaction.productCategory.deleteMany({ where: { productId: id } });
+          await transaction.productCategory.deleteMany({ where: { productId: databaseId } });
           await transaction.productCategory.createMany({
             data: categoryIds.map((categoryId, sortOrder) => ({
-              productId: id,
-              categoryId,
+              productId: databaseId,
+              categoryId: toDatabaseId(categoryId),
               isPrimary: categoryId === primaryCategoryId,
               sortOrder,
             })),
@@ -295,10 +301,11 @@ export class ProductsService {
     input: ChangeProductStatusDto,
     context: MutationContext,
   ): Promise<ProductDetailDto> {
+    const databaseId = toDatabaseId(id);
     const now = new Date();
     return this.prisma.$transaction(async (transaction) => {
       const candidate = await transaction.product.findUnique({
-        where: { id },
+        where: { id: databaseId },
         select: {
           id: true,
           variants: {
@@ -323,7 +330,7 @@ export class ProductsService {
       ];
       await this.lockProductIds(transaction, aggregateProductIds);
       const product = await transaction.product.findFirst({
-        where: { id },
+        where: { id: databaseId },
         include: {
           variants: {
             where: { status: PRODUCT_VARIANT_STATUS.ACTIVE },
@@ -349,7 +356,7 @@ export class ProductsService {
       this.assertPublishable(product.productType as ProductType, product.variants);
       const updated = await transaction.product.updateMany({
         where: {
-          id,
+          id: databaseId,
           version: BigInt(input.expectedVersion),
           status: PRODUCT_STATUS.DRAFT,
         },
@@ -357,7 +364,7 @@ export class ProductsService {
           status: PRODUCT_STATUS.PUBLISHED,
           publishedAt: now,
           version: { increment: 1 },
-          updatedBy: context.actorUserId,
+          updatedBy: toOptionalDatabaseId(context.actorUserId),
         },
       });
       if (updated.count !== 1) throw new ConflictException(PRODUCT_ERROR.VERSION_CONFLICT);
@@ -412,15 +419,16 @@ export class ProductsService {
     input: ChangeProductStatusDto,
     context: MutationContext,
   ): Promise<ProductDetailDto> {
+    const databaseVariantId = toDatabaseId(variantId);
     return this.prisma.$transaction(async (transaction) => {
       const candidate = await transaction.productVariant.findUnique({
-        where: { id: variantId },
+        where: { id: databaseVariantId },
         select: { productId: true },
       });
       if (!candidate) throw new NotFoundException(PRODUCT_ERROR.VARIANT_NOT_FOUND);
       await this.lockProductIds(transaction, [candidate.productId]);
       const variant = await transaction.productVariant.findUnique({
-        where: { id: variantId },
+        where: { id: databaseVariantId },
       });
       if (!variant) throw new NotFoundException(PRODUCT_ERROR.VARIANT_NOT_FOUND);
       if (variant.status !== PRODUCT_VARIANT_STATUS.ACTIVE) {
@@ -428,7 +436,7 @@ export class ProductsService {
       }
       const activePublishedBundleUsage = await transaction.bundleItem.count({
         where: {
-          componentVariantId: variantId,
+          componentVariantId: databaseVariantId,
           productBundle: {
             status: PRODUCT_BUNDLE_STATUS.ACTIVE,
             bundleVariant: { product: { status: PRODUCT_STATUS.PUBLISHED } },
@@ -442,7 +450,7 @@ export class ProductsService {
       }
       const updated = await transaction.productVariant.updateMany({
         where: {
-          id: variantId,
+          id: databaseVariantId,
           version: BigInt(input.expectedVersion),
           status: PRODUCT_VARIANT_STATUS.ACTIVE,
         },
@@ -472,15 +480,16 @@ export class ProductsService {
     input: ChangeProductStatusDto,
     context: MutationContext,
   ): Promise<ProductDetailDto> {
+    const databaseVariantId = toDatabaseId(variantId);
     return this.prisma.$transaction(async (transaction) => {
       const candidate = await transaction.productVariant.findUnique({
-        where: { id: variantId },
+        where: { id: databaseVariantId },
         select: { productId: true },
       });
       if (!candidate) throw new NotFoundException(PRODUCT_ERROR.VARIANT_NOT_FOUND);
       await this.lockProductIds(transaction, [candidate.productId]);
       const variant = await transaction.productVariant.findUnique({
-        where: { id: variantId },
+        where: { id: databaseVariantId },
         include: { product: true },
       });
       if (!variant) throw new NotFoundException(PRODUCT_ERROR.VARIANT_NOT_FOUND);
@@ -492,7 +501,7 @@ export class ProductsService {
       }
       const updated = await transaction.productVariant.updateMany({
         where: {
-          id: variantId,
+          id: databaseVariantId,
           version: BigInt(input.expectedVersion),
           status: PRODUCT_VARIANT_STATUS.INACTIVE,
         },
@@ -522,15 +531,17 @@ export class ProductsService {
     input: CreateVariantDto,
     context: MutationContext,
   ): Promise<ProductDetailDto> {
+    const databaseProductId = toDatabaseId(productId);
     try {
       await this.prisma.$transaction(async (transaction) => {
-        await this.lockProductIds(transaction, [productId]);
+        await this.lockProductIds(transaction, [databaseProductId]);
         const product = await transaction.product.findFirst({
-          where: { id: productId, status: { not: PRODUCT_STATUS.ARCHIVED } },
+          where: { id: databaseProductId, status: { not: PRODUCT_STATUS.ARCHIVED } },
         });
         if (!product) throw new NotFoundException(PRODUCT_ERROR.NOT_FOUND);
-        const variantId = uuidv7();
-        await transaction.productVariant.create({ data: { id: variantId, productId, ...input } });
+        const variant = await transaction.productVariant.create({
+          data: { productId: databaseProductId, ...input },
+        });
         await this.audit.write(
           {
             requestId: context.requestId,
@@ -539,7 +550,7 @@ export class ProductsService {
             actorUserId: context.actorUserId,
             action: PRODUCT_AUDIT_ACTION.VARIANT_CREATE,
             entityType: 'PRODUCT_VARIANT',
-            entityId: variantId,
+            entityId: toEntityId(variant.id),
           },
           transaction,
         );
@@ -555,6 +566,7 @@ export class ProductsService {
     input: UpdateVariantDto,
     context: MutationContext,
   ): Promise<ProductDetailDto> {
+    const databaseVariantId = toDatabaseId(variantId);
     const { expectedVersion, ...fields } = input;
     if (Object.keys(fields).length === 0) {
       throw new UnprocessableEntityException('At least one mutable variant field is required');
@@ -562,14 +574,14 @@ export class ProductsService {
     try {
       const productId = await this.prisma.$transaction(async (transaction) => {
         const candidate = await transaction.productVariant.findUnique({
-          where: { id: variantId },
+          where: { id: databaseVariantId },
           select: { productId: true },
         });
         if (!candidate) throw new NotFoundException(PRODUCT_ERROR.VARIANT_NOT_FOUND);
         await this.lockProductIds(transaction, [candidate.productId]);
         const updated = await transaction.productVariant.updateMany({
           where: {
-            id: variantId,
+            id: databaseVariantId,
             version: BigInt(expectedVersion),
             product: { status: { not: PRODUCT_STATUS.ARCHIVED } },
           },
@@ -604,29 +616,28 @@ export class ProductsService {
     input: CreatePriceDto,
     context: MutationContext,
   ): Promise<ProductDetailDto> {
+    const databaseVariantId = toDatabaseId(variantId);
     const startsAt = new Date(input.startsAt);
     const endsAt = input.endsAt ? new Date(input.endsAt) : undefined;
     this.ensurePriceIsNotRetroactive(startsAt);
     if (endsAt && endsAt <= startsAt) throw new UnprocessableEntityException('endsAt must be after startsAt');
     try {
       const productId = await this.prisma.$transaction(async (transaction) => {
-        const variant = await transaction.productVariant.findFirst({ where: { id: variantId } });
+        const variant = await transaction.productVariant.findFirst({ where: { id: databaseVariantId } });
         if (!variant) throw new NotFoundException(PRODUCT_ERROR.VARIANT_NOT_FOUND);
         await this.lockProductIds(transaction, [variant.productId]);
         const reference = await transaction.productPrice.findFirst({
           where: {
-            productVariantId: variantId,
+            productVariantId: databaseVariantId,
             startsAt: { lte: startsAt },
             OR: [{ endsAt: null }, { endsAt: { gt: startsAt } }],
           },
           orderBy: { startsAt: 'desc' },
         });
         this.ensureLargeReductionHasReason(reference?.amount, input.amount, input.reason);
-        const priceId = uuidv7();
-        await transaction.productPrice.create({
+        const price = await transaction.productPrice.create({
           data: {
-            id: priceId,
-            productVariantId: variantId,
+            productVariantId: databaseVariantId,
             amount: new Prisma.Decimal(input.amount),
             startsAt,
             endsAt,
@@ -634,8 +645,8 @@ export class ProductsService {
               startsAt <= new Date()
                 ? PRODUCT_PRICE_STATUS.ACTIVE
                 : PRODUCT_PRICE_STATUS.SCHEDULED,
-            createdBy: context.actorUserId,
-            updatedBy: context.actorUserId,
+            createdBy: toDatabaseId(context.actorUserId),
+            updatedBy: toDatabaseId(context.actorUserId),
           },
         });
         await this.audit.write(
@@ -646,7 +657,7 @@ export class ProductsService {
             actorUserId: context.actorUserId,
             action: PRODUCT_AUDIT_ACTION.PRICE_CREATE,
             entityType: 'PRODUCT_PRICE',
-            entityId: priceId,
+            entityId: toEntityId(price.id),
             after: { ...input, amount: input.amount },
             reason: input.reason?.trim(),
           },
@@ -668,6 +679,7 @@ export class ProductsService {
     input: ReplacePriceDto,
     context: MutationContext,
   ): Promise<ProductDetailDto> {
+    const databaseVariantId = toDatabaseId(variantId);
     const startsAt = new Date(input.startsAt);
     const endsAt = input.endsAt ? new Date(input.endsAt) : undefined;
     this.ensurePriceIsNotRetroactive(startsAt);
@@ -677,14 +689,14 @@ export class ProductsService {
 
     try {
       const productId = await this.prisma.$transaction(async (transaction) => {
-        const variant = await transaction.productVariant.findUnique({ where: { id: variantId } });
+        const variant = await transaction.productVariant.findUnique({ where: { id: databaseVariantId } });
         if (!variant) throw new NotFoundException(PRODUCT_ERROR.VARIANT_NOT_FOUND);
         await this.lockProductIds(transaction, [variant.productId]);
 
         const current = await transaction.productPrice.findFirst({
           where: {
-            id: input.expectedCurrentPriceId,
-            productVariantId: variantId,
+            id: toDatabaseId(input.expectedCurrentPriceId),
+            productVariantId: databaseVariantId,
             priceType: PRODUCT_PRICE_TYPE.REGULAR,
             channel: PRODUCT_SALES_CHANNEL.ONLINE,
             currencyCode: PRODUCT_CURRENCY.VND,
@@ -711,18 +723,16 @@ export class ProductsService {
           data: {
             endsAt: startsAt,
             version: { increment: 1 },
-            updatedBy: context.actorUserId,
+            updatedBy: toDatabaseId(context.actorUserId),
           },
         });
         if (closed.count !== 1) {
           throw new ConflictException('Current price changed; reload before replacing it');
         }
 
-        const priceId = uuidv7();
-        await transaction.productPrice.create({
+        const price = await transaction.productPrice.create({
           data: {
-            id: priceId,
-            productVariantId: variantId,
+            productVariantId: databaseVariantId,
             amount: new Prisma.Decimal(input.amount),
             startsAt,
             endsAt,
@@ -730,8 +740,8 @@ export class ProductsService {
               startsAt <= new Date()
                 ? PRODUCT_PRICE_STATUS.ACTIVE
                 : PRODUCT_PRICE_STATUS.SCHEDULED,
-            createdBy: context.actorUserId,
-            updatedBy: context.actorUserId,
+            createdBy: toDatabaseId(context.actorUserId),
+            updatedBy: toDatabaseId(context.actorUserId),
           },
         });
         await this.audit.write(
@@ -742,15 +752,15 @@ export class ProductsService {
             actorUserId: context.actorUserId,
             action: PRODUCT_AUDIT_ACTION.PRICE_REPLACE,
             entityType: 'PRODUCT_PRICE',
-            entityId: priceId,
+            entityId: toEntityId(price.id),
             before: {
-              id: current.id,
+              id: toEntityId(current.id),
               amount: current.amount.toFixed(2),
               endsAt: current.endsAt?.toISOString() ?? null,
               version: Number(current.version),
             },
             after: {
-              id: priceId,
+              id: toEntityId(price.id),
               amount: input.amount,
               startsAt: input.startsAt,
               reason: input.reason?.trim() || null,
@@ -772,15 +782,16 @@ export class ProductsService {
   }
 
   async getPriceTimeline(variantId: string): Promise<ProductPriceTimelineDto> {
-    const exists = await this.prisma.productVariant.count({ where: { id: variantId } });
+    const databaseVariantId = toDatabaseId(variantId);
+    const exists = await this.prisma.productVariant.count({ where: { id: databaseVariantId } });
     if (!exists) throw new NotFoundException(PRODUCT_ERROR.VARIANT_NOT_FOUND);
     const rows = await this.prisma.productPrice.findMany({
-      where: { productVariantId: variantId },
+      where: { productVariantId: databaseVariantId },
       orderBy: [{ startsAt: 'desc' }, { id: 'desc' }],
     });
     const now = new Date();
     const mapPrice = (row: (typeof rows)[number]): ProductPriceWindowDto => ({
-      id: row.id,
+      id: toEntityId(row.id),
       amount: row.amount.toFixed(2),
       startsAt: row.startsAt.toISOString(),
       endsAt: row.endsAt?.toISOString() ?? null,
@@ -827,21 +838,23 @@ export class ProductsService {
     input: CreateBundleDto,
     context: MutationContext,
   ): Promise<ProductDetailDto> {
+    const databaseProductId = toDatabaseId(productId);
     try {
       await this.prisma.$transaction(async (transaction) => {
         const componentIds = input.items.map(({ componentVariantId }) => componentVariantId);
+        const databaseComponentIds = componentIds.map(toDatabaseId);
         if (new Set(componentIds).size !== componentIds.length) {
           throw new UnprocessableEntityException('Bundle components must be unique');
         }
         const candidateComponents = await transaction.productVariant.findMany({
-          where: { id: { in: componentIds } },
+          where: { id: { in: databaseComponentIds } },
           select: { productId: true },
         });
         await this.lockProductIds(transaction, [
-          productId,
+          databaseProductId,
           ...candidateComponents.map(({ productId: componentProductId }) => componentProductId),
         ]);
-        const product = await transaction.product.findUnique({ where: { id: productId } });
+        const product = await transaction.product.findUnique({ where: { id: databaseProductId } });
         if (!product) throw new NotFoundException(PRODUCT_ERROR.NOT_FOUND);
         if (product.productType !== PRODUCT_TYPE.BUNDLE) {
           throw new UnprocessableEntityException(
@@ -850,8 +863,8 @@ export class ProductsService {
         }
         const bundleVariant = await transaction.productVariant.findFirst({
           where: {
-            id: input.bundleVariantId,
-            productId,
+            id: toDatabaseId(input.bundleVariantId),
+            productId: databaseProductId,
             status: PRODUCT_VARIANT_STATUS.ACTIVE,
           },
         });
@@ -862,21 +875,23 @@ export class ProductsService {
         }
         const componentCount = await transaction.productVariant.count({
           where: {
-            id: { in: componentIds },
+            id: { in: databaseComponentIds },
             status: PRODUCT_VARIANT_STATUS.ACTIVE,
             product: { status: { not: PRODUCT_STATUS.ARCHIVED } },
           },
         });
         if (componentCount !== componentIds.length) throw new UnprocessableEntityException('Bundle contains invalid component');
-        const bundleId = uuidv7();
-        await transaction.productBundle.create({
+        const bundle = await transaction.productBundle.create({
           data: {
-            id: bundleId,
-            bundleVariantId: input.bundleVariantId,
-            createdBy: context.actorUserId,
-            updatedBy: context.actorUserId,
+            bundleVariantId: toDatabaseId(input.bundleVariantId),
+            createdBy: toDatabaseId(context.actorUserId),
+            updatedBy: toDatabaseId(context.actorUserId),
             items: {
-              create: input.items.map((item, sortOrder) => ({ id: uuidv7(), ...item, sortOrder })),
+              create: input.items.map((item, sortOrder) => ({
+                componentVariantId: toDatabaseId(item.componentVariantId),
+                quantity: item.quantity,
+                sortOrder,
+              })),
             },
           },
         });
@@ -888,7 +903,7 @@ export class ProductsService {
             actorUserId: context.actorUserId,
             action: PRODUCT_AUDIT_ACTION.BUNDLE_CREATE,
             entityType: 'PRODUCT_BUNDLE',
-            entityId: bundleId,
+            entityId: toEntityId(bundle.id),
           },
           transaction,
         );
@@ -903,11 +918,11 @@ export class ProductsService {
   }
 
   private async getById(
-    id: string,
+    id: string | bigint,
     client: Prisma.TransactionClient | PrismaService = this.prisma,
   ): Promise<ProductDetailDto> {
     const row = await client.product.findFirst({
-      where: { id },
+      where: { id: typeof id === 'bigint' ? id : toDatabaseId(id) },
       include: this.productInclude(new Date(), false),
     });
     if (!row) throw new NotFoundException(PRODUCT_ERROR.NOT_FOUND);
@@ -922,9 +937,10 @@ export class ProductsService {
     targetStatus: typeof PRODUCT_STATUS.DRAFT | typeof PRODUCT_STATUS.ARCHIVED,
     action: string,
   ): Promise<ProductDetailDto> {
+    const databaseId = toDatabaseId(id);
     return this.prisma.$transaction(async (transaction) => {
-      await this.lockProductIds(transaction, [id]);
-      const product = await transaction.product.findUnique({ where: { id } });
+      await this.lockProductIds(transaction, [databaseId]);
+      const product = await transaction.product.findUnique({ where: { id: databaseId } });
       if (!product) throw new NotFoundException(PRODUCT_ERROR.NOT_FOUND);
       if (!allowedFrom.includes(product.status as (typeof allowedFrom)[number])) {
         throw new UnprocessableEntityException(
@@ -934,7 +950,7 @@ export class ProductsService {
       if (targetStatus === PRODUCT_STATUS.ARCHIVED) {
         const activePublishedBundleUsage = await transaction.bundleItem.count({
           where: {
-            componentVariant: { productId: id },
+            componentVariant: { productId: databaseId },
             productBundle: {
               status: PRODUCT_BUNDLE_STATUS.ACTIVE,
               bundleVariant: { product: { status: PRODUCT_STATUS.PUBLISHED } },
@@ -949,7 +965,7 @@ export class ProductsService {
       }
       const updated = await transaction.product.updateMany({
         where: {
-          id,
+          id: databaseId,
           version: BigInt(input.expectedVersion),
           status: { in: allowedFrom },
         },
@@ -957,7 +973,7 @@ export class ProductsService {
           status: targetStatus,
           ...(targetStatus === PRODUCT_STATUS.DRAFT ? { publishedAt: null } : {}),
           version: { increment: 1 },
-          updatedBy: context.actorUserId,
+          updatedBy: toOptionalDatabaseId(context.actorUserId),
         },
       });
       if (updated.count !== 1) throw new ConflictException(PRODUCT_ERROR.VERSION_CONFLICT);
@@ -975,7 +991,7 @@ export class ProductsService {
         },
         transaction,
       );
-      return this.getById(id, transaction);
+      return this.getById(databaseId, transaction);
     });
   }
 
@@ -1075,7 +1091,7 @@ export class ProductsService {
     const imageUrl = (row.media.find(({ isPrimary }) => isPrimary) ?? row.media[0])
       ?.mediaAsset.secureUrl;
     return {
-      id: row.id,
+      id: toEntityId(row.id),
       productNo: row.productNo,
       name: row.name,
       slug: row.slug,
@@ -1101,19 +1117,19 @@ export class ProductsService {
       : row.variants;
     return {
       ...this.toSummary(row, storefront),
-      brandId: row.brandId,
+      brandId: toOptionalEntityId(row.brandId),
       primaryCategoryId:
-        row.categories.find(({ isPrimary }) => isPrimary)?.categoryId ?? null,
+        toOptionalEntityId(row.categories.find(({ isPrimary }) => isPrimary)?.categoryId),
       ...(row.shortDescription ? { shortDescription: row.shortDescription } : {}),
       ...(row.description ? { description: row.description } : {}),
-      categoryIds: row.categories.map(({ categoryId }) => categoryId),
+      categoryIds: row.categories.map(({ categoryId }) => toEntityId(categoryId)),
       categories: row.categories.map(({ categoryId, category, isPrimary }) => ({
-        id: categoryId,
+        id: toEntityId(categoryId),
         name: category.name,
         isPrimary,
       })),
       variants: variants.map((variant) => ({
-        id: variant.id,
+        id: toEntityId(variant.id),
         sku: variant.sku,
         ...(variant.barcode ? { barcode: variant.barcode } : {}),
         name: variant.name,
@@ -1124,7 +1140,7 @@ export class ProductsService {
         status: variant.status as ProductDetailDto['variants'][number]['status'],
         version: Number(variant.version),
         effectivePrice: variant.prices[0]?.amount.toFixed(2) ?? null,
-        effectivePriceId: variant.prices[0]?.id ?? null,
+        effectivePriceId: toOptionalEntityId(variant.prices[0]?.id),
         effectivePriceVersion:
           variant.prices[0] === undefined ? null : Number(variant.prices[0].version),
         bundle: variant.bundleDefinition
@@ -1132,7 +1148,7 @@ export class ProductsService {
               bundleType: PRODUCT_BUNDLE_TYPE.FIXED_VIRTUAL,
               status: variant.bundleDefinition.status as 'ACTIVE' | 'INACTIVE',
               components: variant.bundleDefinition.items.map((item) => ({
-                componentVariantId: item.componentVariantId,
+                componentVariantId: toEntityId(item.componentVariantId),
                 componentSku: item.componentVariant.sku,
                 componentName: item.componentVariant.name,
                 quantity: item.quantity,
@@ -1141,9 +1157,9 @@ export class ProductsService {
           : null,
       })),
       media: row.media.map((item) => ({
-        id: item.id,
-        mediaAssetId: item.mediaAssetId,
-        variantId: item.variantId,
+        id: toEntityId(item.id),
+        mediaAssetId: toEntityId(item.mediaAssetId),
+        variantId: toOptionalEntityId(item.variantId),
         secureUrl: item.mediaAsset.secureUrl,
         thumbnailUrl: item.mediaAsset.thumbnailUrl,
         altText: item.altText,
@@ -1231,13 +1247,13 @@ export class ProductsService {
 
   private async lockProductIds(
     transaction: Prisma.TransactionClient,
-    productIds: string[],
+    productIds: bigint[],
   ): Promise<void> {
     const orderedIds = [...new Set(productIds)].sort();
     if (orderedIds.length === 0) return;
     await transaction.$queryRaw(
       Prisma.sql`SELECT "id" FROM "products" WHERE "id" IN (${Prisma.join(
-        orderedIds.map((id) => Prisma.sql`${id}::uuid`),
+        orderedIds.map((id) => Prisma.sql`${id}`),
       )}) ORDER BY "id" FOR UPDATE`,
     );
   }
@@ -1258,13 +1274,16 @@ export class ProductsService {
   ): Promise<void> {
     if (brandId) {
       const brand = await transaction.brand.count({
-        where: { id: brandId, status: CATALOG_REFERENCE_STATUS.ACTIVE },
+        where: { id: toDatabaseId(brandId), status: CATALOG_REFERENCE_STATUS.ACTIVE },
       });
       if (!brand) throw new UnprocessableEntityException('Brand is not active');
     }
     if (categoryIds) {
       const count = await transaction.category.count({
-        where: { id: { in: categoryIds }, status: CATALOG_REFERENCE_STATUS.ACTIVE },
+        where: {
+          id: { in: categoryIds.map(toDatabaseId) },
+          status: CATALOG_REFERENCE_STATUS.ACTIVE,
+        },
       });
       if (count !== categoryIds.length) throw new UnprocessableEntityException('Category is not active');
     }

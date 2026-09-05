@@ -1,6 +1,7 @@
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { ENTITY_ID_OPENAPI, IsEntityId } from '../identifiers/entity-id';
 
 export class ActiveSearchQueryDto {
   @ApiPropertyOptional({ description: 'Search by business code or display label', maxLength: 100 })
@@ -26,14 +27,14 @@ export class ActiveSearchQueryDto {
 }
 
 export class ActiveWarehouseSearchQueryDto extends ActiveSearchQueryDto {
-  @ApiPropertyOptional({ format: 'uuid', description: 'Restrict lookup to one branch' })
+  @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI, description: 'Restrict lookup to one branch' })
   @IsOptional()
-  @IsUUID()
+  @IsEntityId()
   branchId?: string;
 }
 
 export class ActiveLookupOptionDto {
-  @ApiProperty({ format: 'uuid' }) id: string;
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) id: string;
   @ApiProperty({ example: 'CN-HCM-01' }) code: string;
   @ApiProperty({ example: 'Chi nhánh Hồ Chí Minh' }) label: string;
 }
