@@ -34,7 +34,7 @@
     "test:watch": "jest --watch",
     "test:e2e": "node --env-file-if-exists=.env.local scripts/run-jest.cjs --config test/jest-e2e.json",
     "verify": "yarn lint && yarn test && yarn build",
-    "gitnexus:analyze": "gitnexus analyze"
+    "gitnexus:analyze": "npx --yes gitnexus@1.6.9 analyze"
   },
   "dependencies": {
     "@nestjs/common": "11.1.6",
@@ -73,7 +73,6 @@
     "eslint": "9.35.0",
     "eslint-config-prettier": "10.1.8",
     "exceljs": "4.4.0",
-    "gitnexus": "1.6.9",
     "globals": "16.3.0",
     "jest": "30.1.3",
     "source-map-support": "0.5.21",
