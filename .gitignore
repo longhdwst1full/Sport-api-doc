@@ -13,6 +13,8 @@ storybook-static/
 api/openapi/.tmp-*.json
 *.rar
 saletools-ulrp-presentation/
+/admin/
+/client/
 .gitnexus/lbug
 .gitnexus/parse-cache/
 .gitnexus/parsedfile-cache/
