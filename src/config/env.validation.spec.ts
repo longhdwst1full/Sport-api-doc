@@ -12,6 +12,7 @@ describe('validateEnvironment', () => {
     expect(environment.APP_MODE).toBe('serve');
     expect(environment.CORS_ORIGINS).toBe('*');
     expect(environment.AUTH_BYPASS).toBe(true);
+    expect(environment.TELEGRAM_BOT_ENABLED).toBe(false);
   });
 
   it('parses the deploy migration switch centrally', () => {
@@ -49,5 +50,23 @@ describe('validateEnvironment', () => {
         DATABASE_URL: 'postgresql://runtime-pool/postgres',
       }),
     ).toThrow('DIRECT_URL must be a PostgreSQL URL');
+  });
+
+  it('requires all Telegram secrets when the command bot is enabled', () => {
+    expect(() => validateEnvironment({ TELEGRAM_BOT_ENABLED: 'true' })).toThrow(
+      'TELEGRAM_BOT_TOKEN is invalid',
+    );
+  });
+
+  it('accepts a complete Telegram webhook configuration', () => {
+    const environment = validateEnvironment({
+      TELEGRAM_BOT_ENABLED: 'true',
+      TELEGRAM_BOT_TOKEN: '123456789:test_token',
+      TELEGRAM_ALLOWED_USER_ID: '5333290241',
+      TELEGRAM_WEBHOOK_SECRET: 'a'.repeat(32),
+    });
+
+    expect(environment.TELEGRAM_BOT_ENABLED).toBe(true);
+    expect(environment.TELEGRAM_ALLOWED_USER_ID).toBe('5333290241');
   });
 });

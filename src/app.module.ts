@@ -10,7 +10,9 @@ import appConfig from './config/app.config';
 import cloudinaryConfig from './config/cloudinary.config';
 import databaseConfig from './config/database.config';
 import { validateEnvironment } from './config/env.validation';
+import telegramConfig from './config/telegram.config';
 import { PrismaModule } from './database/prisma.module';
+import { TelegramModule } from './integrations/telegram/telegram.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { ApprovalModule } from './modules/approval/approval.module';
 import { AuditModule } from './modules/audit/audit.module';
@@ -41,7 +43,7 @@ import { SystemModule } from './modules/system/system.module';
       isGlobal: true,
       cache: true,
       envFilePath: ['.env.local', '.env'],
-      load: [appConfig, databaseConfig, cloudinaryConfig],
+      load: [appConfig, databaseConfig, cloudinaryConfig, telegramConfig],
       validate: validateEnvironment,
     }),
     LoggerModule.forRootAsync({
@@ -61,6 +63,7 @@ import { SystemModule } from './modules/system/system.module';
             paths: [
               'req.headers.authorization',
               'req.headers.cookie',
+              'req.headers["x-telegram-bot-api-secret-token"]',
               'res.headers.set-cookie',
               'req.body.password',
               'req.body.refreshToken',
@@ -81,6 +84,7 @@ import { SystemModule } from './modules/system/system.module';
       ],
     }),
     PrismaModule,
+    TelegramModule,
     HealthModule,
     SystemModule,
     OrganizationModule,

@@ -806,6 +806,21 @@
           }
         }
       ]
+    },
+    {
+      "id": "API-20260905-TELEGRAM-COMMAND-BOT",
+      "date": "2026-09-05",
+      "scope": "API+INTEGRATION+OPERATIONS+SECURITY",
+      "summary": "Bổ sung Telegram webhook machine-to-machine với secret header, Telegram User ID allowlist và bộ lệnh read-only; endpoint bị loại khỏi OpenAPI dành cho frontend và không cho chạy shell/mutation.",
+      "sources": [
+        "route:POST /api/v1/integrations/telegram/webhook",
+        "source:api/src/integrations/telegram/telegram-update.service.ts",
+        "source:api/src/integrations/telegram/telegram-webhook.controller.ts",
+        "test:api/src/integrations/telegram/telegram-update.service.spec.ts",
+        "test:api/src/integrations/telegram/telegram-webhook.controller.spec.ts",
+        "document:24-telegram-command-bot.md@1.0.0"
+      ],
+      "targets": []
     }
   ]
 }

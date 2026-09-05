@@ -1,10 +1,10 @@
 # DCTD-UTC — Blueprint V1
 
-> **Document version:** 1.0.0
+> **Document version:** 1.1.0
 >
 > **Last updated:** 2026-09-05
 >
-> **Change summary:** Bổ sung tài liệu migration ID và cơ chế migrate-at-start của API.
+> **Change summary:** Bổ sung runbook Telegram command bot dùng webhook bảo vệ hai lớp.
 
 Ngày chốt bản nháp: 2026-08-28  
 Mục tiêu: hệ thống web/PWA bán thiết bị tập luyện, dụng cụ và đồ thể thao; có cổng quản trị đa chi nhánh.
@@ -44,6 +44,7 @@ Mục tiêu: hệ thống web/PWA bán thiết bị tập luyện, dụng cụ v
 | `20-sprint-1-execution-status.md`     | Trạng thái Sprint 1 hiện tại, evidence, phần còn thiếu và blocker     |
 | `22-repository-split-and-deployment.md` | Ranh giới ba repository, contract sync, CI và quy trình deploy      |
 | `23-id-migration-and-startup.md`      | Migration UUID sang BIGINT IDENTITY, startup DB và runbook Supabase |
+| `24-telegram-command-bot.md`          | Telegram webhook, allowlist command, security và runbook Vercel    |
 | `DCTD-UTC-V1-database-model-review.xlsx` | Workbook review có ô đỏ, Excel Note và sheet Change Log           |
 | `api/openapi-v1.yaml`                 | Contract OpenAPI V1 tổng được sinh từ NestJS                          |
 
@@ -67,4 +68,5 @@ Mục tiêu: hệ thống web/PWA bán thiết bị tập luyện, dụng cụ v
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.1.0 | 2026-09-05 | Bổ sung Telegram command bot vào chỉ mục tài liệu. | API-20260905-TELEGRAM-COMMAND-BOT |
 | 1.0.0 | 2026-09-05 | Bổ sung runbook D43 vào chỉ mục tài liệu. | D43 |

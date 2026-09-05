@@ -121,6 +121,26 @@ class EnvironmentVariables {
     message: 'CLOUDINARY_FOLDER must be a relative provider folder',
   })
   CLOUDINARY_FOLDER?: string;
+
+  @Transform(toBoolean)
+  @IsBoolean()
+  TELEGRAM_BOT_ENABLED = false;
+
+  @ValidateIf((environment: EnvironmentVariables) => environment.TELEGRAM_BOT_ENABLED)
+  @IsString()
+  @Matches(/^\d+:[A-Za-z0-9_-]+$/, { message: 'TELEGRAM_BOT_TOKEN is invalid' })
+  TELEGRAM_BOT_TOKEN?: string;
+
+  @ValidateIf((environment: EnvironmentVariables) => environment.TELEGRAM_BOT_ENABLED)
+  @IsString()
+  @Matches(/^[1-9]\d*$/, { message: 'TELEGRAM_ALLOWED_USER_ID must be a numeric user ID' })
+  TELEGRAM_ALLOWED_USER_ID?: string;
+
+  @ValidateIf((environment: EnvironmentVariables) => environment.TELEGRAM_BOT_ENABLED)
+  @IsString()
+  @MinLength(32)
+  @Matches(/^[A-Za-z0-9_-]+$/, { message: 'TELEGRAM_WEBHOOK_SECRET is invalid' })
+  TELEGRAM_WEBHOOK_SECRET?: string;
 }
 
 export function validateEnvironment(config: Record<string, unknown>): Record<string, unknown> {
