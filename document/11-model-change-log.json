@@ -821,6 +821,19 @@
         "document:24-telegram-command-bot.md@1.0.0"
       ],
       "targets": []
+    },
+    {
+      "id": "API-20260905-DEV-OWNER-PERMISSIONS",
+      "date": "2026-09-05",
+      "scope": "API+AUTH+IAM+ADMIN",
+      "summary": "Development AUTH_BYPASS principal trả toàn bộ permission OWNER cho cả authentication-only endpoint /admin/auth/me; sửa Admin bị ẩn màn role/phân quyền khi API trả permissions rỗng. Production JWT/RBAC không thay đổi.",
+      "sources": [
+        "source:api/src/common/guards/permission.guard.ts#createDevelopmentPrincipal",
+        "test:api/src/common/guards/permission.guard.spec.ts",
+        "OpenAPI:getAdminCurrentUser",
+        "document:19-admin-api-v1-contract-integration.md@1.2.1"
+      ],
+      "targets": []
     }
   ]
 }

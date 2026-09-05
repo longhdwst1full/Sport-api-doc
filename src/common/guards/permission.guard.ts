@@ -12,6 +12,7 @@ import { AUTHENTICATION_REQUIRED_KEY } from '../decorators/require-authenticatio
 import { PERMISSIONS_KEY } from '../decorators/require-permissions.decorator';
 import { AuthService } from '../../modules/auth/auth.service';
 import type { AuthPrincipal } from '../../modules/auth/auth.types';
+import { V1_ROLE_PERMISSIONS } from '../../modules/iam/iam.permissions';
 import { ScopeType } from '../../modules/iam/iam.types';
 
 interface AuthenticatedRequest extends Request {
@@ -20,13 +21,13 @@ interface AuthenticatedRequest extends Request {
 
 const DEVELOPMENT_OWNER_ID = '00000000-0000-7000-8000-000000000010';
 
-function createDevelopmentPrincipal(requiredPermissions: string[]): AuthPrincipal {
+function createDevelopmentPrincipal(): AuthPrincipal {
   return {
     userId: DEVELOPMENT_OWNER_ID,
     sessionId: 'development-auth-bypass',
     displayName: 'Development Owner',
     permissionVersion: 'dev',
-    permissions: requiredPermissions,
+    permissions: [...V1_ROLE_PERMISSIONS.OWNER],
     scopes: [{ type: ScopeType.GLOBAL }],
     mustChangePassword: false,
   };
@@ -55,7 +56,7 @@ export class PermissionGuard implements CanActivate {
       this.config.get<string>('app.environment') === 'development' &&
       this.config.get<boolean>('app.authBypass') === true;
     if (developmentBypass) {
-      request.auth = createDevelopmentPrincipal(required ?? []);
+      request.auth = createDevelopmentPrincipal();
       return true;
     }
 
