@@ -1,6 +1,6 @@
 import { defineConfig } from 'orval';
 
-const CONTRACT_BASE = '../document/api/admin';
+const CONTRACT_BASE = './contracts/admin';
 const OUTPUT_BASE = './src/generated/api';
 
 function createDomainConfig(domain: string) {

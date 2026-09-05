@@ -1,0 +1,158 @@
+# Generated from NestJS decorators. Do not edit by hand.
+openapi: 3.0.0
+info:
+  title: DCTD-UTC Commerce API
+  description: Contract for storefront and admin applications
+  version: 1.0.0
+  contact: {}
+servers:
+  - url: http://localhost:4000
+    description: Local
+paths:
+  /api/v1/content/posts:
+    get:
+      operationId: listPublishedPosts
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContentPostListDto"
+      summary: List published content posts
+      tags:
+        - Storefront Content
+  /api/v1/content/posts/{slug}:
+    get:
+      operationId: getPublishedPost
+      parameters:
+        - name: slug
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContentPostDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      summary: Get a published post by slug
+      tags:
+        - Storefront Content
+components:
+  schemas:
+    ContentPostListDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContentPostDto"
+        total:
+          type: number
+      required:
+        - items
+        - total
+    ContentPostDto:
+      type: object
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+        postType:
+          type: string
+          enum:
+            - NEWS
+            - TRAINING_GUIDE
+            - PRODUCT_GUIDE
+            - ABOUT
+        title:
+          type: string
+        excerpt:
+          type: string
+        body:
+          type: string
+        coverUrl:
+          type: string
+          format: uri
+        relatedProductSlugs:
+          type: array
+          items:
+            type: string
+        publishedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - slug
+        - postType
+        - title
+        - excerpt
+        - body
+        - coverUrl
+        - relatedProductSlugs
+        - publishedAt
+    ErrorResponseDto:
+      type: object
+      properties:
+        statusCode:
+          type: number
+          example: 400
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: Request validation failed
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorDetailDto"
+        path:
+          type: string
+          example: /api/v1/catalog/products
+        method:
+          type: string
+          example: POST
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+      required:
+        - statusCode
+        - code
+        - message
+        - path
+        - method
+        - timestamp
+    ErrorDetailDto:
+      type: object
+      properties:
+        field:
+          type: string
+          example: name
+        code:
+          type: string
+          example: INVALID_VALUE
+        message:
+          type: string
+          example: name should not be empty
+      required:
+        - code
+        - message
+  securitySchemes:
+    bearer:
+      scheme: bearer
+      bearerFormat: JWT
+      type: http

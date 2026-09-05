@@ -36,6 +36,7 @@ Mục tiêu: hệ thống web/PWA bán thiết bị tập luyện, dụng cụ v
 | `19-admin-api-v1-contract-integration.md` | Mapping API V1, permission và generated admin consumer          |
 | `21-admin-crud-coverage.md`           | Coverage CRUD admin thật, phần fixture/scaffold và demo seed          |
 | `20-sprint-1-execution-status.md`     | Trạng thái Sprint 1 hiện tại, evidence, phần còn thiếu và blocker     |
+| `22-repository-split-and-deployment.md` | Ranh giới ba repository, contract sync, CI và quy trình deploy      |
 | `DCTD-UTC-V1-database-model-review.xlsx` | Workbook review có ô đỏ, Excel Note và sheet Change Log           |
 | `api/openapi-v1.yaml`                 | Contract OpenAPI V1 tổng được sinh từ NestJS                          |
 

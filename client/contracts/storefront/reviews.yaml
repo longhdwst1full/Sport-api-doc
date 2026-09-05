@@ -1,0 +1,118 @@
+# Generated from NestJS decorators. Do not edit by hand.
+openapi: 3.0.0
+info:
+  title: DCTD-UTC Commerce API
+  description: Contract for storefront and admin applications
+  version: 1.0.0
+  contact: {}
+servers:
+  - url: http://localhost:4000
+    description: Local
+paths:
+  /api/v1/catalog/products/{slug}/reviews:
+    get:
+      operationId: listProductReviews
+      parameters:
+        - name: slug
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductReviewListDto"
+      summary: List approved product reviews
+      tags:
+        - Storefront Reviews
+components:
+  schemas:
+    ProductReviewListDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductReviewDto"
+        total:
+          type: number
+        averageRating:
+          type: number
+      required:
+        - items
+        - total
+        - averageRating
+    ProductReviewDto:
+      type: object
+      properties:
+        id:
+          type: string
+        productSlug:
+          type: string
+        customerDisplayName:
+          type: string
+        rating:
+          type: number
+          minimum: 1
+          maximum: 5
+        title:
+          type: string
+        content:
+          type: string
+        verifiedPurchase:
+          type: boolean
+        status:
+          type: string
+          enum:
+            - PENDING
+            - APPROVED
+            - REJECTED
+        comments:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReviewCommentDto"
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - productSlug
+        - customerDisplayName
+        - rating
+        - title
+        - content
+        - verifiedPurchase
+        - status
+        - comments
+        - createdAt
+    ReviewCommentDto:
+      type: object
+      properties:
+        id:
+          type: string
+        authorType:
+          type: string
+          enum:
+            - CUSTOMER
+            - STAFF
+        authorName:
+          type: string
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - authorType
+        - authorName
+        - content
+        - createdAt
+  securitySchemes:
+    bearer:
+      scheme: bearer
+      bearerFormat: JWT
+      type: http

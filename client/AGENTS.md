@@ -8,7 +8,7 @@ Scope: `client/` only. Do not load admin Ant Design rules or backend module rule
 - Prefer server components for public read rendering; add client boundaries only for interaction, browser APIs or client-side query behavior.
 - TanStack Query owns server state; Redux owns interactive cart/checkout workflow state and must not become a second API cache.
 - Consume HTTP contracts only from `src/generated/api`. Never import from `admin/` or `api/src`.
-- Add storefront dependencies with `yarn workspace @dctd/client add <package>` (or `--dev`), never at the workspace root.
+- Add dependencies from this repository with `yarn add <package>` (or `--dev`); keep this app independently deployable.
 
 ## Required routing
 
@@ -21,12 +21,13 @@ Scope: `client/` only. Do not load admin Ant Design rules or backend module rule
 
 ## Quality gate
 
-Run from the repository root:
+Run from the Storefront repository root:
 
 ```bash
-yarn workspace @dctd/client lint
-yarn workspace @dctd/client test
-yarn workspace @dctd/client build
+yarn lint
+yarn test
+yarn generate:api
+yarn build
 ```
 
 Never manually edit `src/generated/api`.

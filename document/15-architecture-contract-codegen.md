@@ -1,6 +1,8 @@
 # Kiến trúc module và OpenAPI codegen V1
 
-Ngày cập nhật: 2026-08-29  
+Version: 1.1.0
+
+Ngày cập nhật: 2026-09-05
 Phạm vi áp dụng: `api/`, `admin/`, `client/`.
 
 ## 1. Quyết định kiến trúc
@@ -84,7 +86,7 @@ admin generated SDK       client generated SDK
 
 ## 4. Generated SDK frontend
 
-Admin:
+Admin (repository `Sport-Admin`, dùng snapshot `contracts/admin/*.yaml`):
 
 ```text
 admin/src/generated/api/
@@ -97,7 +99,8 @@ admin/src/generated/api/
 └── system/{system.ts,models/}
 ```
 
-Storefront chỉ có `catalog`, `content`, `reviews`. Client không còn sinh DTO hoặc operation Admin.
+Storefront (repository `Sport-Client`, snapshot `contracts/storefront/*.yaml`) chỉ có
+`catalog`, `content`, `reviews`, `auth`. Client không sinh DTO hoặc operation Admin.
 
 Mỗi frontend có script dọn đúng `src/generated/api` của chính nó trước khi generate. Generated code là disposable; feature chỉ import SDK/models từ domain của mình. Mapping DTO ↔ form/table đặt trong `src/features/<feature>`, không đặt trong generated hoặc transport mutator.
 
@@ -109,7 +112,8 @@ Mỗi frontend có script dọn đúng `src/generated/api` của chính nó trư
 4. Thêm tag mới vào danh sách contract slice nếu đó là domain mới.
 5. Chạy API lint, test, OpenAPI generate và build.
 6. Review YAML domain: path, error, required/nullability và schema leakage.
-7. Chạy `yarn workspace @dctd/admin generate:api` hoặc client tương ứng.
+7. Commit contract tại API; trong repository FE tương ứng chạy
+   `yarn contracts:sync && yarn generate:api`.
 8. Import generated SDK trong feature; chạy lint/test/build frontend.
 
 ## 6. Hai người sửa cùng một bản ghi
@@ -129,3 +133,9 @@ Các use case tranh chấp cao như tồn kho, đặt hàng, thanh toán và sta
 - Ưu tiên Catalog update + optimistic locking, sau đó Inventory command, CMS publishing và Review moderation.
 - Prisma foundation đã chốt ở D33; chỉ thay adapter in-memory bằng PostgreSQL sau khi quyết định schema liên quan và migration wave được duyệt.
 - Không tạo `common service`, `utils` hoặc barrel dùng chung nếu ownership nghiệp vụ chưa rõ.
+
+## 8. Revision summary
+
+| Version | Ngày | Thay đổi |
+| --- | --- | --- |
+| 1.1.0 | 2026-09-05 | Cập nhật pipeline contract cho ba repository độc lập và bổ sung Storefront Auth. |

@@ -9,7 +9,7 @@ Scope: `admin/` only. Do not load storefront PWA rules or backend implementation
 - Recharts, react-window and CKEditor are feature-level dependencies and must stay lazy or route-scoped.
 - Organize business UI under `src/features/<feature>`; application composition lives in `src/app`; reusable infrastructure lives in `src/core` or `src/lib`.
 - Consume the API only through `src/generated/api` and the transport mutator. Never import code from `client/` or `api/src`.
-- Add admin dependencies with `yarn workspace @dctd/admin add <package>` (or `--dev`), never at the workspace root.
+- Add dependencies from this repository with `yarn add <package>` (or `--dev`); keep this app independently deployable.
 
 ## Required routing
 
@@ -21,12 +21,14 @@ Scope: `admin/` only. Do not load storefront PWA rules or backend implementation
 
 ## Quality gate
 
-Run from the repository root:
+Run from the Admin repository root:
 
 ```bash
-yarn workspace @dctd/admin lint
-yarn workspace @dctd/admin test
-yarn workspace @dctd/admin build
+yarn lint
+yarn test
+yarn generate:api
+yarn build
+yarn build-storybook
 ```
 
 Never manually edit `src/generated/api`.

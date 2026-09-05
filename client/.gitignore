@@ -1,0 +1,12 @@
+node_modules/
+.next/
+coverage/
+*.log
+*.tsbuildinfo
+.DS_Store
+.env
+.env.local
+!.env.example
+.gitnexus/lbug/
+.gitnexus/parse-cache/
+.gitnexus/parsedfile-cache/

@@ -1,103 +1,77 @@
-# DCTD-UTC Commerce
+# Sport API and system documents
 
-> **Document version:** 1.5.0
+> **Document version:** 2.0.0
 >
 > **Last updated:** 2026-09-05
 >
-> **Change summary:** Bổ sung Storybook riêng cho Admin component/layout và thay CKEditor component test bằng visual stories.
+> **Change summary:** Tách Admin và Storefront thành repository độc lập; repository hiện tại chỉ sở hữu API, OpenAPI và tài liệu hệ thống.
 
-Base workspace for a sports equipment storefront, admin portal and API.
+NestJS API, Prisma/PostgreSQL migrations, generated OpenAPI contracts and system design
+documents for the sports-commerce platform.
 
-## Applications
+## Repository boundaries
 
-- `api`: NestJS modular API, Swagger UI and generated OpenAPI contract.
-- `client`: Next.js storefront/PWA using Tailwind and generated React Query SDK.
-- `admin`: React/Vite admin using Ant Design, Tailwind and the same generated SDK.
+- This repository: `api/`, `document/`, API CI and API engineering rules.
+- Admin: `https://github.com/longhdwst1full/Sport-Admin.git`.
+- Storefront/PWA: `https://github.com/longhdwst1full/Sport-Client.git`.
+- `admin/` and `client/` may exist locally as independent nested Git repositories, but they
+  are ignored and are not part of this repository.
 
-## Commands
+The API is the OpenAPI producer. Every contract change starts in NestJS DTO/controller code,
+then generates `api/openapi/openapi.json` and `document/api/openapi-v1.yaml` plus the Admin and
+Storefront domain slices. Frontend repositories sync those generated YAML slices before Orval
+code generation; they never hand-write endpoint URLs or generated DTOs.
+
+## Setup
 
 ```bash
-yarn install
+yarn install --frozen-lockfile
 cp api/.env.local.example api/.env.local
-cp client/.env.example client/.env.local
-cp admin/.env.example admin/.env
-yarn contracts:generate
-yarn dev
-```
-
-Review component và full Admin layout độc lập với backend bằng Storybook:
-
-```bash
-yarn workspace @dctd/admin storybook
-yarn workspace @dctd/admin build-storybook
-```
-
-Storybook chạy tại `http://localhost:6006`; CKEditor story cần kết nối Internet để tải
-CKEditor 4 LTS từ CDN. Story source nằm cạnh component/layout trong `admin/src`.
-
-Điền connection string Supabase thật vào `api/.env.local`, sau đó chạy migration/seed từ đúng thư mục root chứa file `package.json` này:
-
-```bash
 yarn db:status
 yarn db:migrate
 yarn db:seed
 yarn db:seed:demo
-yarn db:admin:reset
+yarn dev
 ```
 
-`db:seed:demo` chạy foundation seed trước, sau đó upsert bộ dữ liệu nhỏ gồm
-3 chi nhánh/kho, 3 thương hiệu, 3 danh mục và 4 sản phẩm (gồm một combo). Lệnh có thể chạy
-lặp và không xóa dữ liệu ngoài các mã demo cố định.
+Development uses the configured Supabase PostgreSQL database. Do not start a local database
+Docker stack. `DATABASE_URL` is for runtime pooling and `DIRECT_URL` is for migrations.
 
-Foundation seed tạo đúng một tài khoản OWNER bootstrap cho môi trường development:
-`bootstrap-admin@example.invalid` / `Aa@123456`. Lần đăng nhập đầu tiên bắt buộc
-đổi mật khẩu; chạy seed lại không reset mật khẩu đã đổi. Không dùng credential này
-cho staging/production.
+Bootstrap development OWNER:
 
-`OWNER` là vai trò bất biến của đúng tài khoản bootstrap trên. API không cho tạo hoặc
-gán thêm OWNER. Chỉ Admin gốc được tạo/quản lý tài khoản và gán `BRANCH_MANAGER` hoặc
-`STAFF`; hai vai trò cấp dưới luôn có phạm vi một chi nhánh. Đăng nhập sai lần thứ 5
-trả thông báo tài khoản đã khóa; đăng nhập thành công reset số lần sai về `0`.
-Email/SĐT và password được trim khoảng trắng hai đầu; đăng ký và đổi mật khẩu dùng cùng
-quy tắc để không tạo credential không thể đăng nhập.
+```text
+bootstrap-admin@example.invalid
+Aa@123456
+```
 
-Nếu bootstrap Admin bị khóa do nhập sai mật khẩu 5 lần hoặc cần phục hồi credential
-development, chạy `yarn db:admin:reset`. Command chỉ tác động đúng bootstrap OWNER cố định,
-đưa tài khoản về `ACTIVE`, đặt lại mật khẩu tạm `Aa@123456`, bắt đổi mật khẩu, revoke
-session cũ và ghi audit trong cùng transaction. Command từ chối chạy khi
-`NODE_ENV=production`; không dùng `db:seed` như một cách reset mật khẩu.
+The first login requires a password change. If the bootstrap account is locked after five
+failed attempts, run `yarn db:admin:reset`; this command is forbidden in production.
 
-Không chạy `docker compose up` cho database. NestJS và Prisma dùng Supabase được cấu hình trong `api/.env.local`; file này bị Git ignore và không được commit. `DATABASE_URL` dùng runtime pooler, còn `DIRECT_URL` dùng Session pooler cổng `5432` cho migration.
+## Contract and quality gates
 
-OpenAPI is served at `http://localhost:4000/openapi.json`; Swagger UI is at `http://localhost:4000/docs`.
+```bash
+yarn contracts:generate
+yarn contracts:check
+yarn lint
+yarn test
+yarn build
+yarn verify
+```
 
-The storefront exposes its PWA diagnostics/reset screen at `http://localhost:3000/pwa`. API, checkout, account and payment data are never service-worker cached.
+Swagger UI is served at `http://localhost:4000/docs`; the raw contract is available at
+`http://localhost:4000/openapi.json`.
 
-The API registers the reviewed V1 model across bounded contexts. Organization, IAM, Audit, Catalog and basic Inventory adjustment/balance/ledger use Prisma/PostgreSQL when `DATABASE_ENABLED=true`. CMS Content and Review moderation remain in-memory vertical slices until their delivery sprint.
+## Structure
 
-Authentication transport is environment-specific: use `AUTH_TOKEN_TRANSPORT=BODY` with the matching frontend flags in local development; production validation requires `COOKIE`, `AUTH_BYPASS=false`, and explicit `CORS_ORIGINS`. COOKIE mode keeps refresh tokens in scoped HttpOnly cookies and access tokens in frontend memory.
-
-Each application owns an independent agent context:
-
-- `admin/AGENTS.md`, `admin/.agent/rules`, `admin/.agent/skills`: React/Vite, Ant Design, admin permissions, list/form and generated admin SDK workflows.
-- `client/AGENTS.md`, `client/.agent/rules`, `client/.agent/skills`: Next.js rendering, storefront commerce UX, PWA security/offline behavior and generated public SDK workflows.
-- `api/AGENTS.md`, `api/.agent/rules`, `api/.agent/skills`: NestJS modules, OpenAPI producer contract, authorization/audit, transitions, persistence and API verification.
-
-The root `AGENTS.md` only routes monorepo and contract orchestration; it is not a shared application rule set. Root `_features`, `_plans`, `_prompts` and `_templates` remain project planning assets, not executable application skills. The local rule sets are adapted from the useful patterns in the workspace references; finance-specific plans and framework-incompatible Java/Quarkus implementation details were intentionally not copied.
-
-The source-by-source frontend architecture review and inheritance decisions are documented in `document/12-frontend-base-source-review.md`.
-
-## Non-negotiable contract rule
-
-Backend DTO/controller first, then OpenAPI export, then Orval generation. Frontends never hand-write API DTOs or endpoint URLs.
+```text
+api/          NestJS application, Prisma schema/migrations and producer OpenAPI JSON
+document/     Model, RBAC, sprint evidence, generated YAML slices and review workbook
+.github/      API CI gate
+```
 
 ## Revision history
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
-| 1.0.0 | 2026-09-04 | Bổ sung bootstrap local/dev và ownership rule/skill theo từng ứng dụng. | Current worktree documentation update |
-| 1.1.0 | 2026-09-04 | Bỏ workflow Docker local; chuyển migration, seed và runtime database sang Supabase online. | Supabase workflow 2026-09-04 |
-| 1.2.0 | 2026-09-04 | Thêm command phục hồi bootstrap Admin bị khóa, revoke session và ghi audit atomic. | DBAPI-20260904-BOOTSTRAP-RECOVERY |
-| 1.3.0 | 2026-09-04 | Chốt một Admin gốc; hoàn thiện lockout/reset attempts, trim input Auth và bỏ Request ID khỏi toast Admin. | DBAPI-20260904-SINGLE-ROOT-ADMIN |
-| 1.4.0 | 2026-09-05 | Dùng đúng CKEditor 4 props/config từ admin-client, harden dữ liệu phiên Admin, prefill điều chỉnh tồn và nâng cấp Storefront. | Sprint 1 UI stabilization 2026-09-05 |
-| 1.5.0 | 2026-09-05 | Thêm Storybook Admin với Docs/a11y, visual states cho CKEditor, feedback, management primitives và full layout. | Admin Storybook foundation 2026-09-05 |
+| 1.0.0–1.5.0 | 2026-09-04–2026-09-05 | Monorepo foundation through Sprint 1 Storybook and UI stabilization. | Existing repository history |
+| 2.0.0 | 2026-09-05 | Split Admin/Storefront into independent repositories and retain API/document ownership here. | Repository split 2026-09-05 |

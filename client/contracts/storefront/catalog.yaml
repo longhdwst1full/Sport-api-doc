@@ -1,0 +1,460 @@
+# Generated from NestJS decorators. Do not edit by hand.
+openapi: 3.0.0
+info:
+  title: DCTD-UTC Commerce API
+  description: Contract for storefront and admin applications
+  version: 1.0.0
+  contact: {}
+servers:
+  - url: http://localhost:4000
+    description: Local
+paths:
+  /api/v1/catalog/products:
+    get:
+      operationId: listCatalogProducts
+      parameters:
+        - name: page
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            default: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 12
+            type: number
+        - name: search
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: category
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: status
+          required: false
+          in: query
+          schema:
+            type: string
+            enum:
+              - DRAFT
+              - PUBLISHED
+              - ARCHIVED
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductListResponseDto"
+      summary: List published products
+      tags:
+        - Storefront Catalog
+  /api/v1/catalog/products/{slug}:
+    get:
+      operationId: getCatalogProduct
+      parameters:
+        - name: slug
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetailDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      summary: Get product by slug
+      tags:
+        - Storefront Catalog
+components:
+  schemas:
+    ProductListResponseDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductSummaryDto"
+        meta:
+          $ref: "#/components/schemas/ProductListMetaDto"
+      required:
+        - items
+        - meta
+    ProductDetailDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        productNo:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        brand:
+          type: string
+        primaryCategory:
+          type: string
+        productType:
+          type: string
+          enum:
+            - STANDARD
+            - BUNDLE
+        status:
+          type: string
+          enum:
+            - DRAFT
+            - PUBLISHED
+            - ARCHIVED
+        version:
+          type: number
+          example: 0
+        minPrice:
+          type: string
+          example: "18990000.00"
+          nullable: true
+        currency:
+          type: string
+          enum:
+            - VND
+          example: VND
+        imageUrl:
+          type: string
+          format: uri
+          nullable: true
+        brandId:
+          type: string
+          format: uuid
+          nullable: true
+        primaryCategoryId:
+          type: string
+          format: uuid
+          nullable: true
+        shortDescription:
+          type: string
+        description:
+          type: string
+        variants:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductVariantDto"
+        media:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductMediaDto"
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductCategoryDto"
+        categoryIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required:
+        - id
+        - productNo
+        - name
+        - slug
+        - productType
+        - status
+        - version
+        - currency
+        - variants
+        - media
+        - categories
+        - categoryIds
+    ErrorResponseDto:
+      type: object
+      properties:
+        statusCode:
+          type: number
+          example: 400
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: Request validation failed
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorDetailDto"
+        path:
+          type: string
+          example: /api/v1/catalog/products
+        method:
+          type: string
+          example: POST
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+      required:
+        - statusCode
+        - code
+        - message
+        - path
+        - method
+        - timestamp
+    ProductSummaryDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        productNo:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        brand:
+          type: string
+        primaryCategory:
+          type: string
+        productType:
+          type: string
+          enum:
+            - STANDARD
+            - BUNDLE
+        status:
+          type: string
+          enum:
+            - DRAFT
+            - PUBLISHED
+            - ARCHIVED
+        version:
+          type: number
+          example: 0
+        minPrice:
+          type: string
+          example: "18990000.00"
+          nullable: true
+        currency:
+          type: string
+          enum:
+            - VND
+          example: VND
+        imageUrl:
+          type: string
+          format: uri
+          nullable: true
+      required:
+        - id
+        - productNo
+        - name
+        - slug
+        - productType
+        - status
+        - version
+        - currency
+    ProductListMetaDto:
+      type: object
+      properties:
+        page:
+          type: number
+          example: 1
+        limit:
+          type: number
+          example: 12
+        total:
+          type: number
+          example: 2
+        totalPages:
+          type: number
+          example: 1
+      required:
+        - page
+        - limit
+        - total
+        - totalPages
+    ProductVariantDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        sku:
+          type: string
+        barcode:
+          type: string
+        name:
+          type: string
+        weightGrams:
+          type: number
+          minimum: 0
+        lengthMm:
+          type: number
+          minimum: 1
+          nullable: true
+        widthMm:
+          type: number
+          minimum: 1
+          nullable: true
+        heightMm:
+          type: number
+          minimum: 1
+          nullable: true
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+        version:
+          type: number
+          example: 0
+        effectivePrice:
+          type: string
+          example: "18990000.00"
+          nullable: true
+        effectivePriceId:
+          type: string
+          format: uuid
+          nullable: true
+        effectivePriceVersion:
+          type: number
+          example: 0
+          nullable: true
+        bundle:
+          nullable: true
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/ProductBundleDto"
+      required:
+        - id
+        - sku
+        - name
+        - weightGrams
+        - status
+        - version
+    ProductMediaDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        mediaAssetId:
+          type: string
+          format: uuid
+        variantId:
+          type: object
+          format: uuid
+          nullable: true
+        secureUrl:
+          type: string
+          format: uri
+        thumbnailUrl:
+          type: string
+          format: uri
+          nullable: true
+        altText:
+          type: string
+          nullable: true
+        sortOrder:
+          type: number
+          minimum: 0
+        isPrimary:
+          type: boolean
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+      required:
+        - id
+        - mediaAssetId
+        - secureUrl
+        - sortOrder
+        - isPrimary
+        - status
+    ProductCategoryDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        isPrimary:
+          type: boolean
+      required:
+        - id
+        - name
+        - isPrimary
+    ErrorDetailDto:
+      type: object
+      properties:
+        field:
+          type: string
+          example: name
+        code:
+          type: string
+          example: INVALID_VALUE
+        message:
+          type: string
+          example: name should not be empty
+      required:
+        - code
+        - message
+    ProductBundleDto:
+      type: object
+      properties:
+        bundleType:
+          type: string
+          enum:
+            - FIXED_VIRTUAL
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+        components:
+          type: array
+          items:
+            $ref: "#/components/schemas/BundleComponentDto"
+      required:
+        - bundleType
+        - status
+        - components
+    BundleComponentDto:
+      type: object
+      properties:
+        componentVariantId:
+          type: string
+          format: uuid
+        componentSku:
+          type: string
+        componentName:
+          type: string
+        quantity:
+          type: number
+          minimum: 1
+      required:
+        - componentVariantId
+        - componentSku
+        - componentName
+        - quantity
+  securitySchemes:
+    bearer:
+      scheme: bearer
+      bearerFormat: JWT
+      type: http
