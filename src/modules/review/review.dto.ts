@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, IsString } from 'class-validator';
+import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min, MinLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ReviewCommentDto {
@@ -19,6 +19,9 @@ export class ProductReviewDto {
   @ApiProperty() verifiedPurchase: boolean;
   @ApiProperty({ enum: ['PENDING', 'APPROVED', 'REJECTED'] })
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  @ApiProperty({ minimum: 0 }) version: number;
+  @ApiPropertyOptional() moderationReason?: string;
+  @ApiPropertyOptional({ format: 'date-time' }) moderatedAt?: string;
   @ApiProperty({ type: [ReviewCommentDto] }) comments: ReviewCommentDto[];
   @ApiProperty({ format: 'date-time' }) createdAt: string;
 }
@@ -34,4 +37,15 @@ export class ModerateReviewDto {
   @IsIn(['APPROVED', 'REJECTED'])
   status: 'APPROVED' | 'REJECTED';
   @ApiPropertyOptional() @IsString() @IsOptional() reason?: string;
+  @ApiPropertyOptional({ minimum: 0 }) @IsInt() @Min(0) @IsOptional() expectedVersion?: number;
+}
+
+export class DeleteReviewDto {
+  @ApiProperty({ minimum: 0 }) @IsInt() @Min(0) expectedVersion: number;
+  @ApiProperty({ minLength: 3, maxLength: 255, example: 'Đánh giá vi phạm chính sách' })
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(3)
+  @MaxLength(255)
+  reason: string;
 }

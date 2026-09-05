@@ -1,5 +1,23 @@
-import { IsArray, IsIn, IsNotEmpty, IsOptional, IsString, IsUrl } from 'class-validator';
+import {
+  IsArray,
+  IsIn,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUrl,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+export const CONTENT_POST_STATUS = {
+  PUBLISHED: 'PUBLISHED',
+  ARCHIVED: 'ARCHIVED',
+} as const;
+
+export type ContentPostStatus = (typeof CONTENT_POST_STATUS)[keyof typeof CONTENT_POST_STATUS];
 
 export class ContentPostDto {
   @ApiProperty() id: string;
@@ -12,6 +30,10 @@ export class ContentPostDto {
   @ApiProperty({ format: 'uri' }) coverUrl: string;
   @ApiProperty({ type: [String] }) relatedProductSlugs: string[];
   @ApiProperty({ format: 'date-time' }) publishedAt: string;
+  @ApiProperty({ enum: Object.values(CONTENT_POST_STATUS) }) status: ContentPostStatus;
+  @ApiProperty({ minimum: 0 }) version: number;
+  @ApiPropertyOptional({ format: 'date-time' }) archivedAt?: string;
+  @ApiPropertyOptional() archiveReason?: string;
 }
 
 export class ContentPostListDto {
@@ -33,4 +55,18 @@ export class CreateContentPostDto {
   @IsString({ each: true })
   @IsOptional()
   relatedProductSlugs?: string[];
+}
+
+export class ArchiveContentPostDto {
+  @ApiProperty({ minimum: 0 })
+  @IsInt()
+  @Min(0)
+  expectedVersion: number;
+
+  @ApiProperty({ minLength: 3, maxLength: 255, example: 'Nội dung không còn phù hợp' })
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(3)
+  @MaxLength(255)
+  reason: string;
 }

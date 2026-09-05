@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   Param,
@@ -96,6 +97,32 @@ export class IamController {
   @ApiNotFoundResponse({ type: ErrorResponseDto })
   @ApiConflictResponse({ type: ErrorResponseDto, description: 'User is no longer ACTIVE' })
   lockStaffUser(
+    @Param('userId', new ParseEntityIdPipe()) userId: string,
+    @Body() input: LockStaffUserDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<UserDto> {
+    return this.iam.lockStaffUser(
+      userId,
+      input,
+      getMutationContext(request),
+      getAuthPrincipal(request),
+    );
+  }
+
+  @Delete('users/:userId')
+  @HttpCode(200)
+  @RequirePermissions('iam.user.manage')
+  @ApiOperation({
+    operationId: 'deleteAdminStaffUser',
+    summary: 'Logically delete a subordinate staff account by locking it and revoking sessions',
+  })
+  @ApiOkResponse({ type: UserDto })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiUnauthorizedResponse({ type: ErrorResponseDto })
+  @ApiForbiddenResponse({ type: ErrorResponseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  deleteStaffUser(
     @Param('userId', new ParseEntityIdPipe()) userId: string,
     @Body() input: LockStaffUserDto,
     @Req() request: AuthenticatedRequest,

@@ -1,5 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { ModerateReviewDto, ProductReviewDto, ProductReviewListDto } from './review.dto';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  DeleteReviewDto,
+  ModerateReviewDto,
+  ProductReviewDto,
+  ProductReviewListDto,
+} from './review.dto';
 
 @Injectable()
 export class ReviewService {
@@ -13,6 +18,7 @@ export class ReviewService {
       content: 'Vùng chạy rộng và tư vấn vị trí đặt máy rất kỹ.',
       verifiedPurchase: true,
       status: 'APPROVED',
+      version: 0,
       comments: [
         {
           id: 'comment-run-x1-shop',
@@ -52,7 +58,29 @@ export class ReviewService {
   moderate(id: string, input: ModerateReviewDto): ProductReviewDto {
     const review = this.reviews.find((item) => item.id === id);
     if (!review) throw new NotFoundException('Review not found');
+    if (input.expectedVersion !== undefined && review.version !== input.expectedVersion) {
+      throw new ConflictException('Review was changed by another request');
+    }
     review.status = input.status;
+    review.moderationReason = input.reason?.trim();
+    review.moderatedAt = new Date().toISOString();
+    review.version += 1;
+    return review;
+  }
+
+  archive(id: string, input: DeleteReviewDto): ProductReviewDto {
+    const review = this.reviews.find((item) => item.id === id);
+    if (!review) throw new NotFoundException('Review not found');
+    if (review.version !== input.expectedVersion) {
+      throw new ConflictException('Review was changed by another request');
+    }
+    if (review.status === 'REJECTED') {
+      throw new ConflictException('Review is already hidden');
+    }
+    review.status = 'REJECTED';
+    review.moderationReason = input.reason.trim();
+    review.moderatedAt = new Date().toISOString();
+    review.version += 1;
     return review;
   }
 }

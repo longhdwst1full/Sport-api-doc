@@ -1,6 +1,12 @@
 import { randomUUID } from 'node:crypto';
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { ContentPostDto, ContentPostListDto, CreateContentPostDto } from './cms.dto';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ArchiveContentPostDto,
+  CONTENT_POST_STATUS,
+  ContentPostDto,
+  ContentPostListDto,
+  CreateContentPostDto,
+} from './cms.dto';
 
 @Injectable()
 export class CmsService {
@@ -15,6 +21,8 @@ export class CmsService {
       coverUrl: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48',
       relatedProductSlugs: ['combo-tap-gym-tai-nha'],
       publishedAt: '2026-08-20T02:00:00.000Z',
+      status: CONTENT_POST_STATUS.PUBLISHED,
+      version: 0,
     },
     {
       id: 'post-treadmill-guide',
@@ -26,15 +34,24 @@ export class CmsService {
       coverUrl: 'https://images.unsplash.com/photo-1576678927484-cc907957088c',
       relatedProductSlugs: ['may-chay-bo-dctd-pro-x1'],
       publishedAt: '2026-08-18T02:00:00.000Z',
+      status: CONTENT_POST_STATUS.PUBLISHED,
+      version: 0,
     },
   ];
 
   listPublished(): ContentPostListDto {
+    const items = this.posts.filter(({ status }) => status === CONTENT_POST_STATUS.PUBLISHED);
+    return { items, total: items.length };
+  }
+
+  listAdmin(): ContentPostListDto {
     return { items: [...this.posts], total: this.posts.length };
   }
 
   getBySlug(slug: string): ContentPostDto {
-    const post = this.posts.find((item) => item.slug === slug);
+    const post = this.posts.find(
+      (item) => item.slug === slug && item.status === CONTENT_POST_STATUS.PUBLISHED,
+    );
     if (!post) throw new NotFoundException('Post not found');
     return post;
   }
@@ -45,8 +62,26 @@ export class CmsService {
       id: randomUUID(),
       relatedProductSlugs: input.relatedProductSlugs ?? [],
       publishedAt: new Date().toISOString(),
+      status: CONTENT_POST_STATUS.PUBLISHED,
+      version: 0,
     };
     this.posts.unshift(post);
+    return post;
+  }
+
+  archive(id: string, input: ArchiveContentPostDto): ContentPostDto {
+    const post = this.posts.find((item) => item.id === id);
+    if (!post) throw new NotFoundException('Post not found');
+    if (post.version !== input.expectedVersion) {
+      throw new ConflictException('Post was changed by another request');
+    }
+    if (post.status === CONTENT_POST_STATUS.ARCHIVED) {
+      throw new ConflictException('Post is already archived');
+    }
+    post.status = CONTENT_POST_STATUS.ARCHIVED;
+    post.archiveReason = input.reason.trim();
+    post.archivedAt = new Date().toISOString();
+    post.version += 1;
     return post;
   }
 }
