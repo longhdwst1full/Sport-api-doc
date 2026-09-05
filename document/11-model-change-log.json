@@ -834,6 +834,22 @@
         "document:19-admin-api-v1-contract-integration.md@1.2.1"
       ],
       "targets": []
+    },
+    {
+      "id": "OPS-20260905-TELEGRAM-CODEX-WORKER",
+      "date": "2026-09-05",
+      "scope": "OPERATIONS+SECURITY+DEVELOPER-TOOLING",
+      "summary": "Bổ sung local polling worker cho phép OWNER tạo và xác nhận task Codex qua Telegram trên ba repository cố định; dùng workspace-write sandbox, loại secret env, lưu state local và gửi notification chủ động. Không thay đổi database hoặc public API/OpenAPI.",
+      "sources": [
+        "source:api/scripts/telegram-codex-worker.ts",
+        "source:api/scripts/telegram-notify.ts",
+        "source:api/src/integrations/telegram/codex-bridge",
+        "test:api/src/integrations/telegram/codex-bridge/codex-command.parser.spec.ts",
+        "test:api/src/integrations/telegram/codex-bridge/codex-process.runner.spec.ts",
+        "test:api/src/integrations/telegram/codex-bridge/codex-task.store.spec.ts",
+        "document:24-telegram-command-bot.md@1.1.0"
+      ],
+      "targets": []
     }
   ]
 }
