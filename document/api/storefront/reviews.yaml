@@ -70,6 +70,14 @@ components:
             - PENDING
             - APPROVED
             - REJECTED
+        version:
+          type: number
+          minimum: 0
+        moderationReason:
+          type: string
+        moderatedAt:
+          type: string
+          format: date-time
         comments:
           type: array
           items:
@@ -86,6 +94,7 @@ components:
         - content
         - verifiedPurchase
         - status
+        - version
         - comments
         - createdAt
     ReviewCommentDto:

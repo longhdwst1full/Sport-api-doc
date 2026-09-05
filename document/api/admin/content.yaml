@@ -20,6 +20,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ContentPostListDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
       security:
         - bearer: []
       summary: List posts for administration
@@ -41,9 +53,78 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ContentPostDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
       security:
         - bearer: []
       summary: Create and publish a content post
+      tags:
+        - Admin Content
+  /api/v1/admin/content/posts/{id}:
+    delete:
+      operationId: deleteAdminPost
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ArchiveContentPostDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContentPostDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Logically delete a content post by archiving it
       tags:
         - Admin Content
 components:
@@ -60,6 +141,40 @@ components:
       required:
         - items
         - total
+    ErrorResponseDto:
+      type: object
+      properties:
+        statusCode:
+          type: number
+          example: 400
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: Request validation failed
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorDetailDto"
+        path:
+          type: string
+          example: /api/v1/catalog/products
+        method:
+          type: string
+          example: POST
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+      required:
+        - statusCode
+        - code
+        - message
+        - path
+        - method
+        - timestamp
     CreateContentPostDto:
       type: object
       properties:
@@ -122,6 +237,19 @@ components:
         publishedAt:
           type: string
           format: date-time
+        status:
+          type: string
+          enum:
+            - PUBLISHED
+            - ARCHIVED
+        version:
+          type: number
+          minimum: 0
+        archivedAt:
+          type: string
+          format: date-time
+        archiveReason:
+          type: string
       required:
         - id
         - slug
@@ -132,6 +260,37 @@ components:
         - coverUrl
         - relatedProductSlugs
         - publishedAt
+        - status
+        - version
+    ArchiveContentPostDto:
+      type: object
+      properties:
+        expectedVersion:
+          type: number
+          minimum: 0
+        reason:
+          type: string
+          minLength: 3
+          maxLength: 255
+          example: Nội dung không còn phù hợp
+      required:
+        - expectedVersion
+        - reason
+    ErrorDetailDto:
+      type: object
+      properties:
+        field:
+          type: string
+          example: name
+        code:
+          type: string
+          example: INVALID_VALUE
+        message:
+          type: string
+          example: name should not be empty
+      required:
+        - code
+        - message
   securitySchemes:
     bearer:
       scheme: bearer

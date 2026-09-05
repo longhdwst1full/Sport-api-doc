@@ -731,6 +731,23 @@
       "targets": []
     },
     {
+      "id": "API-20260905-ADMIN-DELETE-EXTENSION",
+      "date": "2026-09-05",
+      "scope": "API+ADMIN+CMS+REVIEW+IAM",
+      "summary": "Bổ sung DELETE logic cho content post (ARCHIVED), review (REJECTED/ẩn) và staff cấp dưới (LOCKED + revoke session/audit); generate OpenAPI/Orval và ghép action xác nhận vào Admin. CMS/Review tiếp tục là in-memory P1, không mô tả sai thành persistence production.",
+      "sources": [
+        "OpenAPI:deleteAdminPost",
+        "OpenAPI:deleteAdminReview",
+        "OpenAPI:deleteAdminStaffUser",
+        "test:api/src/modules/cms/cms.service.spec.ts",
+        "test:api/src/modules/review/review.service.spec.ts",
+        "test:api/src/modules/iam/iam.controller.spec.ts",
+        "document:19-admin-api-v1-contract-integration.md",
+        "document:21-admin-crud-coverage.md"
+      ],
+      "targets": []
+    },
+    {
       "id": "DBAPI-20260905-BIGINT-IDENTITY",
       "date": "2026-09-05",
       "scope": "DATABASE+API+ADMIN+STOREFRONT+OPERATIONS",

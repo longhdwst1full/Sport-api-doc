@@ -92,6 +92,19 @@ components:
         publishedAt:
           type: string
           format: date-time
+        status:
+          type: string
+          enum:
+            - PUBLISHED
+            - ARCHIVED
+        version:
+          type: number
+          minimum: 0
+        archivedAt:
+          type: string
+          format: date-time
+        archiveReason:
+          type: string
       required:
         - id
         - slug
@@ -102,6 +115,8 @@ components:
         - coverUrl
         - relatedProductSlugs
         - publishedAt
+        - status
+        - version
     ErrorResponseDto:
       type: object
       properties:

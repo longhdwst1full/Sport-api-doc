@@ -1,10 +1,10 @@
 # Admin và Storefront API v1 contract integration
 
-> **Document version:** 1.1.0
+> **Document version:** 1.2.0
 >
 > **Last updated:** 2026-09-05
 >
-> **Change summary:** Bổ sung contract HTTP DELETE logic cho sáu aggregate Sprint 1 và generated SDK Admin tương ứng.
+> **Change summary:** Mở rộng contract DELETE logic cho content post, review và staff, đồng thời ghép generated SDK vào Admin.
 
 ## Nguyên tắc đã áp dụng
 
@@ -31,11 +31,14 @@
 | Gán role cấp dưới | `POST /api/v1/admin/iam/users/{userId}/role-assignments` | `assignAdminUserRole` | `iam.assignment.manage` — OWNER duy nhất | Chỉ BRANCH_MANAGER/STAFF + branchId |
 | Thu hồi assignment cấp dưới | `POST /api/v1/admin/iam/users/{userId}/role-assignments/{assignmentId}/revoke` | `revokeAdminUserRoleAssignment` | `iam.assignment.manage` — OWNER duy nhất | Cấm thu hồi OWNER |
 | Tạo account cấp dưới + branch role | `POST /api/v1/admin/iam/users` | `createAdminStaffUser` | `iam.user.manage` — OWNER duy nhất | Chỉ BRANCH_MANAGER/STAFF |
+| Xóa logic account cấp dưới | `DELETE /api/v1/admin/iam/users/{userId}` | `deleteAdminStaffUser` | `iam.user.manage` — OWNER duy nhất | Chuyển LOCKED, revoke session và audit; cấm OWNER |
 | CRUD lifecycle brand | `GET/POST/PATCH/DELETE` + `POST .../{id}/activate|deactivate` | `list/create/update/delete/activate/deactivateAdminBrand` | `catalog.brand.view/manage` | `DELETE` chuyển `INACTIVE`; không xóa row |
 | CRUD lifecycle category | `GET/POST/PATCH/DELETE` + `POST .../{id}/activate|deactivate` | `list/create/update/delete/activate/deactivateAdminCategory` | `catalog.category.view/manage` | `DELETE` chuyển leaf category sang `INACTIVE`; chặn khi còn child active |
 | Product SPU create/update/detail | `POST/PATCH/GET /api/v1/admin/products...` | `create/update/getAdminProduct` | `catalog.product.manage/view` | Product create/edit drawer + workflow detail |
 | Điều chỉnh kho | `POST /api/v1/admin/inventory/adjustments` | `createStockAdjustment` | `inventory.stock.adjust` | Inventory drawer; generated request option truyền Idempotency-Key |
 | Kiểm duyệt đánh giá | `PATCH /api/v1/admin/reviews/{id}/moderation` | `moderateAdminReview` | `review.moderate` | Reviews actions |
+| Xóa/ẩn đánh giá | `DELETE /api/v1/admin/reviews/{id}` | `deleteAdminReview` | `review.moderate` | Chuyển REJECTED theo expected version; giữ lịch sử Admin |
+| Xóa/lưu trữ bài viết | `DELETE /api/v1/admin/content/posts/{id}` | `deleteAdminPost` | `content.post.manage` | Chuyển ARCHIVED theo expected version; public API chỉ trả PUBLISHED |
 | Archive/reactivate product hoặc combo | `POST .../products/{id}/archive|reactivate` | `archiveAdminProduct` / `reactivateAdminProduct` | `catalog.product.publish` | Product workflow drawer |
 | Xóa logic product hoặc combo | `DELETE /api/v1/admin/products/{id}` | `deleteAdminProduct` | `catalog.product.publish` | Tái sử dụng invariant archive; body có `expectedVersion` |
 | Archive/reactivate variant | `POST .../products/variants/{id}/archive|reactivate` | `archiveAdminProductVariant` / `reactivateAdminProductVariant` | `catalog.product.manage` | Product workflow drawer |
@@ -123,6 +126,7 @@ Admin dùng `getApiErrorMessage` cho lỗi form/query và `getApiFieldErrors` đ
 - [x] HTTP e2e với fresh PostgreSQL local và `AUTH_BYPASS=false`: 2 suites, 11/11 test; gồm revoke assignment, variant/media, price lifecycle và inventory adjustment persist/replay/conflict/audit.
 - [x] PostgreSQL integration: 3 suites, 21/21 test; fresh 9/9 migration và seed demo chạy lặp hai lần.
 - [x] Sáu operation HTTP DELETE logic đã xuất vào OpenAPI/YAML và Admin Orval SDK; controller regression xác nhận tái sử dụng đúng lifecycle/invariant/audit service.
+- [x] Ba operation DELETE mở rộng cho post/review/staff đã xuất từ NestJS và ghép vào Admin bằng Orval hooks; staff giữ PostgreSQL lifecycle, CMS/Review vẫn là in-memory P1.
 - [ ] Verified identity/token — development đang dùng `AUTH_BYPASS=true` và principal OWNER bootstrap; production bắt buộc tắt bypass.
 - [ ] PostgreSQL permission/scope + transaction/audit integration — blocker trước staging.
 
@@ -132,3 +136,4 @@ Admin dùng `getApiErrorMessage` cho lỗi form/query và `getApiFieldErrors` đ
 | --- | --- | --- | --- |
 | 1.0.0 | 2026-09-04 | Chuẩn hóa metadata; chốt một Admin gốc, lockout, trim input Auth và cách hiển thị lỗi Admin. | DBAPI-20260904-SINGLE-ROOT-ADMIN |
 | 1.1.0 | 2026-09-05 | Bổ sung sáu HTTP DELETE logic, giữ route lifecycle cũ và regenerate OpenAPI/Admin SDK. | API-20260905-LOGICAL-DELETE-V1 |
+| 1.2.0 | 2026-09-05 | Mở rộng DELETE logic cho content post, review và staff; generated SDK được ghép vào ba màn Admin. | API-20260905-ADMIN-DELETE-EXTENSION |

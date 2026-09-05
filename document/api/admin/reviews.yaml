@@ -20,6 +20,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ProductReviewListDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
       security:
         - bearer: []
       summary: List reviews for moderation
@@ -47,9 +59,78 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ProductReviewDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
       security:
         - bearer: []
       summary: Approve or reject a review
+      tags:
+        - Admin Reviews
+  /api/v1/admin/reviews/{id}:
+    delete:
+      operationId: deleteAdminReview
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeleteReviewDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductReviewDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Logically delete a review by hiding it from the storefront
       tags:
         - Admin Reviews
 components:
@@ -69,6 +150,40 @@ components:
         - items
         - total
         - averageRating
+    ErrorResponseDto:
+      type: object
+      properties:
+        statusCode:
+          type: number
+          example: 400
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: Request validation failed
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorDetailDto"
+        path:
+          type: string
+          example: /api/v1/catalog/products
+        method:
+          type: string
+          example: POST
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+      required:
+        - statusCode
+        - code
+        - message
+        - path
+        - method
+        - timestamp
     ModerateReviewDto:
       type: object
       properties:
@@ -79,6 +194,9 @@ components:
             - REJECTED
         reason:
           type: string
+        expectedVersion:
+          type: number
+          minimum: 0
       required:
         - status
     ProductReviewDto:
@@ -106,6 +224,14 @@ components:
             - PENDING
             - APPROVED
             - REJECTED
+        version:
+          type: number
+          minimum: 0
+        moderationReason:
+          type: string
+        moderatedAt:
+          type: string
+          format: date-time
         comments:
           type: array
           items:
@@ -122,8 +248,38 @@ components:
         - content
         - verifiedPurchase
         - status
+        - version
         - comments
         - createdAt
+    DeleteReviewDto:
+      type: object
+      properties:
+        expectedVersion:
+          type: number
+          minimum: 0
+        reason:
+          type: string
+          minLength: 3
+          maxLength: 255
+          example: Đánh giá vi phạm chính sách
+      required:
+        - expectedVersion
+        - reason
+    ErrorDetailDto:
+      type: object
+      properties:
+        field:
+          type: string
+          example: name
+        code:
+          type: string
+          example: INVALID_VALUE
+        message:
+          type: string
+          example: name should not be empty
+      required:
+        - code
+        - message
     ReviewCommentDto:
       type: object
       properties:

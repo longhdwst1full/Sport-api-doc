@@ -1,10 +1,10 @@
 # Admin CRUD coverage V1
 
-> **Document version:** 1.8.0
+> **Document version:** 1.9.0
 >
 > **Last updated:** 2026-09-05
 >
-> **Change summary:** Bổ sung sáu API DELETE logic cho CRUD Sprint 1, không thay đổi nguyên tắc giữ lịch sử dữ liệu.
+> **Change summary:** Bổ sung DELETE logic và Admin action cho bài viết, đánh giá và tài khoản nhân viên; không hard-delete dữ liệu lịch sử.
 
 ## Đã có API thật và màn quản lý
 
@@ -16,15 +16,15 @@
 | Danh mục | Có | Có | Có | `DELETE` → INACTIVE; activate/deactivate | PostgreSQL; parent immutable; không tắt cha khi còn con active |
 | Chi nhánh + kho | Có | Có cùng nhau | Có cùng nhau | `DELETE` → INACTIVE atomic; activate/deactivate | PostgreSQL; đúng rule 1 branch–1 warehouse |
 | Tồn kho cơ bản | Có | Stock adjustment | Không sửa ledger | Không xóa | PostgreSQL; action theo dòng tự điền kho/SKU và snapshot hiện tại; adjustment, movement và balance ghi atomic; UI gửi Idempotency-Key qua generated operation wrapper |
-| Đánh giá | Có | Storefront chưa expose create | Moderate approve/reject | Không physical delete | In-memory V1; admin có confirmation |
-| Nội dung | Có | Có | Chưa có | Chưa có | In-memory V1; CKEditor4 built-in Image dialog; editor lazy-load và có visual states trong Storybook |
-| IAM | User/role/permission list | Admin gốc tạo account + gán BRANCH_MANAGER/STAFF theo branch | Chưa sửa hồ sơ user | Admin gốc lock/unlock, revoke session và assignment cấp dưới | PostgreSQL; OWNER bất biến; login thành công reset failed attempts; revoke giữ lịch sử và audit |
+| Đánh giá | Có | Storefront chưa expose create | Moderate approve/reject | `DELETE` → REJECTED/ẩn | In-memory P1; expected version; Admin confirmation; vẫn giữ lịch sử kiểm duyệt |
+| Nội dung | Có | Có | Chưa có | `DELETE` → ARCHIVED | In-memory P1; expected version; public API chỉ trả PUBLISHED; CKEditor4 lazy-load |
+| IAM | User/role/permission list | Admin gốc tạo account + gán BRANCH_MANAGER/STAFF theo branch | Chưa sửa hồ sơ user | `DELETE` staff → LOCKED; lock/unlock; revoke session và assignment | PostgreSQL; DELETE tái sử dụng lifecycle lock, revoke session và audit atomic; OWNER bất biến |
 
 ## Chưa được coi là CRUD hoàn chỉnh
 
 - Đơn hàng/POS tại cửa hàng và Khách hàng đang dùng fixture ở admin; backend module vẫn scaffold, không tạo API CRUD giả. Đây là delivery wave sau Sprint 1 vì phải hoàn thành đồng bộ Order snapshot, Payment, Inventory reservation/commit và Fulfillment.
-- CMS chưa persist PostgreSQL, vì vậy edit/unpublish/delete bài viết chưa triển khai trong đợt này.
-- Review hiện là in-memory vertical slice; chưa có persistence PostgreSQL production.
+- CMS chưa persist PostgreSQL; create/archive chạy trong vertical slice in-memory và chưa được coi là durable production CRUD. Edit vẫn chưa triển khai.
+- Review hiện là in-memory vertical slice; moderate/delete giữ trạng thái trong runtime nhưng chưa có persistence PostgreSQL production.
 - Inventory core đã persist PostgreSQL và có transaction/locking/idempotency; còn thiếu full branch-scope HTTP regression trước khi ký Sprint DONE.
 - Media mới phục vụ upload/finalize trong form, chưa có media-library page độc lập.
 - Lock/unlock user, revoke session, revoke role assignment và audit query đã có API/UI thật; còn thiếu QA acceptance toàn màn.
@@ -34,8 +34,9 @@
 - `DELETE` là command lifecycle có optimistic version, permission server-side và audit; không thực hiện SQL hard delete.
 - Có sáu operation: branch+kho, brand, category, product/combo, variant/SKU và product-media link.
 - Product-media chỉ bỏ liên kết khỏi sản phẩm; `media_assets` và asset bên provider vẫn được giữ để tránh xóa nhầm tài nguyên đang được dùng nơi khác.
-- User/role dùng lock/revoke; tồn kho dùng adjustment/ledger; price và audit là lịch sử bất biến. Các nhóm này cố ý không expose `DELETE`.
-- Admin SDK cho sáu operation được sinh từ OpenAPI. UI hiện giữ action lifecycle `archive/deactivate` có ý nghĩa nghiệp vụ rõ; có thể chuyển sang hook `delete*` mà không tự viết URL/DTO.
+- User cấp dưới có `DELETE` tương thích lifecycle lock + revoke session; OWNER không thể xóa. Role dùng revoke; tồn kho dùng adjustment/ledger; price và audit là lịch sử bất biến.
+- Admin SDK cho chín operation được sinh từ OpenAPI; UI gọi generated hooks, không tự viết URL/DTO.
+- CMS post và review có `DELETE` optimistic theo version; post chuyển ARCHIVED, review chuyển REJECTED/ẩn và vẫn hiện trong danh sách Admin.
 
 ## Ổn định trải nghiệm Admin
 
@@ -83,3 +84,4 @@ và 3 sản phẩm/SKU/giá. Script không chứa credential thật, không xóa
 | 1.6.0 | 2026-09-05 | Sửa CKEditor timeout/skeleton, harden Admin runtime và bổ sung stock-adjustment prefill theo từng dòng. | Sprint 1 UI stabilization 2026-09-05 |
 | 1.7.0 | 2026-09-05 | Thêm Storybook visual review cho Admin component/layout và thay CKEditor test bằng ba visual states. | Admin Storybook foundation 2026-09-05 |
 | 1.8.0 | 2026-09-05 | Bổ sung sáu HTTP DELETE logic cho aggregate Sprint 1 và ghi rõ nhóm dữ liệu cố ý không được xóa. | API-20260905-LOGICAL-DELETE-V1 |
+| 1.9.0 | 2026-09-05 | Bổ sung DELETE logic và Admin action cho bài viết, đánh giá và staff; giữ lifecycle/history hiện hữu. | API-20260905-ADMIN-DELETE-EXTENSION |
