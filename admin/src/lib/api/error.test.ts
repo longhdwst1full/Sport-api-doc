@@ -12,7 +12,7 @@ describe('canonical API errors', () => {
       details: [{ field: 'roleCode', code: 'IS_NOT_EMPTY', message: 'Role is required' }],
     });
 
-    expect(getApiErrorMessage(error)).toContain('request-123');
+    expect(getApiErrorMessage(error)).toBe('Request validation failed');
     expect(getApiFieldErrors(error)).toEqual({ roleCode: 'Role is required' });
   });
 });

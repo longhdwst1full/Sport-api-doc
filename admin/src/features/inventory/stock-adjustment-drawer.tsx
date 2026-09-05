@@ -1,7 +1,7 @@
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useQueryClient } from '@tanstack/react-query';
-import { App, Button, Drawer, Form, Input, InputNumber, Select } from 'antd';
-import { useRef } from 'react';
+import { Alert, App, Button, Drawer, Form, Input, InputNumber, Select } from 'antd';
+import { useEffect, useRef } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import * as yup from 'yup';
 import {
@@ -28,10 +28,12 @@ const schema: yup.ObjectSchema<StockAdjustmentValues> = yup.object({
 export function StockAdjustmentDrawer({
   open,
   balances,
+  balance,
   onClose,
 }: {
   open: boolean;
   balances: InventoryBalanceDto[];
+  balance?: InventoryBalanceDto;
   onClose: () => void;
 }) {
   const { message } = App.useApp();
@@ -42,6 +44,17 @@ export function StockAdjustmentDrawer({
     defaultValues: { warehouseCode: '', sku: '', quantityDelta: 0, reason: '' },
   });
   const warehouseCode = form.watch('warehouseCode');
+
+  useEffect(() => {
+    if (!open) return;
+    form.reset({
+      warehouseCode: balance?.warehouseCode ?? '',
+      sku: balance?.sku ?? '',
+      quantityDelta: 0,
+      reason: '',
+    });
+  }, [balance, form, open]);
+
   const mutation = useCreateStockAdjustment({
     request: { headers: { 'Idempotency-Key': idempotencyKey.current } },
     mutation: {
@@ -70,7 +83,7 @@ export function StockAdjustmentDrawer({
 
   return (
     <Drawer
-      title="Điều chỉnh tồn kho"
+      title={balance ? `Điều chỉnh tồn — ${balance.sku}` : 'Điều chỉnh tồn kho'}
       width={520}
       open={open}
       onClose={onClose}
@@ -78,6 +91,15 @@ export function StockAdjustmentDrawer({
       extra={<Button type="primary" loading={mutation.isPending} onClick={() => void submit()}>Ghi điều chỉnh</Button>}
     >
       <Form layout="vertical" onFinish={() => void submit()}>
+        {balance && (
+          <Alert
+            className="mb-5"
+            showIcon
+            type="info"
+            message={`${balance.productName} · ${balance.warehouseCode}`}
+            description={`Tồn vật lý: ${balance.onHand} · Đang giữ: ${balance.reserved} · Có thể bán: ${balance.available}. Điều chỉnh tạo phiếu mới, không sửa lịch sử tồn kho.`}
+          />
+        )}
         <Form.Item label="Kho" required validateStatus={form.formState.errors.warehouseCode ? 'error' : undefined} help={form.formState.errors.warehouseCode?.message}>
           <Controller
             name="warehouseCode"

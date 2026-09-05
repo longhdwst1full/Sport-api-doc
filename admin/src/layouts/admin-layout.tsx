@@ -34,6 +34,9 @@ export function AdminLayout() {
   const navigate = useNavigate();
   const permissions = usePermissions();
   const auth = useAuth();
+  const scopeLabels = Array.isArray(auth.currentUser?.scopes)
+    ? auth.currentUser.scopes.map((scope) => scope.type).join(', ')
+    : '';
   const visibleItems = NAVIGATION_ITEMS.filter(
     (item) => !item.permission || permissions.has(item.permission),
   );
@@ -77,7 +80,7 @@ export function AdminLayout() {
             <div className="hidden xl:block">
               <Typography.Text strong>{auth.currentUser?.displayName ?? 'Quản trị viên'}</Typography.Text>
               <div className="text-xs leading-4 text-slate-500">
-                {auth.developmentBypass ? 'DEV bypass' : auth.currentUser?.scopes.map((scope) => scope.type).join(', ')}
+                {auth.developmentBypass ? 'DEV bypass' : scopeLabels || 'Chưa có phạm vi'}
               </div>
             </div>
             <Button

@@ -1,9 +1,10 @@
-import { PlusOutlined, ReloadOutlined } from '@ant-design/icons';
+import { EditOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons';
 import { Button, Card, Progress, Table, Tag, Typography } from 'antd';
 import { useState } from 'react';
 import { PermissionGate } from '@/core/auth/permissions';
 import { QueryErrorAlert } from '@/foundation/feedback/query-error-alert';
 import { useListInventoryBalances } from '@/generated/api/inventory/inventory';
+import type { InventoryBalanceDto } from '@/generated/api/inventory/models';
 import { StockAdjustmentDrawer } from './stock-adjustment-drawer';
 
 const status = {
@@ -14,7 +15,19 @@ const status = {
 
 export function InventoryPage() {
   const [adjustmentOpen, setAdjustmentOpen] = useState(false);
+  const [selectedBalance, setSelectedBalance] = useState<InventoryBalanceDto>();
   const query = useListInventoryBalances();
+
+  const openAdjustment = (balance?: InventoryBalanceDto) => {
+    setSelectedBalance(balance);
+    setAdjustmentOpen(true);
+  };
+
+  const closeAdjustment = () => {
+    setAdjustmentOpen(false);
+    setSelectedBalance(undefined);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-end justify-between">
@@ -27,7 +40,7 @@ export function InventoryPage() {
         <div className="flex gap-2">
           <Button icon={<ReloadOutlined />} onClick={() => void query.refetch()}>Làm mới</Button>
           <PermissionGate permission="inventory.stock.adjust">
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setAdjustmentOpen(true)}>Điều chỉnh tồn</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => openAdjustment()}>Điều chỉnh tồn</Button>
           </PermissionGate>
         </div>
       </div>
@@ -78,6 +91,24 @@ export function InventoryPage() {
                 <Tag color={status[value].color}>{status[value].label}</Tag>
               ),
             },
+            {
+              title: 'Thao tác',
+              key: 'actions',
+              fixed: 'right',
+              width: 120,
+              render: (_, row) => (
+                <PermissionGate permission="inventory.stock.adjust">
+                  <Button
+                    type="link"
+                    size="small"
+                    icon={<EditOutlined />}
+                    onClick={() => openAdjustment(row)}
+                  >
+                    Điều chỉnh
+                  </Button>
+                </PermissionGate>
+              ),
+            },
           ]}
         />
       </Card>
@@ -85,7 +116,8 @@ export function InventoryPage() {
         <StockAdjustmentDrawer
           open={adjustmentOpen}
           balances={query.data?.items ?? []}
-          onClose={() => setAdjustmentOpen(false)}
+          balance={selectedBalance}
+          onClose={closeAdjustment}
         />
       )}
     </div>

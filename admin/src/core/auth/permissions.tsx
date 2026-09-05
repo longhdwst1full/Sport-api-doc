@@ -34,8 +34,13 @@ const PermissionContext = createContext<ReadonlySet<string>>(new Set());
 
 export function PermissionProvider({ children }: { children: ReactNode }) {
   const { currentUser, developmentBypass } = useAuth();
+  const currentUserPermissions = Array.isArray(currentUser?.permissions)
+    ? currentUser.permissions
+    : [];
   const permissions = createPermissionSet(
-    currentUser?.permissions.join(',') ?? import.meta.env.VITE_DEV_PERMISSIONS ?? '',
+    currentUserPermissions.length > 0
+      ? currentUserPermissions.join(',')
+      : import.meta.env.VITE_DEV_PERMISSIONS ?? '',
     developmentBypass,
   );
   return <PermissionContext.Provider value={permissions}>{children}</PermissionContext.Provider>;

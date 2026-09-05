@@ -34,7 +34,7 @@ export function getApiErrorMessage(
 ): string {
   const payload = getApiErrorPayload(error);
   if (!payload) return error instanceof Error && error.message ? error.message : fallback;
-  return payload.requestId ? `${payload.message} (Request ID: ${payload.requestId})` : payload.message;
+  return payload.message;
 }
 
 export function getApiFieldErrors(error: unknown): Record<string, string> {

@@ -17,6 +17,7 @@ export interface RegisterCustomerDto {
    */
   phone?: string;
   /**
+   * Leading and trailing whitespace is ignored
    * @minLength 8
    * @maxLength 128
    */

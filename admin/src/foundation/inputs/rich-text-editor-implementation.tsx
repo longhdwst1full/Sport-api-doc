@@ -1,9 +1,5 @@
-import {
-  CKEditor,
-  type CKEditorEventPayload,
-} from 'ckeditor4-react';
-import { Alert, Button, Input, Skeleton } from 'antd';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { CKEditor, type CKEditorEventPayload } from 'ckeditor4-react';
+import { useEffect, useMemo, useRef } from 'react';
 import type { RichTextEditorProps } from './rich-text-editor';
 
 const DEFAULT_EDITOR_URL = 'https://cdn.ckeditor.com/4.25.1-lts/full-all/ckeditor.js';
@@ -11,7 +7,6 @@ const DEFAULT_EDITOR_URL = 'https://cdn.ckeditor.com/4.25.1-lts/full-all/ckedito
 interface CKEditorInstanceLike {
   getData: () => string;
   setData: (html: string) => void;
-  setReadOnly?: (readOnly: boolean) => void;
 }
 
 export function RichTextEditorImplementation({
@@ -21,9 +16,6 @@ export function RichTextEditorImplementation({
   placeholder = 'Nhập nội dung...',
   editorUrl = DEFAULT_EDITOR_URL,
 }: RichTextEditorProps) {
-  const [attempt, setAttempt] = useState(0);
-  const [ready, setReady] = useState(false);
-  const [loadingTimedOut, setLoadingTimedOut] = useState(false);
   const editorRef = useRef<CKEditorInstanceLike | null>(null);
   const lastValueRef = useRef('');
   const onChangeRef = useRef(onChange);
@@ -33,19 +25,22 @@ export function RichTextEditorImplementation({
   }, [onChange]);
 
   useEffect(() => {
-    setReady(false);
-    setLoadingTimedOut(false);
-    const timeout = window.setTimeout(() => setLoadingTimedOut(true), 10_000);
-    return () => window.clearTimeout(timeout);
-  }, [attempt, editorUrl]);
+    const nextValue = value ?? '';
+    if (!editorRef.current || nextValue === lastValueRef.current) return;
+    try {
+      editorRef.current.setData(nextValue);
+      lastValueRef.current = nextValue;
+    } catch {
+      // CKEditor can reject setData briefly while an instance is being replaced.
+    }
+  }, [value]);
 
   const config = useMemo(
     () => ({
       skin: 'moono-lisa',
       height: '320px',
-      readOnly: disabled,
       versionCheck: false,
-      removePlugins: 'exportpdf',
+      removePlugins: ['ExportPdf'],
       entities: false,
       basicEntities: false,
       allowedContent: true,
@@ -66,73 +61,37 @@ export function RichTextEditorImplementation({
         'Verdana/Verdana, Geneva, sans-serif;' +
         'SVN-Poppins/SVN-Poppins, sans-serif;',
     }),
-    [disabled, placeholder],
+    [placeholder],
   );
-
-  useEffect(() => {
-    const activeEditor = editorRef.current;
-    const nextValue = value ?? '';
-    if (
-      activeEditor &&
-      nextValue !== lastValueRef.current &&
-      nextValue !== activeEditor.getData()
-    ) {
-      activeEditor.setData(nextValue);
-      lastValueRef.current = nextValue;
-    }
-  }, [value]);
 
   return (
     <div
-      className="dctd-rich-text-editor relative min-h-80"
+      className="dctd-rich-text-editor"
       data-editor-state={disabled ? 'read-only' : 'editable'}
     >
-      {!ready && !loadingTimedOut && <Skeleton active paragraph={{ rows: 7 }} title={false} />}
-      {!ready && loadingTimedOut && (
-        <div className="space-y-3">
-          <Alert
-            showIcon
-            type="warning"
-            message="Không tải được CKEditor 4"
-            description="Editor tải quá 10 giây. Anh/chị vẫn có thể nhập HTML bên dưới hoặc thử tải lại."
-            action={<Button onClick={() => setAttempt((current) => current + 1)}>Thử lại</Button>}
-          />
-          <Input.TextArea
-            aria-label="Nội dung HTML dự phòng"
-            disabled={disabled}
-            rows={12}
-            value={value ?? ''}
-            onChange={(event) => onChangeRef.current?.(event.target.value)}
-            placeholder={placeholder}
-          />
-        </div>
-      )}
-      <div
-        className={ready ? undefined : 'pointer-events-none absolute inset-x-0 top-0 invisible'}
-        aria-busy={!ready}
-      >
-        <CKEditor
-          key={attempt}
-          editorUrl={editorUrl}
-          initData={value ?? ''}
-          readOnly={disabled}
-          config={config}
-          onInstanceReady={(event: CKEditorEventPayload<'instanceReady'>) => {
-            const activeEditor = event.editor as unknown as CKEditorInstanceLike | null;
-            const nextValue = value ?? '';
-            editorRef.current = activeEditor;
-            activeEditor?.setData(nextValue);
+      <CKEditor
+        scriptUrl={editorUrl}
+        data={value ?? ''}
+        readOnly={disabled}
+        config={config}
+        onInstanceReady={(event: CKEditorEventPayload<'instanceReady'>) => {
+          const editor = event.editor as unknown as CKEditorInstanceLike | null;
+          const nextValue = value ?? '';
+          editorRef.current = editor;
+          try {
+            editor?.setData(nextValue);
             lastValueRef.current = nextValue;
-            setReady(true);
-          }}
-          onChange={(event: CKEditorEventPayload<'change'>) => {
-            const activeEditor = event.editor as unknown as CKEditorInstanceLike | null;
-            const html = activeEditor?.getData() ?? '';
-            lastValueRef.current = html;
-            onChangeRef.current?.(html);
-          }}
-        />
-      </div>
+          } catch {
+            // Keep the form usable if CKEditor is still finalizing its editable area.
+          }
+        }}
+        onChange={(event: CKEditorEventPayload<'change'>) => {
+          const editor = event.editor as unknown as CKEditorInstanceLike | null;
+          const html = editor?.getData() ?? '';
+          lastValueRef.current = html;
+          onChangeRef.current?.(html);
+        }}
+      />
     </div>
   );
 }
