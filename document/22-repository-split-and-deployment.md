@@ -1,8 +1,8 @@
 # Tách repository và quy trình triển khai
 
-Version: 1.2.0
+Version: 1.3.0
 
-Change summary: Chuyển Git root của backend vào `api/`; API và tài liệu hiện là repository độc lập thực sự.
+Change summary: Chuẩn hóa NestJS entrypoint và cấu hình Vercel zero-config sau lỗi không nhận diện backend.
 
 Ngày cập nhật: 2026-09-05
 
@@ -65,6 +65,26 @@ repository API.
 Mỗi repository chạy `yarn install --frozen-lockfile` bằng Yarn 1.22.22 và Node.js 22.
 Secret chỉ tồn tại ở biến môi trường của máy chạy/deployment; không commit `.env`.
 
+## Triển khai API trên Vercel
+
+Vercel project của API phải trỏ trực tiếp tới repository `longhdwst1full/dctd-utc`:
+
+- Root Directory để trống (`.`), không còn đặt `api` như cấu trúc monorepo cũ;
+- Framework Preset để `Other`/tự động nhận diện NestJS;
+- không khai báo Build Command hoặc Output Directory tùy chỉnh;
+- Node.js dùng phiên bản tương thích với project và Yarn được nhận diện từ `yarn.lock`;
+- các biến `DATABASE_URL`, `DIRECT_URL` và secret ứng dụng được cấu hình trong Vercel Environment Variables.
+
+`src/main.ts` phải trực tiếp import `NestFactory` từ `@nestjs/core`, gọi
+`NestFactory.create(AppModule)` và `app.listen(...)`. Đây là entrypoint mà bộ nhận
+diện tĩnh của Vercel sử dụng. Không chuyển lời gọi tạo Nest application hoàn toàn sang
+factory khác; `src/platform/app.factory.ts` chỉ chia sẻ bước cấu hình middleware,
+validation, error filter, CORS và Swagger.
+
+Không chạy Prisma migration ở mỗi serverless invocation. Migration production chạy
+riêng bằng `yarn db:migrate` trước khi promote deployment; build chỉ validate schema,
+generate Prisma Client và compile NestJS.
+
 ## Release và rollback
 
 Ba ứng dụng có version/tag và pipeline riêng. Một release FE phải ghi rõ API contract
@@ -78,6 +98,7 @@ trong FE là bằng chứng để xác định phiên bản API mà bản build 
 
 | Version | Ngày | Thay đổi |
 | --- | --- | --- |
+| 1.3.0 | 2026-09-05 | Chuẩn hóa `src/main.ts` cho Vercel NestJS zero-config và ghi rõ Root Directory/build/migration deployment. |
 | 1.2.0 | 2026-09-05 | Chuyển `.git` vào `api/`, hoàn tất ba repository độc lập. |
 | 1.1.0 | 2026-09-05 | Tách project tooling/CI/GitNexus, ghi nguồn tham khảo riêng và trạng thái Git API. |
 | 1.0.0 | 2026-09-05 | Tách API, Admin và Client thành ba Git repository; bổ sung contract sync, lockfile và CI độc lập. |

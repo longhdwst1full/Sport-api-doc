@@ -37,6 +37,13 @@ export async function createApplication(
     logger: options.logger ? undefined : false,
   });
 
+  return configureApplication(app, options);
+}
+
+export async function configureApplication(
+  app: INestApplication,
+  options: CreateApplicationOptions,
+): Promise<INestApplication> {
   if (options.logger) app.useLogger(app.get(PinoLogger));
   const config = app.get(ConfigService);
   const corsOrigins = config.get<string[]>('app.corsOrigins') ?? ['*'];
