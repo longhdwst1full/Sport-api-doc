@@ -1,10 +1,10 @@
 # D43 — Migration UUID sang BIGINT IDENTITY và migrate-at-start
 
-> **Document version:** 1.0.1
+> **Document version:** 1.1.0
 >
 > **Last updated:** 2026-09-05
 >
-> **Change summary:** Bổ sung migrate-only cưỡng bức, nạp env tại tiến trình startup và loại default UUID khỏi `legacy_id`.
+> **Change summary:** Bổ sung migration gate tự động cho Vercel production, không chạy DDL từ preview/local build.
 
 ## Kết quả thiết kế
 
@@ -35,6 +35,15 @@ Tham khảo convention Java/Quarkus trong workspace (`quarkus.flyway.migrate-at-
 4. `APP_MODE=migrate` chỉ migrate rồi thoát, phù hợp release job trước khi scale application.
 5. `DATABASE_ENABLED=false` hoặc `DB_MIGRATE_ON_START=false` bỏ qua migration có log rõ ràng.
 
+Với Vercel zero-config, platform gọi thẳng NestJS entrypoint nên không chạy
+`scripts/start.cjs`. Vì vậy `yarn build` gọi `prisma:migrate:on-deploy`:
+
+1. local build (`VERCEL` không bằng `1`) luôn skip;
+2. Vercel Preview luôn skip để không cho branch tùy ý thay đổi shared database;
+3. Vercel Production tự chạy `prisma migrate deploy` trước `nest build`;
+4. `DB_MIGRATE_ON_DEPLOY=false` là kill switch khi cần tách migration thành release job;
+5. thiếu connection URL hoặc migration fail sẽ làm deployment fail-fast.
+
 `yarn db:migrate:only` và `APP_MODE=migrate` cưỡng bức chạy migration ngay cả khi `DB_MIGRATE_ON_START=false`; `DATABASE_ENABLED=false` vẫn là công tắc tắt database cao nhất.
 
 Không có runtime DDL trong controller/service/repository. `prisma` nằm trong production dependencies vì startup cần migration runner.
@@ -45,6 +54,7 @@ Không có runtime DDL trong controller/service/repository. `prisma` nằm trong
 - [ ] Dừng write traffic hoặc mở maintenance window; migration lấy `ACCESS EXCLUSIVE` lock.
 - [ ] Chỉ chạy một release job với `APP_MODE=migrate`; chưa scale replica đồng thời.
 - [ ] `DATABASE_URL` dùng transaction pooler cổng `6543`; `DIRECT_URL` dùng session pooler cổng `5432`.
+- [ ] Vercel Production có `DATABASE_ENABLED=true` và `DB_MIGRATE_ON_DEPLOY=true`.
 - [ ] Chạy `yarn db:status`, sau đó `yarn db:migrate:only` hoặc start release job.
 - [ ] Kiểm tra số dòng, orphan FK, constraint/index và `legacy_id` của dữ liệu cũ.
 - [ ] Chạy `yarn db:seed` và `yarn db:seed:demo`; seed phải upsert bằng business key, không thay credential đã đổi.
@@ -59,5 +69,6 @@ Không có runtime DDL trong controller/service/repository. `prisma` nằm trong
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.1.0 | 2026-09-05 | Tự động migrate khi Vercel Production build; skip preview/local và bổ sung kill switch. | DBOPS-20260905-VERCEL-AUTO-MIGRATE |
 | 1.0.1 | 2026-09-05 | Bảo đảm migrate-only không bị cờ startup vô hiệu hóa; `legacy_id` của bản ghi mới mặc định NULL. | D43 hardening |
 | 1.0.0 | 2026-09-05 | Tạo runbook migration ID và startup database. | D43 / `20260905120000_migrate_uuid_ids_to_bigint_identity` |

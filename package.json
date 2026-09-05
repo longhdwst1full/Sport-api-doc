@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "yarn start:dev",
-    "build": "yarn prisma:validate && yarn prisma:generate && nest build",
+    "build": "yarn prisma:validate && yarn prisma:generate && yarn prisma:migrate:on-deploy && nest build",
     "start": "node scripts/start.cjs",
     "prestart:dev": "yarn prisma:generate && yarn prisma:migrate:on-start",
     "start:dev": "nest start --watch",
@@ -13,6 +13,7 @@
     "prisma:migrate:deploy": "node scripts/run-prisma.cjs migrate-deploy",
     "prisma:migrate:status": "node scripts/run-prisma.cjs migrate-status",
     "prisma:migrate:on-start": "node scripts/migrate-on-start.cjs",
+    "prisma:migrate:on-deploy": "node scripts/migrate-on-start.cjs --deploy",
     "prisma:migrate:only": "node scripts/migrate-on-start.cjs --force",
     "prisma:seed": "tsx --env-file-if-exists=.env.local prisma/seed.ts",
     "prisma:seed:demo": "tsx --env-file-if-exists=.env.local prisma/seed-demo.ts",

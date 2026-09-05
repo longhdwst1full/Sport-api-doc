@@ -8,9 +8,16 @@ describe('validateEnvironment', () => {
     expect(environment.PORT).toBe(4000);
     expect(environment.DATABASE_ENABLED).toBe(false);
     expect(environment.DB_MIGRATE_ON_START).toBe(true);
+    expect(environment.DB_MIGRATE_ON_DEPLOY).toBe(true);
     expect(environment.APP_MODE).toBe('serve');
     expect(environment.CORS_ORIGINS).toBe('*');
     expect(environment.AUTH_BYPASS).toBe(true);
+  });
+
+  it('parses the deploy migration switch centrally', () => {
+    const environment = validateEnvironment({ DB_MIGRATE_ON_DEPLOY: 'false' });
+
+    expect(environment.DB_MIGRATE_ON_DEPLOY).toBe(false);
   });
 
   it('rejects wildcard CORS in production', () => {

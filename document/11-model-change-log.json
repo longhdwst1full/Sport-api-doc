@@ -731,6 +731,21 @@
       "targets": []
     },
     {
+      "id": "DBOPS-20260905-VERCEL-AUTO-MIGRATE",
+      "date": "2026-09-05",
+      "scope": "DATABASE+DEPLOYMENT+VERCEL",
+      "summary": "Production deployment trên Vercel tự chạy prisma migrate deploy trước Nest build; preview/local build không mutate database và có DB_MIGRATE_ON_DEPLOY kill switch.",
+      "sources": [
+        "script:api/scripts/migration-execution-policy.cjs",
+        "script:api/scripts/migrate-on-start.cjs --deploy",
+        "package:@dctd/api#build",
+        "test:api/src/database/migration-execution-policy.spec.ts",
+        "document:22-repository-split-and-deployment.md@1.4.0",
+        "document:23-id-migration-and-startup.md@1.1.0"
+      ],
+      "targets": []
+    },
+    {
       "id": "API-20260905-ADMIN-DELETE-EXTENSION",
       "date": "2026-09-05",
       "scope": "API+ADMIN+CMS+REVIEW+IAM",

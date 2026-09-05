@@ -85,6 +85,10 @@ class EnvironmentVariables {
   @IsBoolean()
   DB_MIGRATE_ON_START = true;
 
+  @Transform(toBoolean)
+  @IsBoolean()
+  DB_MIGRATE_ON_DEPLOY = true;
+
   @ValidateIf((environment: EnvironmentVariables) => environment.DATABASE_ENABLED)
   @IsString()
   @Matches(/^postgres(?:ql)?:\/\//, { message: 'DATABASE_URL must be a PostgreSQL URL' })

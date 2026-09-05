@@ -1,8 +1,8 @@
 # Tách repository và quy trình triển khai
 
-Version: 1.3.0
+Version: 1.4.0
 
-Change summary: Chuẩn hóa NestJS entrypoint và cấu hình Vercel zero-config sau lỗi không nhận diện backend.
+Change summary: Tự động chạy Prisma migration trong production deployment Vercel, đồng thời cô lập preview/local build.
 
 Ngày cập nhật: 2026-09-05
 
@@ -71,7 +71,7 @@ Vercel project của API phải trỏ trực tiếp tới repository `longhdwst1
 
 - Root Directory để trống (`.`), không còn đặt `api` như cấu trúc monorepo cũ;
 - Framework Preset để `Other`/tự động nhận diện NestJS;
-- không khai báo Build Command hoặc Output Directory tùy chỉnh;
+- không khai báo Output Directory tùy chỉnh; Build Command mặc định `yarn build` đã bao gồm migration gate;
 - Node.js dùng phiên bản tương thích với project và Yarn được nhận diện từ `yarn.lock`;
 - các biến `DATABASE_URL`, `DIRECT_URL` và secret ứng dụng được cấu hình trong Vercel Environment Variables.
 
@@ -81,9 +81,12 @@ diện tĩnh của Vercel sử dụng. Không chuyển lời gọi tạo Nest ap
 factory khác; `src/platform/app.factory.ts` chỉ chia sẻ bước cấu hình middleware,
 validation, error filter, CORS và Swagger.
 
-Không chạy Prisma migration ở mỗi serverless invocation. Migration production chạy
-riêng bằng `yarn db:migrate` trước khi promote deployment; build chỉ validate schema,
-generate Prisma Client và compile NestJS.
+Không chạy Prisma migration ở mỗi serverless invocation. `yarn build` gọi migration
+gate sau khi validate/generate Prisma Client: chỉ khi `VERCEL=1`,
+`VERCEL_ENV=production`, `DATABASE_ENABLED=true` và
+`DB_MIGRATE_ON_DEPLOY!=false` thì chạy `prisma migrate deploy`. Preview và local build
+luôn skip; thiếu `DATABASE_URL`/`DIRECT_URL` hoặc migration lỗi làm production build
+fail trước khi phiên bản lệch schema được phát hành.
 
 ## Release và rollback
 
@@ -98,6 +101,7 @@ trong FE là bằng chứng để xác định phiên bản API mà bản build 
 
 | Version | Ngày | Thay đổi |
 | --- | --- | --- |
+| 1.4.0 | 2026-09-05 | Thêm production deployment migration gate cho Vercel; preview/local build không mutate database. |
 | 1.3.0 | 2026-09-05 | Chuẩn hóa `src/main.ts` cho Vercel NestJS zero-config và ghi rõ Root Directory/build/migration deployment. |
 | 1.2.0 | 2026-09-05 | Chuyển `.git` vào `api/`, hoàn tất ba repository độc lập. |
 | 1.1.0 | 2026-09-05 | Tách project tooling/CI/GitNexus, ghi nguồn tham khảo riêng và trạng thái Git API. |

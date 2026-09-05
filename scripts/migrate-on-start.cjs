@@ -1,6 +1,7 @@
 const { spawnSync } = require('node:child_process');
 const { existsSync } = require('node:fs');
 const { resolve } = require('node:path');
+const { resolveMigrationExecution } = require('./migration-execution-policy.cjs');
 
 for (const environmentFile of ['.env.local', '.env']) {
   const environmentPath = resolve(process.cwd(), environmentFile);
@@ -10,13 +11,11 @@ for (const environmentFile of ['.env.local', '.env']) {
   }
 }
 
-const databaseEnabled = process.env.DATABASE_ENABLED === 'true';
-const migrateOnStart = process.env.DB_MIGRATE_ON_START !== 'false';
-const forceMigration = process.argv.includes('--force') || process.env.APP_MODE === 'migrate';
+const decision = resolveMigrationExecution(process.argv.slice(2), process.env);
 
-if (!databaseEnabled || (!migrateOnStart && !forceMigration)) {
+if (!decision.shouldRun) {
   console.log(
-    `[database] migration skipped (DATABASE_ENABLED=${databaseEnabled}, DB_MIGRATE_ON_START=${migrateOnStart}, forced=${forceMigration})`,
+    `[database] migration skipped (mode=${decision.mode}, reason=${decision.reason})`,
   );
   process.exit(0);
 }
@@ -27,7 +26,7 @@ if (!process.env.DATABASE_URL || !process.env.DIRECT_URL) {
   );
 }
 
-console.log('[database] applying pending Prisma migrations before application startup');
+console.log(`[database] applying pending Prisma migrations (mode=${decision.mode})`);
 const result = spawnSync(
   process.execPath,
   [require.resolve('prisma/build/index.js'), 'migrate', 'deploy'],
