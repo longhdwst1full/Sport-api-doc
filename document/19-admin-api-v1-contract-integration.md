@@ -1,6 +1,10 @@
 # Admin và Storefront API v1 contract integration
 
-Ngày cập nhật: 2026-09-03
+> **Document version:** 1.1.0
+>
+> **Last updated:** 2026-09-05
+>
+> **Change summary:** Bổ sung contract HTTP DELETE logic cho sáu aggregate Sprint 1 và generated SDK Admin tương ứng.
 
 ## Nguyên tắc đã áp dụng
 
@@ -19,22 +23,26 @@ Ngày cập nhật: 2026-09-03
 | Tạo branch + kho 1:1 | `POST /api/v1/admin/organization/branches` | `createAdminBranchWithWarehouse` | `org.branch.manage` + `org.warehouse.manage` | Organization drawer |
 | Cập nhật branch + kho 1:1 | `PATCH /api/v1/admin/organization/branches/{id}` | `updateAdminBranchWithWarehouse` | `org.branch.manage` + `org.warehouse.manage` | Organization drawer |
 | Bật/tắt branch + kho | `POST .../branches/{id}/activate|deactivate` | `activateAdminBranchWithWarehouse` / `deactivateAdminBranchWithWarehouse` | `org.branch.manage` + `org.warehouse.manage` | Organization table actions |
+| Xóa logic branch + kho | `DELETE /api/v1/admin/organization/branches/{id}` | `deleteAdminBranchWithWarehouse` | `org.branch.manage` + `org.warehouse.manage` | Chuyển đồng thời branch và warehouse sang `INACTIVE`; body có hai expected version |
 | Search branch active | `GET /api/v1/admin/organization/branches/active` | `searchActiveAdminBranches` | `org.branch.view` | Gán role scope BRANCH |
 | Search warehouse active | `GET /api/v1/admin/organization/warehouses/active` | `searchActiveAdminWarehouses` | `org.warehouse.view` | Gán role scope WAREHOUSE |
 | Danh sách role quản trị | `GET /api/v1/admin/iam/roles` | `listAdminRoles` | `iam.role.view` | Tab Role |
 | Search role active | `GET /api/v1/admin/iam/roles/active` | `searchActiveAdminRoles` | `iam.role.view` | Gán role cho user |
-| Gán role | `POST /api/v1/admin/iam/users/{userId}/role-assignments` | `assignAdminUserRole` | `iam.assignment.manage` | Role assignment drawer |
-| Thu hồi assignment | `POST /api/v1/admin/iam/users/{userId}/role-assignments/{assignmentId}/revoke` | `revokeAdminUserRoleAssignment` | `iam.assignment.manage` | Access page + reason modal |
-| Tạo staff và gán branch role | `POST /api/v1/admin/iam/users` | `createAdminStaffUser` | `iam.user.manage` | Staff creation drawer |
-| CRUD lifecycle brand | `GET/POST/PATCH` + `POST .../{id}/activate|deactivate` | `list/create/update/activate/deactivateAdminBrand` | `catalog.brand.view/manage` | Catalog master page |
-| CRUD lifecycle category | `GET/POST/PATCH` + `POST .../{id}/activate|deactivate` | `list/create/update/activate/deactivateAdminCategory` | `catalog.category.view/manage` | Catalog master page |
+| Gán role cấp dưới | `POST /api/v1/admin/iam/users/{userId}/role-assignments` | `assignAdminUserRole` | `iam.assignment.manage` — OWNER duy nhất | Chỉ BRANCH_MANAGER/STAFF + branchId |
+| Thu hồi assignment cấp dưới | `POST /api/v1/admin/iam/users/{userId}/role-assignments/{assignmentId}/revoke` | `revokeAdminUserRoleAssignment` | `iam.assignment.manage` — OWNER duy nhất | Cấm thu hồi OWNER |
+| Tạo account cấp dưới + branch role | `POST /api/v1/admin/iam/users` | `createAdminStaffUser` | `iam.user.manage` — OWNER duy nhất | Chỉ BRANCH_MANAGER/STAFF |
+| CRUD lifecycle brand | `GET/POST/PATCH/DELETE` + `POST .../{id}/activate|deactivate` | `list/create/update/delete/activate/deactivateAdminBrand` | `catalog.brand.view/manage` | `DELETE` chuyển `INACTIVE`; không xóa row |
+| CRUD lifecycle category | `GET/POST/PATCH/DELETE` + `POST .../{id}/activate|deactivate` | `list/create/update/delete/activate/deactivateAdminCategory` | `catalog.category.view/manage` | `DELETE` chuyển leaf category sang `INACTIVE`; chặn khi còn child active |
 | Product SPU create/update/detail | `POST/PATCH/GET /api/v1/admin/products...` | `create/update/getAdminProduct` | `catalog.product.manage/view` | Product create/edit drawer + workflow detail |
 | Điều chỉnh kho | `POST /api/v1/admin/inventory/adjustments` | `createStockAdjustment` | `inventory.stock.adjust` | Inventory drawer; generated request option truyền Idempotency-Key |
 | Kiểm duyệt đánh giá | `PATCH /api/v1/admin/reviews/{id}/moderation` | `moderateAdminReview` | `review.moderate` | Reviews actions |
 | Archive/reactivate product hoặc combo | `POST .../products/{id}/archive|reactivate` | `archiveAdminProduct` / `reactivateAdminProduct` | `catalog.product.publish` | Product workflow drawer |
+| Xóa logic product hoặc combo | `DELETE /api/v1/admin/products/{id}` | `deleteAdminProduct` | `catalog.product.publish` | Tái sử dụng invariant archive; body có `expectedVersion` |
 | Archive/reactivate variant | `POST .../products/variants/{id}/archive|reactivate` | `archiveAdminProductVariant` / `reactivateAdminProductVariant` | `catalog.product.manage` | Product workflow drawer |
+| Xóa logic variant/SKU | `DELETE /api/v1/admin/products/variants/{variantId}` | `deleteAdminProductVariant` | `catalog.product.manage` | Chuyển `INACTIVE`; chặn component đang thuộc combo published |
 | Sửa metadata variant | `PATCH /api/v1/admin/products/variants/{variantId}` | `updateAdminProductVariant` | `catalog.product.manage` | Variant edit drawer; SKU bất biến |
 | Product media lifecycle | `POST/PATCH .../products/{id}/media...` | `attach/update/reorder/archiveAdminProductMedia` | `catalog.product.manage` | Product media panel |
+| Xóa logic liên kết ảnh sản phẩm | `DELETE /api/v1/admin/products/{id}/media/{mediaId}` | `deleteAdminProductMedia` | `catalog.product.manage` | Chuyển link `INACTIVE`, không xóa `media_assets` hay asset trên provider |
 | Finalize media asset | `POST /api/v1/admin/media/uploads/finalize` | `finalizeAdminMediaUpload` | `media.asset.upload` | Cloudinary upload adapter; verify rồi persist idempotent |
 | Search SKU active để tạo combo | `GET /api/v1/admin/products/variants/active` | `searchActiveAdminProductVariants` | `catalog.product.view` | Combo builder; chỉ SKU thường ACTIVE, không nested combo |
 | Thay giá hiện hành atomic | `POST /api/v1/admin/products/variants/{variantId}/prices/replace` | `replaceAdminProductPrice` | `catalog.price.manage` | Price form gửi expected price id/version |
@@ -54,6 +62,8 @@ API `/active` nhận `search`, `page`, `limit`; warehouse nhận thêm `branchId
   "meta": { "page": 1, "limit": 20, "total": 1, "hasMore": false }
 }
 ```
+
+Các operation `DELETE` của Sprint 1 đều nhận request body chứa optimistic version. Lặp lại request với version cũ không làm xóa thêm dữ liệu và trả conflict/invalid transition theo error envelope chuẩn. Các route `POST .../deactivate|archive` cũ vẫn được giữ để tương thích với Admin hiện tại; không có hard delete cho master, transaction, ledger, audit hoặc root IAM.
 
 ## Error contract duy nhất
 
@@ -90,6 +100,9 @@ Admin dùng `getApiErrorMessage` cho lỗi form/query và `getApiFieldErrors` đ
 - [x] Brand/category và branch/kho update dùng expected version; activate/deactivate không xóa vật lý.
 - [x] Demo seed chạy lặp hai lần trên PostgreSQL local, không nhân bản dữ liệu.
 - [x] Staff create dùng Argon2 default password, tạo user + assignment + audit atomic; API không trả credential/hash.
+- [x] `OWNER` chỉ thuộc fixed bootstrap Admin; Branch Manager không có quyền tạo/quản lý/gán account.
+- [x] Sai password lần 5 và account đã khóa trả `ACCOUNT_LOCKED`; login thành công reset attempts/lock metadata; toast Admin không ghép Request ID.
+- [x] Register/login/change-password trim khoảng trắng hai đầu password trước validation/hash/verify; login đồng thời trim identifier.
 - [x] Product/combo/variant lifecycle dùng named actions và optimistic version; storefront không trả archived/inactive data.
 - [x] Product có discriminator `STANDARD|BUNDLE`; combo nằm theo từng SKU, không flatten ở Product.
 - [x] Product workflow dùng active SKU lookup generated từ OpenAPI; không tải toàn bộ danh sách quản trị để dựng combo.
@@ -109,5 +122,13 @@ Admin dùng `getApiErrorMessage` cho lỗi form/query và `getApiFieldErrors` đ
 - [x] Price Admin quản lý current/upcoming/history, future schedule, no-retroactive và >20% reason/confirm.
 - [x] HTTP e2e với fresh PostgreSQL local và `AUTH_BYPASS=false`: 2 suites, 11/11 test; gồm revoke assignment, variant/media, price lifecycle và inventory adjustment persist/replay/conflict/audit.
 - [x] PostgreSQL integration: 3 suites, 21/21 test; fresh 9/9 migration và seed demo chạy lặp hai lần.
+- [x] Sáu operation HTTP DELETE logic đã xuất vào OpenAPI/YAML và Admin Orval SDK; controller regression xác nhận tái sử dụng đúng lifecycle/invariant/audit service.
 - [ ] Verified identity/token — development đang dùng `AUTH_BYPASS=true` và principal OWNER bootstrap; production bắt buộc tắt bypass.
 - [ ] PostgreSQL permission/scope + transaction/audit integration — blocker trước staging.
+
+## Revision history
+
+| Version | Date | Change summary | Source / Change ID |
+| --- | --- | --- | --- |
+| 1.0.0 | 2026-09-04 | Chuẩn hóa metadata; chốt một Admin gốc, lockout, trim input Auth và cách hiển thị lỗi Admin. | DBAPI-20260904-SINGLE-ROOT-ADMIN |
+| 1.1.0 | 2026-09-05 | Bổ sung sáu HTTP DELETE logic, giữ route lifecycle cũ và regenerate OpenAPI/Admin SDK. | API-20260905-LOGICAL-DELETE-V1 |

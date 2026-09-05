@@ -67,7 +67,7 @@ export const getListAdminBrandsQueryKey = () => {
 
 export const getListAdminBrandsQueryOptions = <
   TData = Awaited<ReturnType<typeof listAdminBrands>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(options?: {
   query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminBrands>>, TError, TData>>;
 }) => {
@@ -86,11 +86,11 @@ export const getListAdminBrandsQueryOptions = <
 };
 
 export type ListAdminBrandsQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminBrands>>>;
-export type ListAdminBrandsQueryError = ErrorType<unknown>;
+export type ListAdminBrandsQueryError = ErrorType<ErrorResponseDto | ErrorResponseDto>;
 
 export function useListAdminBrands<
   TData = Awaited<ReturnType<typeof listAdminBrands>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   options: {
     query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminBrands>>, TError, TData>> &
@@ -107,7 +107,7 @@ export function useListAdminBrands<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListAdminBrands<
   TData = Awaited<ReturnType<typeof listAdminBrands>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminBrands>>, TError, TData>> &
@@ -124,7 +124,7 @@ export function useListAdminBrands<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListAdminBrands<
   TData = Awaited<ReturnType<typeof listAdminBrands>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminBrands>>, TError, TData>>;
@@ -134,7 +134,7 @@ export function useListAdminBrands<
 
 export function useListAdminBrands<
   TData = Awaited<ReturnType<typeof listAdminBrands>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminBrands>>, TError, TData>>;
@@ -166,7 +166,7 @@ export const createAdminBrand = (
 };
 
 export const getCreateAdminBrandMutationOptions = <
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -204,9 +204,12 @@ export type CreateAdminBrandMutationResult = NonNullable<
   Awaited<ReturnType<typeof createAdminBrand>>
 >;
 export type CreateAdminBrandMutationBody = BodyType<CreateBrandDto>;
-export type CreateAdminBrandMutationError = ErrorType<unknown>;
+export type CreateAdminBrandMutationError = ErrorType<ErrorResponseDto | ErrorResponseDto>;
 
-export const useCreateAdminBrand = <TError = ErrorType<unknown>, TContext = unknown>(
+export const useCreateAdminBrand = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createAdminBrand>>,
@@ -245,7 +248,7 @@ export const getSearchActiveAdminBrandsQueryKey = (params?: SearchActiveAdminBra
 
 export const getSearchActiveAdminBrandsQueryOptions = <
   TData = Awaited<ReturnType<typeof searchActiveAdminBrands>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   params?: SearchActiveAdminBrandsParams,
   options?: {
@@ -272,11 +275,11 @@ export const getSearchActiveAdminBrandsQueryOptions = <
 export type SearchActiveAdminBrandsQueryResult = NonNullable<
   Awaited<ReturnType<typeof searchActiveAdminBrands>>
 >;
-export type SearchActiveAdminBrandsQueryError = ErrorType<unknown>;
+export type SearchActiveAdminBrandsQueryError = ErrorType<ErrorResponseDto | ErrorResponseDto>;
 
 export function useSearchActiveAdminBrands<
   TData = Awaited<ReturnType<typeof searchActiveAdminBrands>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   params: undefined | SearchActiveAdminBrandsParams,
   options: {
@@ -296,7 +299,7 @@ export function useSearchActiveAdminBrands<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useSearchActiveAdminBrands<
   TData = Awaited<ReturnType<typeof searchActiveAdminBrands>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   params?: SearchActiveAdminBrandsParams,
   options?: {
@@ -316,7 +319,7 @@ export function useSearchActiveAdminBrands<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useSearchActiveAdminBrands<
   TData = Awaited<ReturnType<typeof searchActiveAdminBrands>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   params?: SearchActiveAdminBrandsParams,
   options?: {
@@ -329,7 +332,7 @@ export function useSearchActiveAdminBrands<
 
 export function useSearchActiveAdminBrands<
   TData = Awaited<ReturnType<typeof searchActiveAdminBrands>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   params?: SearchActiveAdminBrandsParams,
   options?: {
@@ -363,7 +366,7 @@ export const updateAdminBrand = (id: string, updateBrandDto: BodyType<UpdateBran
 };
 
 export const getUpdateAdminBrandMutationOptions = <
-  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -401,13 +404,15 @@ export type UpdateAdminBrandMutationResult = NonNullable<
   Awaited<ReturnType<typeof updateAdminBrand>>
 >;
 export type UpdateAdminBrandMutationBody = BodyType<UpdateBrandDto>;
-export type UpdateAdminBrandMutationError = ErrorType<ErrorResponseDto | ErrorResponseDto>;
+export type UpdateAdminBrandMutationError = ErrorType<
+  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+>;
 
 /**
  * @summary Update mutable brand fields
  */
 export const useUpdateAdminBrand = <
-  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
   TContext = unknown,
 >(
   options?: {
@@ -431,6 +436,95 @@ export const useUpdateAdminBrand = <
 };
 
 /**
+ * @summary Logically delete a brand by changing its status to INACTIVE
+ */
+export const deleteAdminBrand = (
+  id: string,
+  changeMasterStatusDto: BodyType<ChangeMasterStatusDto>,
+) => {
+  return apiFetcher<BrandDto>({
+    url: `/api/v1/admin/catalog/brands/${id}`,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    data: changeMasterStatusDto,
+  });
+};
+
+export const getDeleteAdminBrandMutationOptions = <
+  TError = ErrorType<
+    ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteAdminBrand>>,
+    TError,
+    { id: string; data: BodyType<ChangeMasterStatusDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteAdminBrand>>,
+  TError,
+  { id: string; data: BodyType<ChangeMasterStatusDto> },
+  TContext
+> => {
+  const mutationKey = ['deleteAdminBrand'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteAdminBrand>>,
+    { id: string; data: BodyType<ChangeMasterStatusDto> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return deleteAdminBrand(id, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteAdminBrandMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteAdminBrand>>
+>;
+export type DeleteAdminBrandMutationBody = BodyType<ChangeMasterStatusDto>;
+export type DeleteAdminBrandMutationError = ErrorType<
+  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+>;
+
+/**
+ * @summary Logically delete a brand by changing its status to INACTIVE
+ */
+export const useDeleteAdminBrand = <
+  TError = ErrorType<
+    ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteAdminBrand>>,
+      TError,
+      { id: string; data: BodyType<ChangeMasterStatusDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteAdminBrand>>,
+  TError,
+  { id: string; data: BodyType<ChangeMasterStatusDto> },
+  TContext
+> => {
+  const mutationOptions = getDeleteAdminBrandMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+/**
  * @summary Deactivate a brand
  */
 export const deactivateAdminBrand = (
@@ -448,7 +542,7 @@ export const deactivateAdminBrand = (
 };
 
 export const getDeactivateAdminBrandMutationOptions = <
-  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -486,13 +580,15 @@ export type DeactivateAdminBrandMutationResult = NonNullable<
   Awaited<ReturnType<typeof deactivateAdminBrand>>
 >;
 export type DeactivateAdminBrandMutationBody = BodyType<ChangeMasterStatusDto>;
-export type DeactivateAdminBrandMutationError = ErrorType<ErrorResponseDto | ErrorResponseDto>;
+export type DeactivateAdminBrandMutationError = ErrorType<
+  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+>;
 
 /**
  * @summary Deactivate a brand
  */
 export const useDeactivateAdminBrand = <
-  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
   TContext = unknown,
 >(
   options?: {
@@ -533,7 +629,7 @@ export const activateAdminBrand = (
 };
 
 export const getActivateAdminBrandMutationOptions = <
-  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -571,13 +667,15 @@ export type ActivateAdminBrandMutationResult = NonNullable<
   Awaited<ReturnType<typeof activateAdminBrand>>
 >;
 export type ActivateAdminBrandMutationBody = BodyType<ChangeMasterStatusDto>;
-export type ActivateAdminBrandMutationError = ErrorType<ErrorResponseDto | ErrorResponseDto>;
+export type ActivateAdminBrandMutationError = ErrorType<
+  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+>;
 
 /**
  * @summary Reactivate a brand
  */
 export const useActivateAdminBrand = <
-  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
   TContext = unknown,
 >(
   options?: {
@@ -614,7 +712,7 @@ export const getListAdminCategoriesQueryKey = () => {
 
 export const getListAdminCategoriesQueryOptions = <
   TData = Awaited<ReturnType<typeof listAdminCategories>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(options?: {
   query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminCategories>>, TError, TData>>;
 }) => {
@@ -635,11 +733,11 @@ export const getListAdminCategoriesQueryOptions = <
 export type ListAdminCategoriesQueryResult = NonNullable<
   Awaited<ReturnType<typeof listAdminCategories>>
 >;
-export type ListAdminCategoriesQueryError = ErrorType<unknown>;
+export type ListAdminCategoriesQueryError = ErrorType<ErrorResponseDto | ErrorResponseDto>;
 
 export function useListAdminCategories<
   TData = Awaited<ReturnType<typeof listAdminCategories>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   options: {
     query: Partial<
@@ -658,7 +756,7 @@ export function useListAdminCategories<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListAdminCategories<
   TData = Awaited<ReturnType<typeof listAdminCategories>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   options?: {
     query?: Partial<
@@ -677,7 +775,7 @@ export function useListAdminCategories<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListAdminCategories<
   TData = Awaited<ReturnType<typeof listAdminCategories>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   options?: {
     query?: Partial<
@@ -689,7 +787,7 @@ export function useListAdminCategories<
 
 export function useListAdminCategories<
   TData = Awaited<ReturnType<typeof listAdminCategories>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   options?: {
     query?: Partial<
@@ -723,7 +821,7 @@ export const createAdminCategory = (
 };
 
 export const getCreateAdminCategoryMutationOptions = <
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -761,9 +859,12 @@ export type CreateAdminCategoryMutationResult = NonNullable<
   Awaited<ReturnType<typeof createAdminCategory>>
 >;
 export type CreateAdminCategoryMutationBody = BodyType<CreateCategoryDto>;
-export type CreateAdminCategoryMutationError = ErrorType<unknown>;
+export type CreateAdminCategoryMutationError = ErrorType<ErrorResponseDto | ErrorResponseDto>;
 
-export const useCreateAdminCategory = <TError = ErrorType<unknown>, TContext = unknown>(
+export const useCreateAdminCategory = <
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TContext = unknown,
+>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createAdminCategory>>,
@@ -804,7 +905,7 @@ export const getSearchActiveAdminCategoriesQueryKey = (
 
 export const getSearchActiveAdminCategoriesQueryOptions = <
   TData = Awaited<ReturnType<typeof searchActiveAdminCategories>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   params?: SearchActiveAdminCategoriesParams,
   options?: {
@@ -831,11 +932,11 @@ export const getSearchActiveAdminCategoriesQueryOptions = <
 export type SearchActiveAdminCategoriesQueryResult = NonNullable<
   Awaited<ReturnType<typeof searchActiveAdminCategories>>
 >;
-export type SearchActiveAdminCategoriesQueryError = ErrorType<unknown>;
+export type SearchActiveAdminCategoriesQueryError = ErrorType<ErrorResponseDto | ErrorResponseDto>;
 
 export function useSearchActiveAdminCategories<
   TData = Awaited<ReturnType<typeof searchActiveAdminCategories>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   params: undefined | SearchActiveAdminCategoriesParams,
   options: {
@@ -855,7 +956,7 @@ export function useSearchActiveAdminCategories<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useSearchActiveAdminCategories<
   TData = Awaited<ReturnType<typeof searchActiveAdminCategories>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   params?: SearchActiveAdminCategoriesParams,
   options?: {
@@ -875,7 +976,7 @@ export function useSearchActiveAdminCategories<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useSearchActiveAdminCategories<
   TData = Awaited<ReturnType<typeof searchActiveAdminCategories>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   params?: SearchActiveAdminCategoriesParams,
   options?: {
@@ -888,7 +989,7 @@ export function useSearchActiveAdminCategories<
 
 export function useSearchActiveAdminCategories<
   TData = Awaited<ReturnType<typeof searchActiveAdminCategories>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   params?: SearchActiveAdminCategoriesParams,
   options?: {
@@ -922,7 +1023,7 @@ export const updateAdminCategory = (id: string, updateCategoryDto: BodyType<Upda
 };
 
 export const getUpdateAdminCategoryMutationOptions = <
-  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -960,13 +1061,15 @@ export type UpdateAdminCategoryMutationResult = NonNullable<
   Awaited<ReturnType<typeof updateAdminCategory>>
 >;
 export type UpdateAdminCategoryMutationBody = BodyType<UpdateCategoryDto>;
-export type UpdateAdminCategoryMutationError = ErrorType<ErrorResponseDto | ErrorResponseDto>;
+export type UpdateAdminCategoryMutationError = ErrorType<
+  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+>;
 
 /**
  * @summary Update mutable category fields
  */
 export const useUpdateAdminCategory = <
-  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
   TContext = unknown,
 >(
   options?: {
@@ -990,6 +1093,110 @@ export const useUpdateAdminCategory = <
 };
 
 /**
+ * @summary Logically delete a leaf category by changing its status to INACTIVE
+ */
+export const deleteAdminCategory = (
+  id: string,
+  changeMasterStatusDto: BodyType<ChangeMasterStatusDto>,
+) => {
+  return apiFetcher<CategoryDto>({
+    url: `/api/v1/admin/catalog/categories/${id}`,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    data: changeMasterStatusDto,
+  });
+};
+
+export const getDeleteAdminCategoryMutationOptions = <
+  TError = ErrorType<
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteAdminCategory>>,
+    TError,
+    { id: string; data: BodyType<ChangeMasterStatusDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteAdminCategory>>,
+  TError,
+  { id: string; data: BodyType<ChangeMasterStatusDto> },
+  TContext
+> => {
+  const mutationKey = ['deleteAdminCategory'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteAdminCategory>>,
+    { id: string; data: BodyType<ChangeMasterStatusDto> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return deleteAdminCategory(id, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteAdminCategoryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteAdminCategory>>
+>;
+export type DeleteAdminCategoryMutationBody = BodyType<ChangeMasterStatusDto>;
+export type DeleteAdminCategoryMutationError = ErrorType<
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+>;
+
+/**
+ * @summary Logically delete a leaf category by changing its status to INACTIVE
+ */
+export const useDeleteAdminCategory = <
+  TError = ErrorType<
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteAdminCategory>>,
+      TError,
+      { id: string; data: BodyType<ChangeMasterStatusDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteAdminCategory>>,
+  TError,
+  { id: string; data: BodyType<ChangeMasterStatusDto> },
+  TContext
+> => {
+  const mutationOptions = getDeleteAdminCategoryMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+/**
  * @summary Deactivate a leaf category
  */
 export const deactivateAdminCategory = (
@@ -1007,7 +1214,9 @@ export const deactivateAdminCategory = (
 };
 
 export const getDeactivateAdminCategoryMutationOptions = <
-  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+  TError = ErrorType<
+    ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1046,14 +1255,16 @@ export type DeactivateAdminCategoryMutationResult = NonNullable<
 >;
 export type DeactivateAdminCategoryMutationBody = BodyType<ChangeMasterStatusDto>;
 export type DeactivateAdminCategoryMutationError = ErrorType<
-  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
 >;
 
 /**
  * @summary Deactivate a leaf category
  */
 export const useDeactivateAdminCategory = <
-  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+  TError = ErrorType<
+    ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+  >,
   TContext = unknown,
 >(
   options?: {
@@ -1094,7 +1305,9 @@ export const activateAdminCategory = (
 };
 
 export const getActivateAdminCategoryMutationOptions = <
-  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+  TError = ErrorType<
+    ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1133,14 +1346,16 @@ export type ActivateAdminCategoryMutationResult = NonNullable<
 >;
 export type ActivateAdminCategoryMutationBody = BodyType<ChangeMasterStatusDto>;
 export type ActivateAdminCategoryMutationError = ErrorType<
-  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
 >;
 
 /**
  * @summary Reactivate a category
  */
 export const useActivateAdminCategory = <
-  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
+  TError = ErrorType<
+    ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+  >,
   TContext = unknown,
 >(
   options?: {
@@ -1688,6 +1903,110 @@ export const useUpdateAdminProduct = <
 };
 
 /**
+ * @summary Logically delete a product or combo by changing its status to ARCHIVED
+ */
+export const deleteAdminProduct = (
+  id: string,
+  changeProductStatusDto: BodyType<ChangeProductStatusDto>,
+) => {
+  return apiFetcher<ProductDetailDto>({
+    url: `/api/v1/admin/products/${id}`,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    data: changeProductStatusDto,
+  });
+};
+
+export const getDeleteAdminProductMutationOptions = <
+  TError = ErrorType<
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteAdminProduct>>,
+    TError,
+    { id: string; data: BodyType<ChangeProductStatusDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteAdminProduct>>,
+  TError,
+  { id: string; data: BodyType<ChangeProductStatusDto> },
+  TContext
+> => {
+  const mutationKey = ['deleteAdminProduct'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteAdminProduct>>,
+    { id: string; data: BodyType<ChangeProductStatusDto> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return deleteAdminProduct(id, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteAdminProductMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteAdminProduct>>
+>;
+export type DeleteAdminProductMutationBody = BodyType<ChangeProductStatusDto>;
+export type DeleteAdminProductMutationError = ErrorType<
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+>;
+
+/**
+ * @summary Logically delete a product or combo by changing its status to ARCHIVED
+ */
+export const useDeleteAdminProduct = <
+  TError = ErrorType<
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteAdminProduct>>,
+      TError,
+      { id: string; data: BodyType<ChangeProductStatusDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteAdminProduct>>,
+  TError,
+  { id: string; data: BodyType<ChangeProductStatusDto> },
+  TContext
+> => {
+  const mutationOptions = getDeleteAdminProductMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+/**
  * @summary Create a sellable SKU variant
  */
 export const createAdminProductVariant = (
@@ -1872,6 +2191,110 @@ export const useUpdateAdminProductVariant = <
   TContext
 > => {
   const mutationOptions = getUpdateAdminProductVariantMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+/**
+ * @summary Logically delete one sellable SKU variant by changing its status to INACTIVE
+ */
+export const deleteAdminProductVariant = (
+  variantId: string,
+  changeProductStatusDto: BodyType<ChangeProductStatusDto>,
+) => {
+  return apiFetcher<ProductDetailDto>({
+    url: `/api/v1/admin/products/variants/${variantId}`,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    data: changeProductStatusDto,
+  });
+};
+
+export const getDeleteAdminProductVariantMutationOptions = <
+  TError = ErrorType<
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteAdminProductVariant>>,
+    TError,
+    { variantId: string; data: BodyType<ChangeProductStatusDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteAdminProductVariant>>,
+  TError,
+  { variantId: string; data: BodyType<ChangeProductStatusDto> },
+  TContext
+> => {
+  const mutationKey = ['deleteAdminProductVariant'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteAdminProductVariant>>,
+    { variantId: string; data: BodyType<ChangeProductStatusDto> }
+  > = (props) => {
+    const { variantId, data } = props ?? {};
+
+    return deleteAdminProductVariant(variantId, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteAdminProductVariantMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteAdminProductVariant>>
+>;
+export type DeleteAdminProductVariantMutationBody = BodyType<ChangeProductStatusDto>;
+export type DeleteAdminProductVariantMutationError = ErrorType<
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+>;
+
+/**
+ * @summary Logically delete one sellable SKU variant by changing its status to INACTIVE
+ */
+export const useDeleteAdminProductVariant = <
+  TError = ErrorType<
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteAdminProductVariant>>,
+      TError,
+      { variantId: string; data: BodyType<ChangeProductStatusDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteAdminProductVariant>>,
+  TError,
+  { variantId: string; data: BodyType<ChangeProductStatusDto> },
+  TContext
+> => {
+  const mutationOptions = getDeleteAdminProductVariantMutationOptions(options);
 
   return useMutation(mutationOptions, queryClient);
 };
@@ -2187,6 +2610,111 @@ export const useUpdateAdminProductMedia = <
   TContext
 > => {
   const mutationOptions = getUpdateAdminProductMediaMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+/**
+ * @summary Logically delete a product media link without deleting its provider asset
+ */
+export const deleteAdminProductMedia = (
+  id: string,
+  mediaId: string,
+  changeProductMediaStatusDto: BodyType<ChangeProductMediaStatusDto>,
+) => {
+  return apiFetcher<ProductMediaDto[]>({
+    url: `/api/v1/admin/products/${id}/media/${mediaId}`,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    data: changeProductMediaStatusDto,
+  });
+};
+
+export const getDeleteAdminProductMediaMutationOptions = <
+  TError = ErrorType<
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteAdminProductMedia>>,
+    TError,
+    { id: string; mediaId: string; data: BodyType<ChangeProductMediaStatusDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteAdminProductMedia>>,
+  TError,
+  { id: string; mediaId: string; data: BodyType<ChangeProductMediaStatusDto> },
+  TContext
+> => {
+  const mutationKey = ['deleteAdminProductMedia'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteAdminProductMedia>>,
+    { id: string; mediaId: string; data: BodyType<ChangeProductMediaStatusDto> }
+  > = (props) => {
+    const { id, mediaId, data } = props ?? {};
+
+    return deleteAdminProductMedia(id, mediaId, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteAdminProductMediaMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteAdminProductMedia>>
+>;
+export type DeleteAdminProductMediaMutationBody = BodyType<ChangeProductMediaStatusDto>;
+export type DeleteAdminProductMediaMutationError = ErrorType<
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+  | ErrorResponseDto
+>;
+
+/**
+ * @summary Logically delete a product media link without deleting its provider asset
+ */
+export const useDeleteAdminProductMedia = <
+  TError = ErrorType<
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+    | ErrorResponseDto
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteAdminProductMedia>>,
+      TError,
+      { id: string; mediaId: string; data: BodyType<ChangeProductMediaStatusDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteAdminProductMedia>>,
+  TError,
+  { id: string; mediaId: string; data: BodyType<ChangeProductMediaStatusDto> },
+  TContext
+> => {
+  const mutationOptions = getDeleteAdminProductMediaMutationOptions(options);
 
   return useMutation(mutationOptions, queryClient);
 };

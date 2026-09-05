@@ -63,7 +63,7 @@ export class IamController {
   @RequirePermissions('iam.user.manage')
   @ApiOperation({
     operationId: 'createAdminStaffUser',
-    summary: 'Create an active staff user with the approved default password and branch role',
+    summary: 'Root Admin creates an active subordinate account with a branch role',
   })
   @ApiCreatedResponse({ type: UserDto })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
@@ -87,7 +87,7 @@ export class IamController {
   @RequirePermissions('iam.user.manage')
   @ApiOperation({
     operationId: 'lockAdminStaffUser',
-    summary: 'Lock a staff user and revoke every active session',
+    summary: 'Root Admin locks a subordinate account and revokes every active session',
   })
   @ApiOkResponse({ type: UserDto })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
@@ -113,7 +113,7 @@ export class IamController {
   @RequirePermissions('iam.user.manage')
   @ApiOperation({
     operationId: 'unlockAdminStaffUser',
-    summary: 'Unlock a staff user and reset the password to the approved default',
+    summary: 'Root Admin unlocks a subordinate account and resets its password',
   })
   @ApiOkResponse({ type: UserDto })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
@@ -152,7 +152,7 @@ export class IamController {
   @RequirePermissions('iam.role.view')
   @ApiOperation({
     operationId: 'searchActiveAdminRoles',
-    summary: 'Search active roles for admin assignment lookups',
+    summary: 'Search assignable BRANCH_MANAGER or STAFF roles',
   })
   @ApiOkResponse({ type: ActiveLookupResponseDto })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
@@ -169,7 +169,7 @@ export class IamController {
   @RequirePermissions('iam.assignment.manage')
   @ApiOperation({
     operationId: 'assignAdminUserRole',
-    summary: 'Assign a role with a validated data scope',
+    summary: 'Root Admin assigns BRANCH_MANAGER or STAFF within an active branch',
   })
   @ApiCreatedResponse({ type: UserRoleAssignmentDto })
   @ApiBadRequestResponse({
@@ -200,7 +200,7 @@ export class IamController {
   @RequirePermissions('iam.assignment.manage')
   @ApiOperation({
     operationId: 'revokeAdminUserRoleAssignment',
-    summary: 'Revoke one active non-owner role assignment and refresh effective permissions',
+    summary: 'Root Admin revokes one subordinate assignment and refreshes permissions',
   })
   @ApiOkResponse({ type: UserDto })
   @ApiBadRequestResponse({ type: ErrorResponseDto })

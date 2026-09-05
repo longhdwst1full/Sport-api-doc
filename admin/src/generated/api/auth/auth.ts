@@ -46,7 +46,7 @@ export const loginAdmin = (loginDto: BodyType<LoginDto>, signal?: AbortSignal) =
 };
 
 export const getLoginAdminMutationOptions = <
-  TError = ErrorType<void>,
+  TError = ErrorType<ErrorResponseDto>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -82,12 +82,12 @@ export const getLoginAdminMutationOptions = <
 
 export type LoginAdminMutationResult = NonNullable<Awaited<ReturnType<typeof loginAdmin>>>;
 export type LoginAdminMutationBody = BodyType<LoginDto>;
-export type LoginAdminMutationError = ErrorType<void>;
+export type LoginAdminMutationError = ErrorType<ErrorResponseDto>;
 
 /**
  * @summary Authenticate staff by email or phone
  */
-export const useLoginAdmin = <TError = ErrorType<void>, TContext = unknown>(
+export const useLoginAdmin = <TError = ErrorType<ErrorResponseDto>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof loginAdmin>>,

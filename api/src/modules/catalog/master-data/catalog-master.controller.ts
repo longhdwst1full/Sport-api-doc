@@ -1,23 +1,28 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
   Req,
 } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
   ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
+  ApiUnauthorizedResponse,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
 import { RequirePermissions } from '../../../common/decorators/require-permissions.decorator';
@@ -39,6 +44,8 @@ import { CatalogMasterService } from './catalog-master.service';
 
 @ApiTags('Admin Catalog')
 @ApiBearerAuth()
+@ApiUnauthorizedResponse({ type: ErrorResponseDto })
+@ApiForbiddenResponse({ type: ErrorResponseDto })
 @Controller('admin/catalog')
 export class CatalogMasterController {
   constructor(private readonly catalog: CatalogMasterService) {}
@@ -82,6 +89,25 @@ export class CatalogMasterController {
   @ApiConflictResponse({ type: ErrorResponseDto })
   deactivateBrand(
     @Param('id') id: string,
+    @Body() input: ChangeMasterStatusDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<BrandDto> {
+    return this.catalog.changeBrandStatus(id, 'INACTIVE', input, getMutationContext(request));
+  }
+
+  @Delete('brands/:id')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions('catalog.brand.manage')
+  @ApiOperation({
+    operationId: 'deleteAdminBrand',
+    summary: 'Logically delete a brand by changing its status to INACTIVE',
+  })
+  @ApiOkResponse({ type: BrandDto })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  deleteBrand(
+    @Param('id', new ParseUUIDPipe()) id: string,
     @Body() input: ChangeMasterStatusDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<BrandDto> {
@@ -143,6 +169,26 @@ export class CatalogMasterController {
   @ApiUnprocessableEntityResponse({ type: ErrorResponseDto })
   deactivateCategory(
     @Param('id') id: string,
+    @Body() input: ChangeMasterStatusDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<CategoryDto> {
+    return this.catalog.changeCategoryStatus(id, 'INACTIVE', input, getMutationContext(request));
+  }
+
+  @Delete('categories/:id')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions('catalog.category.manage')
+  @ApiOperation({
+    operationId: 'deleteAdminCategory',
+    summary: 'Logically delete a leaf category by changing its status to INACTIVE',
+  })
+  @ApiOkResponse({ type: CategoryDto })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  @ApiUnprocessableEntityResponse({ type: ErrorResponseDto })
+  deleteCategory(
+    @Param('id', new ParseUUIDPipe()) id: string,
     @Body() input: ChangeMasterStatusDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<CategoryDto> {

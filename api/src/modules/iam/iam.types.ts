@@ -24,6 +24,13 @@ export const SystemRoleCode = {
 
 export type SystemRoleCode = (typeof SystemRoleCode)[keyof typeof SystemRoleCode];
 
+export const ASSIGNABLE_STAFF_ROLE_CODES = [
+  SystemRoleCode.BRANCH_MANAGER,
+  SystemRoleCode.STAFF,
+] as const;
+
+export type AssignableStaffRoleCode = (typeof ASSIGNABLE_STAFF_ROLE_CODES)[number];
+
 export interface Permission {
   code: string;
   module: string;
@@ -71,8 +78,8 @@ export interface UserWithAssignments extends User {
 }
 
 export interface AssignUserRoleInput {
-  roleCode: SystemRoleCode;
-  scopeType: ScopeType;
+  roleCode: AssignableStaffRoleCode;
+  scopeType: typeof ScopeType.BRANCH;
   branchId?: string;
 }
 

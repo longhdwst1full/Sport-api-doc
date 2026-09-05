@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   IsEmail,
   IsNotEmpty,
@@ -17,9 +18,16 @@ export class LoginDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(255)
+  @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   identifier: string;
 
-  @ApiProperty({ format: 'password', minLength: 8, maxLength: 128 })
+  @ApiProperty({
+    format: 'password',
+    minLength: 8,
+    maxLength: 128,
+    description: 'Leading and trailing whitespace is ignored',
+  })
+  @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsString()
   @MinLength(8)
   @MaxLength(128)
@@ -50,7 +58,13 @@ export class RegisterCustomerDto {
   @MaxLength(32)
   phone?: string;
 
-  @ApiProperty({ format: 'password', minLength: 8, maxLength: 128 })
+  @ApiProperty({
+    format: 'password',
+    minLength: 8,
+    maxLength: 128,
+    description: 'Leading and trailing whitespace is ignored',
+  })
+  @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsString()
   @MinLength(8)
   @MaxLength(128)
@@ -79,13 +93,25 @@ export class TokenPairDto {
 }
 
 export class ChangePasswordDto {
-  @ApiProperty({ format: 'password', minLength: 8, maxLength: 128 })
+  @ApiProperty({
+    format: 'password',
+    minLength: 8,
+    maxLength: 128,
+    description: 'Leading and trailing whitespace is ignored',
+  })
+  @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsString()
   @MinLength(8)
   @MaxLength(128)
   currentPassword: string;
 
-  @ApiProperty({ format: 'password', minLength: 8, maxLength: 128 })
+  @ApiProperty({
+    format: 'password',
+    minLength: 8,
+    maxLength: 128,
+    description: 'Leading and trailing whitespace is ignored',
+  })
+  @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsString()
   @MinLength(8)
   @MaxLength(128)

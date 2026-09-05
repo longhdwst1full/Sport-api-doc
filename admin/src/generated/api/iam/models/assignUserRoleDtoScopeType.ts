@@ -11,6 +11,5 @@ export type AssignUserRoleDtoScopeType =
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const AssignUserRoleDtoScopeType = {
-  GLOBAL: 'GLOBAL',
   BRANCH: 'BRANCH',
 } as const;

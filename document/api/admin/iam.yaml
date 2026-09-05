@@ -73,7 +73,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponseDto"
       security:
         - bearer: []
-      summary: Create an active staff user with the approved default password and branch role
+      summary: Root Admin creates an active subordinate account with a branch role
       tags:
         - Admin IAM
   /api/v1/admin/iam/users/{userId}/lock:
@@ -130,7 +130,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponseDto"
       security:
         - bearer: []
-      summary: Lock a staff user and revoke every active session
+      summary: Root Admin locks a subordinate account and revokes every active session
       tags:
         - Admin IAM
   /api/v1/admin/iam/users/{userId}/unlock:
@@ -181,7 +181,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponseDto"
       security:
         - bearer: []
-      summary: Unlock a staff user and reset the password to the approved default
+      summary: Root Admin unlocks a subordinate account and resets its password
       tags:
         - Admin IAM
   /api/v1/admin/iam/roles:
@@ -269,7 +269,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponseDto"
       security:
         - bearer: []
-      summary: Search active roles for admin assignment lookups
+      summary: Search assignable BRANCH_MANAGER or STAFF roles
       tags:
         - Admin IAM
   /api/v1/admin/iam/users/{userId}/role-assignments:
@@ -314,7 +314,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponseDto"
       security:
         - bearer: []
-      summary: Assign a role with a validated data scope
+      summary: Root Admin assigns BRANCH_MANAGER or STAFF within an active branch
       tags:
         - Admin IAM
   /api/v1/admin/iam/users/{userId}/role-assignments/{assignmentId}/revoke:
@@ -376,7 +376,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponseDto"
       security:
         - bearer: []
-      summary: Revoke one active non-owner role assignment and refresh effective permissions
+      summary: Root Admin revokes one subordinate assignment and refreshes permissions
       tags:
         - Admin IAM
 components:
@@ -555,14 +555,12 @@ components:
         roleCode:
           type: string
           enum:
-            - OWNER
             - BRANCH_MANAGER
             - STAFF
           example: BRANCH_MANAGER
         scopeType:
           type: string
           enum:
-            - GLOBAL
             - BRANCH
         branchId:
           type: string
@@ -570,6 +568,7 @@ components:
       required:
         - roleCode
         - scopeType
+        - branchId
     UserRoleAssignmentDto:
       type: object
       properties:

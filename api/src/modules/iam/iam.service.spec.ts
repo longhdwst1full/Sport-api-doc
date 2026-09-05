@@ -53,40 +53,36 @@ describe('IamService', () => {
           roleCode: SystemRoleCode.BRANCH_MANAGER,
           scopeType: ScopeType.GLOBAL,
           branchId: branch.id,
-        },
+        } as never,
         context,
         ownerActor,
       ),
     ).rejects.toThrow(BadRequestException);
   });
 
-  it('returns only active roles through the server-side lookup contract', async () => {
+  it('returns only assignable subordinate roles through the server-side lookup contract', async () => {
     const { service } = createService();
-    const result = await service.searchActiveRoles({ search: 'owner', page: 1, limit: 20 }, ownerActor);
+    const result = await service.searchActiveRoles({ page: 1, limit: 20 }, ownerActor);
 
-    expect(result.items).toEqual([
-      expect.objectContaining({ code: 'OWNER', label: 'Chủ cửa hàng' }),
-    ]);
-    expect(result.meta).toEqual({ page: 1, limit: 20, total: 1, hasMore: false });
+    expect(result.items.map(({ code }) => code)).toEqual(['BRANCH_MANAGER', 'STAFF']);
+    expect(result.meta).toEqual({ page: 1, limit: 20, total: 2, hasMore: false });
   });
 
-  it('requires OWNER to use GLOBAL scope', async () => {
-    const { organization, service } = createService();
+  it('never allows the single bootstrap OWNER role to be assigned', async () => {
+    const { service } = createService();
     const user = (await service.listUsers(ownerActor)).items[1];
-    const branch = (await organization.listBranches()).items[0];
 
     await expect(
       service.assignRole(
         user.id,
         {
           roleCode: SystemRoleCode.OWNER,
-          scopeType: ScopeType.BRANCH,
-          branchId: branch.id,
-        },
+          scopeType: ScopeType.GLOBAL,
+        } as never,
         context,
         ownerActor,
       ),
-    ).rejects.toThrow(BadRequestException);
+    ).rejects.toThrow('OWNER is the single bootstrap administrator and cannot be assigned');
   });
 
   it('requires STAFF to use BRANCH scope', async () => {
@@ -99,14 +95,14 @@ describe('IamService', () => {
         {
           roleCode: SystemRoleCode.STAFF,
           scopeType: ScopeType.GLOBAL,
-        },
+        } as never,
         context,
         ownerActor,
       ),
     ).rejects.toThrow(BadRequestException);
   });
 
-  it('limits branch managers to STAFF assignments in their own branch', async () => {
+  it('allows only the root administrator to assign subordinate roles', async () => {
     const { organization, service } = createService();
     const branch = (await organization.listBranches()).items[0];
     const user = (await service.listUsers(ownerActor)).items[1];
@@ -116,21 +112,14 @@ describe('IamService', () => {
       scopes: [{ type: ScopeType.BRANCH, branchId: branch.id }],
     };
 
-    await expect(service.assignRole(
-      user.id,
-      { roleCode: SystemRoleCode.OWNER, scopeType: ScopeType.GLOBAL },
-      context,
-      branchManager,
-    )).rejects.toThrow('Branch manager can assign STAFF only within an assigned branch');
-
-    const assignment = await service.assignRole(
-      user.id,
-      { roleCode: SystemRoleCode.STAFF, scopeType: ScopeType.BRANCH, branchId: branch.id },
-      context,
-      branchManager,
-    );
-    expect(assignment).toMatchObject({ roleCode: SystemRoleCode.STAFF, branchId: branch.id });
-    expect((await service.listUsers(branchManager)).items.map(({ id }) => id)).toContain(user.id);
+    await expect(
+      service.assignRole(
+        user.id,
+        { roleCode: SystemRoleCode.STAFF, scopeType: ScopeType.BRANCH, branchId: branch.id },
+        context,
+        branchManager,
+      ),
+    ).rejects.toThrow('Only the root administrator can assign staff roles');
   });
 
   it('creates an active staff user with one branch assignment', async () => {
@@ -163,7 +152,7 @@ describe('IamService', () => {
     });
   });
 
-  it('prevents a branch manager from creating another branch manager', async () => {
+  it('prevents a branch manager from creating staff accounts', async () => {
     const { organization, service } = createService();
     const branch = (await organization.listBranches()).items[0];
     const branchManager: AuthPrincipal = {
@@ -183,7 +172,7 @@ describe('IamService', () => {
         context,
         branchManager,
       ),
-    ).rejects.toThrow('Branch manager can assign STAFF only within an assigned branch');
+    ).rejects.toThrow('Only the root administrator can assign staff roles');
   });
 
   it('locks an active staff user and increments permission version', async () => {
@@ -247,19 +236,9 @@ describe('IamService', () => {
     ).rejects.toThrow('OWNER account cannot be locked or unlocked');
   });
 
-  it('limits a branch manager lifecycle action to STAFF in the assigned branch', async () => {
+  it('allows only the root administrator to manage staff account lifecycle', async () => {
     const { organization, service } = createService();
     const [ownBranch, otherBranch] = (await organization.listBranches()).items;
-    const ownStaff = await service.createStaffUser(
-      {
-        displayName: 'Nhân viên cùng chi nhánh',
-        email: 'own.staff@example.com',
-        roleCode: SystemRoleCode.STAFF,
-        branchId: ownBranch.id,
-      },
-      context,
-      ownerActor,
-    );
     const otherStaff = await service.createStaffUser(
       {
         displayName: 'Nhân viên chi nhánh khác',
@@ -283,16 +262,7 @@ describe('IamService', () => {
         context,
         branchManager,
       ),
-    ).rejects.toThrow('Branch manager can manage STAFF only within an assigned branch');
-
-    await expect(
-      service.lockStaffUser(
-        ownStaff.id,
-        { reason: 'Tạm khóa trong chi nhánh' },
-        context,
-        branchManager,
-      ),
-    ).resolves.toMatchObject({ status: 'LOCKED' });
+    ).rejects.toThrow('Only the root administrator can manage staff accounts');
   });
 
   it('revokes a non-owner assignment and increments permission version', async () => {

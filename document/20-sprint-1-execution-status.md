@@ -1,31 +1,31 @@
 # Sprint 1 execution status
 
-> **Document version:** 1.4.0
+> **Document version:** 1.8.0
 >
-> **Last updated:** 2026-09-04
+> **Last updated:** 2026-09-05
 >
-> **Change summary:** Ghi nhận migration/seed Supabase online đã thành công và bổ sung command phục hồi bootstrap Admin bị auto-lock với audit/session revocation.
+> **Change summary:** Hoàn tất functional scope Sprint 1 bằng sáu API DELETE logic, role-permission matrix, OpenAPI/SDK và full monorepo gate.
 
 ## Kết luận
 
-Sprint 1 hiện đạt khoảng **99% functional scope** và **94% Definition of Done**. Phần code V1 đã đóng token transport BODY dev/HttpOnly COOKIE production, bắt buộc đổi mật khẩu staff, auto-lock atomic ở lần sai mật khẩu thứ 5, audit query GLOBAL owner-only, price scheduling/history và tồn kho PostgreSQL có ledger/idempotency. Migration từ zero, seed lặp, integration và HTTP e2e đã chạy lại trên PostgreSQL 16 local. Sprint chưa ký DONE chính thức vì full permission HTTP matrix và BA/QA trên environment chung chưa ký nhận.
+Sprint 1 hiện đạt **100% functional scope đã khóa** và **94% Definition of Done**. Phần code V1 đã đóng token transport BODY dev/HttpOnly COOKIE production, bắt buộc đổi mật khẩu staff, auto-lock atomic ở lần sai mật khẩu thứ 5, audit query GLOBAL owner-only, price scheduling/history, tồn kho PostgreSQL có ledger/idempotency và CRUD lifecycle có HTTP DELETE logic. Migration từ zero, seed lặp, integration và HTTP e2e đã có evidence ở các vòng trước; full monorepo gate hiện tại đã xanh. Sprint đủ điều kiện đóng gói engineering release candidate, nhưng chưa được ký DONE chính thức vì full permission HTTP matrix trên Supabase và BA/QA trên environment chung chưa ký nhận.
 
 Hai tỷ lệ không được tính theo số file hoặc số endpoint:
 
-- **Functional scope 99/100**: chức năng người dùng thực hiện được so với phạm vi Sprint 1 đã khóa.
+- **Functional scope 100/100**: chức năng và API contract so với phạm vi Sprint 1 đã khóa.
 - **Definition of Done 94/100**: mức hoàn thiện kỹ thuật gồm validation, authorization, transaction, test, migration, audit, tài liệu và QA acceptance; 6 điểm còn lại thuộc permission regression đầy đủ và BA/QA acceptance trên environment chung.
 
 ## Bảng điểm có trọng số
 
-### Functional scope — 99/100
+### Functional scope — 100/100
 
 | Nhóm | Trọng số | Điểm đạt | Evidence chính | Phần còn thiếu |
 | --- | ---: | ---: | --- | --- |
 | Foundation/platform | 15 | **15** | Config validation, DB/migration/seed, error envelope, request-id, audit writer, CI foundation, OpenAPI V1 | Production readiness được tính trong DoD |
 | IAM/RBAC | 25 | **25** | Auth email/phone; lockout 5 lần; forced password; BODY/COOKIE transport; fixed roles/scope; audit query/redaction | Full HTTP permission matrix còn là DoD evidence |
 | Catalog/Pricing/Media | 40 | **40** | Catalog CRUD/lifecycle; media; combo; atomic price replace; future schedule/current/upcoming/history; >20% rule | Update bundle composition sau publish chuyển P1 |
-| Admin/Storefront/contract | 20 | **19** | Generated Orval SDK; forced-password screen; audit screen; price lifecycle panel; Storefront auth transport/PWA | QA acceptance evidence toàn màn |
-| **Tổng** | **100** | **99** |  |  |
+| Admin/Storefront/contract | 20 | **20** | Generated Orval SDK; forced-password screen; audit screen; price lifecycle panel; Storefront auth transport/PWA; sáu DELETE lifecycle operation | QA acceptance được tính trong DoD |
+| **Tổng** | **100** | **100** |  |  |
 
 ### Definition of Done — 94/100
 
@@ -112,6 +112,7 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 - [x] Audit writer transaction-bound và append-only hardening.
 - [x] API prefix `/api/v1`, Swagger/OpenAPI JSON/YAML.
 - [x] Admin/Client SDK generate từ OpenAPI; không sửa generated code bằng tay.
+- [x] Sáu API `DELETE` logic giữ nguyên permission, optimistic version, invariant và audit của lifecycle; không hard delete.
 - [~] CI gate có code/config, cần evidence lại trên environment chung.
 
 ### IAM/RBAC
@@ -127,8 +128,8 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 - [x] Ba role V1: `OWNER`, `BRANCH_MANAGER`, `STAFF`.
 - [x] Tạo staff ACTIVE bằng email và mật khẩu mặc định `Aa@123456`.
 - [x] Gán role GLOBAL/BRANCH; duplicate đồng thời trả một `201`, một `409`.
-- [x] OWNER quản lý BRANCH_MANAGER/STAFF; không lock/unlock OWNER.
-- [x] Branch Manager chỉ quản lý STAFF trong branch được gán.
+- [x] Chỉ fixed bootstrap OWNER quản lý BRANCH_MANAGER/STAFF; không thể tạo/gán/thu hồi/lock OWNER.
+- [x] Branch Manager xem nhân sự trong branch nhưng không được tạo, khóa/mở hoặc phân quyền account.
 - [x] Lock yêu cầu lý do, chuyển ACTIVE→LOCKED và revoke toàn bộ session atomic.
 - [x] Unlock chuyển LOCKED→ACTIVE, reset Argon2 password và không phục hồi session cũ.
 - [x] Create/assign/lock/unlock ghi audit cùng transaction.
@@ -174,8 +175,11 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 - [x] IAM list/create/assign/lock/unlock UI.
 - [x] Branch + một warehouse CRUD/lifecycle UI.
 - [x] Brand/category/product/variant/combo core UI.
-- [x] CKEditor4 theo base admin-client, dùng Image dialog tích hợp; không gắn custom Cloudinary uploader; vẫn có loading/error/retry và HTML fallback khi CDN lỗi.
-- [x] CKEditor dùng component trực tiếp, timeout 10 giây để không treo skeleton; Admin form hiển thị dấu `*` theo validation bắt buộc và menu chia theo vùng nghiệp vụ.
+- [x] CKEditor4 dùng đúng `scriptUrl`/`data`, config và cơ chế đồng bộ `setData` theo base `admin-client`; dùng Image dialog tích hợp và không gắn custom Cloudinary uploader.
+- [x] Editor được lazy-load thành chunk riêng; đã bỏ timer 10 giây gây false timeout/skeleton. CKEditor có Storybook states cho edit, dữ liệu có sẵn và read-only.
+- [x] Admin runtime phòng vệ response phiên cũ thiếu `permissions/scopes`; Error Boundary hiển thị lỗi thật ở DEV và cho phép xóa phiên quay lại login.
+- [x] Admin form hiển thị dấu `*` theo validation bắt buộc; form sửa Product/Brand/Category/Branch/Warehouse/Variant/Media hydrate record hiện tại.
+- [x] Inventory có action theo từng balance, tự điền warehouse/SKU và snapshot tồn; mutation vẫn tạo adjustment/ledger mới thay vì sửa lịch sử.
 - [x] Axios canonical fetcher/error mapping; loading/error patterns.
 - [x] Storefront Next.js và PWA base; Catalog list/detail generated API.
 - [~] UI states có ở flow chính, chưa có QA matrix toàn bộ màn.
@@ -186,12 +190,21 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 
 - [x] Workflow development đã chuyển sang Supabase online; operator xác nhận 9 migration up to date, foundation seed và demo seed 3 branch/kho, 3 brand, 3 category, 4 product chạy thành công ngày 2026-09-04.
 - [x] Có `yarn db:admin:reset` để phục hồi đúng bootstrap OWNER bị auto-lock; reset password tạm, bắt đổi mật khẩu, revoke session và ghi audit atomic; seed vẫn không ghi đè password hiện hữu.
+- [x] Identifier/password Auth trim khoảng trắng hai đầu; register/login/change-password áp dụng đồng nhất và có DTO/service regression test.
 - [x] 9 migration chạy từ zero, seed demo có 4 product gồm combo và chạy lặp; 21 PostgreSQL integration + 11 HTTP e2e pass.
 - [ ] Chạy full permission/branch-scope regression.
 - [x] Variant update, Product Media và Price scheduling/history UI đã hoàn thiện core.
+- [x] CKEditor/Admin runtime hardening; Admin lint và production build pass; Storybook 10 production build pass với Docs/a11y và 5 nhóm component/layout stories.
+- [x] Storefront home responsive gồm shop-by-sport, product discovery, trust/service, tư vấn, review/content; Client typecheck, 3 test files/4 tests và Next production build pass (`/` 144 kB First Load JS).
+- [x] API gate trước closeout: lint, Prisma validate/generate, 26 suites/89 tests và Nest production build pass; OpenAPI/YAML/Orval generate hai lần cho cùng artifact hash.
+- [x] Gate closeout ngày 2026-09-05: root `yarn verify` pass; API **28 suites/96 tests**, Client **3 files/4 tests**, Admin **12 files/22 tests**, API/Next/Vite production build đều pass.
+- [x] OpenAPI/YAML regenerate hai lần giữ nguyên SHA-256; đủ 6/6 operation ID DELETE và Admin Orval SDK tương ứng.
+- [x] Role-permission matrix kiểm tra đủ ba role, không duplicate và không có permission code ngoài catalog.
+- [x] Workbook annotate pass `changes=20`, `markedCells=507`, `changeLogRows=20`; API-only change có Change Log riêng và không tô sai ô schema không thay đổi.
+- [~] GitNexus re-index đạt **5.926 nodes/11.382 edges/223 clusters/265 flows**; từng delete method có impact LOW, nhưng toàn worktree vẫn CRITICAL (**47 files/198 symbols/69 flows**) do thay đổi cộng dồn Auth/RBAC/OpenAPI/Admin/Storefront và không được dùng graph để thay thế regression test.
 - [x] Decision/model trace đã cập nhật cho audit query, forced password, lockout, token transport và pricing.
 - [ ] BA acceptance và QA regression trên environment chung.
-- [ ] Không còn P0/P1 bug mở.
+- [~] Automated review không còn P0/P1 code failure; cần BA/QA xác nhận bug list trên environment chung trước sign-off.
 - [ ] Lưu screenshot/API/test/log evidence và cập nhật Function Matrix.
 
 ### Ngoài phạm vi Sprint 1
@@ -211,13 +224,13 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 | IAM-01 Customer auth | DONE-CORE | Register CUSTOMER ACTIVE; email/phone identifier; E.164; Argon2; session/audit atomic; Storefront login/register generated SDK; DB e2e pass | Verification; protected-API auto attach/refresh; forgot password nằm IAM-02 |
 | IAM-03 Staff lifecycle | DONE-V1-CORE | Tạo ACTIVE staff; default password; forced change; sai lần 5 auto-lock; manual lock/unlock reset password; revoke session/audit atomic; DB integration pass | QA acceptance trên environment chung |
 | IAM-04 Fixed RBAC | DONE-CORE | 3 system roles; deny unknown; no create-role API; seed hội tụ | Test matrix toàn permission catalog |
-| IAM-05 Assignment scope | DONE-V1-CORE | GLOBAL/BRANCH; duplicate 201/409; assign/revoke atomic; permissionVersion; audit; OWNER revoke deny | Thêm full e2e Branch Manager cross-branch deny matrix |
+| IAM-05 Assignment scope | DONE-V1-CORE | Một fixed OWNER GLOBAL; BRANCH_MANAGER/STAFF bắt buộc branchId; assign/revoke atomic; permissionVersion; audit | Thêm full HTTP matrix xác nhận non-OWNER bị deny |
 | IAM-06 Audit | DONE-V1-CORE | Append-only; actor constraint; cursor filter API; GLOBAL owner-only; recursive redaction; Admin list/detail snapshots | QA acceptance và retention job sau V1 |
-| CAT-01 Brand | DONE-CORE | Persisted create/list/update/active-search/activate/deactivate; optimistic version; audit; admin screen | Logo asset workflow độc lập |
-| CAT-02 Category | DONE-V1-CORE | Persisted create/list/update/search/activate/deactivate; parent immutable; chặn tắt cha còn con active | Move subtree đã chốt P1; tiếp tục in-use test matrix |
-| CAT-03 Product SPU | DONE-CORE | Create/list/detail/update/publish/archive/reactivate-to-DRAFT; STANDARD/BUNDLE invariant; aggregate row locking; version conflict; audit; Admin productType generated UI | Một số metadata edit nâng cao |
-| CAT-04 Variant/SKU | DONE-V1-CORE | Persisted create/update/archive/reactivate; SKU immutable; barcode/dimension validation; optimistic version; admin drawer | QA acceptance toàn màn |
-| CAT-05 Product media | DONE-V1-CORE | Cloudinary verify + persist idempotent; attach/update/reorder/archive; ownership/primary; product version; Admin panel | MED-02 media library/reuse và provider cleanup là P1 |
+| CAT-01 Brand | DONE-CORE | Persisted create/list/update/active-search/activate/deactivate; `DELETE` → INACTIVE; optimistic version; audit; admin screen | Logo asset workflow độc lập |
+| CAT-02 Category | DONE-V1-CORE | Persisted create/list/update/search/activate/deactivate; `DELETE` → INACTIVE; parent immutable; chặn tắt cha còn con active | Move subtree đã chốt P1; tiếp tục in-use test matrix |
+| CAT-03 Product SPU | DONE-CORE | Create/list/detail/update/publish/archive/reactivate-to-DRAFT; `DELETE` → ARCHIVED; STANDARD/BUNDLE invariant; aggregate row locking; version conflict; audit | Một số metadata edit nâng cao |
+| CAT-04 Variant/SKU | DONE-V1-CORE | Persisted create/update/archive/reactivate; `DELETE` → INACTIVE; SKU immutable; barcode/dimension validation; optimistic version; admin drawer | QA acceptance toàn màn |
+| CAT-05 Product media | DONE-V1-CORE | Cloudinary verify + persist idempotent; attach/update/reorder/archive; `DELETE` chỉ archive link; ownership/primary; product version; Admin panel | MED-02 media library/reuse và provider cleanup là P1 |
 | CAT-07 Storefront catalog | DONE-CORE | Chỉ PUBLISHED + sellable variant; minPrice loại INACTIVE; category INACTIVE không lọc/hiện; slug detail/list | Brand/price filter, sort và SEO detail page |
 | CAT-12 Fixed combo | DONE-LIFECYCLE-CORE | Persisted per variant; no nested; quantity > 0; publish validate component; publish/archive concurrency invariant; response bundle per SKU | Update bundle items và preview stock availability theo thành phần |
 | PRI-01 Effective price | DONE-V1-CORE | Decimal(19,2), VAT-included global; no-overlap/no-retroactive; future schedule; current/upcoming/history; immutable history; >20% reason/confirm; replace optimistic atomic | Promotion/maker-checker ngoài V1 |
@@ -225,8 +238,8 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 
 ## RBAC V1 đã áp dụng
 
-- `OWNER`: scope GLOBAL, toàn quyền mọi branch; có thể có nhiều OWNER.
-- `BRANCH_MANAGER`: chỉ xem nhân sự thuộc branch được gán; chỉ được gán role STAFF vào chính branch đó; không quản lý global Catalog/price/role/branch.
+- `OWNER`: đúng một fixed bootstrap Admin có scope GLOBAL; không expose trong create/assign API và không thể khóa/thu hồi.
+- `BRANCH_MANAGER`: xem nhân sự và vận hành trong branch được gán; không có quyền tạo/quản lý account hoặc role assignment.
 - `STAFF`: nghiệp vụ vận hành trong branch; không có quyền IAM management.
 - Backend lấy permission và scope từ assignment đang ACTIVE trong PostgreSQL; header `x-permissions` giả bị trả 401.
 
@@ -236,7 +249,7 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 2. Product/combo archive ẩn storefront ngay, giữ snapshot đơn lịch sử; reactivate về DRAFT (D36).
 3. Category move không thuộc Sprint 1, chuyển sang P1; `parent_id` bất biến khi update V1 (D37).
 4. Lock chỉ nhận user ACTIVE và yêu cầu lý do; unlock chỉ nhận user LOCKED, không phục hồi session cũ và reset password về `Aa@123456`.
-5. OWNER không được lock/unlock bất kỳ OWNER nào; Branch Manager chỉ lock/unlock STAFF trong branch được gán.
+5. OWNER bootstrap là root-of-trust bất biến; chỉ account này được create/lock/unlock và assign/revoke BRANCH_MANAGER hoặc STAFF theo branch.
 6. Public register chỉ tạo CUSTOMER ACTIVE; tạm bỏ verification. Login dùng email hoặc SĐT Việt Nam đã chuẩn hóa E.164 (D38).
 7. Product tách rõ STANDARD/BUNDLE, combo gắn theo từng variant và storefront dùng một sellability predicate thống nhất (D39).
 8. Giá REGULAR phải > 0; thay giá đóng/mở window trong cùng transaction với expected id/version (D40).
@@ -248,7 +261,8 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 ## Blocker môi trường
 
 - `api/.env.local` được git-ignore và không bị track. Trên môi trường operator, Supabase Session pooler đã xác nhận 9 migration up to date; foundation/demo seed chạy thành công. Secret không được đưa vào repository.
-- Bootstrap OWNER đã được xác nhận tồn tại nhưng `LOCKED` sau 5 lần sai; recovery command đã được bổ sung. Cần chạy command và login lại để đóng runtime auth evidence.
+- Workspace Linux dùng để review hiện vẫn chứa hostname placeholder `aws-0-region.pooler.supabase.com`, nên chưa thể apply seed quyền mới lên Supabase từ máy này; chạy `yarn db:seed` tại máy Windows đã cấu hình connection thật để seed kiểm tra invariant một OWNER và hội tụ role-permission.
+- Bootstrap OWNER là Admin gốc duy nhất. Lần sai thứ 5 trả `ACCOUNT_LOCKED`; login thành công reset attempts về 0; nếu bị khóa dùng recovery command.
 - PostgreSQL local đã chạy fresh **9 migrations**; integration **3 suites/21 cases** và HTTP e2e **2 suites/11 cases** pass với `AUTH_BYPASS=false`.
 - Runtime least-privilege DB role/RLS policy chưa được chốt; hiện migration owner có thể bypass RLS. Không được coi là production-ready cho đến khi có non-owner test.
 
@@ -261,3 +275,7 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 | 1.2.0 | 2026-09-04 | Xác nhận Admin lint, 12 test files/21 tests và production build; sửa login dev, CKEditor fallback, required marker và menu. | Admin stabilization review 2026-09-04 |
 | 1.3.0 | 2026-09-04 | Chuyển database development workflow sang Supabase online; chờ connection string thật để verify migration/seed. | Supabase workflow 2026-09-04 |
 | 1.4.0 | 2026-09-04 | Ghi nhận migration/seed Supabase pass và bổ sung recovery command cho bootstrap Admin bị auto-lock. | DBAPI-20260904-BOOTSTRAP-RECOVERY |
+| 1.5.0 | 2026-09-04 | Chốt một Admin gốc; bổ sung lockout/reset attempts, trim input Auth và bỏ Request ID khỏi toast Admin. | DBAPI-20260904-SINGLE-ROOT-ADMIN |
+| 1.6.0 | 2026-09-05 | Sửa CKEditor props/hydration, harden Admin session rendering, prefill stock adjustment và nâng cấp Storefront; cập nhật gate evidence. | Sprint 1 UI stabilization 2026-09-05 |
+| 1.7.0 | 2026-09-05 | Thêm Storybook Admin cho CKEditor, feedback, management primitives và full layout; bỏ CKEditor component test theo yêu cầu. | Admin Storybook foundation 2026-09-05 |
+| 1.8.0 | 2026-09-05 | Bổ sung sáu HTTP DELETE logic, role-permission matrix, regenerate contract/SDK/workbook và xác nhận full monorepo gate. | API-20260905-LOGICAL-DELETE-V1 |

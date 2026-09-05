@@ -1,10 +1,12 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -42,6 +44,8 @@ import { OrganizationService } from './organization.service';
 
 @ApiTags('Admin Organization')
 @ApiBearerAuth()
+@ApiUnauthorizedResponse({ type: ErrorResponseDto })
+@ApiForbiddenResponse({ type: ErrorResponseDto })
 @Controller('admin/organization')
 export class OrganizationController {
   constructor(private readonly organization: OrganizationService) {}
@@ -139,6 +143,30 @@ export class OrganizationController {
   @ApiConflictResponse({ type: ErrorResponseDto })
   deactivateBranch(
     @Param('id') id: string,
+    @Body() input: ChangeBranchStatusDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<BranchWithWarehouseDto> {
+    return this.organization.changeBranchStatus(
+      id,
+      'INACTIVE',
+      input,
+      getMutationContext(request),
+    );
+  }
+
+  @Delete('branches/:id')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions('org.branch.manage', 'org.warehouse.manage')
+  @ApiOperation({
+    operationId: 'deleteAdminBranchWithWarehouse',
+    summary: 'Logically delete a branch and its V1 warehouse atomically',
+  })
+  @ApiOkResponse({ type: BranchWithWarehouseDto })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  deleteBranch(
+    @Param('id', new ParseUUIDPipe()) id: string,
     @Body() input: ChangeBranchStatusDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<BranchWithWarehouseDto> {

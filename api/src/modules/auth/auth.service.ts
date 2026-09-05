@@ -19,7 +19,7 @@ import {
   USER_TYPE,
 } from '../iam/iam.constants';
 import { ScopeType } from '../iam/iam.types';
-import { AUTH_AUDIT_ACTION, AUTH_SECURITY } from './auth.constants';
+import { AUTH_AUDIT_ACTION, AUTH_ERROR, AUTH_SECURITY } from './auth.constants';
 import { ChangePasswordDto, LoginDto, RegisterCustomerDto, TokenPairDto } from './auth.dto';
 import { AccessTokenPayload, AuthPrincipal } from './auth.types';
 import {
@@ -45,6 +45,7 @@ export class AuthService {
   ): Promise<TokenPairDto> {
     this.ensureDatabaseEnabled();
     const identity = this.normalizeLoginIdentifier(input.identifier);
+    const password = input.password.trim();
     const user = await this.prisma.user.findFirst({
       where: {
         userType,
@@ -53,12 +54,20 @@ export class AuthService {
           : { normalizedPhone: identity.value }),
       },
     });
-    if (!user?.passwordHash || user.status !== USER_STATUS.ACTIVE) {
-      throw new UnauthorizedException('Email/phone or password is incorrect');
+    if (!user?.passwordHash) {
+      throw new UnauthorizedException(AUTH_ERROR.INVALID_CREDENTIALS);
     }
-    if (!(await verify(user.passwordHash, input.password))) {
-      await this.recordFailedLogin(user, requestId);
-      throw new UnauthorizedException('Email/phone or password is incorrect');
+    if (user.status === USER_STATUS.LOCKED) {
+      throw new UnauthorizedException(AUTH_ERROR.ACCOUNT_LOCKED);
+    }
+    if (user.status !== USER_STATUS.ACTIVE) {
+      throw new UnauthorizedException(AUTH_ERROR.INVALID_CREDENTIALS);
+    }
+    if (!(await verify(user.passwordHash, password))) {
+      const locked = await this.recordFailedLogin(user, requestId);
+      throw new UnauthorizedException(
+        locked ? AUTH_ERROR.ACCOUNT_LOCKED : AUTH_ERROR.INVALID_CREDENTIALS,
+      );
     }
 
     return this.prisma.$transaction(async (transaction) => {
@@ -72,7 +81,7 @@ export class AuthService {
         },
       });
       if (reset.count !== 1) {
-        throw new UnauthorizedException('Email/phone or password is incorrect');
+        throw new UnauthorizedException(AUTH_ERROR.INVALID_CREDENTIALS);
       }
       const pair = await this.createSession(transaction, user);
       return pair;
@@ -89,19 +98,21 @@ export class AuthService {
     if (!user?.passwordHash || user.status !== USER_STATUS.ACTIVE) {
       throw new UnauthorizedException('Account is unavailable');
     }
-    if (!(await verify(user.passwordHash, input.currentPassword))) {
+    const currentPassword = input.currentPassword.trim();
+    const newPassword = input.newPassword.trim();
+    if (!(await verify(user.passwordHash, currentPassword))) {
       throw new BadRequestException({
         code: 'CURRENT_PASSWORD_INCORRECT',
         message: 'Current password is incorrect',
       });
     }
-    if (await verify(user.passwordHash, input.newPassword)) {
+    if (await verify(user.passwordHash, newPassword)) {
       throw new BadRequestException({
         code: 'PASSWORD_UNCHANGED',
         message: 'New password must be different from the current password',
       });
     }
-    const passwordHash = await hash(input.newPassword);
+    const passwordHash = await hash(newPassword);
     await this.prisma.$transaction(async (transaction) => {
       const changed = await transaction.user.updateMany({
         where: { id: user.id, version: user.version, status: USER_STATUS.ACTIVE },
@@ -152,7 +163,7 @@ export class AuthService {
     }
 
     const userId = uuidv7();
-    const passwordHash = await hash(input.password);
+    const passwordHash = await hash(input.password.trim());
     try {
       return await this.prisma.$transaction(async (transaction) => {
         const user = await transaction.user.create({
@@ -344,8 +355,8 @@ export class AuthService {
     };
   }
 
-  private async recordFailedLogin(user: User, requestId: string): Promise<void> {
-    await this.prisma.$transaction(async (transaction) => {
+  private async recordFailedLogin(user: User, requestId: string): Promise<boolean> {
+    return this.prisma.$transaction(async (transaction) => {
       const rows = await transaction.$queryRaw<
         Array<{ status: string; failedLoginAttempts: number; lockedAt: Date | null }>
       >(Prisma.sql`
@@ -381,7 +392,7 @@ export class AuthService {
           "locked_at" AS "lockedAt"
       `);
       const result = rows[0];
-      if (result?.status !== USER_STATUS.LOCKED) return;
+      if (result?.status !== USER_STATUS.LOCKED) return false;
 
       const revoked = await transaction.authSession.updateMany({
         where: { userId: user.id, revokedAt: null },
@@ -408,6 +419,7 @@ export class AuthService {
         },
         transaction,
       );
+      return true;
     });
   }
 

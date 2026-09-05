@@ -11,7 +11,6 @@ export type AssignUserRoleDtoRoleCode =
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const AssignUserRoleDtoRoleCode = {
-  OWNER: 'OWNER',
   BRANCH_MANAGER: 'BRANCH_MANAGER',
   STAFF: 'STAFF',
 } as const;

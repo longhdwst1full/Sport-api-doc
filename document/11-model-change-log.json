@@ -647,6 +647,88 @@
           "columns": ["Ý nghĩa", "Retention"]
         }
       ]
+    },
+    {
+      "id": "DBAPI-20260904-SINGLE-ROOT-ADMIN",
+      "date": "2026-09-04",
+      "scope": "DATABASE+API+IAM+ADMIN",
+      "summary": "Supersede API-20260829-RBAC-V1: một fixed bootstrap OWNER quản lý account cấp dưới; auto-lock rõ ràng, login reset attempts, Auth trim hai đầu identifier/password và toast Admin không hiện Request ID.",
+      "sources": [
+        "OpenAPI:createAdminStaffUser/assignAdminUserRole/revokeAdminUserRoleAssignment/loginAdmin",
+        "source:api/src/modules/iam/iam.service.ts",
+        "source:api/src/modules/auth/auth.service.ts",
+        "source:api/src/modules/auth/auth.dto.ts",
+        "seed:api/prisma/seed.ts",
+        "test:iam.service.spec.ts/iam.permissions.spec.ts/auth.service.spec.ts/auth.dto.spec.ts",
+        "decision:D42"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "users" },
+          "columns": ["Ý nghĩa", "Retention"],
+          "set": {
+            "Ý nghĩa": "Customer/staff account; development có đúng một fixed bootstrap Admin OWNER",
+            "Retention": "OWNER bất biến; Auth trim hai đầu identifier/password; lần sai thứ 5 trả ACCOUNT_LOCKED; login thành công reset attempts; never hard-delete"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "user_role_assignments" },
+          "columns": ["Ý nghĩa", "Retention"],
+          "set": {
+            "Ý nghĩa": "Một fixed OWNER GLOBAL; BRANCH_MANAGER/STAFF theo BRANCH; WAREHOUSE/OWN dormant",
+            "Retention": "API cấm gán/thu hồi OWNER; chỉ Admin gốc quản lý assignment cấp dưới; audit + expire not delete"
+          }
+        },
+        {
+          "sheet": "RBAC Permissions",
+          "match": { "Permission code": "iam.user.manage" },
+          "columns": ["Allowed scopes", "Default roles", "Ghi chú"],
+          "set": {
+            "Allowed scopes": "GLOBAL",
+            "Default roles": "OWNER",
+            "Ghi chú": "Chỉ Admin gốc tạo và khóa/mở BRANCH_MANAGER hoặc STAFF; OWNER bất biến"
+          }
+        },
+        {
+          "sheet": "RBAC Permissions",
+          "match": { "Permission code": "iam.role.view" },
+          "columns": ["Allowed scopes", "Default roles", "Ghi chú"],
+          "set": {
+            "Allowed scopes": "GLOBAL",
+            "Default roles": "OWNER",
+            "Ghi chú": "Chỉ Admin gốc lookup BRANCH_MANAGER hoặc STAFF để phân quyền"
+          }
+        },
+        {
+          "sheet": "RBAC Permissions",
+          "match": { "Permission code": "iam.assignment.manage" },
+          "columns": ["Allowed scopes", "Default roles", "Ghi chú"],
+          "set": {
+            "Allowed scopes": "GLOBAL",
+            "Default roles": "OWNER",
+            "Ghi chú": "Chỉ Admin gốc gán/thu hồi role cấp dưới theo branch; OWNER không thể gán hay thu hồi"
+          }
+        }
+      ]
+    },
+    {
+      "id": "API-20260905-LOGICAL-DELETE-V1",
+      "date": "2026-09-05",
+      "scope": "API+ADMIN+CATALOG+ORGANIZATION",
+      "summary": "Bổ sung sáu HTTP DELETE V1 dưới dạng lifecycle tương thích ngược: branch+warehouse/brand/category chuyển INACTIVE, product/combo chuyển ARCHIVED, variant và product-media chuyển INACTIVE; giữ optimistic version, permission, invariant và audit hiện hữu, không xóa vật lý.",
+      "sources": [
+        "OpenAPI:deleteAdminBranchWithWarehouse",
+        "OpenAPI:deleteAdminBrand",
+        "OpenAPI:deleteAdminCategory",
+        "OpenAPI:deleteAdminProduct",
+        "OpenAPI:deleteAdminProductVariant",
+        "OpenAPI:deleteAdminProductMedia",
+        "test:api/src/modules/catalog/logical-delete.controller.spec.ts",
+        "decision:D22/D36/D41"
+      ],
+      "targets": []
     }
   ]
 }

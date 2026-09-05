@@ -11,5 +11,5 @@ import type { AssignUserRoleDtoScopeType } from './assignUserRoleDtoScopeType';
 export interface AssignUserRoleDto {
   roleCode: AssignUserRoleDtoRoleCode;
   scopeType: AssignUserRoleDtoScopeType;
-  branchId?: string;
+  branchId: string;
 }

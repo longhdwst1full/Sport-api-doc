@@ -54,8 +54,8 @@ export function AccessPage() {
     <ManagementPage
       eyebrow="Identity & access"
       title="Người dùng & phân quyền"
-      description="RBAC V1 gồm OWNER, BRANCH_MANAGER và STAFF với scope GLOBAL/BRANCH; backend luôn là nguồn quyết định quyền cuối cùng."
-      dataNotice="Dữ liệu lấy từ generated Admin IAM SDK và PostgreSQL. Nhân viên mới hoặc vừa mở khóa phải đổi mật khẩu mặc định trước khi dùng chức năng quản trị."
+      description="Hệ thống có một Admin gốc duy nhất; Admin tạo và phân quyền BRANCH_MANAGER hoặc STAFF theo chi nhánh."
+      dataNotice="OWNER là tài khoản bootstrap bất biến, không thể tạo thêm, khóa hoặc gán lại. Nhân viên mới hoặc vừa mở khóa phải đổi mật khẩu mặc định."
       metrics={[
         { key: 'users', label: 'Người dùng', value: users.length, icon: <UserOutlined /> },
         {
@@ -214,7 +214,7 @@ export function AccessPage() {
                             );
                             return (
                               <Space size={0}>
-                                {canAssignRoles && (
+                                {canAssignRoles && !isOwner && (
                                   <Button type="link" onClick={() => setAssignmentUser(user)}>
                                     Gán vai trò
                                   </Button>

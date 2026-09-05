@@ -20,6 +20,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BranchListDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
       security:
         - bearer: []
       summary: List sales branches
@@ -41,6 +53,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BranchWithWarehouseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
         "409":
           description: Branch or warehouse code already exists
           content:
@@ -63,6 +87,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WarehouseListDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
       security:
         - bearer: []
       summary: List branch warehouses
@@ -209,6 +245,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BranchWithWarehouseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
         "404":
           description: ""
           content:
@@ -224,6 +272,62 @@ paths:
       security:
         - bearer: []
       summary: Update a branch and its single V1 warehouse
+      tags:
+        - Admin Organization
+    delete:
+      operationId: deleteAdminBranchWithWarehouse
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeBranchStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BranchWithWarehouseDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Logically delete a branch and its V1 warehouse atomically
       tags:
         - Admin Organization
   /api/v1/admin/organization/branches/{id}/deactivate:
@@ -248,6 +352,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BranchWithWarehouseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
         "404":
           description: ""
           content:
@@ -287,6 +403,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BranchWithWarehouseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
         "404":
           description: ""
           content:
@@ -319,40 +447,6 @@ components:
       required:
         - items
         - total
-    CreateBranchDto:
-      type: object
-      properties:
-        code:
-          type: string
-          example: CN-DN-01
-        name:
-          type: string
-          example: Chi nhánh Đà Nẵng
-        phone:
-          type: string
-          example: 0236 7300 8899
-        email:
-          type: string
-          example: danang@dctd.vn
-        address:
-          $ref: "#/components/schemas/AddressDto"
-        warehouse:
-          $ref: "#/components/schemas/CreateWarehouseInputDto"
-      required:
-        - code
-        - name
-        - address
-        - warehouse
-    BranchWithWarehouseDto:
-      type: object
-      properties:
-        branch:
-          $ref: "#/components/schemas/BranchDto"
-        warehouse:
-          $ref: "#/components/schemas/WarehouseDto"
-      required:
-        - branch
-        - warehouse
     ErrorResponseDto:
       type: object
       properties:
@@ -387,6 +481,40 @@ components:
         - path
         - method
         - timestamp
+    CreateBranchDto:
+      type: object
+      properties:
+        code:
+          type: string
+          example: CN-DN-01
+        name:
+          type: string
+          example: Chi nhánh Đà Nẵng
+        phone:
+          type: string
+          example: 0236 7300 8899
+        email:
+          type: string
+          example: danang@dctd.vn
+        address:
+          $ref: "#/components/schemas/AddressDto"
+        warehouse:
+          $ref: "#/components/schemas/CreateWarehouseInputDto"
+      required:
+        - code
+        - name
+        - address
+        - warehouse
+    BranchWithWarehouseDto:
+      type: object
+      properties:
+        branch:
+          $ref: "#/components/schemas/BranchDto"
+        warehouse:
+          $ref: "#/components/schemas/WarehouseDto"
+      required:
+        - branch
+        - warehouse
     WarehouseListDto:
       type: object
       properties:
@@ -491,6 +619,21 @@ components:
         - address
         - timezone
         - version
+    ErrorDetailDto:
+      type: object
+      properties:
+        field:
+          type: string
+          example: name
+        code:
+          type: string
+          example: INVALID_VALUE
+        message:
+          type: string
+          example: name should not be empty
+      required:
+        - code
+        - message
     AddressDto:
       type: object
       properties:
@@ -553,21 +696,6 @@ components:
         - status
         - isPrimary
         - version
-    ErrorDetailDto:
-      type: object
-      properties:
-        field:
-          type: string
-          example: name
-        code:
-          type: string
-          example: INVALID_VALUE
-        message:
-          type: string
-          example: name should not be empty
-      required:
-        - code
-        - message
     ActiveLookupOptionDto:
       type: object
       properties:

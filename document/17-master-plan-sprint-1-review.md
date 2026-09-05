@@ -1,6 +1,12 @@
 # Master Plan review và Sprint 1 execution baseline
 
-Ngày rà soát: 2026-08-29  
+> **Document version:** 1.0.0
+>
+> **Last updated:** 2026-09-04
+>
+> **Change summary:** Đồng bộ IAM-03 theo quyết định một Admin gốc duy nhất quản lý account cấp dưới.
+
+Ngày rà soát gốc: 2026-08-29
 Nguồn: Master Plan Sports Equipment E-commerce V1 và Global DoR/DoD do Product cung cấp.
 
 ## 1. Kết luận
@@ -46,7 +52,7 @@ Không đưa Cart, Inventory mutation, Order, Payment hoặc Shipping vào Sprin
 
 | ID | Function | DoR/Acceptance chính | Trạng thái |
 | --- | --- | --- | --- |
-| IAM-03 | Staff user lifecycle | OWNER tạo staff; lock/unlock/revoke atomic; không lock/unlock OWNER; Branch Manager chỉ quản lý STAFF cùng branch | DONE-CORE |
+| IAM-03 | Staff user lifecycle | Một fixed OWNER tạo/lock/unlock và phân quyền account cấp dưới; Branch Manager không có quyền IAM manage | DONE-CORE |
 | IAM-01 | Customer register/login | Public register chỉ CUSTOMER; email hoặc phone; phone E.164; tạm bỏ verification | DONE-CORE; thiếu DB e2e rerun và secure protected-API token transport |
 | IAM-04 | Role/permission | Unknown permission deny; stable code; role system không xóa | DONE-CORE; thiếu full permission matrix |
 | IAM-05 | Assignment scope | GLOBAL/BRANCH/WAREHOUSE/OWN đúng FK; duplicate fail; permission version tăng atomic | DONE-V1-CORE; assign/revoke atomic, giữ lịch sử REVOKED |
@@ -105,3 +111,9 @@ Customer registration/login (`IAM-01`) đã được kéo vào Sprint 1 theo quy
 - API integration evidence cho permission/scope và Catalog published filtering.
 - OpenAPI diff, generated SDK diff, screenshots loading/empty/error/success.
 - GitNexus impact/change detection và danh sách bug P0/P1 còn mở.
+
+## Revision history
+
+| Version | Date | Change summary | Source / Change ID |
+| --- | --- | --- | --- |
+| 1.0.0 | 2026-09-04 | Chuẩn hóa metadata và đồng bộ IAM-03 với quyết định single root Admin. | DBAPI-20260904-SINGLE-ROOT-ADMIN |

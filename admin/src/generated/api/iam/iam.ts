@@ -140,7 +140,7 @@ export function useListAdminUsers<
 }
 
 /**
- * @summary Create an active staff user with the approved default password and branch role
+ * @summary Root Admin creates an active subordinate account with a branch role
  */
 export const createAdminStaffUser = (
   createStaffUserDto: BodyType<CreateStaffUserDto>,
@@ -201,7 +201,7 @@ export type CreateAdminStaffUserMutationError = ErrorType<
 >;
 
 /**
- * @summary Create an active staff user with the approved default password and branch role
+ * @summary Root Admin creates an active subordinate account with a branch role
  */
 export const useCreateAdminStaffUser = <
   TError = ErrorType<
@@ -230,7 +230,7 @@ export const useCreateAdminStaffUser = <
 };
 
 /**
- * @summary Lock a staff user and revoke every active session
+ * @summary Root Admin locks a subordinate account and revokes every active session
  */
 export const lockAdminStaffUser = (
   userId: string,
@@ -292,7 +292,7 @@ export type LockAdminStaffUserMutationError = ErrorType<
 >;
 
 /**
- * @summary Lock a staff user and revoke every active session
+ * @summary Root Admin locks a subordinate account and revokes every active session
  */
 export const useLockAdminStaffUser = <
   TError = ErrorType<
@@ -321,7 +321,7 @@ export const useLockAdminStaffUser = <
 };
 
 /**
- * @summary Unlock a staff user and reset the password to the approved default
+ * @summary Root Admin unlocks a subordinate account and resets its password
  */
 export const unlockAdminStaffUser = (userId: string, signal?: AbortSignal) => {
   return apiFetcher<UserDto>({
@@ -377,7 +377,7 @@ export type UnlockAdminStaffUserMutationError = ErrorType<
 >;
 
 /**
- * @summary Unlock a staff user and reset the password to the approved default
+ * @summary Root Admin unlocks a subordinate account and resets its password
  */
 export const useUnlockAdminStaffUser = <
   TError = ErrorType<
@@ -622,7 +622,7 @@ export function useListAdminPermissions<
 }
 
 /**
- * @summary Search active roles for admin assignment lookups
+ * @summary Search assignable BRANCH_MANAGER or STAFF roles
  */
 export const searchActiveAdminRoles = (
   params?: SearchActiveAdminRolesParams,
@@ -725,7 +725,7 @@ export function useSearchActiveAdminRoles<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Search active roles for admin assignment lookups
+ * @summary Search assignable BRANCH_MANAGER or STAFF roles
  */
 
 export function useSearchActiveAdminRoles<
@@ -752,7 +752,7 @@ export function useSearchActiveAdminRoles<
 }
 
 /**
- * @summary Assign a role with a validated data scope
+ * @summary Root Admin assigns BRANCH_MANAGER or STAFF within an active branch
  */
 export const assignAdminUserRole = (
   userId: string,
@@ -812,7 +812,7 @@ export type AssignAdminUserRoleMutationError = ErrorType<
 >;
 
 /**
- * @summary Assign a role with a validated data scope
+ * @summary Root Admin assigns BRANCH_MANAGER or STAFF within an active branch
  */
 export const useAssignAdminUserRole = <
   TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
@@ -839,7 +839,7 @@ export const useAssignAdminUserRole = <
 };
 
 /**
- * @summary Revoke one active non-owner role assignment and refresh effective permissions
+ * @summary Root Admin revokes one subordinate assignment and refreshes permissions
  */
 export const revokeAdminUserRoleAssignment = (
   userId: string,
@@ -902,7 +902,7 @@ export type RevokeAdminUserRoleAssignmentMutationError = ErrorType<
 >;
 
 /**
- * @summary Revoke one active non-owner role assignment and refresh effective permissions
+ * @summary Root Admin revokes one subordinate assignment and refreshes permissions
  */
 export const useRevokeAdminUserRoleAssignment = <
   TError = ErrorType<

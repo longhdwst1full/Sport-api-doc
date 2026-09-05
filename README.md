@@ -1,10 +1,10 @@
 # DCTD-UTC Commerce
 
-> **Document version:** 1.2.0
+> **Document version:** 1.5.0
 >
-> **Last updated:** 2026-09-04
+> **Last updated:** 2026-09-05
 >
-> **Change summary:** Bổ sung command break-glass phục hồi bootstrap Admin bị khóa trên database development, có revoke session và audit atomic.
+> **Change summary:** Bổ sung Storybook riêng cho Admin component/layout và thay CKEditor component test bằng visual stories.
 
 Base workspace for a sports equipment storefront, admin portal and API.
 
@@ -25,6 +25,16 @@ yarn contracts:generate
 yarn dev
 ```
 
+Review component và full Admin layout độc lập với backend bằng Storybook:
+
+```bash
+yarn workspace @dctd/admin storybook
+yarn workspace @dctd/admin build-storybook
+```
+
+Storybook chạy tại `http://localhost:6006`; CKEditor story cần kết nối Internet để tải
+CKEditor 4 LTS từ CDN. Story source nằm cạnh component/layout trong `admin/src`.
+
 Điền connection string Supabase thật vào `api/.env.local`, sau đó chạy migration/seed từ đúng thư mục root chứa file `package.json` này:
 
 ```bash
@@ -43,6 +53,13 @@ Foundation seed tạo đúng một tài khoản OWNER bootstrap cho môi trườ
 `bootstrap-admin@example.invalid` / `Aa@123456`. Lần đăng nhập đầu tiên bắt buộc
 đổi mật khẩu; chạy seed lại không reset mật khẩu đã đổi. Không dùng credential này
 cho staging/production.
+
+`OWNER` là vai trò bất biến của đúng tài khoản bootstrap trên. API không cho tạo hoặc
+gán thêm OWNER. Chỉ Admin gốc được tạo/quản lý tài khoản và gán `BRANCH_MANAGER` hoặc
+`STAFF`; hai vai trò cấp dưới luôn có phạm vi một chi nhánh. Đăng nhập sai lần thứ 5
+trả thông báo tài khoản đã khóa; đăng nhập thành công reset số lần sai về `0`.
+Email/SĐT và password được trim khoảng trắng hai đầu; đăng ký và đổi mật khẩu dùng cùng
+quy tắc để không tạo credential không thể đăng nhập.
 
 Nếu bootstrap Admin bị khóa do nhập sai mật khẩu 5 lần hoặc cần phục hồi credential
 development, chạy `yarn db:admin:reset`. Command chỉ tác động đúng bootstrap OWNER cố định,
@@ -81,3 +98,6 @@ Backend DTO/controller first, then OpenAPI export, then Orval generation. Fronte
 | 1.0.0 | 2026-09-04 | Bổ sung bootstrap local/dev và ownership rule/skill theo từng ứng dụng. | Current worktree documentation update |
 | 1.1.0 | 2026-09-04 | Bỏ workflow Docker local; chuyển migration, seed và runtime database sang Supabase online. | Supabase workflow 2026-09-04 |
 | 1.2.0 | 2026-09-04 | Thêm command phục hồi bootstrap Admin bị khóa, revoke session và ghi audit atomic. | DBAPI-20260904-BOOTSTRAP-RECOVERY |
+| 1.3.0 | 2026-09-04 | Chốt một Admin gốc; hoàn thiện lockout/reset attempts, trim input Auth và bỏ Request ID khỏi toast Admin. | DBAPI-20260904-SINGLE-ROOT-ADMIN |
+| 1.4.0 | 2026-09-05 | Dùng đúng CKEditor 4 props/config từ admin-client, harden dữ liệu phiên Admin, prefill điều chỉnh tồn và nâng cấp Storefront. | Sprint 1 UI stabilization 2026-09-05 |
+| 1.5.0 | 2026-09-05 | Thêm Storybook Admin với Docs/a11y, visual states cho CKEditor, feedback, management primitives và full layout. | Admin Storybook foundation 2026-09-05 |

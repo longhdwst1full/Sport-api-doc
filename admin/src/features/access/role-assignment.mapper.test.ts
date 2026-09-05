@@ -10,7 +10,6 @@ describe('toAssignUserRoleDto', () => {
     expect(
       toAssignUserRoleDto({
         roleCode: AssignUserRoleDtoRoleCode.BRANCH_MANAGER,
-        scopeType: AssignUserRoleDtoScopeType.BRANCH,
         branchId: 'branch-1',
       }),
     ).toEqual({
@@ -20,16 +19,16 @@ describe('toAssignUserRoleDto', () => {
     });
   });
 
-  it('removes stale scope identifiers for GLOBAL scope', () => {
+  it('always maps subordinate assignments to BRANCH scope', () => {
     expect(
       toAssignUserRoleDto({
-        roleCode: AssignUserRoleDtoRoleCode.OWNER,
-        scopeType: AssignUserRoleDtoScopeType.GLOBAL,
-        branchId: 'stale-branch',
+        roleCode: AssignUserRoleDtoRoleCode.STAFF,
+        branchId: 'branch-2',
       }),
     ).toEqual({
-      roleCode: AssignUserRoleDtoRoleCode.OWNER,
-      scopeType: AssignUserRoleDtoScopeType.GLOBAL,
+      roleCode: AssignUserRoleDtoRoleCode.STAFF,
+      scopeType: AssignUserRoleDtoScopeType.BRANCH,
+      branchId: 'branch-2',
     });
   });
 });

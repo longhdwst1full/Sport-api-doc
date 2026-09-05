@@ -6,16 +6,13 @@ import {
 
 export interface AssignmentFormValues {
   roleCode: AssignUserRoleDtoRoleCode | '';
-  scopeType: AssignUserRoleDtoScopeType;
-  branchId?: string;
+  branchId: string;
 }
 
 export function toAssignUserRoleDto(values: AssignmentFormValues): AssignUserRoleDto {
   return {
     roleCode: values.roleCode as AssignUserRoleDtoRoleCode,
-    scopeType: values.scopeType,
-    ...(values.scopeType === AssignUserRoleDtoScopeType.BRANCH
-      ? { branchId: values.branchId }
-      : {}),
+    scopeType: AssignUserRoleDtoScopeType.BRANCH,
+    branchId: values.branchId,
   };
 }

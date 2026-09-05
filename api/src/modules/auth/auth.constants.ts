@@ -3,6 +3,17 @@ export const AUTH_SECURITY = {
   AUTO_LOCK_REASON: 'MAX_FAILED_LOGIN_ATTEMPTS',
 } as const;
 
+export const AUTH_ERROR = {
+  INVALID_CREDENTIALS: {
+    code: 'UNAUTHORIZED',
+    message: 'Email/phone or password is incorrect',
+  },
+  ACCOUNT_LOCKED: {
+    code: 'ACCOUNT_LOCKED',
+    message: 'Tài khoản đã bị khóa do nhập sai mật khẩu 5 lần. Vui lòng liên hệ Admin để mở khóa.',
+  },
+} as const;
+
 export const AUTH_AUDIT_ACTION = {
   ACCOUNT_AUTO_LOCK: 'auth.account.auto_lock',
   PASSWORD_CHANGE: 'auth.password.change',

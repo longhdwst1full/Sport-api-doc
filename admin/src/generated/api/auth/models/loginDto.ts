@@ -13,6 +13,7 @@ export interface LoginDto {
    */
   identifier: string;
   /**
+   * Leading and trailing whitespace is ignored
    * @minLength 8
    * @maxLength 128
    */

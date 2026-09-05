@@ -53,7 +53,7 @@ export const getListAdminBranchesQueryKey = () => {
 
 export const getListAdminBranchesQueryOptions = <
   TData = Awaited<ReturnType<typeof listAdminBranches>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(options?: {
   query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminBranches>>, TError, TData>>;
 }) => {
@@ -74,11 +74,11 @@ export const getListAdminBranchesQueryOptions = <
 export type ListAdminBranchesQueryResult = NonNullable<
   Awaited<ReturnType<typeof listAdminBranches>>
 >;
-export type ListAdminBranchesQueryError = ErrorType<unknown>;
+export type ListAdminBranchesQueryError = ErrorType<ErrorResponseDto | ErrorResponseDto>;
 
 export function useListAdminBranches<
   TData = Awaited<ReturnType<typeof listAdminBranches>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   options: {
     query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminBranches>>, TError, TData>> &
@@ -95,7 +95,7 @@ export function useListAdminBranches<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListAdminBranches<
   TData = Awaited<ReturnType<typeof listAdminBranches>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminBranches>>, TError, TData>> &
@@ -112,7 +112,7 @@ export function useListAdminBranches<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListAdminBranches<
   TData = Awaited<ReturnType<typeof listAdminBranches>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminBranches>>, TError, TData>>;
@@ -125,7 +125,7 @@ export function useListAdminBranches<
 
 export function useListAdminBranches<
   TData = Awaited<ReturnType<typeof listAdminBranches>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminBranches>>, TError, TData>>;
@@ -160,7 +160,7 @@ export const createAdminBranchWithWarehouse = (
 };
 
 export const getCreateAdminBranchWithWarehouseMutationOptions = <
-  TError = ErrorType<ErrorResponseDto>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -198,13 +198,15 @@ export type CreateAdminBranchWithWarehouseMutationResult = NonNullable<
   Awaited<ReturnType<typeof createAdminBranchWithWarehouse>>
 >;
 export type CreateAdminBranchWithWarehouseMutationBody = BodyType<CreateBranchDto>;
-export type CreateAdminBranchWithWarehouseMutationError = ErrorType<ErrorResponseDto>;
+export type CreateAdminBranchWithWarehouseMutationError = ErrorType<
+  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+>;
 
 /**
  * @summary Create a branch with its single V1 warehouse
  */
 export const useCreateAdminBranchWithWarehouse = <
-  TError = ErrorType<ErrorResponseDto>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
   TContext = unknown,
 >(
   options?: {
@@ -244,7 +246,7 @@ export const getListAdminWarehousesQueryKey = () => {
 
 export const getListAdminWarehousesQueryOptions = <
   TData = Awaited<ReturnType<typeof listAdminWarehouses>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(options?: {
   query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminWarehouses>>, TError, TData>>;
 }) => {
@@ -265,11 +267,11 @@ export const getListAdminWarehousesQueryOptions = <
 export type ListAdminWarehousesQueryResult = NonNullable<
   Awaited<ReturnType<typeof listAdminWarehouses>>
 >;
-export type ListAdminWarehousesQueryError = ErrorType<unknown>;
+export type ListAdminWarehousesQueryError = ErrorType<ErrorResponseDto | ErrorResponseDto>;
 
 export function useListAdminWarehouses<
   TData = Awaited<ReturnType<typeof listAdminWarehouses>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   options: {
     query: Partial<
@@ -288,7 +290,7 @@ export function useListAdminWarehouses<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListAdminWarehouses<
   TData = Awaited<ReturnType<typeof listAdminWarehouses>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   options?: {
     query?: Partial<
@@ -307,7 +309,7 @@ export function useListAdminWarehouses<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useListAdminWarehouses<
   TData = Awaited<ReturnType<typeof listAdminWarehouses>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   options?: {
     query?: Partial<
@@ -322,7 +324,7 @@ export function useListAdminWarehouses<
 
 export function useListAdminWarehouses<
   TData = Awaited<ReturnType<typeof listAdminWarehouses>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
 >(
   options?: {
     query?: Partial<
@@ -622,7 +624,7 @@ export const updateAdminBranchWithWarehouse = (
 };
 
 export const getUpdateAdminBranchWithWarehouseMutationOptions = <
-  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -661,14 +663,14 @@ export type UpdateAdminBranchWithWarehouseMutationResult = NonNullable<
 >;
 export type UpdateAdminBranchWithWarehouseMutationBody = BodyType<UpdateBranchWithWarehouseDto>;
 export type UpdateAdminBranchWithWarehouseMutationError = ErrorType<
-  ErrorResponseDto | ErrorResponseDto
+  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
 >;
 
 /**
  * @summary Update a branch and its single V1 warehouse
  */
 export const useUpdateAdminBranchWithWarehouse = <
-  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
   TContext = unknown,
 >(
   options?: {
@@ -692,6 +694,95 @@ export const useUpdateAdminBranchWithWarehouse = <
 };
 
 /**
+ * @summary Logically delete a branch and its V1 warehouse atomically
+ */
+export const deleteAdminBranchWithWarehouse = (
+  id: string,
+  changeBranchStatusDto: BodyType<ChangeBranchStatusDto>,
+) => {
+  return apiFetcher<BranchWithWarehouseDto>({
+    url: `/api/v1/admin/organization/branches/${id}`,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    data: changeBranchStatusDto,
+  });
+};
+
+export const getDeleteAdminBranchWithWarehouseMutationOptions = <
+  TError = ErrorType<
+    ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteAdminBranchWithWarehouse>>,
+    TError,
+    { id: string; data: BodyType<ChangeBranchStatusDto> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteAdminBranchWithWarehouse>>,
+  TError,
+  { id: string; data: BodyType<ChangeBranchStatusDto> },
+  TContext
+> => {
+  const mutationKey = ['deleteAdminBranchWithWarehouse'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteAdminBranchWithWarehouse>>,
+    { id: string; data: BodyType<ChangeBranchStatusDto> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return deleteAdminBranchWithWarehouse(id, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteAdminBranchWithWarehouseMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteAdminBranchWithWarehouse>>
+>;
+export type DeleteAdminBranchWithWarehouseMutationBody = BodyType<ChangeBranchStatusDto>;
+export type DeleteAdminBranchWithWarehouseMutationError = ErrorType<
+  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+>;
+
+/**
+ * @summary Logically delete a branch and its V1 warehouse atomically
+ */
+export const useDeleteAdminBranchWithWarehouse = <
+  TError = ErrorType<
+    ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteAdminBranchWithWarehouse>>,
+      TError,
+      { id: string; data: BodyType<ChangeBranchStatusDto> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteAdminBranchWithWarehouse>>,
+  TError,
+  { id: string; data: BodyType<ChangeBranchStatusDto> },
+  TContext
+> => {
+  const mutationOptions = getDeleteAdminBranchWithWarehouseMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+
+/**
  * @summary Deactivate a branch and its V1 warehouse atomically
  */
 export const deactivateAdminBranchWithWarehouse = (
@@ -709,7 +800,7 @@ export const deactivateAdminBranchWithWarehouse = (
 };
 
 export const getDeactivateAdminBranchWithWarehouseMutationOptions = <
-  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -748,14 +839,14 @@ export type DeactivateAdminBranchWithWarehouseMutationResult = NonNullable<
 >;
 export type DeactivateAdminBranchWithWarehouseMutationBody = BodyType<ChangeBranchStatusDto>;
 export type DeactivateAdminBranchWithWarehouseMutationError = ErrorType<
-  ErrorResponseDto | ErrorResponseDto
+  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
 >;
 
 /**
  * @summary Deactivate a branch and its V1 warehouse atomically
  */
 export const useDeactivateAdminBranchWithWarehouse = <
-  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
   TContext = unknown,
 >(
   options?: {
@@ -796,7 +887,7 @@ export const activateAdminBranchWithWarehouse = (
 };
 
 export const getActivateAdminBranchWithWarehouseMutationOptions = <
-  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -835,14 +926,14 @@ export type ActivateAdminBranchWithWarehouseMutationResult = NonNullable<
 >;
 export type ActivateAdminBranchWithWarehouseMutationBody = BodyType<ChangeBranchStatusDto>;
 export type ActivateAdminBranchWithWarehouseMutationError = ErrorType<
-  ErrorResponseDto | ErrorResponseDto
+  ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto
 >;
 
 /**
  * @summary Reactivate a branch and its V1 warehouse atomically
  */
 export const useActivateAdminBranchWithWarehouse = <
-  TError = ErrorType<ErrorResponseDto | ErrorResponseDto>,
+  TError = ErrorType<ErrorResponseDto | ErrorResponseDto | ErrorResponseDto | ErrorResponseDto>,
   TContext = unknown,
 >(
   options?: {

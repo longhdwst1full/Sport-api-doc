@@ -12,7 +12,6 @@ import {
 } from '@/generated/api/iam/iam';
 import {
   AssignUserRoleDtoRoleCode,
-  AssignUserRoleDtoScopeType,
   type UserDto,
 } from '@/generated/api/iam/models';
 import {
@@ -35,21 +34,8 @@ const schema: yup.ObjectSchema<AssignmentFormValues> = yup.object({
     .mixed<AssignmentFormValues['roleCode']>()
     .oneOf(Object.values(AssignUserRoleDtoRoleCode))
     .required('Vui lòng chọn vai trò'),
-  scopeType: yup
-    .mixed<AssignUserRoleDtoScopeType>()
-    .oneOf(Object.values(AssignUserRoleDtoScopeType))
-    .required('Vui lòng chọn phạm vi'),
-  branchId: yup.string().when('scopeType', {
-    is: AssignUserRoleDtoScopeType.BRANCH,
-    then: (value) => value.required('Vui lòng chọn chi nhánh'),
-    otherwise: (value) => value.optional(),
-  }),
+  branchId: yup.string().required('Vui lòng chọn chi nhánh'),
 });
-
-const scopeOptions = [
-  { value: AssignUserRoleDtoScopeType.GLOBAL, label: 'Toàn hệ thống' },
-  { value: AssignUserRoleDtoScopeType.BRANCH, label: 'Theo chi nhánh' },
-];
 
 export function RoleAssignmentDrawer({ user, open, onClose }: RoleAssignmentDrawerProps) {
   const { message } = App.useApp();
@@ -63,22 +49,18 @@ export function RoleAssignmentDrawer({ user, open, onClose }: RoleAssignmentDraw
     handleSubmit,
     reset,
     setError,
-    setValue,
-    watch,
     formState: { errors },
   } = useForm<AssignmentFormValues>({
     resolver: yupResolver(schema),
-    defaultValues: { roleCode: '', scopeType: AssignUserRoleDtoScopeType.BRANCH },
+    defaultValues: { roleCode: '', branchId: '' },
   });
-  const scopeType = watch('scopeType');
-  const roleCode = watch('roleCode');
   const rolesQuery = useSearchActiveAdminRoles(
     { search: debouncedRoleSearch || undefined, page: 1, limit: 20 },
     { query: { enabled: open } },
   );
   const branchesQuery = useSearchActiveAdminBranches(
     { search: debouncedBranchSearch || undefined, page: 1, limit: 20 },
-    { query: { enabled: open && scopeType === AssignUserRoleDtoScopeType.BRANCH } },
+    { query: { enabled: open } },
   );
   const assignment = useAssignAdminUserRole({
     mutation: {
@@ -107,16 +89,6 @@ export function RoleAssignmentDrawer({ user, open, onClose }: RoleAssignmentDraw
       setBranchSearch('');
     }
   }, [open, reset]);
-
-  useEffect(() => {
-    if (!roleCode) return;
-    setValue(
-      'scopeType',
-      roleCode === AssignUserRoleDtoRoleCode.OWNER
-        ? AssignUserRoleDtoScopeType.GLOBAL
-        : AssignUserRoleDtoScopeType.BRANCH,
-    );
-  }, [roleCode, setValue]);
 
   const submit = handleSubmit((values) => {
     if (!user) return;
@@ -170,46 +142,35 @@ export function RoleAssignmentDrawer({ user, open, onClose }: RoleAssignmentDraw
           />
         </Form.Item>
 
-        <Form.Item
-          label="Phạm vi dữ liệu"
-          required
-          validateStatus={errors.scopeType ? 'error' : undefined}
-          help={errors.scopeType?.message}
-        >
-          <Controller
-            name="scopeType"
-            control={control}
-            render={({ field }) => <Select {...field} options={scopeOptions} disabled={Boolean(roleCode)} />}
-          />
+        <Form.Item label="Phạm vi dữ liệu">
+          <Input value="Theo chi nhánh" disabled />
         </Form.Item>
 
-        {scopeType === AssignUserRoleDtoScopeType.BRANCH && (
-          <Form.Item
-            label="Chi nhánh đang hoạt động"
-            required
-            validateStatus={errors.branchId ? 'error' : undefined}
-            help={errors.branchId?.message}
-          >
-            <Controller
-              name="branchId"
-              control={control}
-              render={({ field }) => (
-                <Select
-                  {...field}
-                  showSearch
-                  filterOption={false}
-                  onSearch={setBranchSearch}
-                  loading={branchesQuery.isFetching}
-                  options={(branchesQuery.data?.items ?? []).map((item) => ({
-                    value: item.id,
-                    label: `${item.code} — ${item.label}`,
-                  }))}
-                  placeholder="Tìm chi nhánh active"
-                />
-              )}
-            />
-          </Form.Item>
-        )}
+        <Form.Item
+          label="Chi nhánh đang hoạt động"
+          required
+          validateStatus={errors.branchId ? 'error' : undefined}
+          help={errors.branchId?.message}
+        >
+          <Controller
+            name="branchId"
+            control={control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                showSearch
+                filterOption={false}
+                onSearch={setBranchSearch}
+                loading={branchesQuery.isFetching}
+                options={(branchesQuery.data?.items ?? []).map((item) => ({
+                  value: item.id,
+                  label: `${item.code} — ${item.label}`,
+                }))}
+                placeholder="Tìm chi nhánh active"
+              />
+            )}
+          />
+        </Form.Item>
 
         <Form.Item label="Người dùng">
           <Input value={user?.displayName} disabled />

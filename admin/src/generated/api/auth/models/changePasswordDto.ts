@@ -8,11 +8,13 @@
 
 export interface ChangePasswordDto {
   /**
+   * Leading and trailing whitespace is ignored
    * @minLength 8
    * @maxLength 128
    */
   currentPassword: string;
   /**
+   * Leading and trailing whitespace is ignored
    * @minLength 8
    * @maxLength 128
    */

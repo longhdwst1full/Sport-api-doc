@@ -1,10 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEmail,
-  IsEnum,
   IsIn,
   IsNotEmpty,
-  IsOptional,
   IsString,
   IsUUID,
   MaxLength,
@@ -16,7 +14,14 @@ import {
   USER_STATUS,
   USER_TYPE,
 } from './iam.constants';
-import { RoleStatus, ScopeType, SystemRoleCode, UserStatus } from './iam.types';
+import {
+  ASSIGNABLE_STAFF_ROLE_CODES,
+  AssignableStaffRoleCode,
+  RoleStatus,
+  ScopeType,
+  SystemRoleCode,
+  UserStatus,
+} from './iam.types';
 
 export class PermissionDto {
   @ApiProperty({ example: 'org.branch.view' }) code: string;
@@ -80,18 +85,17 @@ export class PermissionListDto {
 }
 
 export class AssignUserRoleDto {
-  @ApiProperty({ enum: SystemRoleCode, example: SystemRoleCode.BRANCH_MANAGER })
-  @IsEnum(SystemRoleCode)
-  roleCode: SystemRoleCode;
+  @ApiProperty({ enum: ASSIGNABLE_STAFF_ROLE_CODES, example: SystemRoleCode.BRANCH_MANAGER })
+  @IsIn(ASSIGNABLE_STAFF_ROLE_CODES)
+  roleCode: AssignableStaffRoleCode;
 
-  @ApiProperty({ enum: ScopeType })
-  @IsEnum(ScopeType)
-  scopeType: ScopeType;
+  @ApiProperty({ enum: [ScopeType.BRANCH] })
+  @IsIn([ScopeType.BRANCH])
+  scopeType: typeof ScopeType.BRANCH;
 
-  @ApiPropertyOptional({ format: 'uuid' })
+  @ApiProperty({ format: 'uuid' })
   @IsUUID()
-  @IsOptional()
-  branchId?: string;
+  branchId: string;
 }
 
 export class CreateStaffUserDto {

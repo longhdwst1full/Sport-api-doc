@@ -20,6 +20,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BrandListDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
       security:
         - bearer: []
       summary: ""
@@ -41,6 +53,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BrandDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
       security:
         - bearer: []
       summary: ""
@@ -79,6 +103,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ActiveLookupResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
       security:
         - bearer: []
       summary: ""
@@ -106,6 +142,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BrandDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
         "404":
           description: ""
           content:
@@ -121,6 +169,62 @@ paths:
       security:
         - bearer: []
       summary: Update mutable brand fields
+      tags:
+        - Admin Catalog
+    delete:
+      operationId: deleteAdminBrand
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeMasterStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BrandDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Logically delete a brand by changing its status to INACTIVE
       tags:
         - Admin Catalog
   /api/v1/admin/catalog/brands/{id}/deactivate:
@@ -145,6 +249,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BrandDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
         "404":
           description: ""
           content:
@@ -184,6 +300,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BrandDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
         "404":
           description: ""
           content:
@@ -212,6 +340,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CategoryListDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
       security:
         - bearer: []
       summary: ""
@@ -233,6 +373,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CategoryDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
       security:
         - bearer: []
       summary: ""
@@ -271,6 +423,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ActiveLookupResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
       security:
         - bearer: []
       summary: ""
@@ -298,6 +462,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CategoryDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
         "404":
           description: ""
           content:
@@ -313,6 +489,68 @@ paths:
       security:
         - bearer: []
       summary: Update mutable category fields
+      tags:
+        - Admin Catalog
+    delete:
+      operationId: deleteAdminCategory
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeMasterStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "422":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Logically delete a leaf category by changing its status to INACTIVE
       tags:
         - Admin Catalog
   /api/v1/admin/catalog/categories/{id}/deactivate:
@@ -337,6 +575,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CategoryDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
         "404":
           description: ""
           content:
@@ -382,6 +632,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CategoryDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
         "404":
           description: ""
           content:
@@ -622,6 +884,68 @@ paths:
       summary: Update product
       tags:
         - Admin Products
+    delete:
+      operationId: deleteAdminProduct
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeProductStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetailDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "422":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Logically delete a product or combo by changing its status to ARCHIVED
+      tags:
+        - Admin Products
   /api/v1/admin/products/{id}/variants:
     post:
       operationId: createAdminProductVariant
@@ -722,6 +1046,68 @@ paths:
       security:
         - bearer: []
       summary: Update mutable SKU metadata
+      tags:
+        - Admin Products
+    delete:
+      operationId: deleteAdminProductVariant
+      parameters:
+        - name: variantId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeProductStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetailDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "422":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Logically delete one sellable SKU variant by changing its status to INACTIVE
       tags:
         - Admin Products
   /api/v1/admin/products/{id}/media:
@@ -922,6 +1308,75 @@ paths:
       security:
         - bearer: []
       summary: Update product media alt text or primary flag
+      tags:
+        - Admin Products
+    delete:
+      operationId: deleteAdminProductMedia
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: mediaId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeProductMediaStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductMediaDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "422":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Logically delete a product media link without deleting its provider asset
       tags:
         - Admin Products
   /api/v1/admin/products/{id}/media/{mediaId}/archive:
@@ -1418,6 +1873,40 @@ components:
       required:
         - items
         - total
+    ErrorResponseDto:
+      type: object
+      properties:
+        statusCode:
+          type: number
+          example: 400
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: Request validation failed
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorDetailDto"
+        path:
+          type: string
+          example: /api/v1/catalog/products
+        method:
+          type: string
+          example: POST
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+      required:
+        - statusCode
+        - code
+        - message
+        - path
+        - method
+        - timestamp
     CreateBrandDto:
       type: object
       properties:
@@ -1496,40 +1985,6 @@ components:
           minimum: 0
       required:
         - expectedVersion
-    ErrorResponseDto:
-      type: object
-      properties:
-        statusCode:
-          type: number
-          example: 400
-        code:
-          type: string
-          example: VALIDATION_ERROR
-        message:
-          type: string
-          example: Request validation failed
-        details:
-          type: array
-          items:
-            $ref: "#/components/schemas/ErrorDetailDto"
-        path:
-          type: string
-          example: /api/v1/catalog/products
-        method:
-          type: string
-          example: POST
-        timestamp:
-          type: string
-          format: date-time
-        requestId:
-          type: string
-      required:
-        - statusCode
-        - code
-        - message
-        - path
-        - method
-        - timestamp
     ChangeMasterStatusDto:
       type: object
       properties:
@@ -1809,6 +2264,14 @@ components:
           minimum: 0
       required:
         - expectedVersion
+    ChangeProductStatusDto:
+      type: object
+      properties:
+        expectedVersion:
+          type: number
+          minimum: 0
+      required:
+        - expectedVersion
     CreateVariantDto:
       type: object
       properties:
@@ -2025,14 +2488,6 @@ components:
         - startsAt
         - expectedCurrentPriceId
         - expectedCurrentPriceVersion
-    ChangeProductStatusDto:
-      type: object
-      properties:
-        expectedVersion:
-          type: number
-          minimum: 0
-      required:
-        - expectedVersion
     CreateBundleDto:
       type: object
       properties:
@@ -2046,6 +2501,21 @@ components:
       required:
         - bundleVariantId
         - items
+    ErrorDetailDto:
+      type: object
+      properties:
+        field:
+          type: string
+          example: name
+        code:
+          type: string
+          example: INVALID_VALUE
+        message:
+          type: string
+          example: name should not be empty
+      required:
+        - code
+        - message
     ActiveLookupOptionDto:
       type: object
       properties:
@@ -2082,21 +2552,6 @@ components:
         - limit
         - total
         - hasMore
-    ErrorDetailDto:
-      type: object
-      properties:
-        field:
-          type: string
-          example: name
-        code:
-          type: string
-          example: INVALID_VALUE
-        message:
-          type: string
-          example: name should not be empty
-      required:
-        - code
-        - message
     ProductSummaryDto:
       type: object
       properties:

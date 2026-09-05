@@ -127,7 +127,7 @@ Table user_role_assignments {
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
   indexes { (user_id, role_id, scope_type, branch_id, warehouse_id) [unique] }
-  Note: '[P0] DB giữ GLOBAL|BRANCH|WAREHOUSE|OWN để mở rộng; API/UI V1 chỉ expose GLOBAL cho OWNER và BRANCH cho BRANCH_MANAGER/STAFF.'
+  Note: '[P0] V1 có đúng một OWNER GLOBAL gắn fixed bootstrap Admin; API cấm gán/thu hồi OWNER. Chỉ Admin gốc quản lý BRANCH_MANAGER/STAFF theo BRANCH; DB giữ WAREHOUSE/OWN dormant để mở rộng.'
 }
 
 Table audit_logs {

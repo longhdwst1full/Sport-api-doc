@@ -45,7 +45,10 @@ export class AuthController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({ operationId: 'loginAdmin', summary: 'Authenticate staff by email or phone' })
   @ApiOkResponse({ type: TokenPairDto })
-  @ApiUnauthorizedResponse({ description: 'Invalid credentials' })
+  @ApiUnauthorizedResponse({
+    type: ErrorResponseDto,
+    description: 'Invalid credentials, or ACCOUNT_LOCKED after five failed attempts',
+  })
   async login(
     @Body() input: LoginDto,
     @Req() request: Request,
@@ -160,7 +163,10 @@ export class StorefrontAuthController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({ operationId: 'loginCustomer', summary: 'Authenticate customer by email or phone' })
   @ApiOkResponse({ type: TokenPairDto })
-  @ApiUnauthorizedResponse({ type: ErrorResponseDto, description: 'Invalid credentials' })
+  @ApiUnauthorizedResponse({
+    type: ErrorResponseDto,
+    description: 'Invalid credentials, or ACCOUNT_LOCKED after five failed attempts',
+  })
   async login(
     @Body() input: LoginDto,
     @Req() request: Request,
