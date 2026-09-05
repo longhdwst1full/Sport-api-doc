@@ -125,7 +125,7 @@ async function seed(transaction: Prisma.TransactionClient): Promise<void> {
     {
       id: ids.ownerRole,
       code: 'OWNER',
-      name: 'Chủ cửa hàng',
+      name: 'Quản trị viên gốc',
       permissionCodes: V1_ROLE_PERMISSIONS.OWNER,
     },
     {
@@ -192,6 +192,21 @@ async function seed(transaction: Prisma.TransactionClient): Promise<void> {
         assignedBy: ids.bootstrapUser,
       },
     });
+  }
+
+  const unexpectedOwnerAssignment = await transaction.userRoleAssignment.findFirst({
+    where: {
+      roleId: ownerRole.id,
+      status: 'ACTIVE',
+      userId: { not: ids.bootstrapUser },
+    },
+    select: { id: true, userId: true },
+  });
+  if (unexpectedOwnerAssignment) {
+    throw new Error(
+      `Single-root-admin invariant violated by OWNER assignment ${unexpectedOwnerAssignment.id} `
+      + `for user ${unexpectedOwnerAssignment.userId}; revoke it explicitly before seeding`,
+    );
   }
 }
 

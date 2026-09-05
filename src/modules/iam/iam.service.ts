@@ -23,7 +23,12 @@ import {
 } from './iam.dto';
 import { PERMISSION_CATALOG } from './iam.permissions';
 import { IamRepository } from './iam.repository';
-import { ScopeType, SystemRoleCode } from './iam.types';
+import {
+  ASSIGNABLE_STAFF_ROLE_CODES,
+  AssignableStaffRoleCode,
+  ScopeType,
+  SystemRoleCode,
+} from './iam.types';
 import {
   IAM_SECURITY_DEFAULTS,
   ROLE_ASSIGNMENT_STATUS,
@@ -58,14 +63,14 @@ export class IamService {
     query: ActiveSearchQueryDto,
     actor: AuthPrincipal,
   ): Promise<ActiveLookupResponseDto> {
-    const allowedRoleCodes: ReadonlySet<SystemRoleCode> | undefined = this.hasGlobalScope(actor)
-      ? undefined
-      : new Set<SystemRoleCode>([SystemRoleCode.STAFF]);
+    const allowedRoleCodes: ReadonlySet<AssignableStaffRoleCode> = this.hasGlobalScope(actor)
+      ? new Set(ASSIGNABLE_STAFF_ROLE_CODES)
+      : new Set<AssignableStaffRoleCode>([SystemRoleCode.STAFF]);
     return buildActiveLookupResponse(
       (await this.iam.listRoles())
         .filter((role) =>
           role.status === ROLE_STATUS.ACTIVE
-          && (!allowedRoleCodes || allowedRoleCodes.has(role.code as SystemRoleCode)))
+          && allowedRoleCodes.has(role.code as AssignableStaffRoleCode))
         .map((role) => ({ id: role.id, code: role.code, label: role.name })),
       query,
     );
@@ -125,9 +130,16 @@ export class IamService {
     if (assignment.roleCode === SystemRoleCode.OWNER) {
       throw new ForbiddenException('OWNER assignment cannot be revoked');
     }
+    if (
+      !ASSIGNABLE_STAFF_ROLE_CODES.includes(assignment.roleCode as AssignableStaffRoleCode)
+      || assignment.scopeType !== ScopeType.BRANCH
+      || !assignment.branchId
+    ) {
+      throw new ForbiddenException('Only subordinate branch assignments can be revoked');
+    }
     this.authorizeAssignment(actor, {
-      roleCode: assignment.roleCode as SystemRoleCode,
-      scopeType: assignment.scopeType,
+      roleCode: assignment.roleCode as AssignableStaffRoleCode,
+      scopeType: ScopeType.BRANCH,
       branchId: assignment.branchId,
     });
     const updated = await this.iam.revokeAssignmentAndIncrementPermissionVersion(
@@ -235,15 +247,11 @@ export class IamService {
   }
 
   private authorizeAssignment(actor: AuthPrincipal, input: AssignUserRoleDto): void {
-    if (this.hasGlobalScope(actor)) return;
-    const branchIds = this.visibleBranchIds(actor) ?? [];
-    if (
-      input.roleCode !== SystemRoleCode.STAFF
-      || input.scopeType !== ScopeType.BRANCH
-      || !input.branchId
-      || !branchIds.includes(input.branchId)
-    ) {
-      throw new ForbiddenException('Branch manager can assign STAFF only within an assigned branch');
+    if (!ASSIGNABLE_STAFF_ROLE_CODES.includes(input.roleCode)) {
+      throw new ForbiddenException('OWNER is the single bootstrap administrator and cannot be assigned');
+    }
+    if (!this.hasGlobalScope(actor)) {
+      throw new ForbiddenException('Only the root administrator can assign staff roles');
     }
   }
 
@@ -256,43 +264,18 @@ export class IamService {
     if (user.assignments.some(({ roleCode }) => roleCode === SystemRoleCode.OWNER)) {
       throw new ForbiddenException('OWNER account cannot be locked or unlocked');
     }
-    if (this.hasGlobalScope(actor)) return user;
-
-    const branchIds = this.visibleBranchIds(actor) ?? [];
-    const assignments = user.assignments;
-    if (
-      assignments.length === 0
-      || assignments.some(({ roleCode }) => roleCode !== SystemRoleCode.STAFF)
-      || assignments.some(({ branchId }) => !branchId || !branchIds.includes(branchId))
-    ) {
-      throw new ForbiddenException('Branch manager can manage STAFF only within an assigned branch');
+    if (!this.hasGlobalScope(actor)) {
+      throw new ForbiddenException('Only the root administrator can manage staff accounts');
     }
     return user;
   }
 
   private async validateScope(input: AssignUserRoleDto): Promise<void> {
-    if (input.roleCode === SystemRoleCode.OWNER && input.scopeType !== ScopeType.GLOBAL) {
-      throw new BadRequestException('OWNER role requires GLOBAL scope');
-    }
-    if (input.roleCode !== SystemRoleCode.OWNER && input.scopeType !== ScopeType.BRANCH) {
+    if (input.scopeType !== ScopeType.BRANCH) {
       throw new BadRequestException(`${input.roleCode} role requires BRANCH scope`);
     }
-
-    if (input.scopeType === ScopeType.GLOBAL) {
-      if (input.branchId) {
-        throw new BadRequestException('GLOBAL scope must not include branch');
-      }
-      return;
-    }
-
-    if (input.scopeType === ScopeType.BRANCH) {
-      if (
-        !input.branchId ||
-        !(await this.organization.hasActiveBranch(input.branchId))
-      ) {
-        throw new BadRequestException('BRANCH scope requires one active branchId');
-      }
-      return;
+    if (!(await this.organization.hasActiveBranch(input.branchId))) {
+      throw new BadRequestException('BRANCH scope requires one active branchId');
     }
   }
 }

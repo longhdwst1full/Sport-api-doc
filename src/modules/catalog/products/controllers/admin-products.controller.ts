@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Query, Req } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -205,6 +205,32 @@ export class AdminProductsController {
     );
   }
 
+  @Delete(':id/media/:mediaId')
+  @HttpCode(200)
+  @RequirePermissions('catalog.product.manage')
+  @ApiOperation({
+    operationId: 'deleteAdminProductMedia',
+    summary: 'Logically delete a product media link without deleting its provider asset',
+  })
+  @ApiOkResponse({ type: [ProductMediaDto] })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  @ApiUnprocessableEntityResponse({ type: ErrorResponseDto })
+  deleteMedia(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('mediaId', new ParseUUIDPipe()) mediaId: string,
+    @Body() input: ChangeProductMediaStatusDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ProductMediaDto[]> {
+    return this.productMedia.archive(
+      id,
+      mediaId,
+      input.expectedProductVersion,
+      getMutationContext(request),
+    );
+  }
+
   @Post('variants/:variantId/prices')
   @RequirePermissions('catalog.price.manage')
   @ApiOperation({ operationId: 'createAdminProductPrice', summary: 'Create a global VAT-included price window' })
@@ -285,6 +311,26 @@ export class AdminProductsController {
     return this.products.archiveProduct(id, input, getMutationContext(request));
   }
 
+  @Delete(':id')
+  @HttpCode(200)
+  @RequirePermissions('catalog.product.publish')
+  @ApiOperation({
+    operationId: 'deleteAdminProduct',
+    summary: 'Logically delete a product or combo by changing its status to ARCHIVED',
+  })
+  @ApiOkResponse({ type: ProductDetailDto })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  @ApiUnprocessableEntityResponse({ type: ErrorResponseDto })
+  deleteProduct(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() input: ChangeProductStatusDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ProductDetailDto> {
+    return this.products.archiveProduct(id, input, getMutationContext(request));
+  }
+
   @Post(':id/reactivate')
   @HttpCode(200)
   @RequirePermissions('catalog.product.publish')
@@ -307,6 +353,26 @@ export class AdminProductsController {
   @ApiOperation({ operationId: 'archiveAdminProductVariant', summary: 'Archive one sellable SKU variant' })
   @ApiOkResponse({ type: ProductDetailDto })
   archiveVariant(
+    @Param('variantId', new ParseUUIDPipe()) variantId: string,
+    @Body() input: ChangeProductStatusDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ProductDetailDto> {
+    return this.products.archiveVariant(variantId, input, getMutationContext(request));
+  }
+
+  @Delete('variants/:variantId')
+  @HttpCode(200)
+  @RequirePermissions('catalog.product.manage')
+  @ApiOperation({
+    operationId: 'deleteAdminProductVariant',
+    summary: 'Logically delete one sellable SKU variant by changing its status to INACTIVE',
+  })
+  @ApiOkResponse({ type: ProductDetailDto })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  @ApiUnprocessableEntityResponse({ type: ErrorResponseDto })
+  deleteVariant(
     @Param('variantId', new ParseUUIDPipe()) variantId: string,
     @Body() input: ChangeProductStatusDto,
     @Req() request: AuthenticatedRequest,

@@ -64,6 +64,26 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -96,6 +116,26 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BranchWithWarehouseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -133,6 +173,26 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/WarehouseListDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -371,6 +431,26 @@
               }
             }
           },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "404": {
             "description": "",
             "content": {
@@ -398,6 +478,100 @@
           }
         ],
         "summary": "Update a branch and its single V1 warehouse",
+        "tags": [
+          "Admin Organization"
+        ]
+      },
+      "delete": {
+        "operationId": "deleteAdminBranchWithWarehouse",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeBranchStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BranchWithWarehouseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Logically delete a branch and its V1 warehouse atomically",
         "tags": [
           "Admin Organization"
         ]
@@ -433,6 +607,26 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BranchWithWarehouseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -499,6 +693,26 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BranchWithWarehouseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -772,7 +986,7 @@
             "bearer": []
           }
         ],
-        "summary": "Create an active staff user with the approved default password and branch role",
+        "summary": "Root Admin creates an active subordinate account with a branch role",
         "tags": [
           "Admin IAM"
         ]
@@ -868,7 +1082,7 @@
             "bearer": []
           }
         ],
-        "summary": "Lock a staff user and revoke every active session",
+        "summary": "Root Admin locks a subordinate account and revokes every active session",
         "tags": [
           "Admin IAM"
         ]
@@ -954,7 +1168,7 @@
             "bearer": []
           }
         ],
-        "summary": "Unlock a staff user and reset the password to the approved default",
+        "summary": "Root Admin unlocks a subordinate account and resets its password",
         "tags": [
           "Admin IAM"
         ]
@@ -1097,7 +1311,7 @@
             "bearer": []
           }
         ],
-        "summary": "Search active roles for admin assignment lookups",
+        "summary": "Search assignable BRANCH_MANAGER or STAFF roles",
         "tags": [
           "Admin IAM"
         ]
@@ -1173,7 +1387,7 @@
             "bearer": []
           }
         ],
-        "summary": "Assign a role with a validated data scope",
+        "summary": "Root Admin assigns BRANCH_MANAGER or STAFF within an active branch",
         "tags": [
           "Admin IAM"
         ]
@@ -1277,7 +1491,7 @@
             "bearer": []
           }
         ],
-        "summary": "Revoke one active non-owner role assignment and refresh effective permissions",
+        "summary": "Root Admin revokes one subordinate assignment and refreshes permissions",
         "tags": [
           "Admin IAM"
         ]
@@ -1309,7 +1523,14 @@
             }
           },
           "401": {
-            "description": "Invalid credentials"
+            "description": "Invalid credentials, or ACCOUNT_LOCKED after five failed attempts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "summary": "Authenticate staff by email or phone",
@@ -1536,7 +1757,7 @@
             }
           },
           "401": {
-            "description": "Invalid credentials",
+            "description": "Invalid credentials, or ACCOUNT_LOCKED after five failed attempts",
             "content": {
               "application/json": {
                 "schema": {
@@ -1670,6 +1891,26 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1702,6 +1943,26 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BrandDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -1764,6 +2025,26 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1811,6 +2092,26 @@
               }
             }
           },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "404": {
             "description": "",
             "content": {
@@ -1838,6 +2139,100 @@
           }
         ],
         "summary": "Update mutable brand fields",
+        "tags": [
+          "Admin Catalog"
+        ]
+      },
+      "delete": {
+        "operationId": "deleteAdminBrand",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeMasterStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Logically delete a brand by changing its status to INACTIVE",
         "tags": [
           "Admin Catalog"
         ]
@@ -1873,6 +2268,26 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BrandDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -1943,6 +2358,26 @@
               }
             }
           },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "404": {
             "description": "",
             "content": {
@@ -1989,6 +2424,26 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2021,6 +2476,26 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CategoryDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -2083,6 +2558,26 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2130,6 +2625,26 @@
               }
             }
           },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "404": {
             "description": "",
             "content": {
@@ -2157,6 +2672,110 @@
           }
         ],
         "summary": "Update mutable category fields",
+        "tags": [
+          "Admin Catalog"
+        ]
+      },
+      "delete": {
+        "operationId": "deleteAdminCategory",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeMasterStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Logically delete a leaf category by changing its status to INACTIVE",
         "tags": [
           "Admin Catalog"
         ]
@@ -2192,6 +2811,26 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CategoryDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -2268,6 +2907,26 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CategoryDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -2780,6 +3439,110 @@
         "tags": [
           "Admin Products"
         ]
+      },
+      "delete": {
+        "operationId": "deleteAdminProduct",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeProductStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDetailDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Logically delete a product or combo by changing its status to ARCHIVED",
+        "tags": [
+          "Admin Products"
+        ]
       }
     },
     "/api/v1/admin/products/{id}/variants": {
@@ -2949,6 +3712,110 @@
           }
         ],
         "summary": "Update mutable SKU metadata",
+        "tags": [
+          "Admin Products"
+        ]
+      },
+      "delete": {
+        "operationId": "deleteAdminProductVariant",
+        "parameters": [
+          {
+            "name": "variantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeProductStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDetailDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Logically delete one sellable SKU variant by changing its status to INACTIVE",
         "tags": [
           "Admin Products"
         ]
@@ -3284,6 +4151,121 @@
           }
         ],
         "summary": "Update product media alt text or primary flag",
+        "tags": [
+          "Admin Products"
+        ]
+      },
+      "delete": {
+        "operationId": "deleteAdminProductMedia",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mediaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeProductMediaStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProductMediaDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Logically delete a product media link without deleting its provider asset",
         "tags": [
           "Admin Products"
         ]
@@ -4709,6 +5691,73 @@
           "p1Models"
         ]
       },
+      "ErrorDetailDto": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string",
+            "example": "name"
+          },
+          "code": {
+            "type": "string",
+            "example": "INVALID_VALUE"
+          },
+          "message": {
+            "type": "string",
+            "example": "name should not be empty"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      },
+      "ErrorResponseDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 400
+          },
+          "code": {
+            "type": "string",
+            "example": "VALIDATION_ERROR"
+          },
+          "message": {
+            "type": "string",
+            "example": "Request validation failed"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ErrorDetailDto"
+            }
+          },
+          "path": {
+            "type": "string",
+            "example": "/api/v1/catalog/products"
+          },
+          "method": {
+            "type": "string",
+            "example": "POST"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requestId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "statusCode",
+          "code",
+          "message",
+          "path",
+          "method",
+          "timestamp"
+        ]
+      },
       "AddressDto": {
         "type": "object",
         "properties": {
@@ -4931,73 +5980,6 @@
         "required": [
           "items",
           "meta"
-        ]
-      },
-      "ErrorDetailDto": {
-        "type": "object",
-        "properties": {
-          "field": {
-            "type": "string",
-            "example": "name"
-          },
-          "code": {
-            "type": "string",
-            "example": "INVALID_VALUE"
-          },
-          "message": {
-            "type": "string",
-            "example": "name should not be empty"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ]
-      },
-      "ErrorResponseDto": {
-        "type": "object",
-        "properties": {
-          "statusCode": {
-            "type": "number",
-            "example": 400
-          },
-          "code": {
-            "type": "string",
-            "example": "VALIDATION_ERROR"
-          },
-          "message": {
-            "type": "string",
-            "example": "Request validation failed"
-          },
-          "details": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ErrorDetailDto"
-            }
-          },
-          "path": {
-            "type": "string",
-            "example": "/api/v1/catalog/products"
-          },
-          "method": {
-            "type": "string",
-            "example": "POST"
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "requestId": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "statusCode",
-          "code",
-          "message",
-          "path",
-          "method",
-          "timestamp"
         ]
       },
       "CreateWarehouseInputDto": {
@@ -5514,7 +6496,6 @@
           "roleCode": {
             "type": "string",
             "enum": [
-              "OWNER",
               "BRANCH_MANAGER",
               "STAFF"
             ],
@@ -5523,7 +6504,6 @@
           "scopeType": {
             "type": "string",
             "enum": [
-              "GLOBAL",
               "BRANCH"
             ]
           },
@@ -5534,7 +6514,8 @@
         },
         "required": [
           "roleCode",
-          "scopeType"
+          "scopeType",
+          "branchId"
         ]
       },
       "RevokeRoleAssignmentDto": {
@@ -5564,7 +6545,8 @@
             "type": "string",
             "format": "password",
             "minLength": 8,
-            "maxLength": 128
+            "maxLength": 128,
+            "description": "Leading and trailing whitespace is ignored"
           }
         },
         "required": [
@@ -5618,13 +6600,15 @@
             "type": "string",
             "format": "password",
             "minLength": 8,
-            "maxLength": 128
+            "maxLength": 128,
+            "description": "Leading and trailing whitespace is ignored"
           },
           "newPassword": {
             "type": "string",
             "format": "password",
             "minLength": 8,
-            "maxLength": 128
+            "maxLength": 128,
+            "description": "Leading and trailing whitespace is ignored"
           }
         },
         "required": [
@@ -5709,7 +6693,8 @@
             "type": "string",
             "format": "password",
             "minLength": 8,
-            "maxLength": 128
+            "maxLength": 128,
+            "description": "Leading and trailing whitespace is ignored"
           }
         },
         "required": [
