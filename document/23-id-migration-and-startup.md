@@ -1,10 +1,10 @@
 # D43 — Migration UUID sang BIGINT IDENTITY và migrate-at-start
 
-> **Document version:** 1.1.1
+> **Document version:** 1.2.0
 >
-> **Last updated:** 2026-09-05
+> **Last updated:** 2026-09-06
 >
-> **Change summary:** Bổ sung forward-fix cho cột actor UUID không có FK vật lý bị D43 generic discovery bỏ sót.
+> **Change summary:** Tách demo seed khỏi startup/deploy và bắt buộc xác nhận thủ công khi chạy.
 
 ## Kết quả thiết kế
 
@@ -59,7 +59,7 @@ Không có runtime DDL trong controller/service/repository. `prisma` nằm trong
 - [ ] Vercel Production có `DATABASE_ENABLED=true` và `DB_MIGRATE_ON_DEPLOY=true`.
 - [ ] Chạy `yarn db:status`, sau đó `yarn db:migrate:only` hoặc start release job.
 - [ ] Kiểm tra số dòng, orphan FK, constraint/index và `legacy_id` của dữ liệu cũ.
-- [ ] Chạy `yarn db:seed` và `yarn db:seed:demo`; seed phải upsert bằng business key, không thay credential đã đổi.
+- [ ] Chạy foundation seed bằng `yarn db:seed`; demo seed không thuộc deploy/startup và chỉ chạy thủ công bằng `yarn db:seed:demo --confirm-manual-seed` khi có yêu cầu riêng.
 - [ ] Smoke login, catalog, inventory adjustment và audit query.
 - [ ] Scale application sau khi migration và smoke test đạt.
 
@@ -71,6 +71,7 @@ Không có runtime DDL trong controller/service/repository. `prisma` nằm trong
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.2.0 | 2026-09-06 | Demo seed không thuộc deploy/startup và bắt buộc cờ xác nhận thủ công. | Demo seed safety hardening |
 | 1.1.1 | 2026-09-05 | Ghi forward migration sáu actor column không có FK vật lý sang BIGINT và evidence Supabase. | DB-20260905-ACTOR-BIGINT-FORWARD-FIX |
 | 1.1.0 | 2026-09-05 | Tự động migrate khi Vercel Production build; skip preview/local và bổ sung kill switch. | DBOPS-20260905-VERCEL-AUTO-MIGRATE |
 | 1.0.1 | 2026-09-05 | Bảo đảm migrate-only không bị cờ startup vô hiệu hóa; `legacy_id` của bản ghi mới mặc định NULL. | D43 hardening |

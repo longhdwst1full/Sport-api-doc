@@ -1,10 +1,10 @@
 # Admin CRUD coverage V1
 
-> **Document version:** 1.9.0
+> **Document version:** 1.10.0
 >
-> **Last updated:** 2026-09-05
+> **Last updated:** 2026-09-06
 >
-> **Change summary:** Bổ sung DELETE logic và Admin action cho bài viết, đánh giá và tài khoản nhân viên; không hard-delete dữ liệu lịch sử.
+> **Change summary:** Cập nhật demo seed manual-only, create-only mặc định và số lượng catalog demo hiện tại.
 
 ## Đã có API thật và màn quản lý
 
@@ -64,17 +64,18 @@
 Chạy:
 
 ```bash
-yarn db:seed:demo
+yarn db:seed:demo --confirm-manual-seed
 ```
 
-Lệnh chạy foundation seed trước rồi upsert 3 chi nhánh/kho, 3 thương hiệu, 3 danh mục
-và 3 sản phẩm/SKU/giá. Script không chứa credential thật, không xóa dữ liệu khác và đã
-được kiểm tra chạy lặp hai lần mà không phát sinh bản ghi trùng.
+Đây là lệnh manual-only, chỉ chạy khi có yêu cầu xác nhận. Lệnh chạy foundation seed trước,
+sau đó chỉ tạo dữ liệu demo còn thiếu và tái sử dụng media hiện có; không ghi đè dữ liệu
+Admin đã chỉnh. Dữ liệu hiện tại gồm 3 chi nhánh/kho, 9 thương hiệu, 7 danh mục và 20 sản phẩm.
 
 ## Revision history
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.10.0 | 2026-09-06 | Khóa demo seed manual-only; mặc định giữ dữ liệu Admin và tái sử dụng media. | Demo seed safety hardening |
 | 1.0.0 | 2026-09-04 | Cập nhật coverage CRUD, bootstrap Admin, inventory và rich-text editor. | Current worktree Admin review |
 | 1.1.0 | 2026-09-04 | Bỏ custom Cloudinary uploader khỏi CKEditor 4 trong Product/CMS form. | User decision 2026-09-04 |
 | 1.2.0 | 2026-09-04 | Đồng bộ coverage hiện tại và ghi nhận bản ổn định login, CKEditor, required marker, menu Admin. | Admin stabilization review 2026-09-04 |

@@ -1,10 +1,10 @@
 # Bảo An Sport demo seed
 
-> **Document version:** 1.0.0
+> **Document version:** 1.1.0
 >
 > **Last updated:** 2026-09-06
 >
-> **Change summary:** Bổ sung 16 sản phẩm tham khảo từ Bảo An Sport vào demo seed, nâng catalog demo lên 20 sản phẩm.
+> **Change summary:** Khóa seed ở chế độ manual-only; mặc định create-only và tái sử dụng ảnh Cloudinary.
 
 ## Phạm vi
 
@@ -29,15 +29,31 @@
 ## Quy tắc idempotency
 
 - Product upsert theo `product_no`; variant theo `sku`; brand/category theo `code`.
-- Giá hiện tại được update thay vì tạo thêm price window trùng.
+- Bản ghi đã tồn tại được giữ nguyên theo mặc định, bao gồm dữ liệu Admin đã chỉnh sửa.
+- Giá chỉ xét đúng scope `REGULAR + ONLINE + VND + ACTIVE`; không ghi đè nếu đã tồn tại.
 - Balance và opening movement chỉ được tạo ở lần đầu; chạy lại không cộng thêm tồn.
-- Cloudinary dùng public ID cố định theo slug; `media_assets` được tìm theo provider + public ID và product media được tái sử dụng.
+- Cloudinary dùng public ID cố định theo slug; asset đã tồn tại được tái sử dụng, không upload lại.
+- Manifest fail-fast nếu trùng brand/category code, slug, product number hoặc SKU.
+
+## Chính sách thực thi
+
+- Demo seed không được gọi bởi `start`, `build`, migration runner hoặc deployment.
+- Chỉ chạy thủ công sau khi người phụ trách yêu cầu và xác nhận rõ phạm vi.
+- `--refresh-data` cho phép ghi đè dữ liệu demo đã tồn tại.
+- `--refresh-media` cho phép tải và upload đè ảnh nguồn.
+- Hai cờ refresh không được sử dụng ngầm trong CI/CD hoặc startup.
 
 ## Lệnh chạy và kiểm tra
 
 ```bash
-yarn db:seed:demo
+yarn db:seed:demo --confirm-manual-seed
 ```
+
+Không có `--confirm-manual-seed`, script dừng trước khi kết nối Cloudinary hoặc ghi database.
+Lệnh không tự chạy foundation seed; nếu thiếu bootstrap OWNER, cần chạy `yarn db:seed` riêng
+sau khi được xác nhận.
+Lần seed dữ liệu Bảo An ban đầu đã hoàn tất ngày 2026-09-06; không chạy lại nếu không có
+yêu cầu mới của người phụ trách.
 
 Sau khi chạy cần kiểm tra tổng 20 product demo, 16 media Cloudinary nguồn Bảo An và reconciliation `on_hand = SUM(quantity_delta)`.
 
@@ -45,4 +61,5 @@ Sau khi chạy cần kiểm tra tổng 20 product demo, 16 media Cloudinary ngu�
 
 | Version | Date | Change summary |
 | --- | --- | --- |
+| 1.1.0 | 2026-09-06 | Manual-only guard, create-only mặc định, scoped price và Cloudinary reuse. |
 | 1.0.0 | 2026-09-06 | Tạo manifest và quy tắc import 16 sản phẩm Bảo An Sport. |

@@ -1,10 +1,16 @@
 import { Prisma, PrismaClient } from '@prisma/client';
-import { v2 as cloudinary, type UploadApiResponse } from 'cloudinary';
+import { v2 as cloudinary } from 'cloudinary';
 import {
   BAO_AN_BRANDS,
   BAO_AN_CATEGORIES,
   BAO_AN_PRODUCTS,
 } from './demo-data/bao-an-sport';
+import {
+  assertUniqueValues,
+  existingRecordUpdate,
+  parseDemoSeedOptions,
+  type DemoSeedOptions,
+} from './demo-data/seed-policy';
 
 const prisma = new PrismaClient();
 
@@ -135,7 +141,57 @@ interface PreparedMedia {
   sizeBytes: bigint;
 }
 
-async function prepareBaoAnMedia(): Promise<Map<string, PreparedMedia>> {
+interface CloudinaryImageResource {
+  asset_id?: string;
+  public_id: string;
+  secure_url: string;
+  format: string;
+  width: number;
+  height: number;
+  bytes: number;
+}
+
+function isCloudinaryNotFound(error: unknown): boolean {
+  return typeof error === 'object'
+    && error !== null
+    && 'http_code' in error
+    && error.http_code === 404;
+}
+
+async function getOrUploadBaoAnImage(
+  publicId: string,
+  imageUrl: string,
+  sourceUrl: string,
+  refreshMedia: boolean,
+): Promise<CloudinaryImageResource> {
+  if (!refreshMedia) {
+    try {
+      return await cloudinary.api.resource(publicId, { resource_type: 'image', type: 'upload' }) as CloudinaryImageResource;
+    } catch (error) {
+      if (!isCloudinaryNotFound(error)) throw error;
+    }
+  }
+  return await cloudinary.uploader.upload(imageUrl, {
+    public_id: publicId,
+    overwrite: refreshMedia,
+    unique_filename: false,
+    resource_type: 'image',
+    tags: ['dctd-demo', 'bao-an-sport'],
+    context: `source=${encodeURIComponent(sourceUrl)}`,
+  });
+}
+
+function validateDemoManifest(): void {
+  assertUniqueValues(brands.map(({ code }) => code), 'brand code');
+  assertUniqueValues(brands.map(({ slug }) => slug), 'brand slug');
+  assertUniqueValues(categories.map(({ code }) => code), 'category code');
+  assertUniqueValues(categories.map(({ slug }) => slug), 'category slug');
+  assertUniqueValues(products.map(({ productNo }) => productNo), 'product number');
+  assertUniqueValues(products.map(({ slug }) => slug), 'product slug');
+  assertUniqueValues(products.map(({ sku }) => sku), 'SKU');
+}
+
+async function prepareBaoAnMedia(options: DemoSeedOptions): Promise<Map<string, PreparedMedia>> {
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
   const apiKey = process.env.CLOUDINARY_API_KEY;
   const apiSecret = process.env.CLOUDINARY_API_SECRET;
@@ -150,17 +206,18 @@ async function prepareBaoAnMedia(): Promise<Map<string, PreparedMedia>> {
     const batch = BAO_AN_PRODUCTS.slice(offset, offset + 4);
     const uploads = await Promise.all(batch.map(async (item) => {
       const publicId = `${folder}/demo/bao-an-sport/${item.slug}`;
-      const result = await cloudinary.uploader.upload(item.imageUrl, {
-        public_id: publicId,
-        overwrite: true,
-        unique_filename: false,
-        resource_type: 'image',
-        tags: ['dctd-demo', 'bao-an-sport'],
-        context: `source=${encodeURIComponent(item.sourceUrl)}`,
-      }) as UploadApiResponse;
+      const result = await getOrUploadBaoAnImage(
+        publicId,
+        item.imageUrl,
+        item.sourceUrl,
+        options.refreshMedia,
+      );
       return { item, publicId, result };
     }));
     for (const { item, publicId, result } of uploads) {
+      if (!result.asset_id) {
+        throw new Error(`Cloudinary did not return an asset ID for ${item.productNo}.`);
+      }
       const mimeFormat = result.format === 'jpg' ? 'jpeg' : result.format;
       prepared.set(item.productNo, {
         providerAssetId: result.asset_id,
@@ -183,6 +240,7 @@ async function prepareBaoAnMedia(): Promise<Map<string, PreparedMedia>> {
 async function importDemoData(
   transaction: Prisma.TransactionClient,
   preparedMedia: ReadonlyMap<string, PreparedMedia>,
+  options: DemoSeedOptions,
 ): Promise<void> {
   const bootstrapUser = await transaction.user.findFirst({
     where: { normalizedEmail: bootstrapAdminEmail },
@@ -195,7 +253,12 @@ async function importDemoData(
   for (const item of branches) {
     const branch = await transaction.branch.upsert({
       where: { code: item.code },
-      update: { name: item.name, addressJson: item.address, status: 'ACTIVE' },
+      update: existingRecordUpdate(options.refreshData, {
+        name: item.name,
+        addressJson: item.address,
+        status: 'ACTIVE',
+        updatedBy: bootstrapUser.id,
+      }),
       create: {
         code: item.code,
         name: item.name,
@@ -207,7 +270,13 @@ async function importDemoData(
     });
     const warehouse = await transaction.warehouse.upsert({
       where: { code: item.warehouseCode },
-      update: { branchId: branch.id, name: item.warehouseName, status: 'ACTIVE', isPrimary: true },
+      update: existingRecordUpdate(options.refreshData, {
+        branchId: branch.id,
+        name: item.warehouseName,
+        status: 'ACTIVE',
+        isPrimary: true,
+        updatedBy: bootstrapUser.id,
+      }),
       create: {
         branchId: branch.id,
         code: item.warehouseCode,
@@ -224,7 +293,11 @@ async function importDemoData(
   for (const item of brands) {
     await transaction.brand.upsert({
       where: { code: item.code },
-      update: { name: item.name, slug: item.slug, status: 'ACTIVE' },
+      update: existingRecordUpdate(options.refreshData, {
+        name: item.name,
+        slug: item.slug,
+        status: 'ACTIVE',
+      }),
       create: {
         code: item.code,
         name: item.name,
@@ -238,7 +311,12 @@ async function importDemoData(
   for (const item of categories) {
     const category = await transaction.category.upsert({
       where: { code: item.code },
-      update: { name: item.name, slug: item.slug, sortOrder: item.sortOrder, status: 'ACTIVE' },
+      update: existingRecordUpdate(options.refreshData, {
+        name: item.name,
+        slug: item.slug,
+        sortOrder: item.sortOrder,
+        status: 'ACTIVE',
+      }),
       create: {
         code: item.code,
         name: item.name,
@@ -250,7 +328,7 @@ async function importDemoData(
         description: `Danh mục demo ${item.name}`,
       },
     });
-    if (category.path !== category.id.toString()) {
+    if ((category.path === 'PENDING' || options.refreshData) && category.path !== category.id.toString()) {
       await transaction.category.update({
         where: { id: category.id },
         data: { path: category.id.toString() },
@@ -266,7 +344,7 @@ async function importDemoData(
     ]);
     const product = await transaction.product.upsert({
       where: { productNo: item.productNo },
-      update: {
+      update: existingRecordUpdate(options.refreshData, {
         brandId: brand.id,
         productType: item.productType,
         name: item.name,
@@ -276,7 +354,7 @@ async function importDemoData(
         status: 'PUBLISHED',
         publishedAt,
         updatedBy: bootstrapUser.id,
-      },
+      }),
       create: {
         brandId: brand.id,
         productType: item.productType,
@@ -293,12 +371,16 @@ async function importDemoData(
     });
     await transaction.productCategory.upsert({
       where: { productId_categoryId: { productId: product.id, categoryId: category.id } },
-      update: { isPrimary: true, sortOrder: 0 },
+      update: existingRecordUpdate(options.refreshData, { isPrimary: true, sortOrder: 0 }),
       create: { productId: product.id, categoryId: category.id, isPrimary: true, sortOrder: 0 },
     });
     const variant = await transaction.productVariant.upsert({
       where: { sku: item.sku },
-      update: { productId: product.id, name: item.name, status: 'ACTIVE' },
+      update: existingRecordUpdate(options.refreshData, {
+        productId: product.id,
+        name: item.name,
+        status: 'ACTIVE',
+      }),
       create: {
         productId: product.id,
         sku: item.sku,
@@ -311,7 +393,7 @@ async function importDemoData(
       const existingBalance = await transaction.inventoryBalance.findUnique({
         where: { warehouseId_productVariantId: { warehouseId, productVariantId: variant.id } },
       });
-      if (existingBalance) {
+      if (existingBalance && options.refreshData) {
         await transaction.inventoryBalance.update({
           where: { id: existingBalance.id },
           data: { reorderPoint: item.reorderPoint },
@@ -345,10 +427,17 @@ async function importDemoData(
       }
     }
     const currentPrice = await transaction.productPrice.findFirst({
-      where: { productVariantId: variant.id, endsAt: null },
+      where: {
+        productVariantId: variant.id,
+        priceType: 'REGULAR',
+        channel: 'ONLINE',
+        currencyCode: 'VND',
+        status: 'ACTIVE',
+        endsAt: null,
+      },
       orderBy: { startsAt: 'desc' },
     });
-    if (currentPrice) {
+    if (currentPrice && options.refreshData) {
       await transaction.productPrice.update({
         where: { id: currentPrice.id },
         data: {
@@ -359,7 +448,7 @@ async function importDemoData(
         updatedBy: bootstrapUser.id,
         },
       });
-    } else {
+    } else if (!currentPrice) {
       await transaction.productPrice.create({
         data: {
           productVariantId: variant.id,
@@ -379,25 +468,35 @@ async function importDemoData(
       if (componentVariants.length !== item.components.length) {
         throw new Error(`Missing demo component for ${item.sku}`);
       }
-      const bundle = await transaction.productBundle.upsert({
+      const existingBundle = await transaction.productBundle.findUnique({
         where: { bundleVariantId: variant.id },
-        update: { status: 'ACTIVE', updatedBy: bootstrapUser.id },
-        create: {
+      });
+      const bundle = existingBundle
+        ? options.refreshData
+          ? await transaction.productBundle.update({
+              where: { id: existingBundle.id },
+              data: { status: 'ACTIVE', updatedBy: bootstrapUser.id },
+            })
+          : existingBundle
+        : await transaction.productBundle.create({
+          data: {
           bundleVariantId: variant.id,
           status: 'ACTIVE',
           createdBy: bootstrapUser.id,
           updatedBy: bootstrapUser.id,
-        },
-      });
-      await transaction.bundleItem.deleteMany({ where: { productBundleId: bundle.id } });
-      await transaction.bundleItem.createMany({
-        data: item.components.map((component, sortOrder) => ({
-          productBundleId: bundle.id,
-          componentVariantId: componentVariants.find(({ sku }) => sku === component.sku)!.id,
-          quantity: component.quantity,
-          sortOrder,
-        })),
-      });
+          },
+        });
+      if (!existingBundle || options.refreshData) {
+        await transaction.bundleItem.deleteMany({ where: { productBundleId: bundle.id } });
+        await transaction.bundleItem.createMany({
+          data: item.components.map((component, sortOrder) => ({
+            productBundleId: bundle.id,
+            componentVariantId: componentVariants.find(({ sku }) => sku === component.sku)!.id,
+            quantity: component.quantity,
+            sortOrder,
+          })),
+        });
+      }
     }
     const media = preparedMedia.get(item.productNo);
     if (media && item.sourceUrl) {
@@ -421,23 +520,29 @@ async function importDemoData(
         uploadedBy: bootstrapUser.id,
       };
       const asset = currentAsset
-        ? await transaction.mediaAsset.update({ where: { id: currentAsset.id }, data: assetData })
+        ? options.refreshData || options.refreshMedia
+          ? await transaction.mediaAsset.update({ where: { id: currentAsset.id }, data: assetData })
+          : currentAsset
         : await transaction.mediaAsset.create({
             data: { provider: 'CLOUDINARY', resourceType: 'IMAGE', ...assetData },
           });
-      await transaction.productMedia.updateMany({
-        where: { productId: product.id, isPrimary: true, mediaAssetId: { not: asset.id } },
-        data: { isPrimary: false },
-      });
       const currentMedia = await transaction.productMedia.findFirst({
         where: { productId: product.id, mediaAssetId: asset.id },
       });
-      if (currentMedia) {
+      if (currentMedia && (options.refreshData || options.refreshMedia)) {
+        await transaction.productMedia.updateMany({
+          where: { productId: product.id, isPrimary: true, mediaAssetId: { not: asset.id } },
+          data: { isPrimary: false },
+        });
         await transaction.productMedia.update({
           where: { id: currentMedia.id },
           data: { variantId: variant.id, altText: item.name, sortOrder: 0, isPrimary: true, status: 'ACTIVE' },
         });
-      } else {
+      } else if (!currentMedia) {
+        await transaction.productMedia.updateMany({
+          where: { productId: product.id, isPrimary: true },
+          data: { isPrimary: false },
+        });
         await transaction.productMedia.create({
           data: {
             productId: product.id,
@@ -455,12 +560,28 @@ async function importDemoData(
 }
 
 async function main(): Promise<void> {
-  const preparedMedia = await prepareBaoAnMedia();
+  const options = parseDemoSeedOptions(process.argv.slice(2));
+  validateDemoManifest();
+  const preparedMedia = await prepareBaoAnMedia(options);
   await prisma.$transaction(
-    (transaction) => importDemoData(transaction, preparedMedia),
+    (transaction) => importDemoData(transaction, preparedMedia, options),
     { maxWait: 10_000, timeout: 180_000 },
   );
-  console.log('Demo data imported: 3 branches/warehouses, 9 brands, 7 categories, 20 products (16 sourced from Bảo An Sport, 1 combo).');
+  console.log(
+    `Demo data checked/imported in ${options.refreshData ? 'refresh-data' : 'create-only'} mode; `
+    + `media mode: ${options.refreshMedia ? 'refresh' : 'reuse'}.`,
+  );
 }
 
-void main().finally(async () => prisma.$disconnect());
+async function run(): Promise<void> {
+  try {
+    await main();
+  } catch (error: unknown) {
+    console.error(error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+void run();

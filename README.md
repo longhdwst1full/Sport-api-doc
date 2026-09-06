@@ -1,10 +1,10 @@
 # Sport API and system documents
 
-> **Document version:** 3.0.0
+> **Document version:** 3.1.0
 >
-> **Last updated:** 2026-09-05
+> **Last updated:** 2026-09-06
 >
-> **Change summary:** Chuyển Git/dependency root vào API và cập nhật toàn bộ lệnh/path chạy độc lập.
+> **Change summary:** Khóa demo seed ở chế độ manual-only; mặc định không ghi đè dữ liệu quản trị hoặc upload lại media.
 
 NestJS API, Prisma/PostgreSQL migrations, generated OpenAPI contracts and system design
 documents for the sports-commerce platform.
@@ -29,9 +29,19 @@ cp .env.local.example .env.local
 yarn db:status
 yarn db:migrate
 yarn db:seed
-yarn db:seed:demo
 yarn dev
 ```
+
+Demo seed không thuộc startup/deploy và không chạy trong setup mặc định. Chỉ chạy khi có
+yêu cầu xác nhận rõ ràng, sau khi foundation seed đã tồn tại:
+
+```bash
+yarn db:seed:demo --confirm-manual-seed
+```
+
+Mặc định lệnh chỉ tạo dữ liệu còn thiếu và tái sử dụng Cloudinary asset. Hai cờ
+`--refresh-data` và `--refresh-media` có thể ghi đè dữ liệu tương ứng, vì vậy chỉ dùng
+khi yêu cầu nêu đích danh.
 
 Development uses the configured Supabase PostgreSQL database. Do not start a local database
 Docker stack. `DATABASE_URL` is for runtime pooling and `DIRECT_URL` is for migrations.
@@ -74,6 +84,7 @@ document/     Model, RBAC, sprint evidence, generated YAML slices and review wor
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 3.1.0 | 2026-09-06 | Demo seed manual-only, create-only mặc định và Cloudinary reuse. | Demo seed safety hardening |
 | 3.0.0 | 2026-09-05 | Chuyển Git và dependency root vào `api/`; cập nhật lệnh/path standalone. | API Git-root migration |
 | 1.0.0–1.5.0 | 2026-09-04–2026-09-05 | Monorepo foundation through Sprint 1 Storybook and UI stabilization. | Existing repository history |
 | 2.0.0 | 2026-09-05 | Split Admin/Storefront into independent repositories and retain API/document ownership here. | Repository split 2026-09-05 |
