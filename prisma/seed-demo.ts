@@ -206,13 +206,19 @@ async function prepareBaoAnMedia(options: DemoSeedOptions): Promise<Map<string, 
     const batch = BAO_AN_PRODUCTS.slice(offset, offset + 4);
     const uploads = await Promise.all(batch.map(async (item) => {
       const publicId = `${folder}/demo/bao-an-sport/${item.slug}`;
-      const result = await getOrUploadBaoAnImage(
-        publicId,
-        item.imageUrl,
-        item.sourceUrl,
-        options.refreshMedia,
-      );
-      return { item, publicId, result };
+      try {
+        const result = await getOrUploadBaoAnImage(
+          publicId,
+          item.imageUrl,
+          item.sourceUrl,
+          options.refreshMedia,
+        );
+        return { item, publicId, result };
+      } catch (error) {
+        throw new Error(`Cannot prepare Cloudinary image for ${item.productNo} (${item.sourceUrl}).`, {
+          cause: error,
+        });
+      }
     }));
     for (const { item, publicId, result } of uploads) {
       if (!result.asset_id) {
