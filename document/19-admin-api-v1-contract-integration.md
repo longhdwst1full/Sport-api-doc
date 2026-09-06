@@ -1,10 +1,10 @@
 # Admin và Storefront API v1 contract integration
 
-> **Document version:** 1.2.1
+> **Document version:** 1.2.2
 >
-> **Last updated:** 2026-09-05
+> **Last updated:** 2026-09-06
 >
-> **Change summary:** Sửa development bypass để `/admin/auth/me` trả đầy đủ permission OWNER cho Admin FE.
+> **Change summary:** Sửa production guard cho endpoint chỉ yêu cầu xác thực; `/admin/auth/me` không còn lỗi 500 khi không khai báo permission cụ thể.
 
 ## Nguyên tắc đã áp dụng
 
@@ -121,6 +121,7 @@ Admin dùng `getApiErrorMessage` cho lỗi form/query và `getApiFieldErrors` đ
 - [x] Contract writer unit test xác nhận operation `Storefront Auth` chỉ nằm trong `document/api/storefront/auth.yaml`; API hiện có 17 suites/61 unit tests pass.
 - [x] BODY transport ở development giữ sessionStorage; COOKIE transport production giữ refresh token HttpOnly, access token memory; shared fetcher auto attach/rotate và giữ BODY compatibility.
 - [x] Development principal của `/admin/auth/me` trả toàn bộ permission OWNER, kể cả route chỉ yêu cầu authentication; Admin FE không còn nhận mảng permission rỗng khi `AUTH_BYPASS=true`.
+- [x] Production guard trả qua sau khi xác minh token đối với endpoint authentication-only; không gọi `.every()` trên permission metadata `undefined`. Regression test cover `/admin/auth/me` với `mustChangePassword=true`.
 - [x] Sai password lần 5 auto-lock atomic, revoke session và audit; staff mới/unlock phải đổi mật khẩu mặc định.
 - [x] Audit Admin dùng cursor pagination, GLOBAL owner scope và recursive redaction; không expose IP/user-agent hash.
 - [x] Price Admin quản lý current/upcoming/history, future schedule, no-retroactive và >20% reason/confirm.
@@ -139,3 +140,4 @@ Admin dùng `getApiErrorMessage` cho lỗi form/query và `getApiFieldErrors` đ
 | 1.1.0 | 2026-09-05 | Bổ sung sáu HTTP DELETE logic, giữ route lifecycle cũ và regenerate OpenAPI/Admin SDK. | API-20260905-LOGICAL-DELETE-V1 |
 | 1.2.0 | 2026-09-05 | Mở rộng DELETE logic cho content post, review và staff; generated SDK được ghép vào ba màn Admin. | API-20260905-ADMIN-DELETE-EXTENSION |
 | 1.2.1 | 2026-09-05 | Đồng bộ development OWNER permissions qua `/admin/auth/me`; production guard không thay đổi. | API-20260905-DEV-OWNER-PERMISSIONS |
+| 1.2.2 | 2026-09-06 | Sửa production authentication-only guard gây `/admin/auth/me` 500 sau khi login thành công. | API-20260906-AUTH-ME-GUARD-FIX |

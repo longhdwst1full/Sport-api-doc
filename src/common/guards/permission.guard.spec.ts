@@ -17,7 +17,7 @@ function createGuard(
   environment: string,
   authBypass: boolean,
   request: TestRequest,
-  required = ['catalog.product.manage'],
+  required: string[] | undefined,
   authenticationRequired = false,
 ) {
   const reflector = {
@@ -47,7 +47,9 @@ function createGuard(
 describe('PermissionGuard development bypass', () => {
   it('attaches a global development principal and skips permission checks in development', async () => {
     const request: TestRequest = { header: jest.fn<string | undefined, [string]>() };
-    const { guard, context } = createGuard('development', true, request);
+    const { guard, context } = createGuard('development', true, request, [
+      'catalog.product.manage',
+    ]);
 
     await expect(guard.canActivate(context)).resolves.toBe(true);
     expect(request.auth).toMatchObject({
@@ -67,7 +69,7 @@ describe('PermissionGuard development bypass', () => {
 
   it('returns the complete OWNER permission set for authentication-only endpoints such as me', async () => {
     const request: TestRequest = { header: jest.fn<string | undefined, [string]>() };
-    const { guard, context } = createGuard('development', true, request, [], true);
+    const { guard, context } = createGuard('development', true, request, undefined, true);
 
     await expect(guard.canActivate(context)).resolves.toBe(true);
     expect(request.auth?.permissions).toContain('iam.user.view');
@@ -79,7 +81,9 @@ describe('PermissionGuard development bypass', () => {
     const request: TestRequest = {
       header: jest.fn<string | undefined, [string]>().mockReturnValue(undefined),
     };
-    const { guard, context } = createGuard('production', true, request);
+    const { guard, context } = createGuard('production', true, request, [
+      'catalog.product.manage',
+    ]);
 
     await expect(guard.canActivate(context)).rejects.toBeInstanceOf(UnauthorizedException);
     expect(request.auth).toBeUndefined();
@@ -89,7 +93,9 @@ describe('PermissionGuard development bypass', () => {
     const request: TestRequest = {
       header: jest.fn<string | undefined, [string]>().mockReturnValue('Bearer access'),
     };
-    const { guard, context, auth } = createGuard('production', false, request);
+    const { guard, context, auth } = createGuard('production', false, request, [
+      'catalog.product.manage',
+    ]);
     jest.spyOn(auth, 'authorizeAccessToken').mockResolvedValue({
       userId: 'user',
       sessionId: 'session',
@@ -101,5 +107,24 @@ describe('PermissionGuard development bypass', () => {
     });
 
     await expect(guard.canActivate(context)).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('allows a verified production request when the endpoint only requires authentication', async () => {
+    const request: TestRequest = {
+      header: jest.fn<string | undefined, [string]>().mockReturnValue('Bearer access'),
+    };
+    const { guard, context, auth } = createGuard('production', false, request, undefined, true);
+    jest.spyOn(auth, 'authorizeAccessToken').mockResolvedValue({
+      userId: '2',
+      sessionId: '76',
+      displayName: 'Owner',
+      permissionVersion: '3',
+      permissions: [],
+      scopes: [{ type: ScopeType.GLOBAL }],
+      mustChangePassword: true,
+    });
+
+    await expect(guard.canActivate(context)).resolves.toBe(true);
+    expect(request.auth?.userId).toBe('2');
   });
 });

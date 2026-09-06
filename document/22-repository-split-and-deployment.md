@@ -1,8 +1,8 @@
 # Tách repository và quy trình triển khai
 
-Version: 1.4.1
+Version: 1.4.2
 
-Change summary: Chuyển `AUTH_BYPASS` sang deny-by-default để production không crash khi Vercel thiếu biến tùy chọn này.
+Change summary: Bổ sung log exception nội bộ có request ID và redact header xác thực riêng của Vercel để chẩn đoán lỗi serverless an toàn.
 
 Ngày cập nhật: 2026-09-06
 
@@ -104,6 +104,7 @@ trong FE là bằng chứng để xác định phiên bản API mà bản build 
 
 | Version | Ngày | Thay đổi |
 | --- | --- | --- |
+| 1.4.2 | 2026-09-06 | Log exception 5xx theo request ID; redact Vercel OIDC token và proxy signature khỏi request log. |
 | 1.4.1 | 2026-09-06 | Chuyển `AUTH_BYPASS` sang deny-by-default; local muốn bypass phải opt-in tường minh. |
 | 1.4.0 | 2026-09-05 | Thêm production deployment migration gate cho Vercel; preview/local build không mutate database. |
 | 1.3.0 | 2026-09-05 | Chuẩn hóa `src/main.ts` cho Vercel NestJS zero-config và ghi rõ Root Directory/build/migration deployment. |

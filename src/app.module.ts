@@ -64,6 +64,8 @@ import { SystemModule } from './modules/system/system.module';
               'req.headers.authorization',
               'req.headers.cookie',
               'req.headers["x-telegram-bot-api-secret-token"]',
+              'req.headers["x-vercel-oidc-token"]',
+              'req.headers["x-vercel-proxy-signature"]',
               'res.headers.set-cookie',
               'req.body.password',
               'req.body.refreshToken',

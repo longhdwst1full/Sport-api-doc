@@ -1111,6 +1111,22 @@
         "evidence:Vercel FUNCTION_INVOCATION_FAILED 2026-09-06T09:29:57Z"
       ],
       "targets": []
+    },
+    {
+      "id": "API-20260906-AUTH-ME-GUARD-FIX",
+      "date": "2026-09-06",
+      "scope": "API+SECURITY+DEPLOYMENT+TEST",
+      "summary": "Sửa PermissionGuard production gọi every trên permission metadata undefined tại endpoint authentication-only, khiến /admin/auth/me trả 500 sau login; thêm regression test, internal 5xx logging theo request ID và redact Vercel authentication headers.",
+      "sources": [
+        "source:src/common/guards/permission.guard.ts",
+        "source:src/common/filters/http-exception.filter.ts",
+        "source:src/app.module.ts",
+        "test:src/common/guards/permission.guard.spec.ts",
+        "document:19-admin-api-v1-contract-integration.md@1.2.2",
+        "document:22-repository-split-and-deployment.md@1.4.2",
+        "evidence:local login 200 then auth/me 200 against shared Supabase"
+      ],
+      "targets": []
     }
   ]
 }

@@ -66,7 +66,8 @@ export class PermissionGuard implements CanActivate {
     }
     const principal = await this.auth.authorizeAccessToken(authorization.slice(7).trim());
     request.auth = principal;
-    if (required?.length && principal.mustChangePassword) {
+    if (!required?.length) return true;
+    if (principal.mustChangePassword) {
       throw new ForbiddenException({
         code: 'PASSWORD_CHANGE_REQUIRED',
         message: 'Password must be changed before using this function',

@@ -1,4 +1,11 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  ArgumentsHost,
+  Catch,
+  ExceptionFilter,
+  HttpException,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
 import type { Request, Response } from 'express';
 
 interface ErrorDetail {
@@ -26,6 +33,8 @@ const ERROR_CODES: Readonly<Record<number, string>> = {
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger(HttpExceptionFilter.name);
+
   catch(exception: unknown, host: ArgumentsHost): void {
     const context = host.switchToHttp();
     const response = context.getResponse<Response>();
@@ -41,6 +50,22 @@ export class HttpExceptionFilter implements ExceptionFilter {
         : (ERROR_CODES[status] ?? `HTTP_${status}`);
     const message = this.extractMessage(raw, status, details);
     const responseRequestId = response.getHeader('x-request-id');
+    const requestId =
+      request.header('x-request-id') ??
+      (typeof responseRequestId === 'string' ? responseRequestId : undefined);
+
+    if (!(exception instanceof HttpException) || status >= 500) {
+      const error = exception instanceof Error ? exception : undefined;
+      this.logger.error({
+        message: 'Unhandled request exception',
+        requestId,
+        method: request.method,
+        path: request.originalUrl,
+        exceptionName: error?.name ?? 'UnknownException',
+        exceptionMessage: error?.message ?? 'Non-error value thrown',
+        stack: error?.stack,
+      });
+    }
 
     response.status(status).json({
       statusCode: status,
@@ -50,9 +75,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       path: request.originalUrl,
       method: request.method,
       timestamp: new Date().toISOString(),
-      requestId:
-        request.header('x-request-id') ??
-        (typeof responseRequestId === 'string' ? responseRequestId : undefined),
+      requestId,
     });
   }
 
