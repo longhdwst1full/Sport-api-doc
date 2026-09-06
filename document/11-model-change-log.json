@@ -1097,6 +1097,20 @@
           "values": { "Permission code": "inventory.transfer.receive", "Module": "inventory", "Action": "receive transfer", "Allowed scopes": "GLOBAL/destination BRANCH", "Sensitive": "YES", "Default roles": "OWNER, BRANCH_MANAGER", "Ghi chú": "Chỉ received_qty hàng tốt được ghi TRANSFER_IN" }
         }
       ]
+    },
+    {
+      "id": "API-20260906-AUTH-BYPASS-DENY-DEFAULT",
+      "date": "2026-09-06",
+      "scope": "API+SECURITY-CONFIG+DEPLOYMENT",
+      "summary": "AUTH_BYPASS mặc định false trong validation và application config; development phải opt-in tường minh, production không còn crash khi Vercel không khai báo biến tùy chọn này.",
+      "sources": [
+        "source:src/config/env.validation.ts",
+        "source:src/config/app.config.ts",
+        "test:src/config/env.validation.spec.ts",
+        "document:22-repository-split-and-deployment.md@1.4.1",
+        "evidence:Vercel FUNCTION_INVOCATION_FAILED 2026-09-06T09:29:57Z"
+      ],
+      "targets": []
     }
   ]
 }

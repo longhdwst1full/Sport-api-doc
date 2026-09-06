@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { validateEnvironment } from './env.validation';
 
 describe('validateEnvironment', () => {
-  it('applies development defaults with database connectivity disabled', () => {
+  it('applies deny-by-default development defaults with database connectivity disabled', () => {
     const environment = validateEnvironment({});
 
     expect(environment.PORT).toBe(4000);
@@ -11,8 +11,24 @@ describe('validateEnvironment', () => {
     expect(environment.DB_MIGRATE_ON_DEPLOY).toBe(true);
     expect(environment.APP_MODE).toBe('serve');
     expect(environment.CORS_ORIGINS).toBe('*');
-    expect(environment.AUTH_BYPASS).toBe(true);
+    expect(environment.AUTH_BYPASS).toBe(false);
     expect(environment.TELEGRAM_BOT_ENABLED).toBe(false);
+  });
+
+  it('allows development to opt in to permission bypass explicitly', () => {
+    const environment = validateEnvironment({ AUTH_BYPASS: 'true' });
+
+    expect(environment.AUTH_BYPASS).toBe(true);
+  });
+
+  it('keeps production permission checks enabled when AUTH_BYPASS is omitted', () => {
+    const environment = validateEnvironment({
+      NODE_ENV: 'production',
+      CORS_ORIGINS: 'https://admin.example.com',
+      AUTH_TOKEN_TRANSPORT: 'COOKIE',
+    });
+
+    expect(environment.AUTH_BYPASS).toBe(false);
   });
 
   it('parses the deploy migration switch centrally', () => {

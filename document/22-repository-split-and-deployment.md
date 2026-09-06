@@ -1,10 +1,10 @@
 # Tách repository và quy trình triển khai
 
-Version: 1.4.0
+Version: 1.4.1
 
-Change summary: Tự động chạy Prisma migration trong production deployment Vercel, đồng thời cô lập preview/local build.
+Change summary: Chuyển `AUTH_BYPASS` sang deny-by-default để production không crash khi Vercel thiếu biến tùy chọn này.
 
-Ngày cập nhật: 2026-09-05
+Ngày cập nhật: 2026-09-06
 
 ## Phạm vi
 
@@ -75,6 +75,9 @@ Vercel project của API phải trỏ trực tiếp tới repository `longhdwst1
 - Node.js dùng phiên bản tương thích với project và Yarn được nhận diện từ `yarn.lock`;
 - các biến `DATABASE_URL`, `DIRECT_URL` và secret ứng dụng được cấu hình trong Vercel Environment Variables.
 
+`AUTH_BYPASS` mặc định `false` trong source. Local development chỉ mở bypass khi
+khai báo tường minh `AUTH_BYPASS=true`; production luôn từ chối giá trị `true`.
+
 `src/main.ts` phải trực tiếp import `NestFactory` từ `@nestjs/core`, gọi
 `NestFactory.create(AppModule)` và `app.listen(...)`. Đây là entrypoint mà bộ nhận
 diện tĩnh của Vercel sử dụng. Không chuyển lời gọi tạo Nest application hoàn toàn sang
@@ -101,6 +104,7 @@ trong FE là bằng chứng để xác định phiên bản API mà bản build 
 
 | Version | Ngày | Thay đổi |
 | --- | --- | --- |
+| 1.4.1 | 2026-09-06 | Chuyển `AUTH_BYPASS` sang deny-by-default; local muốn bypass phải opt-in tường minh. |
 | 1.4.0 | 2026-09-05 | Thêm production deployment migration gate cho Vercel; preview/local build không mutate database. |
 | 1.3.0 | 2026-09-05 | Chuẩn hóa `src/main.ts` cho Vercel NestJS zero-config và ghi rõ Root Directory/build/migration deployment. |
 | 1.2.0 | 2026-09-05 | Chuyển `.git` vào `api/`, hoàn tất ba repository độc lập. |

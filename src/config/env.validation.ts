@@ -45,7 +45,7 @@ class EnvironmentVariables {
 
   @Transform(toBoolean)
   @IsBoolean()
-  AUTH_BYPASS = true;
+  AUTH_BYPASS = false;
 
   @IsEnum(AUTH_TOKEN_TRANSPORT)
   AUTH_TOKEN_TRANSPORT: AuthTokenTransport = AUTH_TOKEN_TRANSPORT.BODY;

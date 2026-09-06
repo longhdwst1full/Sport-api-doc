@@ -15,7 +15,7 @@ export default registerAs('app', () => ({
   corsOrigins: splitCsv(process.env.CORS_ORIGINS, ['*']),
   authBypass:
     (process.env.NODE_ENV ?? 'development') === 'development' &&
-    (process.env.AUTH_BYPASS ?? 'true') === 'true',
+    (process.env.AUTH_BYPASS ?? 'false') === 'true',
   authTokenTransport:
     process.env.AUTH_TOKEN_TRANSPORT ?? AUTH_TOKEN_TRANSPORT.BODY,
   jwt: {
