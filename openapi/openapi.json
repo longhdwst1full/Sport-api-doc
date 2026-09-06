@@ -5183,7 +5183,48 @@
     "/api/v1/admin/inventory/balances": {
       "get": {
         "operationId": "listInventoryBalances",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "number"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Search SKU or product name",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "warehouseCode",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 32,
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -5191,6 +5232,46 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/InventoryBalanceListDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
@@ -5207,7 +5288,276 @@
         ]
       }
     },
+    "/api/v1/admin/inventory/movements": {
+      "get": {
+        "operationId": "listInventoryMovements",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "number"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned by the previous response",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "warehouseCode",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 32,
+              "type": "string"
+            }
+          },
+          {
+            "name": "sku",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          },
+          {
+            "name": "movementType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ADJUST",
+                "RECEIVE",
+                "TRANSFER_OUT",
+                "TRANSFER_IN"
+              ]
+            }
+          },
+          {
+            "name": "referenceType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          },
+          {
+            "name": "referenceId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryMovementListDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List immutable stock ledger entries",
+        "tags": [
+          "Admin Inventory"
+        ]
+      }
+    },
     "/api/v1/admin/inventory/adjustments": {
+      "get": {
+        "operationId": "listStockAdjustments",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "number"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned by the previous response",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "warehouseCode",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 32,
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockAdjustmentListDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List posted stock adjustment documents",
+        "tags": [
+          "Admin Inventory"
+        ]
+      },
       "post": {
         "operationId": "createStockAdjustment",
         "parameters": [
@@ -5240,6 +5590,56 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -5248,6 +5648,92 @@
           }
         ],
         "summary": "Post a basic stock adjustment",
+        "tags": [
+          "Admin Inventory"
+        ]
+      }
+    },
+    "/api/v1/admin/inventory/adjustments/{id}": {
+      "get": {
+        "operationId": "getStockAdjustment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockAdjustmentDetailDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a posted stock adjustment document",
         "tags": [
           "Admin Inventory"
         ]
@@ -8352,11 +8838,297 @@
           },
           "total": {
             "type": "number"
+          },
+          "page": {
+            "type": "number"
+          },
+          "limit": {
+            "type": "number"
           }
         },
         "required": [
           "items",
-          "total"
+          "total",
+          "page",
+          "limit"
+        ]
+      },
+      "InventoryMovementDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
+          },
+          "warehouseCode": {
+            "type": "string"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "productName": {
+            "type": "string"
+          },
+          "movementType": {
+            "type": "string",
+            "enum": [
+              "ADJUST",
+              "RECEIVE",
+              "TRANSFER_OUT",
+              "TRANSFER_IN"
+            ]
+          },
+          "quantityDelta": {
+            "type": "number"
+          },
+          "balanceAfter": {
+            "type": "number"
+          },
+          "referenceType": {
+            "type": "string"
+          },
+          "referenceId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "createdBy": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
+          },
+          "createdByDisplayName": {
+            "type": "string"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "warehouseCode",
+          "sku",
+          "productName",
+          "movementType",
+          "quantityDelta",
+          "balanceAfter",
+          "referenceType",
+          "referenceId",
+          "reason",
+          "createdBy",
+          "createdByDisplayName",
+          "occurredAt"
+        ]
+      },
+      "InventoryMovementListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InventoryMovementDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "StockAdjustmentSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
+          },
+          "adjustmentNo": {
+            "type": "string"
+          },
+          "warehouseCode": {
+            "type": "string"
+          },
+          "adjustmentType": {
+            "type": "string"
+          },
+          "reasonCode": {
+            "type": "string"
+          },
+          "externalReference": {
+            "type": "string",
+            "nullable": true
+          },
+          "sourceName": {
+            "type": "string",
+            "nullable": true
+          },
+          "reason": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "itemCount": {
+            "type": "number"
+          },
+          "createdBy": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
+          },
+          "createdByDisplayName": {
+            "type": "string"
+          },
+          "postedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "adjustmentNo",
+          "warehouseCode",
+          "adjustmentType",
+          "reasonCode",
+          "reason",
+          "status",
+          "itemCount",
+          "createdBy",
+          "createdByDisplayName",
+          "postedAt"
+        ]
+      },
+      "StockAdjustmentListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StockAdjustmentSummaryDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "StockAdjustmentItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "productName": {
+            "type": "string"
+          },
+          "quantityDelta": {
+            "type": "number"
+          },
+          "expectedOnHand": {
+            "type": "number"
+          },
+          "actualOnHand": {
+            "type": "number"
+          },
+          "note": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "sku",
+          "productName",
+          "quantityDelta",
+          "expectedOnHand",
+          "actualOnHand"
+        ]
+      },
+      "StockAdjustmentDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
+          },
+          "adjustmentNo": {
+            "type": "string"
+          },
+          "warehouseCode": {
+            "type": "string"
+          },
+          "adjustmentType": {
+            "type": "string"
+          },
+          "reasonCode": {
+            "type": "string"
+          },
+          "externalReference": {
+            "type": "string",
+            "nullable": true
+          },
+          "sourceName": {
+            "type": "string",
+            "nullable": true
+          },
+          "reason": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "itemCount": {
+            "type": "number"
+          },
+          "createdBy": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
+          },
+          "createdByDisplayName": {
+            "type": "string"
+          },
+          "postedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StockAdjustmentItemDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "adjustmentNo",
+          "warehouseCode",
+          "adjustmentType",
+          "reasonCode",
+          "reason",
+          "status",
+          "itemCount",
+          "createdBy",
+          "createdByDisplayName",
+          "postedAt",
+          "items"
         ]
       },
       "StockAdjustmentItemInputDto": {
@@ -8381,6 +9153,35 @@
           "warehouseCode": {
             "type": "string",
             "example": "KHO-HCM-01"
+          },
+          "adjustmentType": {
+            "type": "string",
+            "enum": [
+              "CORRECTION",
+              "OPENING_BALANCE",
+              "MANUAL_RECEIPT"
+            ],
+            "default": "CORRECTION"
+          },
+          "reasonCode": {
+            "type": "string",
+            "enum": [
+              "MANUAL",
+              "COUNT_CORRECTION",
+              "INITIAL_STOCK",
+              "EXTERNAL_RECEIPT"
+            ],
+            "default": "MANUAL"
+          },
+          "externalReference": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "Required for MANUAL_RECEIPT; external receipt or delivery-note number"
+          },
+          "sourceName": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "Supplier or external source label"
           },
           "reason": {
             "type": "string"
@@ -8410,6 +9211,25 @@
               "POSTED"
             ]
           },
+          "adjustmentType": {
+            "type": "string",
+            "enum": [
+              "CORRECTION",
+              "OPENING_BALANCE",
+              "MANUAL_RECEIPT"
+            ]
+          },
+          "reasonCode": {
+            "type": "string"
+          },
+          "externalReference": {
+            "type": "string",
+            "nullable": true
+          },
+          "sourceName": {
+            "type": "string",
+            "nullable": true
+          },
           "reason": {
             "type": "string"
           },
@@ -8427,6 +9247,8 @@
         "required": [
           "adjustmentNo",
           "status",
+          "adjustmentType",
+          "reasonCode",
           "reason",
           "balances",
           "postedAt"

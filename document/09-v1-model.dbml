@@ -20,9 +20,9 @@ Table branches {
   timezone varchar(64) [not null, default: 'Asia/Ho_Chi_Minh']
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
-  created_by uuid
+  created_by bigint
   updated_at timestamptz [not null]
-  updated_by uuid
+  updated_by bigint
   Note: '[P0] Chi nhánh bán hàng; dùng status ACTIVE|INACTIVE, không soft-delete.'
 }
 
@@ -36,9 +36,9 @@ Table warehouses {
   is_primary boolean [not null, default: true]
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
-  created_by uuid
+  created_by bigint
   updated_at timestamptz [not null]
-  updated_by uuid
+  updated_by bigint
   Note: '[P0] V1 chỉ một warehouse ACTIVE/primary mỗi branch; dùng status ACTIVE|INACTIVE, không soft-delete.'
 }
 
@@ -91,9 +91,9 @@ Table roles {
   is_system boolean [not null, default: false]
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
-  created_by uuid
+  created_by bigint
   updated_at timestamptz [not null]
-  updated_by uuid
+  updated_by bigint
   Note: '[P0] Role là bundle quyền; data scope nằm ở assignment; dùng ACTIVE|INACTIVE.'
 }
 
@@ -112,7 +112,7 @@ Table permissions {
 Table role_permissions {
   role_id bigint [not null]
   permission_id bigint [not null]
-  granted_by uuid
+  granted_by bigint
   created_at timestamptz [not null]
   indexes { (role_id, permission_id) [pk] }
   Note: '[P0] Role n-n Permission.'
@@ -129,7 +129,7 @@ Table user_role_assignments {
   valid_from timestamptz [not null]
   valid_to timestamptz
   status varchar(24) [not null, default: 'ACTIVE']
-  assigned_by uuid [not null]
+  assigned_by bigint [not null]
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
@@ -245,7 +245,7 @@ Table media_assets {
   alt_text varchar(500)
   metadata_json jsonb
   status varchar(24) [not null, default: 'ACTIVE']
-  uploaded_by uuid
+  uploaded_by bigint
   provider_created_at timestamptz
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
@@ -318,9 +318,9 @@ Table products {
   seo_json jsonb
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
-  created_by uuid
+  created_by bigint
   updated_at timestamptz [not null]
-  updated_by uuid
+  updated_by bigint
   Note: '[P0] SPU; product_type STANDARD|BUNDLE; không trộn SKU thường/combo trong cùng product; không chứa price/stock; ngừng dùng bằng status ARCHIVED.'
 }
 
@@ -359,9 +359,9 @@ Table product_bundles {
   status varchar(24) [not null, default: 'ACTIVE']
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
-  created_by uuid [not null]
+  created_by bigint [not null]
   updated_at timestamptz [not null]
-  updated_by uuid [not null]
+  updated_by bigint [not null]
   Note: '[P0] Combo ảo cố định theo bundle_variant_id; không giữ tồn riêng, không chứa combo khác; publish yêu cầu status ACTIVE, có item và mọi component ACTIVE thuộc product chưa ARCHIVED.'
 }
 
@@ -445,7 +445,7 @@ Table product_reviews {
   title varchar(255)
   content text
   status varchar(24) [not null, default: 'PENDING']
-  moderated_by uuid
+  moderated_by bigint
   moderated_at timestamptz
   moderation_reason text
   version bigint [not null, default: 0]
@@ -473,7 +473,7 @@ Table product_review_comments {
   author_user_id bigint
   content text [not null]
   status varchar(24) [not null, default: 'PUBLISHED']
-  moderated_by uuid
+  moderated_by bigint
   moderated_at timestamptz
   moderation_reason text
   version bigint [not null, default: 0]
@@ -497,9 +497,9 @@ Table product_prices {
   status varchar(24) [not null, default: 'SCHEDULED']
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
-  created_by uuid [not null]
+  created_by bigint [not null]
   updated_at timestamptz [not null]
-  updated_by uuid [not null]
+  updated_by bigint [not null]
   Note: '[P0] CHECK amount>0 và end>start; exclusion constraint chống overlap; không tạo giá retroactive; future scheduling được phép; history không sửa/xóa; giảm trên 20% bắt buộc reason và OWNER xác nhận; replace atomic với optimistic version.'
 }
 
@@ -513,9 +513,9 @@ Table flash_sale_campaigns {
   priority int [not null, default: 0]
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
-  created_by uuid [not null]
+  created_by bigint [not null]
   updated_at timestamptz [not null]
-  updated_by uuid [not null]
+  updated_by bigint [not null]
   Note: '[P1] CHECK end>start.'
 }
 
@@ -579,7 +579,7 @@ Table inventory_movements {
   reason text
   occurred_at timestamptz [not null]
   created_at timestamptz [not null]
-  created_by uuid [not null]
+  created_by bigint [not null]
   Note: '[P0] Append-only ledger; reject UPDATE/DELETE/TRUNCATE; mỗi dòng adjustment có idempotency key riêng.'
 }
 
@@ -610,17 +610,19 @@ Table stock_adjustments {
   warehouse_id bigint [not null]
   adjustment_type varchar(32) [not null, default: 'CORRECTION']
   reason_code varchar(64) [not null, default: 'MANUAL']
+  external_reference varchar(100) [note: 'Bắt buộc với MANUAL_RECEIPT']
+  source_name varchar(255) [note: 'Tên nhà cung cấp hoặc nguồn nhập ngoài hệ thống']
   reason text [not null]
   status varchar(24) [not null, default: 'POSTED']
   idempotency_key varchar(150) [not null, unique]
   request_hash char(64) [not null]
   result_json jsonb [not null, note: 'Snapshot response để replay idempotent chính xác']
-  created_by uuid [not null]
+  created_by bigint [not null]
   posted_at timestamptz [not null]
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
-  Note: '[P0] Sprint 1 post trực tiếp CORRECTION/POSTED; transaction khóa balance, ghi items + movements + audit atomic. Workflow approval/receipt mở rộng ở sprint sau.'
+  Note: '[P0] CORRECTION, OPENING_BALANCE hoặc MANUAL_RECEIPT được post atomic; receipt cần chứng từ ngoài, opening chỉ trước movement đầu tiên. Partial unique warehouse+external_reference chống nhập trùng MANUAL_RECEIPT.'
 }
 
 Table stock_adjustment_items {
@@ -643,9 +645,9 @@ Table stocktakes {
   status varchar(24) [not null, default: 'DRAFT']
   scope_json jsonb [not null]
   snapshot_at timestamptz
-  created_by uuid [not null]
+  created_by bigint [not null]
   submitted_at timestamptz
-  approved_by uuid
+  approved_by bigint
   approved_at timestamptz
   posted_at timestamptz
   version bigint [not null, default: 0]
@@ -662,7 +664,7 @@ Table stocktake_items {
   counted_qty int
   variance_qty int
   note text
-  counted_by uuid
+  counted_by bigint
   counted_at timestamptz
   indexes { (stocktake_id, product_variant_id) [unique] }
   Note: '[P1] variance=counted-system.'
@@ -675,11 +677,11 @@ Table stock_transfers {
   to_warehouse_id bigint [not null]
   status varchar(24) [not null, default: 'DRAFT']
   reason text
-  created_by uuid [not null]
+  created_by bigint [not null]
   submitted_at timestamptz
-  shipped_by uuid
+  shipped_by bigint
   shipped_at timestamptz
-  received_by uuid
+  received_by bigint
   received_at timestamptz
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
@@ -844,7 +846,7 @@ Table payments {
   received_amount decimal(19,2) [not null, default: 0]
   currency_code char(3) [not null, default: 'VND']
   expires_at timestamptz [not null]
-  confirmed_by uuid
+  confirmed_by bigint
   confirmed_at timestamptz
   failure_reason text
   version bigint [not null, default: 0]
@@ -873,7 +875,7 @@ Table payment_transactions {
 Table payment_evidences {
   id bigint [pk, increment]
   payment_id bigint [not null]
-  uploaded_by uuid
+  uploaded_by bigint
   guest_access_id varchar(100)
   file_url text [not null]
   file_hash varchar(128) [not null]
@@ -881,7 +883,7 @@ Table payment_evidences {
   file_size_bytes bigint [not null]
   note text
   status varchar(24) [not null, default: 'PENDING_SCAN']
-  reviewed_by uuid
+  reviewed_by bigint
   reviewed_at timestamptz
   review_reason text
   created_at timestamptz [not null]
@@ -900,8 +902,8 @@ Table refunds {
   currency_code char(3) [not null]
   reason text [not null]
   status varchar(32) [not null, default: 'REQUESTED']
-  requested_by uuid [not null]
-  approved_by uuid
+  requested_by bigint [not null]
+  approved_by bigint
   processed_at timestamptz
   external_ref varchar(255)
   failure_reason text
@@ -922,17 +924,17 @@ Table fulfillments {
   tracking_no varchar(255)
   shipping_label_url text
   picked_at timestamptz
-  picked_by uuid
+  picked_by bigint
   packed_at timestamptz
-  packed_by uuid
+  packed_by bigint
   shipped_at timestamptz
-  shipped_by uuid
+  shipped_by bigint
   delivered_at timestamptz
   failed_at timestamptz
   delivery_failure_reason_code varchar(64)
   failure_reason text
   returned_to_warehouse_at timestamptz
-  returned_to_warehouse_by uuid
+  returned_to_warehouse_by bigint
   return_condition varchar(32)
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
@@ -1010,7 +1012,7 @@ Table return_policies {
   effective_to timestamptz
   status varchar(24) [not null, default: 'DRAFT']
   created_at timestamptz [not null]
-  created_by uuid [not null]
+  created_by bigint [not null]
   indexes { (code, version_no) [unique] }
   Note: '[P1] Version immutable sau khi active.'
 }
@@ -1026,10 +1028,10 @@ Table return_requests {
   description text
   evidence_urls jsonb
   requested_at timestamptz [not null]
-  reviewed_by uuid
+  reviewed_by bigint
   reviewed_at timestamptz
   decision_reason text
-  received_by uuid
+  received_by bigint
   received_at timestamptz
   received_condition varchar(32)
   version bigint [not null, default: 0]
@@ -1092,9 +1094,9 @@ Table pages {
   published_at timestamptz
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
-  created_by uuid [not null]
+  created_by bigint [not null]
   updated_at timestamptz [not null]
-  updated_by uuid [not null]
+  updated_by bigint [not null]
   deleted_at timestamptz
   Note: '[P1] CMS page.'
 }
@@ -1112,9 +1114,9 @@ Table posts {
   published_at timestamptz
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
-  created_by uuid [not null]
+  created_by bigint [not null]
   updated_at timestamptz [not null]
-  updated_by uuid [not null]
+  updated_by bigint [not null]
   deleted_at timestamptz
   Note: '[P1] Blog/news.'
 }
@@ -1157,9 +1159,9 @@ Table banners {
   sort_order int [not null, default: 0]
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
-  created_by uuid [not null]
+  created_by bigint [not null]
   updated_at timestamptz [not null]
-  updated_by uuid [not null]
+  updated_by bigint [not null]
   Note: '[P1] Timed banner.'
 }
 
@@ -1173,7 +1175,7 @@ Table notification_templates {
   allowed_variables jsonb [not null]
   status varchar(24) [not null, default: 'DRAFT']
   created_at timestamptz [not null]
-  created_by uuid [not null]
+  created_by bigint [not null]
   indexes { (code, channel, version_no) [unique] }
   Note: '[P1] Immutable active version.'
 }
@@ -1240,7 +1242,7 @@ Table system_settings {
   description text
   is_public boolean [not null, default: false]
   version bigint [not null, default: 0]
-  updated_by uuid [not null]
+  updated_by bigint [not null]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
   Note: '[P1] Không lưu secret.'

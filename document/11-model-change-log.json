@@ -850,6 +850,174 @@
         "document:24-telegram-command-bot.md@1.1.0"
       ],
       "targets": []
+    },
+    {
+      "id": "DB-20260905-ACTOR-BIGINT-FORWARD-FIX",
+      "date": "2026-09-05",
+      "scope": "DATABASE+API+SUPABASE",
+      "summary": "Forward-fix sáu cột created_by/updated_by của branches, warehouses và roles từ UUID lịch sử sang BIGINT; ánh xạ bắt buộc qua users.legacy_id và rollback toàn transaction nếu có actor orphan.",
+      "sources": [
+        "migration:20260905230000_fix_unconstrained_actor_bigint_columns",
+        "source:api/prisma/schema.prisma",
+        "document:03-database-v1.md@2.0.2",
+        "document:23-id-migration-and-startup.md@1.1.1"
+      ],
+      "targets": [
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": ["branches", "warehouses", "roles"],
+            "Tên cột": ["created_by", "updated_by"]
+          },
+          "columns": ["Kiểu dữ liệu", "Ý nghĩa / trạng thái cho phép"],
+          "set": {
+            "Kiểu dữ liệu": "bigint",
+            "Ý nghĩa / trạng thái cho phép": "User actor ID dạng BIGINT; UUID lịch sử được ánh xạ qua users.legacy_id"
+          }
+        }
+      ]
+    },
+    {
+      "id": "API-20260905-INVENTORY-READ-MODEL",
+      "date": "2026-09-05",
+      "scope": "API+ADMIN+INVENTORY",
+      "summary": "Bổ sung read API V1 có branch scope cho balance phân trang, immutable movement ledger dùng cursor và lịch sử/chi tiết phiếu điều chỉnh; Admin tiêu thụ hoàn toàn qua SDK Orval sinh từ OpenAPI.",
+      "sources": [
+        "OpenAPI:listInventoryBalances",
+        "OpenAPI:listInventoryMovements",
+        "OpenAPI:listStockAdjustments",
+        "OpenAPI:getStockAdjustment",
+        "source:api/src/modules/inventory/inventory-query.service.ts",
+        "test:api/src/modules/inventory/inventory-query.service.spec.ts",
+        "test:api/test/admin-contract.e2e-spec.ts",
+        "document:25-sprint-2-execution-status.md@1.1.1"
+      ],
+      "targets": []
+    },
+    {
+      "id": "DBAPI-20260905-INVENTORY-RECEIPT",
+      "date": "2026-09-05",
+      "scope": "DATABASE+API+ADMIN+INVENTORY",
+      "summary": "Hoàn thiện nhập tồn cơ bản D26: CORRECTION/OPENING_BALANCE/MANUAL_RECEIPT, receipt bắt buộc chứng từ ngoài duy nhất theo kho, opening chỉ cho số dương trước movement đầu tiên; RECEIVE ledger và audit vẫn ghi atomic.",
+      "sources": [
+        "decision:D26",
+        "migration:20260905233000_add_stock_adjustment_receipt_reference",
+        "OpenAPI:createStockAdjustment",
+        "source:api/src/modules/inventory/inventory.service.ts",
+        "test:api/src/modules/inventory/inventory.service.spec.ts",
+        "document:10-v1-model-relationship-review.md@2.1.0"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "stock_adjustments" },
+          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính"],
+          "set": {
+            "Ý nghĩa": "Phiếu điều chỉnh và nhập tồn cơ bản",
+            "Unique / CHECK": "adjustment_no UQ; idempotency_key UQ; MANUAL_RECEIPT warehouse+external_reference partial UQ",
+            "Các cột chính": "adjustment_type,reason_code,external_reference,source_name,reason,status,idempotency_key,request_hash,result_json,created_by,posted_at,version"
+          }
+        }
+      ],
+      "upsertRows": [
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "stock_adjustments", "Tên cột": "external_reference" },
+          "values": {
+            "Tên bảng": "stock_adjustments", "STT": "31D", "Tên cột": "external_reference", "Kiểu dữ liệu": "varchar(100)", "Cho phép NULL": "YES", "Default": "", "Ý nghĩa / trạng thái cho phép": "Bắt buộc và unique theo warehouse với MANUAL_RECEIPT"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "stock_adjustments", "Tên cột": "source_name" },
+          "values": {
+            "Tên bảng": "stock_adjustments", "STT": "31E", "Tên cột": "source_name", "Kiểu dữ liệu": "varchar(255)", "Cho phép NULL": "YES", "Default": "", "Ý nghĩa / trạng thái cho phép": "Tên nhà cung cấp hoặc nguồn nhập ngoài hệ thống"
+          }
+        }
+      ]
+    },
+    {
+      "id": "DOC-20260905-ACTOR-ID-CONSISTENCY",
+      "date": "2026-09-05",
+      "scope": "DATABASE-DOCUMENTATION",
+      "summary": "Đồng bộ toàn bộ cột tham chiếu user actor trong logical DBML/workbook sang BIGINT theo D43; UUID chỉ còn ở legacy_id của bảng đã migrate.",
+      "sources": [
+        "decision:D43",
+        "source:api/document/09-v1-model.dbml",
+        "document:03-database-v1.md@2.0.2"
+      ],
+      "targets": [
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": ["role_permissions", "user_role_assignments", "media_assets", "products", "product_bundles", "product_reviews", "product_review_comments", "product_prices", "flash_sale_campaigns", "inventory_movements", "stocktakes", "stocktake_items", "stock_transfers", "payments", "payment_evidences", "refunds", "fulfillments", "return_policies", "return_requests", "pages", "posts", "banners", "notification_templates", "system_settings"],
+            "Tên cột": ["created_by", "updated_by", "granted_by", "assigned_by", "uploaded_by", "moderated_by", "approved_by", "counted_by", "shipped_by", "received_by", "confirmed_by", "reviewed_by", "requested_by", "picked_by", "packed_by", "returned_to_warehouse_by"]
+          },
+          "columns": ["Kiểu dữ liệu", "Ý nghĩa / trạng thái cho phép"],
+          "set": {
+            "Kiểu dữ liệu": "bigint",
+            "Ý nghĩa / trạng thái cho phép": "Tham chiếu users.id BIGINT; UUID lịch sử chỉ lưu ở legacy_id"
+          }
+        }
+      ]
+    },
+    {
+      "id": "DB-20260906-REPAIR-COMPOSITE-PK",
+      "date": "2026-09-06",
+      "scope": "DATABASE+SEED+IAM+CATALOG",
+      "summary": "Khôi phục composite primary key role_permissions(role_id,permission_id) và product_categories(product_id,category_id) bị PostgreSQL bỏ khi D43 thay cột FK; loại đúng các grant seed trùng đồng nhất, giữ bản sớm nhất và fail-fast nếu metadata xung đột.",
+      "sources": [
+        "migration:20260906003000_repair_composite_primary_keys",
+        "decision:D43",
+        "seed:api/prisma/seed.ts",
+        "seed:api/prisma/seed-demo.ts",
+        "document:03-database-v1.md@2.0.3",
+        "document:25-sprint-2-execution-status.md@1.1.3"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": ["role_permissions", "product_categories"] },
+          "columns": ["Khóa chính", "Unique / CHECK"],
+          "set": {
+            "Khóa chính": "Composite PK theo 2 FK",
+            "Unique / CHECK": "Cặp FK là duy nhất qua composite primary key; forward migration 20260906003000 phục hồi PK sau D43 và fail-fast khi duplicate có dữ liệu xung đột"
+          }
+        }
+      ]
+    },
+    {
+      "id": "DATA-20260905-INVENTORY-OPENING-RECONCILIATION",
+      "date": "2026-09-05",
+      "scope": "DATABASE+SEED+INVENTORY+TEST",
+      "summary": "Repair dữ liệu demo lịch sử thiếu movement mở sổ mà không sửa balance; seed mới tạo RECEIVE opening đúng một lần và integration test bắt buộc on_hand bằng tổng ledger theo kho+SKU.",
+      "sources": [
+        "migration:20260905234500_reconcile_missing_opening_movements",
+        "seed:api/prisma/seed-demo.ts",
+        "test:api/test/inventory-reconciliation.integration-spec.ts",
+        "document:03-database-v1.md@2.0.2",
+        "document:25-sprint-2-execution-status.md@1.1.1"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "inventory_balances" },
+          "columns": ["Ý nghĩa", "Unique / CHECK"],
+          "set": {
+            "Ý nghĩa": "Tồn đọc nhanh theo warehouse+variant; luôn đối soát bằng tổng immutable ledger",
+            "Unique / CHECK": "warehouse+variant UQ; nonnegative; on_hand = SUM(movement.quantity_delta)"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "inventory_movements" },
+          "columns": ["Ý nghĩa", "Unique / CHECK"],
+          "set": {
+            "Ý nghĩa": "Sổ kho append-only; seed/import có RECEIVE movement mở sổ",
+            "Unique / CHECK": "idempotency_key UQ; quantity_delta != 0; reject UPDATE/DELETE/TRUNCATE"
+          }
+        }
+      ]
     }
   ]
 }

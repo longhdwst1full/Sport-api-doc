@@ -1,10 +1,10 @@
 # V1 model và quan hệ — bản review
 
-> **Document version:** 2.0.0
+> **Document version:** 2.1.0
 >
 > **Last updated:** 2026-09-05
 >
-> **Change summary:** Đánh giá lại toàn bộ quan hệ khi chuyển UUID PK/FK sang BIGINT IDENTITY và giữ legacy UUID.
+> **Change summary:** Chốt implementation nhập tồn cơ bản bằng CORRECTION/OPENING_BALANCE/MANUAL_RECEIPT và chứng từ ngoài chống nhập trùng.
 
 File nguồn ERD: `09-v1-model.dbml`. Copy toàn bộ nội dung vào dbdiagram.io để xem và kéo thả sơ đồ.
 
@@ -209,12 +209,10 @@ Serial/IMEI và procurement đã được quyết định để V2. Đây không
 ```text
 OPENING_BALANCE   // tồn đầu kỳ, chỉ dùng khi khởi tạo
 MANUAL_RECEIPT    // nhập bổ sung chưa qua PO
-CORRECTION_IN     // sửa chênh lệch tăng
-CORRECTION_OUT    // sửa chênh lệch giảm
-DAMAGE_OUT        // hỏng/mất không còn bán được
+CORRECTION        // sửa chênh lệch tăng/giảm; reason_code phân biệt nguyên nhân
 ```
 
-Với `MANUAL_RECEIPT`, bắt buộc nhập `external_reference` và nên nhập `source_name` để sau này đối chiếu chứng từ. Đây chỉ là cầu nối V1, không thay thế procurement lâu dài.
+Với `MANUAL_RECEIPT`, bắt buộc nhập `external_reference` và nên nhập `source_name` để sau này đối chiếu chứng từ. Cặp `warehouse_id + external_reference` là unique riêng cho MANUAL_RECEIPT để tránh nhập trùng chứng từ. `OPENING_BALANCE` chỉ nhận số lượng dương và bị từ chối nếu SKU tại kho đã có bất kỳ movement nào. Đây chỉ là cầu nối V1, không thay thế procurement lâu dài.
 
 Khi post adjustment:
 
@@ -278,4 +276,5 @@ Quy tắc:
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 2.1.0 | 2026-09-05 | Chốt adjustment/receipt type, external reference unique và invariant tồn đầu kỳ. | DBAPI-20260905-INVENTORY-RECEIPT |
 | 2.0.0 | 2026-09-05 | Bổ sung mô hình ID số, legacy UUID, ranh giới API và lưu ý vận hành migration. | D43 / `20260905120000_migrate_uuid_ids_to_bigint_identity` |

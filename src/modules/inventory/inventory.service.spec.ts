@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditWriter } from '../audit/audit.writer';
 import type { AuthPrincipal } from '../auth/auth.types';
@@ -16,32 +17,14 @@ const owner: AuthPrincipal = {
 };
 
 describe('InventoryService', () => {
-  it('lists durable balances and derives available/status without Product.quantity', async () => {
-    const findMany = jest.fn().mockResolvedValue([{
-      id: 'balance',
-      onHand: 12,
-      reserved: 2,
-      reorderPoint: 3,
-      warehouse: { code: 'KHO-HCM-01' },
-      productVariant: { sku: 'RUN-X1', product: { name: 'Máy chạy bộ' } },
-    }]);
-    const prisma = {
-      isEnabled: jest.fn().mockReturnValue(true),
-      inventoryBalance: { findMany },
-    } as unknown as PrismaService;
-    const service = new InventoryService(prisma, {} as AuditWriter);
-
-    await expect(service.list(owner)).resolves.toEqual({
-      total: 1,
-      items: [expect.objectContaining({ onHand: 12, reserved: 2, available: 10, status: 'IN_STOCK' })],
-    });
-    expect(findMany).toHaveBeenCalledWith(expect.objectContaining({ where: {} }));
-  });
-
   it('replays the exact stored result for the same idempotency key and payload', async () => {
     const result = {
       adjustmentNo: 'ADJ-20260903-ABCDEF12',
       status: 'POSTED',
+      adjustmentType: 'CORRECTION',
+      reasonCode: 'MANUAL',
+      externalReference: null,
+      sourceName: null,
       reason: 'Nhập tồn đầu kỳ',
       balances: [],
       postedAt: '2026-09-03T00:00:00.000Z',
@@ -50,7 +33,7 @@ describe('InventoryService', () => {
       isEnabled: jest.fn().mockReturnValue(true),
       stockAdjustment: {
         findUnique: jest.fn().mockResolvedValue({
-          requestHash: 'e567a853d22adc902a5a83ec1fb4966becb622a18393b67979f69e310f32326f',
+          requestHash: '56729759076e36da7b2c06184e208dbc1a09d099883a460f61d7f1a2b9a16ad3',
           resultJson: result,
         }),
       },
@@ -88,5 +71,55 @@ describe('InventoryService', () => {
         { sku: 'run-x1', quantityDelta: 2 },
       ],
     }, 'duplicate', owner, 'request')).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('requires one external document reference for a manual receipt', async () => {
+    const prisma = { isEnabled: jest.fn().mockReturnValue(true) } as unknown as PrismaService;
+    const service = new InventoryService(prisma, {} as AuditWriter);
+
+    await expect(service.adjust({
+      warehouseCode: 'KHO-HCM-01',
+      adjustmentType: 'MANUAL_RECEIPT',
+      reasonCode: 'EXTERNAL_RECEIPT',
+      reason: 'Nhập hàng từ nhà cung cấp',
+      items: [{ sku: 'RUN-X1', quantityDelta: 3 }],
+    }, 'receipt-without-reference', owner, 'request')).rejects.toThrow(
+      'MANUAL_RECEIPT requires externalReference',
+    );
+  });
+
+  it('never accepts a negative opening or receipt quantity', async () => {
+    const prisma = { isEnabled: jest.fn().mockReturnValue(true) } as unknown as PrismaService;
+    const service = new InventoryService(prisma, {} as AuditWriter);
+
+    await expect(service.adjust({
+      warehouseCode: 'KHO-HCM-01',
+      adjustmentType: 'OPENING_BALANCE',
+      reasonCode: 'INITIAL_STOCK',
+      reason: 'Tồn đầu kỳ',
+      items: [{ sku: 'RUN-X1', quantityDelta: -1 }],
+    }, 'negative-opening', owner, 'request')).rejects.toThrow(
+      'OPENING_BALANCE only accepts positive quantities',
+    );
+  });
+
+  it('maps a PostgreSQL serialization conflict to a retryable inventory conflict', async () => {
+    const prisma = {
+      isEnabled: jest.fn().mockReturnValue(true),
+      stockAdjustment: { findUnique: jest.fn().mockResolvedValue(null) },
+      $transaction: jest.fn().mockRejectedValue(new Prisma.PrismaClientKnownRequestError(
+        'Transaction write conflict',
+        { code: 'P2034', clientVersion: '6.19.3' },
+      )),
+    } as unknown as PrismaService;
+    const service = new InventoryService(prisma, {} as AuditWriter);
+
+    await expect(service.adjust({
+      warehouseCode: 'KHO-HCM-01',
+      reason: 'Điều chỉnh đồng thời',
+      items: [{ sku: 'RUN-X1', quantityDelta: 1 }],
+    }, 'concurrent-adjustment', owner, 'request')).rejects.toThrow(
+      'Inventory changed concurrently; retry with the same key',
+    );
   });
 });

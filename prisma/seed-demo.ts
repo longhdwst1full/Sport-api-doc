@@ -219,21 +219,42 @@ async function importDemoData(transaction: Prisma.TransactionClient): Promise<vo
       },
     });
     if (item.productType === 'STANDARD') {
-      await transaction.inventoryBalance.upsert({
-        where: {
-          warehouseId_productVariantId: {
-            warehouseId: warehouseIdsByCode.get('KHO-HCM-01')!,
-            productVariantId: variant.id,
-          },
-        },
-        update: { reorderPoint: item.reorderPoint },
-        create: {
-          warehouseId: warehouseIdsByCode.get('KHO-HCM-01')!,
-          productVariantId: variant.id,
-          onHand: item.initialOnHand,
-          reorderPoint: item.reorderPoint,
-        },
+      const warehouseId = warehouseIdsByCode.get('KHO-HCM-01')!;
+      const existingBalance = await transaction.inventoryBalance.findUnique({
+        where: { warehouseId_productVariantId: { warehouseId, productVariantId: variant.id } },
       });
+      if (existingBalance) {
+        await transaction.inventoryBalance.update({
+          where: { id: existingBalance.id },
+          data: { reorderPoint: item.reorderPoint },
+        });
+      } else {
+        const balance = await transaction.inventoryBalance.create({
+          data: {
+            warehouseId,
+            productVariantId: variant.id,
+            onHand: item.initialOnHand,
+            reorderPoint: item.reorderPoint,
+          },
+        });
+        if (item.initialOnHand > 0) {
+          await transaction.inventoryMovement.create({
+            data: {
+              warehouseId,
+              productVariantId: variant.id,
+              movementType: 'RECEIVE',
+              quantityDelta: item.initialOnHand,
+              balanceAfter: item.initialOnHand,
+              referenceType: 'DEMO_SEED_OPENING',
+              referenceId: balance.id.toString(),
+              idempotencyKey: `demo-seed-opening:${warehouseId}:${variant.id}`,
+              reason: 'Tồn đầu kỳ từ dữ liệu demo',
+              occurredAt: new Date(),
+              createdBy: bootstrapUser.id,
+            },
+          });
+        }
+      }
     }
     const currentPrice = await transaction.productPrice.findFirst({
       where: { productVariantId: variant.id, endsAt: null },

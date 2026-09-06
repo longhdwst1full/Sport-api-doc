@@ -1,10 +1,10 @@
 # D43 — Migration UUID sang BIGINT IDENTITY và migrate-at-start
 
-> **Document version:** 1.1.0
+> **Document version:** 1.1.1
 >
 > **Last updated:** 2026-09-05
 >
-> **Change summary:** Bổ sung migration gate tự động cho Vercel production, không chạy DDL từ preview/local build.
+> **Change summary:** Bổ sung forward-fix cho cột actor UUID không có FK vật lý bị D43 generic discovery bỏ sót.
 
 ## Kết quả thiết kế
 
@@ -24,6 +24,8 @@ Dữ liệu đã tồn tại có `legacy_id = UUID cũ`; dữ liệu tạo sau m
 21 bảng hiện hữu: `branches`, `warehouses`, `users`, `auth_sessions`, `roles`, `permissions`, `user_role_assignments`, `audit_logs`, `media_assets`, `brands`, `categories`, `products`, `product_variants`, `product_bundles`, `bundle_items`, `product_media`, `product_prices`, `inventory_balances`, `inventory_movements`, `stock_adjustments`, `stock_adjustment_items`.
 
 Migration tự phát hiện toàn bộ FK trỏ tới PK UUID, tạo cột shadow BIGINT, ánh xạ qua UUID cũ, rồi dựng lại constraint và index trong cùng transaction. Nếu schema nguồn không đúng kỳ vọng hoặc có orphan FK, migration fail và rollback toàn bộ.
+
+Sau khi smoke test Prisma trên Supabase, phát hiện sáu cột actor không có FK vật lý (`branches`, `warehouses`, `roles`: `created_by`, `updated_by`) vẫn là UUID. Forward migration `20260905230000_fix_unconstrained_actor_bigint_columns` khóa ba bảng, ánh xạ từng UUID qua `users.legacy_id`, từ chối dữ liệu orphan và chỉ thay cột khi ánh xạ hoàn chỉnh. Migration này đã được áp dụng trên Supabase; `prisma migrate status` xác nhận 11 migration đồng bộ.
 
 ## Cơ chế khởi động
 
@@ -69,6 +71,7 @@ Không có runtime DDL trong controller/service/repository. `prisma` nằm trong
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.1.1 | 2026-09-05 | Ghi forward migration sáu actor column không có FK vật lý sang BIGINT và evidence Supabase. | DB-20260905-ACTOR-BIGINT-FORWARD-FIX |
 | 1.1.0 | 2026-09-05 | Tự động migrate khi Vercel Production build; skip preview/local và bổ sung kill switch. | DBOPS-20260905-VERCEL-AUTO-MIGRATE |
 | 1.0.1 | 2026-09-05 | Bảo đảm migrate-only không bị cờ startup vô hiệu hóa; `legacy_id` của bản ghi mới mặc định NULL. | D43 hardening |
 | 1.0.0 | 2026-09-05 | Tạo runbook migration ID và startup database. | D43 / `20260905120000_migrate_uuid_ids_to_bigint_identity` |

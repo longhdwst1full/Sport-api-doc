@@ -154,13 +154,13 @@ describe('Admin v1 contract', () => {
   it('serves active role search under the versioned API prefix', async () => {
     const response = await request(server())
       .get('/api/v1/admin/iam/roles/active')
-      .query({ search: 'owner', page: 1, limit: 20 })
+      .query({ search: 'quản lý', page: 1, limit: 20 })
       .set('authorization', `Bearer ${accessToken}`)
       .expect(200);
 
     const body = response.body as unknown as LookupBody;
     expect(body.items).toEqual([
-      expect.objectContaining({ code: 'OWNER', label: 'Chủ cửa hàng' }),
+      expect.objectContaining({ code: 'BRANCH_MANAGER', label: 'Quản lý chi nhánh' }),
     ]);
     expect(body.meta).toEqual({ page: 1, limit: 20, total: 1, hasMore: false });
   });
@@ -245,6 +245,43 @@ describe('Admin v1 contract', () => {
     const nextPostedBody = nextPosted.body as { adjustmentNo: string };
     expect(nextPostedBody.adjustmentNo).not.toBe(postedBody.adjustmentNo);
 
+    const adjustmentList = await request(server())
+      .get('/api/v1/admin/inventory/adjustments')
+      .query({ warehouseCode: payload.warehouseCode, limit: 25 })
+      .set('authorization', `Bearer ${accessToken}`)
+      .expect(200);
+    const adjustmentSummary = (
+      adjustmentList.body as { items: Array<{ id: string; adjustmentNo: string }> }
+    ).items.find(({ adjustmentNo }) => adjustmentNo === postedBody.adjustmentNo);
+    expect(adjustmentSummary).toBeDefined();
+
+    const adjustmentDetail = await request(server())
+      .get(`/api/v1/admin/inventory/adjustments/${adjustmentSummary?.id}`)
+      .set('authorization', `Bearer ${accessToken}`)
+      .expect(200);
+    expect(adjustmentDetail.body).toMatchObject({
+      adjustmentNo: postedBody.adjustmentNo,
+      items: [expect.objectContaining({ sku: 'TA-CAO-SU-5KG' })],
+    });
+
+    const movements = await request(server())
+      .get('/api/v1/admin/inventory/movements')
+      .query({ warehouseCode: payload.warehouseCode, sku: 'TA-CAO-SU-5KG', limit: 25 })
+      .set('authorization', `Bearer ${accessToken}`)
+      .expect(200);
+    const movementBody = movements.body as unknown as {
+      items: Array<{ movementType: string; referenceId: string }>;
+    };
+    expect(movementBody.items.some((item) =>
+      item.movementType === 'ADJUST' && item.referenceId === adjustmentSummary?.id,
+    )).toBe(true);
+
+    await request(server())
+      .get('/api/v1/admin/inventory/movements')
+      .query({ cursor: 'invalid' })
+      .set('authorization', `Bearer ${accessToken}`)
+      .expect(400);
+
     await request(server())
       .post('/api/v1/admin/inventory/adjustments')
       .set('authorization', `Bearer ${accessToken}`)
@@ -263,7 +300,7 @@ describe('Admin v1 contract', () => {
       request(server())
         .post(`/api/v1/admin/iam/users/${staffUserId}/role-assignments`)
         .set('authorization', `Bearer ${accessToken}`)
-        .send({ roleCode: 'STAFF', scopeType: 'BRANCH', branchId: branch.id });
+        .send({ roleCode: 'STAFF', scopeType: 'BRANCH', branchId: branch.id.toString() });
 
     const responses = await Promise.all([sendAssignment(), sendAssignment()]);
     expect(responses.map(({ status }) => status).sort()).toEqual([201, 409]);
@@ -309,7 +346,7 @@ describe('Admin v1 contract', () => {
         displayName: 'E2E Created Staff',
         email: staffEmail,
         roleCode: 'STAFF',
-        branchId: branch.id,
+        branchId: branch.id.toString(),
       })
       .expect(201);
     createdStaffUserId = (created.body as { id: string }).id;
@@ -317,7 +354,7 @@ describe('Admin v1 contract', () => {
       displayName: 'E2E Created Staff',
       status: 'ACTIVE',
       permissionVersion: 1,
-      assignments: [expect.objectContaining({ roleCode: 'STAFF', branchId: branch.id })],
+      assignments: [expect.objectContaining({ roleCode: 'STAFF', branchId: branch.id.toString() })],
     });
     expect(created.body).not.toHaveProperty('password');
     expect(created.body).not.toHaveProperty('passwordHash');

@@ -15,9 +15,15 @@ import { ScopeType } from '../iam/iam.types';
 import {
   CreateStockAdjustmentDto,
   InventoryBalanceDto,
-  InventoryBalanceListDto,
   StockAdjustmentResultDto,
 } from './inventory.dto';
+import {
+  INVENTORY_MOVEMENT_TYPE,
+  INVENTORY_REFERENCE_TYPE,
+  STOCK_ADJUSTMENT_REASON,
+  STOCK_ADJUSTMENT_TYPE,
+  type StockAdjustmentType,
+} from './inventory.constants';
 
 const INVENTORY_AUDIT_ACTION = {
   STOCK_ADJUSTMENT_POST: 'inventory.stock_adjustment.post',
@@ -29,24 +35,6 @@ export class InventoryService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditWriter,
   ) {}
-
-  async list(principal: AuthPrincipal): Promise<InventoryBalanceListDto> {
-    this.ensurePersistence();
-    const branchIds = principal.scopes
-      .filter((scope) => scope.type === ScopeType.BRANCH && scope.branchId)
-      .map((scope) => scope.branchId!);
-    const global = principal.scopes.some((scope) => scope.type === ScopeType.GLOBAL);
-    if (!global && branchIds.length === 0) return { items: [], total: 0 };
-    const where: Prisma.InventoryBalanceWhereInput = global
-      ? {}
-      : { warehouse: { branchId: { in: branchIds.map(toDatabaseId) } } };
-    const rows = await this.prisma.inventoryBalance.findMany({
-      where,
-      include: { warehouse: true, productVariant: { include: { product: true } } },
-      orderBy: [{ warehouse: { code: 'asc' } }, { productVariant: { sku: 'asc' } }],
-    });
-    return { items: rows.map((row) => this.toDto(row)), total: rows.length };
-  }
 
   async adjust(
     input: CreateStockAdjustmentDto,
@@ -66,6 +54,11 @@ export class InventoryService {
     if (new Set(input.items.map(({ sku }) => sku.trim().toUpperCase())).size !== input.items.length) {
       throw new BadRequestException('Adjustment items must contain unique SKU values');
     }
+    const adjustmentType = input.adjustmentType ?? STOCK_ADJUSTMENT_TYPE.CORRECTION;
+    const reasonCode = input.reasonCode?.trim().toUpperCase() || STOCK_ADJUSTMENT_REASON.MANUAL;
+    const externalReference = input.externalReference?.trim() || null;
+    const sourceName = input.sourceName?.trim() || null;
+    this.validateAdjustmentType(input, adjustmentType, externalReference, sourceName);
     const requestHash = this.requestHash(input);
     const replay = await this.findReplay(key, requestHash);
     if (replay) return replay;
@@ -93,6 +86,21 @@ export class InventoryService {
             const found = new Set(variants.map(({ sku }) => sku));
             const missing = requestedSkus.filter((sku) => !found.has(sku));
             throw new BadRequestException(`SKU not found: ${missing.join(', ')}`);
+          }
+
+          if (adjustmentType === STOCK_ADJUSTMENT_TYPE.OPENING_BALANCE) {
+            const existingMovement = await transaction.inventoryMovement.findFirst({
+              where: {
+                warehouseId: warehouse.id,
+                productVariantId: { in: variants.map(({ id }) => id) },
+              },
+              select: { productVariant: { select: { sku: true } } },
+            });
+            if (existingMovement) {
+              throw new ConflictException(
+                `OPENING_BALANCE is only allowed before the first movement for ${existingMovement.productVariant.sku}`,
+              );
+            }
           }
 
           await transaction.inventoryBalance.createMany({
@@ -139,6 +147,10 @@ export class InventoryService {
             data: {
               adjustmentNo,
               warehouseId: warehouse.id,
+              adjustmentType,
+              reasonCode,
+              externalReference,
+              sourceName,
               reason: input.reason.trim(),
               idempotencyKey: key,
               requestHash,
@@ -170,10 +182,12 @@ export class InventoryService {
               data: {
                 warehouseId: warehouse.id,
                 productVariantId: change.variant.id,
-                movementType: 'ADJUST',
+                movementType: adjustmentType === STOCK_ADJUSTMENT_TYPE.CORRECTION
+                  ? INVENTORY_MOVEMENT_TYPE.ADJUST
+                  : INVENTORY_MOVEMENT_TYPE.RECEIVE,
                 quantityDelta: change.item.quantityDelta,
                 balanceAfter: change.nextOnHand,
-                referenceType: 'STOCK_ADJUSTMENT',
+                referenceType: INVENTORY_REFERENCE_TYPE.STOCK_ADJUSTMENT,
                 referenceId: toEntityId(adjustment.id),
                 idempotencyKey: `${key}:${change.sku}`,
                 reason: input.reason.trim(),
@@ -197,6 +211,10 @@ export class InventoryService {
           const result: StockAdjustmentResultDto = {
             adjustmentNo,
             status: 'POSTED',
+            adjustmentType,
+            reasonCode,
+            externalReference,
+            sourceName,
             reason: input.reason.trim(),
             balances: resultBalances,
             postedAt: postedAt.toISOString(),
@@ -218,6 +236,9 @@ export class InventoryService {
                 adjustmentNo,
                 warehouseId: toEntityId(warehouse.id),
                 itemCount: changes.length,
+                adjustmentType,
+                reasonCode,
+                externalReference,
                 status: 'POSTED',
               },
               reason: input.reason.trim(),
@@ -232,6 +253,9 @@ export class InventoryService {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         const racedReplay = await this.findReplay(key, requestHash);
         if (racedReplay) return racedReplay;
+        if (adjustmentType === STOCK_ADJUSTMENT_TYPE.MANUAL_RECEIPT) {
+          throw new ConflictException('Manual receipt reference already exists for this warehouse');
+        }
       }
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034') {
         throw new ConflictException('Inventory changed concurrently; retry with the same key');
@@ -262,12 +286,37 @@ export class InventoryService {
   private requestHash(input: CreateStockAdjustmentDto): string {
     const canonical = {
       warehouseCode: input.warehouseCode.trim().toUpperCase(),
+      adjustmentType: input.adjustmentType ?? STOCK_ADJUSTMENT_TYPE.CORRECTION,
+      reasonCode: input.reasonCode?.trim().toUpperCase() || STOCK_ADJUSTMENT_REASON.MANUAL,
+      externalReference: input.externalReference?.trim() || null,
+      sourceName: input.sourceName?.trim() || null,
       reason: input.reason.trim(),
       items: input.items
         .map(({ sku, quantityDelta }) => ({ sku: sku.trim().toUpperCase(), quantityDelta }))
         .sort((left, right) => left.sku.localeCompare(right.sku)),
     };
     return createHash('sha256').update(JSON.stringify(canonical)).digest('hex');
+  }
+
+  private validateAdjustmentType(
+    input: CreateStockAdjustmentDto,
+    adjustmentType: StockAdjustmentType,
+    externalReference: string | null,
+    sourceName: string | null,
+  ): void {
+    if (adjustmentType !== STOCK_ADJUSTMENT_TYPE.CORRECTION
+      && input.items.some(({ quantityDelta }) => quantityDelta < 1)) {
+      throw new BadRequestException(`${adjustmentType} only accepts positive quantities`);
+    }
+    if (adjustmentType === STOCK_ADJUSTMENT_TYPE.MANUAL_RECEIPT && !externalReference) {
+      throw new BadRequestException('MANUAL_RECEIPT requires externalReference');
+    }
+    if (adjustmentType !== STOCK_ADJUSTMENT_TYPE.MANUAL_RECEIPT
+      && (externalReference || sourceName)) {
+      throw new BadRequestException(
+        'externalReference and sourceName are only allowed for MANUAL_RECEIPT',
+      );
+    }
   }
 
   private assertWarehouseScope(principal: AuthPrincipal, branchId: bigint): void {
@@ -277,28 +326,6 @@ export class InventoryService {
         || (scope.type === ScopeType.BRANCH && scope.branchId === publicBranchId),
     );
     if (!allowed) throw new ForbiddenException('Warehouse is outside the assigned branch scope');
-  }
-
-  private toDto(row: {
-    id: bigint;
-    onHand: number;
-    reserved: number;
-    reorderPoint: number;
-    warehouse: { code: string };
-    productVariant: { sku: string; product: { name: string } };
-  }): InventoryBalanceDto {
-    const available = row.onHand - row.reserved;
-    return {
-      id: toEntityId(row.id),
-      warehouseCode: row.warehouse.code,
-      sku: row.productVariant.sku,
-      productName: row.productVariant.product.name,
-      onHand: row.onHand,
-      reserved: row.reserved,
-      available,
-      reorderPoint: row.reorderPoint,
-      status: this.stockStatus(available, row.reorderPoint),
-    };
   }
 
   private stockStatus(

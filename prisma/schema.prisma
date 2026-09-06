@@ -529,6 +529,8 @@ model StockAdjustment {
   warehouseId      BigInt   @map("warehouse_id")
   adjustmentType   String   @default("CORRECTION") @map("adjustment_type") @db.VarChar(32)
   reasonCode       String   @default("MANUAL") @map("reason_code") @db.VarChar(64)
+  externalReference String? @map("external_reference") @db.VarChar(100)
+  sourceName       String?  @map("source_name") @db.VarChar(255)
   reason           String
   status           String   @default("POSTED") @db.VarChar(24)
   idempotencyKey   String   @unique @map("idempotency_key") @db.VarChar(150)
