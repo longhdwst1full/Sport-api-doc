@@ -1,4 +1,10 @@
 import { Prisma, PrismaClient } from '@prisma/client';
+import { v2 as cloudinary, type UploadApiResponse } from 'cloudinary';
+import {
+  BAO_AN_BRANDS,
+  BAO_AN_CATEGORIES,
+  BAO_AN_PRODUCTS,
+} from './demo-data/bao-an-sport';
 
 const prisma = new PrismaClient();
 
@@ -32,12 +38,14 @@ const brands = [
   { code: 'FITGEAR', name: 'FitGear', slug: 'fitgear' },
   { code: 'NIKE', name: 'Nike', slug: 'nike' },
   { code: 'ADIDAS', name: 'Adidas', slug: 'adidas' },
+  ...BAO_AN_BRANDS,
 ] as const;
 
 const categories = [
   { code: 'GYM', name: 'Tập gym', slug: 'tap-gym', sortOrder: 10 },
   { code: 'RUNNING', name: 'Chạy bộ', slug: 'chay-bo', sortOrder: 20 },
   { code: 'ACCESSORY', name: 'Phụ kiện thể thao', slug: 'phu-kien-the-thao', sortOrder: 30 },
+  ...BAO_AN_CATEGORIES,
 ] as const;
 
 const products = [
@@ -53,6 +61,9 @@ const products = [
     reorderPoint: 5,
     productType: 'STANDARD',
     components: [],
+    shortDescription: 'Tạ tay bọc cao su phù hợp tập sức mạnh tại nhà.',
+    sourceUrl: null,
+    imageUrl: null,
   },
   {
     productNo: 'SP-GIAY-CHAY-01',
@@ -66,6 +77,9 @@ const products = [
     reorderPoint: 3,
     productType: 'STANDARD',
     components: [],
+    shortDescription: 'Giày chạy bộ demo phục vụ kiểm thử catalog V1.',
+    sourceUrl: null,
+    imageUrl: null,
   },
   {
     productNo: 'SP-THAM-YOGA-01',
@@ -79,6 +93,9 @@ const products = [
     reorderPoint: 4,
     productType: 'STANDARD',
     components: [],
+    shortDescription: 'Thảm tập chống trượt cho yoga và các bài tập trên sàn.',
+    sourceUrl: null,
+    imageUrl: null,
   },
   {
     productNo: 'SP-COMBO-GYM-01',
@@ -95,10 +112,78 @@ const products = [
       { sku: 'TA-CAO-SU-5KG', quantity: 2 },
       { sku: 'THAM-YOGA-BLUE', quantity: 1 },
     ],
+    shortDescription: 'Combo ảo gồm tạ tay và thảm yoga cho nhu cầu tập luyện tại nhà.',
+    sourceUrl: null,
+    imageUrl: null,
   },
+  ...BAO_AN_PRODUCTS.map((item) => ({
+    ...item,
+    productType: 'STANDARD' as const,
+    components: [] as const,
+  })),
 ] as const;
 
-async function importDemoData(transaction: Prisma.TransactionClient): Promise<void> {
+interface PreparedMedia {
+  providerAssetId: string;
+  publicId: string;
+  secureUrl: string;
+  thumbnailUrl: string;
+  format: string;
+  mimeType: string;
+  width: number;
+  height: number;
+  sizeBytes: bigint;
+}
+
+async function prepareBaoAnMedia(): Promise<Map<string, PreparedMedia>> {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+  if (!cloudName || !apiKey || !apiSecret) {
+    throw new Error('Cloudinary credentials are required to import Bảo An demo images.');
+  }
+  cloudinary.config({ cloud_name: cloudName, api_key: apiKey, api_secret: apiSecret, secure: true });
+  const folder = (process.env.CLOUDINARY_FOLDER ?? 'sport-sys/sport').replace(/^\/+|\/+$/g, '');
+  const prepared = new Map<string, PreparedMedia>();
+
+  for (let offset = 0; offset < BAO_AN_PRODUCTS.length; offset += 4) {
+    const batch = BAO_AN_PRODUCTS.slice(offset, offset + 4);
+    const uploads = await Promise.all(batch.map(async (item) => {
+      const publicId = `${folder}/demo/bao-an-sport/${item.slug}`;
+      const result = await cloudinary.uploader.upload(item.imageUrl, {
+        public_id: publicId,
+        overwrite: true,
+        unique_filename: false,
+        resource_type: 'image',
+        tags: ['dctd-demo', 'bao-an-sport'],
+        context: `source=${encodeURIComponent(item.sourceUrl)}`,
+      }) as UploadApiResponse;
+      return { item, publicId, result };
+    }));
+    for (const { item, publicId, result } of uploads) {
+      const mimeFormat = result.format === 'jpg' ? 'jpeg' : result.format;
+      prepared.set(item.productNo, {
+        providerAssetId: result.asset_id,
+        publicId,
+        secureUrl: result.secure_url,
+        thumbnailUrl: cloudinary.url(publicId, {
+          secure: true, width: 640, height: 640, crop: 'limit', quality: 'auto', fetch_format: 'auto',
+        }),
+        format: result.format,
+        mimeType: `image/${mimeFormat}`,
+        width: result.width,
+        height: result.height,
+        sizeBytes: BigInt(result.bytes),
+      });
+    }
+  }
+  return prepared;
+}
+
+async function importDemoData(
+  transaction: Prisma.TransactionClient,
+  preparedMedia: ReadonlyMap<string, PreparedMedia>,
+): Promise<void> {
   const bootstrapUser = await transaction.user.findFirst({
     where: { normalizedEmail: bootstrapAdminEmail },
   });
@@ -186,6 +271,8 @@ async function importDemoData(transaction: Prisma.TransactionClient): Promise<vo
         productType: item.productType,
         name: item.name,
         slug: item.slug,
+        shortDescription: item.shortDescription,
+        seoJson: item.sourceUrl ? { demoSource: item.sourceUrl, capturedAt: '2026-09-06' } : undefined,
         status: 'PUBLISHED',
         publishedAt,
         updatedBy: bootstrapUser.id,
@@ -196,7 +283,8 @@ async function importDemoData(transaction: Prisma.TransactionClient): Promise<vo
         productNo: item.productNo,
         name: item.name,
         slug: item.slug,
-        shortDescription: 'Sản phẩm demo phục vụ kiểm thử giao diện V1.',
+        shortDescription: item.shortDescription,
+        seoJson: item.sourceUrl ? { demoSource: item.sourceUrl, capturedAt: '2026-09-06' } : undefined,
         status: 'PUBLISHED',
         publishedAt,
         createdBy: bootstrapUser.id,
@@ -311,12 +399,68 @@ async function importDemoData(transaction: Prisma.TransactionClient): Promise<vo
         })),
       });
     }
+    const media = preparedMedia.get(item.productNo);
+    if (media && item.sourceUrl) {
+      const currentAsset = await transaction.mediaAsset.findFirst({
+        where: { provider: 'CLOUDINARY', publicId: media.publicId },
+      });
+      const assetData = {
+        providerAssetId: media.providerAssetId,
+        publicId: media.publicId,
+        secureUrl: media.secureUrl,
+        thumbnailUrl: media.thumbnailUrl,
+        format: media.format,
+        mimeType: media.mimeType,
+        width: media.width,
+        height: media.height,
+        sizeBytes: media.sizeBytes,
+        folder: media.publicId.slice(0, media.publicId.lastIndexOf('/')),
+        altText: item.name,
+        metadataJson: { demoSource: item.sourceUrl, importedAt: '2026-09-06' },
+        status: 'ACTIVE',
+        uploadedBy: bootstrapUser.id,
+      };
+      const asset = currentAsset
+        ? await transaction.mediaAsset.update({ where: { id: currentAsset.id }, data: assetData })
+        : await transaction.mediaAsset.create({
+            data: { provider: 'CLOUDINARY', resourceType: 'IMAGE', ...assetData },
+          });
+      await transaction.productMedia.updateMany({
+        where: { productId: product.id, isPrimary: true, mediaAssetId: { not: asset.id } },
+        data: { isPrimary: false },
+      });
+      const currentMedia = await transaction.productMedia.findFirst({
+        where: { productId: product.id, mediaAssetId: asset.id },
+      });
+      if (currentMedia) {
+        await transaction.productMedia.update({
+          where: { id: currentMedia.id },
+          data: { variantId: variant.id, altText: item.name, sortOrder: 0, isPrimary: true, status: 'ACTIVE' },
+        });
+      } else {
+        await transaction.productMedia.create({
+          data: {
+            productId: product.id,
+            variantId: variant.id,
+            mediaAssetId: asset.id,
+            altText: item.name,
+            sortOrder: 0,
+            isPrimary: true,
+            status: 'ACTIVE',
+          },
+        });
+      }
+    }
   }
 }
 
 async function main(): Promise<void> {
-  await prisma.$transaction(importDemoData, { maxWait: 10_000, timeout: 120_000 });
-  console.log('Demo data imported: 3 branches/warehouses, 3 brands, 3 categories, 4 products (including 1 combo).');
+  const preparedMedia = await prepareBaoAnMedia();
+  await prisma.$transaction(
+    (transaction) => importDemoData(transaction, preparedMedia),
+    { maxWait: 10_000, timeout: 180_000 },
+  );
+  console.log('Demo data imported: 3 branches/warehouses, 9 brands, 7 categories, 20 products (16 sourced from Bảo An Sport, 1 combo).');
 }
 
 void main().finally(async () => prisma.$disconnect());

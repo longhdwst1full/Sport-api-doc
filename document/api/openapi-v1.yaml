@@ -3473,6 +3473,373 @@ paths:
       summary: Get a posted stock adjustment document
       tags:
         - Admin Inventory
+  /api/v1/admin/inventory/transfers:
+    get:
+      operationId: listStockTransfers
+      parameters:
+        - name: page
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            default: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 25
+            type: number
+        - name: search
+          required: false
+          in: query
+          schema:
+            maxLength: 100
+            type: string
+        - name: warehouseCode
+          required: false
+          in: query
+          schema:
+            maxLength: 32
+            type: string
+        - name: status
+          required: false
+          in: query
+          schema:
+            type: string
+            enum:
+              - DRAFT
+              - SUBMITTED
+              - SHIPPED
+              - RECEIVED
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockTransferListDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "503":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: List stock transfers visible to the assigned branches
+      tags:
+        - Admin Inventory Transfers
+    post:
+      operationId: createStockTransfer
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateStockTransferDto"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockTransferDetailDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "503":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Create a DRAFT full-shipment stock transfer
+      tags:
+        - Admin Inventory Transfers
+  /api/v1/admin/inventory/transfers/{id}:
+    get:
+      operationId: getStockTransfer
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockTransferDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "503":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Get stock transfer detail
+      tags:
+        - Admin Inventory Transfers
+  /api/v1/admin/inventory/transfers/{id}/submit:
+    post:
+      operationId: submitStockTransfer
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StockTransferTransitionDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockTransferDetailDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "503":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Submit a DRAFT transfer
+      tags:
+        - Admin Inventory Transfers
+  /api/v1/admin/inventory/transfers/{id}/ship:
+    post:
+      operationId: shipStockTransfer
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StockTransferTransitionDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockTransferDetailDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "503":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Ship every requested item from the source warehouse
+      tags:
+        - Admin Inventory Transfers
+  /api/v1/admin/inventory/transfers/{id}/receive:
+    post:
+      operationId: receiveStockTransfer
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReceiveStockTransferDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockTransferDetailDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "503":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Receive a full shipment and record damaged quantities
+      tags:
+        - Admin Inventory Transfers
   /api/v1/content/posts:
     get:
       operationId: listPublishedPosts
@@ -5948,6 +6315,249 @@ components:
         - reason
         - balances
         - postedAt
+    StockTransferSummaryDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        transferNo:
+          type: string
+        fromWarehouseCode:
+          type: string
+        toWarehouseCode:
+          type: string
+        status:
+          type: string
+          enum:
+            - DRAFT
+            - SUBMITTED
+            - SHIPPED
+            - RECEIVED
+        reason:
+          type: string
+        itemCount:
+          type: number
+        version:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        createdByDisplayName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        submittedAt:
+          type: string
+          format: date-time
+          nullable: true
+        shippedAt:
+          type: string
+          format: date-time
+          nullable: true
+        receivedAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - id
+        - transferNo
+        - fromWarehouseCode
+        - toWarehouseCode
+        - status
+        - reason
+        - itemCount
+        - version
+        - createdByDisplayName
+        - createdAt
+    StockTransferListDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/StockTransferSummaryDto"
+        total:
+          type: number
+        page:
+          type: number
+        limit:
+          type: number
+      required:
+        - items
+        - total
+        - page
+        - limit
+    StockTransferItemDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        sku:
+          type: string
+        productName:
+          type: string
+        requestedQuantity:
+          type: number
+        shippedQuantity:
+          type: number
+        receivedQuantity:
+          type: number
+        damagedQuantity:
+          type: number
+        damageReason:
+          type: string
+          nullable: true
+      required:
+        - id
+        - sku
+        - productName
+        - requestedQuantity
+        - shippedQuantity
+        - receivedQuantity
+        - damagedQuantity
+    StockTransferDetailDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        transferNo:
+          type: string
+        fromWarehouseCode:
+          type: string
+        toWarehouseCode:
+          type: string
+        status:
+          type: string
+          enum:
+            - DRAFT
+            - SUBMITTED
+            - SHIPPED
+            - RECEIVED
+        reason:
+          type: string
+        itemCount:
+          type: number
+        version:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        createdByDisplayName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        submittedAt:
+          type: string
+          format: date-time
+          nullable: true
+        shippedAt:
+          type: string
+          format: date-time
+          nullable: true
+        receivedAt:
+          type: string
+          format: date-time
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/StockTransferItemDto"
+        shippedByDisplayName:
+          type: string
+          nullable: true
+        receivedByDisplayName:
+          type: string
+          nullable: true
+      required:
+        - id
+        - transferNo
+        - fromWarehouseCode
+        - toWarehouseCode
+        - status
+        - reason
+        - itemCount
+        - version
+        - createdByDisplayName
+        - createdAt
+        - items
+    CreateStockTransferItemDto:
+      type: object
+      properties:
+        sku:
+          type: string
+        requestedQuantity:
+          type: number
+          minimum: 1
+      required:
+        - sku
+        - requestedQuantity
+    CreateStockTransferDto:
+      type: object
+      properties:
+        fromWarehouseCode:
+          type: string
+        toWarehouseCode:
+          type: string
+        reason:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreateStockTransferItemDto"
+      required:
+        - fromWarehouseCode
+        - toWarehouseCode
+        - reason
+        - items
+    StockTransferTransitionDto:
+      type: object
+      properties:
+        version:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+          description: Current optimistic-lock version
+      required:
+        - version
+    ReceiveStockTransferItemDto:
+      type: object
+      properties:
+        sku:
+          type: string
+        receivedQuantity:
+          type: number
+          minimum: 0
+        damagedQuantity:
+          type: number
+          minimum: 0
+        damageReason:
+          type: string
+          maxLength: 500
+      required:
+        - sku
+        - receivedQuantity
+        - damagedQuantity
+    ReceiveStockTransferDto:
+      type: object
+      properties:
+        version:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+          description: Current optimistic-lock version
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReceiveStockTransferItemDto"
+      required:
+        - version
+        - items
     ContentPostDto:
       type: object
       properties:

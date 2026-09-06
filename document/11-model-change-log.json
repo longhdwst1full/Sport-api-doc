@@ -1018,6 +1018,85 @@
           }
         }
       ]
+    },
+    {
+      "id": "DBAPI-20260906-STOCK-TRANSFER",
+      "date": "2026-09-06",
+      "scope": "DATABASE+API+IAM+ADMIN+TEST",
+      "summary": "Hoàn tất stock transfer V1 DRAFT→SUBMITTED→SHIPPED→RECEIVED: full shipment, kiểm nhận hàng tốt/hỏng, ledger TRANSFER_OUT/IN, idempotency, optimistic lock, audit và branch scope; chốt D11 giảm tối đa 10 đơn vị/SKU/lệnh cho branch-scoped manager.",
+      "sources": [
+        "migration:20260906090000_add_stock_transfer_core",
+        "migration:20260906100000_seed_stock_transfer_permissions",
+        "migration:20260906101000_normalize_stock_transfer_permission_metadata",
+        "OpenAPI:listStockTransfers/createStockTransfer/getStockTransfer/submitStockTransfer/shipStockTransfer/receiveStockTransfer",
+        "source:api/src/modules/inventory/stock-transfer.service.ts",
+        "source:admin/src/features/inventory/stock-transfer-panel.tsx",
+        "test:api/src/modules/inventory/stock-transfer.service.spec.ts",
+        "test:api/test/stock-transfer-schema.integration-spec.ts",
+        "document:03-database-v1.md@2.1.0",
+        "document:25-sprint-2-execution-status.md@1.2.0",
+        "decision:S2-D01/S2-D02/S2-D03"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "stock_transfers" },
+          "columns": ["Ý nghĩa", "Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính"],
+          "set": {
+            "Ý nghĩa": "Phiếu chuyển kho V1 có state machine, idempotency, actor và audit",
+            "Khóa ngoại quan trọng": "from/to_warehouse_id→warehouses; created/shipped/received_by→users",
+            "Unique / CHECK": "transfer_no UQ; idempotency_key UQ; source<>destination; status/timestamp/actor consistency",
+            "Các cột chính": "status,reason,idempotency_key,request_hash,submitted_at,shipped_at,received_at,version"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "stock_transfer_items" },
+          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính"],
+          "set": {
+            "Ý nghĩa": "Dòng chuyển kho và kết quả kiểm nhận hàng tốt/hỏng",
+            "Unique / CHECK": "transfer+variant UQ; requested>0; received+damaged<=shipped; damaged bắt buộc reason",
+            "Các cột chính": "requested_qty,shipped_qty,received_qty,damaged_qty,damage_reason"
+          }
+        }
+      ],
+      "upsertRows": [
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "stock_transfers", "Tên cột": "idempotency_key" },
+          "values": { "Tên bảng": "stock_transfers", "STT": "35A", "Tên cột": "idempotency_key", "Kiểu dữ liệu": "varchar(150)", "Cho phép NULL": "NO", "Unique": "YES", "Ý nghĩa / trạng thái cho phép": "Khóa replay create; cùng key khác request_hash trả 409" }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "stock_transfers", "Tên cột": "request_hash" },
+          "values": { "Tên bảng": "stock_transfers", "STT": "35B", "Tên cột": "request_hash", "Kiểu dữ liệu": "char(64)", "Cho phép NULL": "NO", "Unique": "NO", "Ý nghĩa / trạng thái cho phép": "SHA-256 payload canonical để kiểm tra idempotency" }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "stock_transfer_items", "Tên cột": "damage_reason" },
+          "values": { "Tên bảng": "stock_transfer_items", "STT": "36A", "Tên cột": "damage_reason", "Kiểu dữ liệu": "varchar(500)", "Cho phép NULL": "YES", "Unique": "NO", "Ý nghĩa / trạng thái cho phép": "Bắt buộc khi damaged_qty>0; hàng hỏng không cộng tồn sellable" }
+        },
+        {
+          "sheet": "RBAC Permissions",
+          "match": { "Permission code": "inventory.transfer.view" },
+          "values": { "Permission code": "inventory.transfer.view", "Module": "inventory", "Action": "view transfer", "Allowed scopes": "GLOBAL/BRANCH", "Sensitive": "NO", "Default roles": "OWNER, BRANCH_MANAGER", "Ghi chú": "Branch thấy phiếu có kho nguồn hoặc đích thuộc scope" }
+        },
+        {
+          "sheet": "RBAC Permissions",
+          "match": { "Permission code": "inventory.transfer.create" },
+          "values": { "Permission code": "inventory.transfer.create", "Module": "inventory", "Action": "create/submit transfer", "Allowed scopes": "GLOBAL/source BRANCH", "Sensitive": "YES", "Default roles": "OWNER, BRANCH_MANAGER", "Ghi chú": "V1 tạo DRAFT và submit tại kho nguồn" }
+        },
+        {
+          "sheet": "RBAC Permissions",
+          "match": { "Permission code": "inventory.transfer.ship" },
+          "values": { "Permission code": "inventory.transfer.ship", "Module": "inventory", "Action": "ship transfer", "Allowed scopes": "GLOBAL/source BRANCH", "Sensitive": "YES", "Default roles": "OWNER, BRANCH_MANAGER", "Ghi chú": "Trừ kho nguồn và ghi TRANSFER_OUT nguyên tử" }
+        },
+        {
+          "sheet": "RBAC Permissions",
+          "match": { "Permission code": "inventory.transfer.receive" },
+          "values": { "Permission code": "inventory.transfer.receive", "Module": "inventory", "Action": "receive transfer", "Allowed scopes": "GLOBAL/destination BRANCH", "Sensitive": "YES", "Default roles": "OWNER, BRANCH_MANAGER", "Ghi chú": "Chỉ received_qty hàng tốt được ghi TRANSFER_IN" }
+        }
+      ]
     }
   ]
 }

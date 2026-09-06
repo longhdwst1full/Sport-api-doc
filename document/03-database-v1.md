@@ -1,10 +1,10 @@
 # Thiết kế dữ liệu V1
 
-> **Document version:** 2.0.3
+> **Document version:** 2.1.0
 >
 > **Last updated:** 2026-09-06
 >
-> **Change summary:** Khôi phục composite primary key của `role_permissions` và `product_categories` bị mất khi D43 đổi FK UUID sang BIGINT; seed lặp lại an toàn theo unique key.
+> **Change summary:** Hiện thực stock transfer V1 có state machine, idempotency, optimistic lock, kiểm nhận hàng tốt/hỏng, branch scope và ledger OUT/IN nguyên tử.
 
 ## 1. Chuẩn chung
 
@@ -57,11 +57,15 @@ order_item 1──n order_item_component n──1 product_variant
 
 Mọi seed/import tạo `inventory_balances.on_hand > 0` phải đồng thời tạo movement `RECEIVE` mở sổ trong cùng transaction. Không được seed trực tiếp balance mà bỏ qua ledger; kiểm tra integration bắt buộc `on_hand = SUM(inventory_movements.quantity_delta)` theo từng kho + SKU.
 
+Permission nghiệp vụ mới phải có data migration cùng release, không chỉ thêm vào seed. Khi permission set của role thay đổi, migration tăng `users.permission_version` cho role-holder đang hoạt động để token cũ bị từ chối và lần đăng nhập tiếp theo nhận claim mới.
+
 ## 4. Constraint quan trọng
 
 - `warehouses(code)`, `branches(code)`, `product_variants(sku)`, barcode khác null và `orders(order_no)` là unique.
 - `role_permissions(role_id, permission_id)` và `product_categories(product_id, category_id)` là composite primary key; migration phải kiểm chứng lại constraint sau mọi lần thay kiểu PK/FK.
 - `inventory_balances(warehouse_id, product_variant_id)` unique; `on_hand >= 0`; `reserved >= 0`; `reserved <= on_hand`.
+- `stock_transfers`: source khác destination; trạng thái chỉ `DRAFT/SUBMITTED/SHIPPED/RECEIVED`; actor/timestamp phải khớp trạng thái; `transfer_no` và `idempotency_key` unique.
+- `stock_transfer_items`: một SKU mỗi phiếu; `requested > 0`, `0 <= shipped <= requested`, `received + damaged <= shipped`; khi nhận service bắt buộc `received + damaged = shipped`, hàng hỏng bắt buộc lý do.
 - `payments(order_id)` unique ở V1; payment có nhiều attempt/event qua `payment_transactions`.
 - `warehouses(branch_id)` unique: một branch đúng một warehouse; branch phải có warehouse trước khi ACTIVE.
 - Guest checkout luôn tạo/upsert `customers` với `user_id` null; bắt buộc normalized phone. Đăng ký sau sẽ link user vào customer cũ sau xác minh.
@@ -95,6 +99,12 @@ Khóa order/reservation → order `CANCELLED` → release active reservation và
 ### Refund/stock adjustment
 
 Maker tạo `approval_request` chứa immutable proposed payload. Approver khác maker approve. Worker/service thực thi với idempotency key và ghi `execution_status`; không cho sửa payload sau submit.
+
+### Chuyển kho V1
+
+Tạo `DRAFT` bằng idempotency key → source manager submit → source manager ship toàn bộ. Lúc ship, khóa transfer và balance nguồn theo thứ tự SKU ổn định, trừ `on_hand`, ghi `TRANSFER_OUT`. Destination manager kiểm nhận; `received_qty` là hàng tốt và được cộng `on_hand` bằng `TRANSFER_IN`, `damaged_qty` chỉ lưu bằng chứng và không nhập tồn bán. Mọi transition dùng `version`, transaction `SERIALIZABLE`, audit và branch scope server-side. V1 không partial shipment.
+
+Điều chỉnh giảm loại `CORRECTION`: principal chỉ có branch scope giảm tối đa 10 đơn vị/SKU/lệnh; principal GLOBAL/OWNER có thể vượt ngưỡng nhưng vẫn phải ghi lý do và audit.
 
 ### Giao thất bại
 
@@ -130,6 +140,8 @@ Fulfillment ghi reason bắt buộc rồi chuyển `DELIVERY_FAILED -> RETURNING
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 2.1.0 | 2026-09-06 | Hiện thực transfer state machine, damaged inspection, idempotency, branch scope và ledger OUT/IN; chốt D11. | DBAPI-20260906-STOCK-TRANSFER / D11 |
+| 2.0.3 | 2026-09-06 | Khôi phục composite PK của hai bảng nối sau D43. | DB-20260906-REPAIR-COMPOSITE-PK |
 | 2.0.2 | 2026-09-05 | Bắt buộc seed/import ghi opening movement và thêm reconciliation invariant. | DATA-20260905-INVENTORY-OPENING-RECONCILIATION |
 | 2.0.1 | 2026-09-05 | Bổ sung forward-fix cho actor UUID không có FK vật lý bị migration D43 bỏ sót. | DB-20260905-ACTOR-BIGINT-FORWARD-FIX |
 | 2.0.0 | 2026-09-05 | Đổi kiến trúc ID sang BIGINT IDENTITY, giữ UUID lịch sử và migrate-at-start fail-fast. | D43 / `20260905120000_migrate_uuid_ids_to_bigint_identity` |

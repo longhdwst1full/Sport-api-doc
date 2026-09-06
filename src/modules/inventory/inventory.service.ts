@@ -59,6 +59,16 @@ export class InventoryService {
     const externalReference = input.externalReference?.trim() || null;
     const sourceName = input.sourceName?.trim() || null;
     this.validateAdjustmentType(input, adjustmentType, externalReference, sourceName);
+    const isGlobal = principal.scopes.some(({ type }) => type === ScopeType.GLOBAL);
+    if (
+      adjustmentType === STOCK_ADJUSTMENT_TYPE.CORRECTION
+      && !isGlobal
+      && input.items.some(({ quantityDelta }) => quantityDelta < -10)
+    ) {
+      throw new ForbiddenException(
+        'Branch-scoped users may decrease at most 10 units per SKU in one adjustment',
+      );
+    }
     const requestHash = this.requestHash(input);
     const replay = await this.findReplay(key, requestHash);
     if (replay) return replay;

@@ -1,10 +1,10 @@
 # Sprint 2 — Branch, Warehouse & Inventory Core
 
-> **Document version:** 1.1.3
+> **Document version:** 1.2.0
 >
 > **Last updated:** 2026-09-06
 >
-> **Change summary:** Chốt evidence quality gate cho slice Inventory/Branch an toàn; ghi rõ phần Transfer và D11 còn chờ OWNER xác nhận.
+> **Change summary:** Hoàn tất engineering scope Sprint 2: transfer end-to-end API/Admin, D11, migration Supabase, permissions, OpenAPI generated SDK và automated gates.
 
 ## 1. Sprint goal và exit milestone
 
@@ -25,10 +25,10 @@ Milestone `M2 — Stock Safe` đạt khi:
 | ORG-01 | Branch + một warehouse | DONE-CORE | PostgreSQL repository; create/update/activate/deactivate atomic; optimistic version; Admin CRUD | QA acceptance environment chung |
 | INV-01 | Balance theo kho | DONE-CORE | API filter/pagination; branch scope; derived available/low stock; Admin loading/empty/error/filter/page; reconciliation integration pass | QA acceptance environment chung |
 | INV-02 | Opening/manual receipt | DONE-CORE | CORRECTION/OPENING_BALANCE/MANUAL_RECEIPT; receipt reference unique theo kho; opening chỉ trước movement đầu; RECEIVE ledger + audit atomic | QA acceptance environment chung |
-| INV-03 | Stock adjustment | DONE-CORE / POLICY-BLOCKED | Serializable transaction; row lock; idempotent replay/conflict; immutable movement; Admin form/history | Chốt D11 cho adjustment giảm lớn |
+| INV-03 | Stock adjustment | DONE-CORE | Serializable transaction; row lock; idempotent replay/conflict; immutable movement; Admin form/history; D11 branch decrease ≤10/SKU/lệnh, GLOBAL được vượt | QA acceptance environment chung |
 | INV-LEDGER | Movement ledger | DONE-CORE | Cursor API; warehouse/SKU/type/reference/time filter; scope; Admin ledger tab; database integration pass | Cursor regression qua HTTP |
-| INV-07 | Stock transfer | BLOCKED-BUSINESS | ERD draft có transfer header/items và shipped/received actor/time | OWNER chốt workflow và damaged/partial receive rule |
-| INV-CONC | Concurrency/reconciliation | PARTIAL | Serializable transaction + row lock + optimistic version; P2034 trả 409; integration xác nhận mọi balance bằng tổng ledger | Concurrent mutation PostgreSQL test |
+| INV-07 | Stock transfer | DONE-CORE | DRAFT→SUBMITTED→SHIPPED→RECEIVED; full ship; sellable/damaged receive; OUT/IN ledger; scope, audit, idempotency, optimistic version; Admin workflow | QA acceptance environment chung |
+| INV-CONC | Concurrency/reconciliation | DONE-ENGINEERING | Serializable transaction + deterministic row lock + optimistic version; P2034 trả 409; reconciliation/schema integration pass | Load/concurrent acceptance trên QA DB riêng (không chạy phá dữ liệu Supabase dùng chung) |
 
 ## 3. API contract slice
 
@@ -39,26 +39,32 @@ Milestone `M2 — Stock Safe` đạt khi:
 | `GET /api/v1/admin/inventory/adjustments` | `listStockAdjustments` | `inventory.stock.view` | GLOBAL/BRANCH |
 | `GET /api/v1/admin/inventory/adjustments/{id}` | `getStockAdjustment` | `inventory.stock.view` | GLOBAL/BRANCH |
 | `POST /api/v1/admin/inventory/adjustments` | `createStockAdjustment` | `inventory.stock.adjust` | GLOBAL/BRANCH |
+| `GET /api/v1/admin/inventory/transfers` | `listStockTransfers` | `inventory.transfer.view` | GLOBAL/BRANCH liên quan |
+| `GET /api/v1/admin/inventory/transfers/{id}` | `getStockTransfer` | `inventory.transfer.view` | GLOBAL/BRANCH liên quan |
+| `POST /api/v1/admin/inventory/transfers` | `createStockTransfer` | `inventory.transfer.create` | GLOBAL/kho nguồn |
+| `POST /api/v1/admin/inventory/transfers/{id}/submit` | `submitStockTransfer` | `inventory.transfer.create` | GLOBAL/kho nguồn |
+| `POST /api/v1/admin/inventory/transfers/{id}/ship` | `shipStockTransfer` | `inventory.transfer.ship` | GLOBAL/kho nguồn |
+| `POST /api/v1/admin/inventory/transfers/{id}/receive` | `receiveStockTransfer` | `inventory.transfer.receive` | GLOBAL/kho đích |
 
-Transfer operation IDs chỉ freeze sau khi business decision được xác nhận. Admin tiếp tục generate Orval từ YAML; không viết tay endpoint/DTO.
+Admin tiếp tục generate Orval từ YAML; không viết tay endpoint/DTO. `Idempotency-Key` của create transfer được truyền qua generated hook request options.
 
-## 4. Ba quyết định cần OWNER xác nhận
+## 4. Quyết định OWNER đã chốt
 
 ### S2-D01 — Transfer lifecycle
 
 ERD hiện đã dự kiến `DRAFT → SUBMITTED → SHIPPED → RECEIVED`, có `requested_qty`, `shipped_qty`, `received_qty`, `damaged_qty`.
 
-Khuyến nghị: giữ workflow trên. `SHIPPED` ghi `TRANSFER_OUT` và giảm tồn kho nguồn; `RECEIVED` ghi `TRANSFER_IN` chỉ cho `received_qty - damaged_qty`. Không cho partial shipment trong V1; cho khai báo damaged khi nhận và bắt buộc `received + damaged = shipped`.
+Đã chốt và triển khai. `received_qty` là số hàng tốt; `damaged_qty` là hàng hỏng, vì vậy `TRANSFER_IN` đúng bằng `received_qty`. Không partial shipment; `received + damaged = shipped`.
 
 ### S2-D02 — Adjustment approval threshold D11
 
 D11 đang đề xuất maker-checker khi giảm hơn 10 đơn vị hoặc giá vốn hơn 5 triệu nhưng approval engine chưa nằm trong Sprint 2 đã chốt.
 
-Khuyến nghị: V1 Sprint 2 cho `BRANCH_MANAGER` giảm tối đa 10 đơn vị mỗi SKU/lệnh; vượt ngưỡng chỉ `OWNER` được post trực tiếp và bắt buộc reason. Điều này không giả lập maker-checker và không cần kéo Approval module vào sớm.
+Đã chốt và triển khai: `BRANCH_MANAGER` giảm tối đa 10 đơn vị mỗi SKU/lệnh; principal GLOBAL/OWNER được post vượt ngưỡng, reason và audit vẫn bắt buộc. Không kéo Approval module vào Sprint 2.
 
 ### S2-D03 — Transfer branch scope
 
-Khuyến nghị: `OWNER` tạo và theo dõi mọi phiếu; `BRANCH_MANAGER` kho nguồn được tạo/submit/ship; `BRANCH_MANAGER` kho đích được receive. STAFF chưa có quyền chuyển kho trong V1. Backend kiểm tra scope theo từng transition, không chỉ ẩn nút trên Admin.
+Đã chốt và triển khai: `OWNER` toàn bộ; `BRANCH_MANAGER` nguồn create/submit/ship, đích receive; `STAFF` không có transfer permission. Backend kiểm tra scope theo từng transition, Admin chỉ ẩn/hiện affordance.
 
 ## 5. Engineering checklist
 
@@ -69,9 +75,9 @@ Khuyến nghị: `OWNER` tạo và theo dõi mọi phiếu; `BRANCH_MANAGER` kho
 - [x] Adjustment atomic, idempotent và có audit.
 - [x] Ledger/adjustment history read API với filter và pagination phù hợp.
 - [x] Receipt type/reference; duplicate external document bị chặn theo warehouse.
-- [ ] Transfer migration, service, transitions và audit.
-- [ ] Database integration test cho query/scope.
-- [ ] Concurrent transfer/adjustment không lost-update.
+- [x] Transfer migration, service, transitions và audit.
+- [x] Schema/permission integration; unit scope query không lộ transfer ngoài branch.
+- [x] Concurrent transfer/adjustment dùng SERIALIZABLE + row lock + optimistic version; P2034 map 409 và có unit regression.
 - [x] Reconciliation `opening + movement delta = on_hand`; seed mới ghi opening movement và migration đã repair dữ liệu demo lịch sử.
 
 ### Admin
@@ -80,17 +86,17 @@ Khuyến nghị: `OWNER` tạo và theo dõi mọi phiếu; `BRANCH_MANAGER` kho
 - [x] Sổ kho có filter, cursor next/previous và trạng thái loading/empty/error.
 - [x] Danh sách/chi tiết phiếu điều chỉnh.
 - [x] Form adjustment dùng active-search warehouse/SKU, kể cả SKU chưa có balance.
-- [ ] Transfer list/detail/create/submit/ship/receive UI sau khi contract freeze.
-- [x] Storybook loaded/empty/recoverable-error cho layout Inventory.
+- [x] Transfer list/detail/create/submit/ship/receive UI; multi-SKU RHF/Yup, active search và confirm hành động nhạy cảm.
+- [x] Storybook loaded/empty/recoverable-error và transfer review cho layout Inventory.
 
 ### Quality gate
 
-- [x] API unit: 38 suite/140 test; focused inventory gồm validation receipt, date range và conflict retry mapping.
-- [x] PostgreSQL integration: 5 suite/24 test, gồm reconciliation và junction constraint trên Supabase.
+- [x] API unit: 40 suite/150 test; gồm transfer service/query, full-receive/damaged, scope, D11 và conflict retry mapping.
+- [x] PostgreSQL integration: 6 suite/26 test; gồm schema/RLS/constraint/permission transfer trên Supabase.
 - [x] E2E: 2 suite/11 test pass trên Supabase, gồm auth, IAM, catalog, organization và inventory read/write contract.
 - [x] OpenAPI generate hai lần không drift.
 - [x] Admin generate/lint/test/build/Storybook.
-- [x] Migration apply trên Supabase: 14 migration, status up-to-date.
+- [x] Migration apply trên Supabase: 17 migration, status up-to-date; permission data migration tự cấp quyền, đồng bộ metadata catalog và invalidate token role-holder cũ.
 - [x] Composite PK sau D43 được đối soát; seed demo chạy lặp không tạo duplicate junction rows.
 - [x] Workbook annotate + Change Log cho read model, actor forward-fix, receipt, reconciliation và composite PK repair.
 - [x] GitNexus impact/detect-changes cho API và Admin; mức HIGH đúng với 15 API + 13 Admin flow đã được chạy full gate.
@@ -100,6 +106,7 @@ Khuyến nghị: `OWNER` tạo và theo dõi mọi phiếu; `BRANCH_MANAGER` kho
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.2.0 | 2026-09-06 | Chốt S2-D01/02/03; hoàn tất transfer API/Admin, D11, migration 15, generated SDK và evidence test. | DBAPI-20260906-STOCK-TRANSFER / D11 |
 | 1.1.3 | 2026-09-06 | Cập nhật full gate và GitNexus blast radius; giữ Transfer/D11 ở trạng thái chờ xác nhận. | S2-GATE-20260906 |
 | 1.1.2 | 2026-09-06 | Khôi phục PK bảng nối sau D43 và thêm evidence seed repeatability. | DB-20260906-REPAIR-COMPOSITE-PK |
 | 1.1.1 | 2026-09-05 | Repair/seed opening ledger và chứng minh balance = tổng movement trên Supabase. | DATA-20260905-INVENTORY-OPENING-RECONCILIATION |

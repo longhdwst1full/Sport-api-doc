@@ -676,7 +676,9 @@ Table stock_transfers {
   from_warehouse_id bigint [not null]
   to_warehouse_id bigint [not null]
   status varchar(24) [not null, default: 'DRAFT']
-  reason text
+  reason text [not null]
+  idempotency_key varchar(150) [not null, unique]
+  request_hash char(64) [not null]
   created_by bigint [not null]
   submitted_at timestamptz
   shipped_by bigint
@@ -686,7 +688,11 @@ Table stock_transfers {
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
-  Note: '[P1] CHECK source != destination; OUT và IN dùng cùng transfer ref.'
+  indexes {
+    (from_warehouse_id, status, created_at)
+    (to_warehouse_id, status, created_at)
+  }
+  Note: '[P1] DRAFT→SUBMITTED→SHIPPED→RECEIVED; source != destination; SHIPPED ghi TRANSFER_OUT toàn bộ, RECEIVED ghi TRANSFER_IN cho received_qty; command idempotent và optimistic lock.'
 }
 
 Table stock_transfer_items {
@@ -697,8 +703,9 @@ Table stock_transfer_items {
   shipped_qty int [not null, default: 0]
   received_qty int [not null, default: 0]
   damaged_qty int [not null, default: 0]
+  damage_reason varchar(500)
   indexes { (stock_transfer_id, product_variant_id) [unique] }
-  Note: '[P1] Các quantity >=0.'
+  Note: '[P1] requested>0; 0<=shipped<=requested; received+damaged<=shipped; khi RECEIVED service bắt buộc received+damaged=shipped; damaged>0 bắt buộc damage_reason.'
 }
 
 // CART + ORDER

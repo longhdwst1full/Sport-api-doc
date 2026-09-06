@@ -73,6 +73,24 @@ describe('InventoryService', () => {
     }, 'duplicate', owner, 'request')).rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it('limits a branch-scoped adjustment decrease to 10 units per SKU', async () => {
+    const prisma = { isEnabled: jest.fn().mockReturnValue(true) } as unknown as PrismaService;
+    const service = new InventoryService(prisma, {} as AuditWriter);
+    const branchManager: AuthPrincipal = {
+      ...owner,
+      displayName: 'Branch Manager',
+      scopes: [{ type: ScopeType.BRANCH, branchId: '1' }],
+    };
+
+    await expect(service.adjust({
+      warehouseCode: 'KHO-HCM-01',
+      reason: 'Giảm tồn vượt ngưỡng chi nhánh',
+      items: [{ sku: 'RUN-X1', quantityDelta: -11 }],
+    }, 'branch-limit', branchManager, 'request')).rejects.toThrow(
+      'Branch-scoped users may decrease at most 10 units per SKU in one adjustment',
+    );
+  });
+
   it('requires one external document reference for a manual receipt', async () => {
     const prisma = { isEnabled: jest.fn().mockReturnValue(true) } as unknown as PrismaService;
     const service = new InventoryService(prisma, {} as AuditWriter);
