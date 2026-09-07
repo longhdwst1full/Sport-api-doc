@@ -1,10 +1,10 @@
 # Sprint 2 — Branch, Warehouse & Inventory Core
 
-> **Document version:** 1.2.0
+> **Document version:** 1.2.1
 >
-> **Last updated:** 2026-09-06
+> **Last updated:** 2026-09-07
 >
-> **Change summary:** Hoàn tất engineering scope Sprint 2: transfer end-to-end API/Admin, D11, migration Supabase, permissions, OpenAPI generated SDK và automated gates.
+> **Change summary:** Bổ sung HTTP regression cho ledger cursor và đồng bộ D11 thành DECIDED; Sprint 2 còn BA/QA acceptance và load/concurrency trên QA DB riêng.
 
 ## 1. Sprint goal và exit milestone
 
@@ -26,7 +26,7 @@ Milestone `M2 — Stock Safe` đạt khi:
 | INV-01 | Balance theo kho | DONE-CORE | API filter/pagination; branch scope; derived available/low stock; Admin loading/empty/error/filter/page; reconciliation integration pass | QA acceptance environment chung |
 | INV-02 | Opening/manual receipt | DONE-CORE | CORRECTION/OPENING_BALANCE/MANUAL_RECEIPT; receipt reference unique theo kho; opening chỉ trước movement đầu; RECEIVE ledger + audit atomic | QA acceptance environment chung |
 | INV-03 | Stock adjustment | DONE-CORE | Serializable transaction; row lock; idempotent replay/conflict; immutable movement; Admin form/history; D11 branch decrease ≤10/SKU/lệnh, GLOBAL được vượt | QA acceptance environment chung |
-| INV-LEDGER | Movement ledger | DONE-CORE | Cursor API; warehouse/SKU/type/reference/time filter; scope; Admin ledger tab; database integration pass | Cursor regression qua HTTP |
+| INV-LEDGER | Movement ledger | DONE-CORE | Cursor API; warehouse/SKU/type/reference/time filter; scope; Admin ledger tab; database integration; HTTP next-cursor regression đã implement và compile | Chạy regression trên QA DB riêng + QA acceptance |
 | INV-07 | Stock transfer | DONE-CORE | DRAFT→SUBMITTED→SHIPPED→RECEIVED; full ship; sellable/damaged receive; OUT/IN ledger; scope, audit, idempotency, optimistic version; Admin workflow | QA acceptance environment chung |
 | INV-CONC | Concurrency/reconciliation | DONE-ENGINEERING | Serializable transaction + deterministic row lock + optimistic version; P2034 trả 409; reconciliation/schema integration pass | Load/concurrent acceptance trên QA DB riêng (không chạy phá dữ liệu Supabase dùng chung) |
 
@@ -58,7 +58,7 @@ ERD hiện đã dự kiến `DRAFT → SUBMITTED → SHIPPED → RECEIVED`, có 
 
 ### S2-D02 — Adjustment approval threshold D11
 
-D11 đang đề xuất maker-checker khi giảm hơn 10 đơn vị hoặc giá vốn hơn 5 triệu nhưng approval engine chưa nằm trong Sprint 2 đã chốt.
+D11 ban đầu đề xuất maker-checker khi giảm hơn 10 đơn vị hoặc giá vốn hơn 5 triệu, nhưng approval engine không nằm trong Sprint 2 đã chốt.
 
 Đã chốt và triển khai: `BRANCH_MANAGER` giảm tối đa 10 đơn vị mỗi SKU/lệnh; principal GLOBAL/OWNER được post vượt ngưỡng, reason và audit vẫn bắt buộc. Không kéo Approval module vào Sprint 2.
 
@@ -94,6 +94,7 @@ D11 đang đề xuất maker-checker khi giảm hơn 10 đơn vị hoặc giá v
 - [x] API unit: 40 suite/150 test; gồm transfer service/query, full-receive/damaged, scope, D11 và conflict retry mapping.
 - [x] PostgreSQL integration: 6 suite/26 test; gồm schema/RLS/constraint/permission transfer trên Supabase.
 - [x] E2E: 2 suite/11 test pass trên Supabase, gồm auth, IAM, catalog, organization và inventory read/write contract.
+- [ ] Ledger HTTP cursor regression đã implement/compile; chưa execute vì `.env.local` đang trỏ shared Supabase production/dev và suite tạo dữ liệu nghiệp vụ.
 - [x] OpenAPI generate hai lần không drift.
 - [x] Admin generate/lint/test/build/Storybook.
 - [x] Migration apply trên Supabase: 17 migration, status up-to-date; permission data migration tự cấp quyền, đồng bộ metadata catalog và invalidate token role-holder cũ.
@@ -106,6 +107,7 @@ D11 đang đề xuất maker-checker khi giảm hơn 10 đơn vị hoặc giá v
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.2.1 | 2026-09-07 | Bổ sung HTTP next-cursor regression cho inventory movement ledger và đồng bộ trạng thái D11 thành DECIDED; không thay đổi API contract. | S2-LEDGER-CURSOR-HTTP-20260907 / D11-SYNC-20260907 |
 | 1.2.0 | 2026-09-06 | Chốt S2-D01/02/03; hoàn tất transfer API/Admin, D11, migration 15, generated SDK và evidence test. | DBAPI-20260906-STOCK-TRANSFER / D11 |
 | 1.1.3 | 2026-09-06 | Cập nhật full gate và GitNexus blast radius; giữ Transfer/D11 ở trạng thái chờ xác nhận. | S2-GATE-20260906 |
 | 1.1.2 | 2026-09-06 | Khôi phục PK bảng nối sau D43 và thêm evidence seed repeatability. | DB-20260906-REPAIR-COMPOSITE-PK |

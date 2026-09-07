@@ -266,13 +266,33 @@ describe('Admin v1 contract', () => {
 
     const movements = await request(server())
       .get('/api/v1/admin/inventory/movements')
-      .query({ warehouseCode: payload.warehouseCode, sku: 'TA-CAO-SU-5KG', limit: 25 })
+      .query({ warehouseCode: payload.warehouseCode, sku: 'TA-CAO-SU-5KG', limit: 1 })
       .set('authorization', `Bearer ${accessToken}`)
       .expect(200);
     const movementBody = movements.body as unknown as {
-      items: Array<{ movementType: string; referenceId: string }>;
+      items: Array<{ id: string; movementType: string; referenceId: string }>;
+      nextCursor: string | null;
     };
-    expect(movementBody.items.some((item) =>
+    expect(movementBody.items).toHaveLength(1);
+    expect(movementBody.nextCursor).toEqual(expect.any(String));
+
+    const nextMovements = await request(server())
+      .get('/api/v1/admin/inventory/movements')
+      .query({
+        warehouseCode: payload.warehouseCode,
+        sku: 'TA-CAO-SU-5KG',
+        limit: 1,
+        cursor: movementBody.nextCursor,
+      })
+      .set('authorization', `Bearer ${accessToken}`)
+      .expect(200);
+    const nextMovementBody = nextMovements.body as unknown as {
+      items: Array<{ id: string; movementType: string; referenceId: string }>;
+      nextCursor: string | null;
+    };
+    expect(nextMovementBody.items).toHaveLength(1);
+    expect(nextMovementBody.items[0]?.id).not.toBe(movementBody.items[0]?.id);
+    expect([...movementBody.items, ...nextMovementBody.items].some((item) =>
       item.movementType === 'ADJUST' && item.referenceId === adjustmentSummary?.id,
     )).toBe(true);
 

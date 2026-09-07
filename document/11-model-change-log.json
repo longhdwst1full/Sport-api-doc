@@ -1127,6 +1127,43 @@
         "evidence:local login 200 then auth/me 200 against shared Supabase"
       ],
       "targets": []
+    },
+    {
+      "id": "S2-LEDGER-CURSOR-HTTP-20260907",
+      "date": "2026-09-07",
+      "scope": "API-TEST+DOCUMENTATION",
+      "summary": "Bổ sung HTTP E2E regression cho inventory movement cursor: trang đầu trả opaque nextCursor, trang kế tiếp không lặp record và malformed cursor vẫn trả 400; không đổi schema hoặc API contract.",
+      "sources": [
+        "test:test/admin-contract.e2e-spec.ts",
+        "operation:listInventoryMovements",
+        "document:25-sprint-2-execution-status.md@1.2.1"
+      ],
+      "targets": []
+    },
+    {
+      "id": "D11-SYNC-20260907",
+      "date": "2026-09-07",
+      "scope": "DECISION+DOCUMENTATION",
+      "summary": "Đồng bộ D11 từ PROPOSED sang DECIDED theo rule Sprint 2 đã chốt và triển khai: V1 không maker-checker; BRANCH_MANAGER giảm tối đa 10 đơn vị/SKU/lệnh; GLOBAL/OWNER được vượt; reason và audit luôn bắt buộc.",
+      "sources": [
+        "decision:D11",
+        "document:08-open-decisions.csv",
+        "document:25-sprint-2-execution-status.md@1.2.1",
+        "source:src/modules/inventory/inventory.service.ts"
+      ],
+      "targets": [
+        {
+          "sheet": "Open Decisions",
+          "match": { "ID": "D11" },
+          "columns": ["Quyết định đề xuất", "Tại sao quan trọng", "Status", "Kết luận review / ghi chú"],
+          "set": {
+            "Quyết định đề xuất": "V1 không maker-checker; BRANCH_MANAGER giảm tối đa 10 đơn vị mỗi SKU/lệnh; GLOBAL/OWNER được vượt; mọi lần giảm bắt buộc reason và audit",
+            "Tại sao quan trọng": "Giữ kiểm soát giảm tồn trong V1 mà không kéo approval engine vào sớm",
+            "Status": "DECIDED",
+            "Kết luận review / ghi chú": "Đã triển khai trong Sprint 2; branch decrease >10 bị từ chối, GLOBAL được vượt; reason và audit bắt buộc."
+          }
+        }
+      ]
     }
   ]
 }
