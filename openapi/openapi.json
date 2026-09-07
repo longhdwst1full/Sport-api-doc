@@ -7347,10 +7347,6 @@
               "INACTIVE"
             ]
           },
-          "isPrimary": {
-            "type": "boolean",
-            "example": true
-          },
           "version": {
             "type": "number",
             "example": 0
@@ -7362,7 +7358,6 @@
           "code",
           "name",
           "status",
-          "isPrimary",
           "version"
         ]
       },

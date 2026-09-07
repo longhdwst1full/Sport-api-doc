@@ -52,7 +52,6 @@ export class WarehouseDto {
   @ApiProperty({ example: 'KHO-HCM-01' }) code: string;
   @ApiProperty({ example: 'Kho bán hàng Hồ Chí Minh' }) name: string;
   @ApiProperty({ enum: ['ACTIVE', 'INACTIVE'] }) status: 'ACTIVE' | 'INACTIVE';
-  @ApiProperty({ example: true }) isPrimary: boolean;
   @ApiProperty({ example: 0 }) version: number;
 }
 

@@ -86,7 +86,6 @@ export class OrganizationService {
         code: input.warehouse.code,
         name: input.warehouse.name,
         status: 'ACTIVE',
-        isPrimary: true,
         version: 0,
         },
         context,

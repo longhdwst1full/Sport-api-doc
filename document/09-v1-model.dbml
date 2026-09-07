@@ -33,13 +33,12 @@ Table warehouses {
   code varchar(32) [not null, unique]
   name varchar(255) [not null]
   status varchar(24) [not null, default: 'ACTIVE']
-  is_primary boolean [not null, default: true]
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
   created_by bigint
   updated_at timestamptz [not null]
   updated_by bigint
-  Note: '[P0] V1 chỉ một warehouse ACTIVE/primary mỗi branch; dùng status ACTIVE|INACTIVE, không soft-delete.'
+  Note: '[P0] V1 đúng một warehouse mỗi branch nhờ branch_id UNIQUE; không dùng is_primary; dùng status ACTIVE|INACTIVE, không soft-delete.'
 }
 
 Table users {
@@ -580,6 +579,10 @@ Table inventory_movements {
   occurred_at timestamptz [not null]
   created_at timestamptz [not null]
   created_by bigint [not null]
+  indexes {
+    (occurred_at, id)
+    (warehouse_id, occurred_at, id)
+  }
   Note: '[P0] Append-only ledger; reject UPDATE/DELETE/TRUNCATE; mỗi dòng adjustment có idempotency key riêng.'
 }
 
@@ -622,6 +625,7 @@ Table stock_adjustments {
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
+  indexes { (warehouse_id, posted_at, id) }
   Note: '[P0] CORRECTION, OPENING_BALANCE hoặc MANUAL_RECEIPT được post atomic; receipt cần chứng từ ngoài, opening chỉ trước movement đầu tiên. Partial unique warehouse+external_reference chống nhập trùng MANUAL_RECEIPT.'
 }
 

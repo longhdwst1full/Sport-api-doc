@@ -1164,6 +1164,52 @@
           }
         }
       ]
+    },
+    {
+      "id": "DBSEC-20260907-WAREHOUSE-RLS-CURSOR",
+      "date": "2026-09-07",
+      "scope": "DATABASE+API+SECURITY+DOCUMENTATION",
+      "summary": "Thực thi D13 bằng branch_id UNIQUE và bỏ warehouses.is_primary; revoke toàn bộ table/sequence privilege public khỏi anon/authenticated, chặn default grants tương lai, bật RLS cho bốn bảng inventory còn thiếu và thêm index khớp keyset cursor.",
+      "sources": [
+        "decision:D13",
+        "migration:20260907100000_enforce_single_warehouse_and_harden_public_schema",
+        "source:prisma/schema.prisma",
+        "test:test/database-security.integration-spec.ts",
+        "OpenAPI:listAdminWarehouses/createAdminBranchWithWarehouse",
+        "document:03-database-v1.md@2.2.0",
+        "document:10-v1-model-relationship-review.md@3.0.0",
+        "document:25-sprint-2-execution-status.md@1.3.0"
+      ],
+      "targets": [
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "warehouses", "Tên cột": "is_primary" },
+          "columns": "*",
+          "archiveRemovedRowsTo": "Removed Columns"
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "warehouses" },
+          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính", "Retention"],
+          "set": {
+            "Ý nghĩa": "Kho vật lý; đúng một kho cho mỗi chi nhánh trong V1",
+            "Unique / CHECK": "code UQ; branch_id UQ; RLS ON; anon/authenticated denied",
+            "Các cột chính": "code,branch_id,name,status,version",
+            "Retention": "status INACTIVE; retain for FK/audit"
+          }
+        },
+        {
+          "sheet": "Open Decisions",
+          "match": { "ID": "D13" },
+          "columns": ["Quyết định đề xuất", "Tại sao quan trọng", "Status", "Kết luận review / ghi chú"],
+          "set": {
+            "Quyết định đề xuất": "V1 đúng một warehouse mỗi branch; branch_id UNIQUE và bỏ is_primary",
+            "Tại sao quan trọng": "Quan hệ 1-1 có một nguồn sự thật và routing kho đơn giản",
+            "Status": "DECIDED",
+            "Kết luận review / ghi chú": "Đã áp dụng migration trên Supabase dev; dữ liệu preflight 4 branch/4 warehouse không vi phạm."
+          }
+        }
+      ]
     }
   ]
 }

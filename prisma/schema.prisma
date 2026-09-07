@@ -41,7 +41,6 @@ model Warehouse {
   code      String   @unique @db.VarChar(32)
   name      String   @db.VarChar(255)
   status    String   @default("ACTIVE") @db.VarChar(24)
-  isPrimary Boolean  @default(true) @map("is_primary")
   version   BigInt   @default(0)
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   createdBy BigInt?  @map("created_by")
@@ -524,6 +523,8 @@ model InventoryMovement {
   creator        User           @relation("InventoryMovementCreator", fields: [createdBy], references: [id], onDelete: Restrict)
 
   @@index([warehouseId, productVariantId, occurredAt])
+  @@index([occurredAt(sort: Desc), id(sort: Desc)])
+  @@index([warehouseId, occurredAt(sort: Desc), id(sort: Desc)])
   @@index([referenceType, referenceId])
   @@map("inventory_movements")
 }
@@ -552,7 +553,7 @@ model StockAdjustment {
   creator   User      @relation("StockAdjustmentCreator", fields: [createdBy], references: [id], onDelete: Restrict)
   items     StockAdjustmentItem[]
 
-  @@index([warehouseId, postedAt])
+  @@index([warehouseId, postedAt(sort: Desc), id(sort: Desc)])
   @@map("stock_adjustments")
 }
 

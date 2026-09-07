@@ -1,10 +1,10 @@
 # Sprint 2 — Branch, Warehouse & Inventory Core
 
-> **Document version:** 1.2.1
+> **Document version:** 1.3.0
 >
 > **Last updated:** 2026-09-07
 >
-> **Change summary:** Bổ sung HTTP regression cho ledger cursor và đồng bộ D11 thành DECIDED; Sprint 2 còn BA/QA acceptance và load/concurrency trên QA DB riêng.
+> **Change summary:** Đóng gói engineering Sprint 2: áp dụng D13 1 branch = 1 warehouse, harden Supabase public schema/RLS, thêm cursor index và đồng bộ generated Admin SDK.
 
 ## 1. Sprint goal và exit milestone
 
@@ -70,6 +70,7 @@ D11 ban đầu đề xuất maker-checker khi giảm hơn 10 đơn vị hoặc g
 
 ### Backend
 
+- [x] `warehouses.branch_id` UNIQUE và đã bỏ cột/API `is_primary` dư thừa theo D13.
 - [x] Balance không nằm trên Product.
 - [x] Branch scope server-side cho balance/ledger/adjustment query và mutation.
 - [x] Adjustment atomic, idempotent và có audit.
@@ -79,6 +80,8 @@ D11 ban đầu đề xuất maker-checker khi giảm hơn 10 đơn vị hoặc g
 - [x] Schema/permission integration; unit scope query không lộ transfer ngoài branch.
 - [x] Concurrent transfer/adjustment dùng SERIALIZABLE + row lock + optimistic version; P2034 map 409 và có unit regression.
 - [x] Reconciliation `opening + movement delta = on_hand`; seed mới ghi opening movement và migration đã repair dữ liệu demo lịch sử.
+- [x] Supabase `public` revoke table/sequence privilege khỏi `anon/authenticated`; default privilege tương lai bị khóa; toàn bộ bảng inventory bật RLS.
+- [x] Ledger/adjustment có composite index khớp keyset cursor thực tế.
 
 ### Admin
 
@@ -91,22 +94,25 @@ D11 ban đầu đề xuất maker-checker khi giảm hơn 10 đơn vị hoặc g
 
 ### Quality gate
 
-- [x] API unit: 40 suite/150 test; gồm transfer service/query, full-receive/damaged, scope, D11 và conflict retry mapping.
-- [x] PostgreSQL integration: 6 suite/26 test; gồm schema/RLS/constraint/permission transfer trên Supabase.
+- [x] API unit: 41 suite/159 test; gồm transfer service/query, full-receive/damaged, scope, D11 và conflict retry mapping.
+- [x] PostgreSQL integration: 7 suite/31 test; gồm warehouse cardinality, schema/RLS, direct-role denial, cursor index, constraint và permission transfer trên Supabase dev.
 - [x] E2E: 2 suite/11 test pass trên Supabase, gồm auth, IAM, catalog, organization và inventory read/write contract.
 - [ ] Ledger HTTP cursor regression đã implement/compile; chưa execute vì `.env.local` đang trỏ shared Supabase production/dev và suite tạo dữ liệu nghiệp vụ.
 - [x] OpenAPI generate hai lần không drift.
 - [x] Admin generate/lint/test/build/Storybook.
-- [x] Migration apply trên Supabase: 17 migration, status up-to-date; permission data migration tự cấp quyền, đồng bộ metadata catalog và invalidate token role-holder cũ.
+- [x] Migration apply trên Supabase: 18 migration, status up-to-date; permission data migration tự cấp quyền, đồng bộ metadata catalog và invalidate token role-holder cũ.
 - [x] Composite PK sau D43 được đối soát; seed demo chạy lặp không tạo duplicate junction rows.
 - [x] Workbook annotate + Change Log cho read model, actor forward-fix, receipt, reconciliation và composite PK repair.
 - [x] GitNexus impact/detect-changes cho API và Admin; mức HIGH đúng với 15 API + 13 Admin flow đã được chạy full gate.
 - [ ] BA/QA evidence trên environment chung.
 
+Engineering scope Sprint 2 đạt 100%. Formal DoD vẫn chờ BA/QA acceptance và load/concurrency trên QA database riêng; không dùng Supabase dev dùng chung để tạo ledger test rác hoặc gây tranh chấp tồn.
+
 ## Revision history
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.3.0 | 2026-09-07 | Chốt D13, harden Supabase/RLS, thêm cursor index, 18 migration; API 159 unit + 31 integration và Admin full gate pass. | DBSEC-20260907-WAREHOUSE-RLS-CURSOR |
 | 1.2.1 | 2026-09-07 | Bổ sung HTTP next-cursor regression cho inventory movement ledger và đồng bộ trạng thái D11 thành DECIDED; không thay đổi API contract. | S2-LEDGER-CURSOR-HTTP-20260907 / D11-SYNC-20260907 |
 | 1.2.0 | 2026-09-06 | Chốt S2-D01/02/03; hoàn tất transfer API/Admin, D11, migration 15, generated SDK và evidence test. | DBAPI-20260906-STOCK-TRANSFER / D11 |
 | 1.1.3 | 2026-09-06 | Cập nhật full gate và GitNexus blast radius; giữ Transfer/D11 ở trạng thái chờ xác nhận. | S2-GATE-20260906 |

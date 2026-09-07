@@ -1,10 +1,10 @@
 # V1 model và quan hệ — bản review
 
-> **Document version:** 2.1.0
+> **Document version:** 3.0.0
 >
-> **Last updated:** 2026-09-05
+> **Last updated:** 2026-09-07
 >
-> **Change summary:** Chốt implementation nhập tồn cơ bản bằng CORRECTION/OPENING_BALANCE/MANUAL_RECEIPT và chứng từ ngoài chống nhập trùng.
+> **Change summary:** Chốt vật lý 1 branch = 1 warehouse, bỏ `warehouses.is_primary`; bổ sung boundary bảo mật Supabase và index cursor inventory.
 
 File nguồn ERD: `09-v1-model.dbml`. Copy toàn bộ nội dung vào dbdiagram.io để xem và kéo thả sơ đồ.
 
@@ -52,7 +52,7 @@ Model vật lý hiện có 74 bảng: 43 bảng P0 và 31 bảng P1. DBML là ng
 
 ```mermaid
 erDiagram
-  BRANCHES ||--o{ WAREHOUSES : owns
+  BRANCHES ||--|| WAREHOUSES : owns
   USERS ||--o| CUSTOMERS : represents
   CUSTOMERS ||--o{ ORDERS : places
   CUSTOMERS ||--o{ CUSTOMER_ADDRESSES : saves
@@ -82,7 +82,7 @@ Sơ đồ trên chỉ hiển thị aggregate lõi. File DBML chứa toàn bộ 7
 
 | Parent | Child | Cardinality V1 | On delete | Rule nghiệp vụ |
 |---|---|---|---|---|
-| `branches` | `warehouses` | 1 → 1 | RESTRICT | `warehouses.branch_id` unique; branch cần warehouse trước khi active |
+| `branches` | `warehouses` | 1 → 1 | RESTRICT | `warehouses.branch_id` unique; không dùng `is_primary`; branch cần warehouse trước khi active |
 | `users` | `customers` | 1 → 0..1 | SET NULL | Guest customer không cần user |
 | `customers` | `customer_addresses` | 1 → n | CASCADE | Chỉ cascade master address; order giữ snapshot riêng |
 | `roles` | `permissions` | n ↔ n | CASCADE junction | Xóa mapping được; role/permission code không tái sử dụng |
@@ -155,7 +155,7 @@ Không dùng quan hệ polymorphic cho dữ liệu lõi cần integrity như ord
 
 DBML chỉ mô tả; migration phải bổ sung:
 
-1. Unique `warehouses.branch_id`; một branch đúng một warehouse.
+1. Unique `warehouses.branch_id`; một branch đúng một warehouse; không có `is_primary`.
 2. Partial unique `normalized_email`, `normalized_phone`, barcode khi khác null.
 3. CHECK đúng cấu trúc `user_role_assignments.scope_type`.
 4. Category cycle được chặn trong service/recursive validation.
@@ -276,5 +276,6 @@ Quy tắc:
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 3.0.0 | 2026-09-07 | Bỏ warehouse is_primary, biểu diễn cardinality 1–1 nhất quán; ghi nhận RLS/least-privilege và cursor index. | DBSEC-20260907-WAREHOUSE-RLS-CURSOR |
 | 2.1.0 | 2026-09-05 | Chốt adjustment/receipt type, external reference unique và invariant tồn đầu kỳ. | DBAPI-20260905-INVENTORY-RECEIPT |
 | 2.0.0 | 2026-09-05 | Bổ sung mô hình ID số, legacy UUID, ranh giới API và lưu ý vận hành migration. | D43 / `20260905120000_migrate_uuid_ids_to_bigint_identity` |

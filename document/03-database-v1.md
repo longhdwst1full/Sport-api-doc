@@ -1,10 +1,10 @@
 # Thiết kế dữ liệu V1
 
-> **Document version:** 2.1.0
+> **Document version:** 2.2.0
 >
-> **Last updated:** 2026-09-06
+> **Last updated:** 2026-09-07
 >
-> **Change summary:** Hiện thực stock transfer V1 có state machine, idempotency, optimistic lock, kiểm nhận hàng tốt/hỏng, branch scope và ledger OUT/IN nguyên tử.
+> **Change summary:** Chốt 1 branch = 1 warehouse bằng `branch_id UNIQUE`, bỏ `is_primary`; khóa truy cập Data API trực tiếp và bổ sung index cho cursor inventory.
 
 ## 1. Chuẩn chung
 
@@ -21,6 +21,7 @@
 - Aggregate hay tranh chấp có `version bigint not null default 0` để optimistic locking.
 - Master data dùng lifecycle `status`; không dùng `deleted_at` trong model V1 đã triển khai. Ledger, transaction và history không physical-delete, không sửa nội dung nghiệp vụ đã chốt.
 - Mã nghiệp vụ (`order_no`, `sku`, `payment_ref`) tách khỏi PK, có unique index và không tái sử dụng.
+- NestJS/Prisma là data-access boundary duy nhất. Supabase role `anon` và `authenticated` không có table/sequence privilege trên `public`; các bảng inventory bật RLS defense-in-depth và migration owner `postgres` không cấp quyền mặc định cho hai role này.
 
 ## 2. Aggregate và quan hệ chính
 
@@ -67,7 +68,7 @@ Permission nghiệp vụ mới phải có data migration cùng release, không c
 - `stock_transfers`: source khác destination; trạng thái chỉ `DRAFT/SUBMITTED/SHIPPED/RECEIVED`; actor/timestamp phải khớp trạng thái; `transfer_no` và `idempotency_key` unique.
 - `stock_transfer_items`: một SKU mỗi phiếu; `requested > 0`, `0 <= shipped <= requested`, `received + damaged <= shipped`; khi nhận service bắt buộc `received + damaged = shipped`, hàng hỏng bắt buộc lý do.
 - `payments(order_id)` unique ở V1; payment có nhiều attempt/event qua `payment_transactions`.
-- `warehouses(branch_id)` unique: một branch đúng một warehouse; branch phải có warehouse trước khi ACTIVE.
+- `warehouses(branch_id)` unique: một branch đúng một warehouse; không có `is_primary`; branch phải có warehouse trước khi ACTIVE.
 - Guest checkout luôn tạo/upsert `customers` với `user_id` null; bắt buộc normalized phone. Đăng ký sau sẽ link user vào customer cũ sau xác minh.
 - `order_items`: quantity > 0; unit/list/discount/final price và tên/SKU/thuế được snapshot.
 - Giá storefront/order đã gồm VAT. `tax_total` là thành phần VAT để báo cáo; `grand_total = subtotal - discount_total + shipping_total`.
@@ -115,6 +116,7 @@ Fulfillment ghi reason bắt buộc rồi chuyển `DELIVERY_FAILED -> RETURNING
 - Mọi FK có index; history/movement có `(aggregate_id, created_at desc)`.
 - Product list: `(status, published_at desc)`, category junction, `slug`, search vector; variant `(product_id, status)`.
 - Availability: balance unique key; reservation `(status, expires_at)` và `(order_id)`.
+- Inventory ledger cursor: `(occurred_at desc, id desc)`; truy vấn theo kho dùng `(warehouse_id, occurred_at desc, id desc)`; adjustment dùng `(warehouse_id, posted_at desc, id desc)`.
 - Order admin: `(branch_id, created_at desc)`, `(status, created_at desc)`, `(customer_id, created_at desc)`, payment/fulfillment status.
 - Audit: `(actor_user_id, created_at desc)`, `(entity_type, entity_id, created_at desc)`, `(request_id)`; partition theo tháng khi dung lượng lớn.
 - Outbox: partial index `(available_at, created_at)` WHERE status IN (`PENDING`,`RETRY`).
@@ -140,6 +142,7 @@ Fulfillment ghi reason bắt buộc rồi chuyển `DELIVERY_FAILED -> RETURNING
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 2.2.0 | 2026-09-07 | Bỏ warehouse is_primary theo D13; revoke Data API role, bật RLS inventory và thêm cursor index. | DBSEC-20260907-WAREHOUSE-RLS-CURSOR |
 | 2.1.0 | 2026-09-06 | Hiện thực transfer state machine, damaged inspection, idempotency, branch scope và ledger OUT/IN; chốt D11. | DBAPI-20260906-STOCK-TRANSFER / D11 |
 | 2.0.3 | 2026-09-06 | Khôi phục composite PK của hai bảng nối sau D43. | DB-20260906-REPAIR-COMPOSITE-PK |
 | 2.0.2 | 2026-09-05 | Bắt buộc seed/import ghi opening movement và thêm reconciliation invariant. | DATA-20260905-INVENTORY-OPENING-RECONCILIATION |

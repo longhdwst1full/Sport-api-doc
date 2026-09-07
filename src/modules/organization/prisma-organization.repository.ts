@@ -48,7 +48,6 @@ function toWarehouse(row: {
   code: string;
   name: string;
   status: string;
-  isPrimary: boolean;
   version: bigint;
 }): Warehouse {
   return {
@@ -57,7 +56,6 @@ function toWarehouse(row: {
     code: row.code,
     name: row.name,
     status: row.status as Warehouse['status'],
-    isPrimary: row.isPrimary,
     version: Number(row.version),
   };
 }
@@ -134,7 +132,6 @@ export class PrismaOrganizationRepository extends OrganizationRepository {
           code: warehouse.code,
           name: warehouse.name,
           status: warehouse.status,
-          isPrimary: true,
           createdBy: toDatabaseId(context.actorUserId),
           updatedBy: toDatabaseId(context.actorUserId),
         },

@@ -11,12 +11,11 @@ describe('OrganizationService', () => {
     warehouse: { code: 'KHO-DN-01', name: 'Kho bán hàng Đà Nẵng' },
   };
 
-  it('creates one branch and exactly one primary warehouse', async () => {
+  it('creates one branch and exactly one warehouse', async () => {
     const service = new OrganizationService(new InMemoryOrganizationRepository());
     const result = await service.createBranch(input, context);
 
     expect(result.warehouse.branchId).toBe(result.branch.id);
-    expect(result.warehouse.isPrimary).toBe(true);
     expect(
       (await service.listWarehouses()).items.filter((item) => item.branchId === result.branch.id),
     ).toHaveLength(1);

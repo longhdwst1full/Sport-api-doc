@@ -31,7 +31,6 @@ async function seed(transaction: Prisma.TransactionClient): Promise<void> {
       code: 'KHO-HCM-01',
       name: 'Kho bán hàng Hồ Chí Minh',
       status: 'ACTIVE',
-      isPrimary: true,
     },
   });
 

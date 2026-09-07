@@ -686,9 +686,6 @@ components:
           enum:
             - ACTIVE
             - INACTIVE
-        isPrimary:
-          type: boolean
-          example: true
         version:
           type: number
           example: 0
@@ -698,7 +695,6 @@ components:
         - code
         - name
         - status
-        - isPrimary
         - version
     ActiveLookupOptionDto:
       type: object

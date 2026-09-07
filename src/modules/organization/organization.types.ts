@@ -24,7 +24,6 @@ export interface Warehouse {
   code: string;
   name: string;
   status: OrganizationStatus;
-  isPrimary: boolean;
   version: number;
 }
 

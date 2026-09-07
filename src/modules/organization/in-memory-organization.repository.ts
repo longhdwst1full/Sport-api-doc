@@ -53,7 +53,6 @@ export class InMemoryOrganizationRepository extends OrganizationRepository {
       code: 'KHO-HCM-01',
       name: 'Kho bán hàng Hồ Chí Minh',
       status: 'ACTIVE',
-      isPrimary: true,
       version: 0,
     },
     {
@@ -62,7 +61,6 @@ export class InMemoryOrganizationRepository extends OrganizationRepository {
       code: 'KHO-HN-01',
       name: 'Kho bán hàng Hà Nội',
       status: 'ACTIVE',
-      isPrimary: true,
       version: 0,
     },
   ];
