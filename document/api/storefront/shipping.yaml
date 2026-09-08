@@ -1,0 +1,157 @@
+# Generated from NestJS decorators. Do not edit by hand.
+openapi: 3.0.0
+info:
+  title: DCTD-UTC Commerce API
+  description: Contract for storefront and admin applications
+  version: 1.0.0
+  contact: {}
+servers:
+  - url: http://localhost:4000
+    description: Local
+paths:
+  /api/v1/shipping/quotes:
+    post:
+      operationId: quoteShipping
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShippingQuoteRequestDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShippingQuoteDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "422":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      summary: Preview V1 delivery fee and ETA; checkout revalidates inputs
+      tags:
+        - Storefront Shipping
+components:
+  schemas:
+    ShippingQuoteRequestDto:
+      type: object
+      properties:
+        branchId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        provinceCode:
+          type: string
+          example: "79"
+          maxLength: 32
+        subtotal:
+          type: string
+          example: "1890000.00"
+          description: VND decimal string
+        weightGrams:
+          type: number
+          example: 1500
+          minimum: 0
+      required:
+        - branchId
+        - provinceCode
+        - subtotal
+        - weightGrams
+    ShippingQuoteDto:
+      type: object
+      properties:
+        shippingRateId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        branchId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        zoneCode:
+          type: string
+        currencyCode:
+          type: string
+          enum:
+            - VND
+        fee:
+          type: string
+          example: "45000.00"
+        etaMinDays:
+          type: number
+          minimum: 0
+        etaMaxDays:
+          type: number
+          minimum: 0
+      required:
+        - shippingRateId
+        - branchId
+        - zoneCode
+        - currencyCode
+        - fee
+        - etaMinDays
+        - etaMaxDays
+    ErrorResponseDto:
+      type: object
+      properties:
+        statusCode:
+          type: number
+          example: 400
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: Request validation failed
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorDetailDto"
+        path:
+          type: string
+          example: /api/v1/catalog/products
+        method:
+          type: string
+          example: POST
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+      required:
+        - statusCode
+        - code
+        - message
+        - path
+        - method
+        - timestamp
+    ErrorDetailDto:
+      type: object
+      properties:
+        field:
+          type: string
+          example: name
+        code:
+          type: string
+          example: INVALID_VALUE
+        message:
+          type: string
+          example: name should not be empty
+      required:
+        - code
+        - message
+  securitySchemes:
+    bearer:
+      scheme: bearer
+      bearerFormat: JWT
+      type: http

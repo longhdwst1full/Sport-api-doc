@@ -1,5 +1,6 @@
 export const CHECKOUT_STATUS = {
   QUOTED: 'QUOTED',
+  AWAITING_SHIPPING_CONSULTATION: 'AWAITING_SHIPPING_CONSULTATION',
   CONFIRMED: 'CONFIRMED',
   EXPIRED: 'EXPIRED',
   COMPLETED: 'COMPLETED',
@@ -19,6 +20,13 @@ export const INVENTORY_RESERVATION_STATUS = {
 } as const;
 
 export const CHECKOUT_AUDIT_ACTION = {
+  QUOTE_CREATE: 'checkout.quote.create',
+  QUOTE_MANUAL_UPDATE: 'checkout.quote.manual-update',
   RESERVATION_CONFIRM: 'checkout.reservation.confirm',
   RESERVATION_RELEASE: 'checkout.reservation.release',
+} as const;
+
+export const CHECKOUT_PAYMENT_METHOD = {
+  BANK_TRANSFER: 'BANK_TRANSFER',
+  COD: 'COD',
 } as const;

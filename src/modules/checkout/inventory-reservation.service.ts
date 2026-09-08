@@ -3,6 +3,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -45,6 +46,12 @@ export interface ReservationResult {
   items: Array<{ productVariantId: string; quantity: number }>;
 }
 
+export interface ReservationActorContext {
+  actorType: 'GUEST' | 'USER' | 'SYSTEM';
+  cartId?: bigint;
+  userId?: string;
+}
+
 @Injectable()
 export class InventoryReservationService {
   constructor(
@@ -57,6 +64,7 @@ export class InventoryReservationService {
     checkoutToken: string,
     idempotencyKey: string,
     requestId: string,
+    actor: ReservationActorContext,
   ): Promise<ReservationResult> {
     this.ensurePersistence();
     const token = checkoutToken.trim();
@@ -80,6 +88,7 @@ export class InventoryReservationService {
             include: { items: true, reservation: { include: { items: true } } },
           });
           if (!checkout) throw new BadRequestException('Checkout session was not found');
+          this.assertCartOwnership(checkout.cartId, actor);
           if (checkout.reservation) {
             if (
               checkout.reservation.idempotencyKey !== key ||
@@ -168,7 +177,8 @@ export class InventoryReservationService {
             {
               requestId,
               sequenceNo: 1,
-              actorType: 'GUEST',
+              actorType: actor.actorType,
+              actorUserId: actor.userId,
               action: CHECKOUT_AUDIT_ACTION.RESERVATION_CONFIRM,
               entityType: 'INVENTORY_RESERVATION',
               entityId: toEntityId(reservation.id),
@@ -202,6 +212,7 @@ export class InventoryReservationService {
     reason: string,
     requestId: string,
     targetStatus: 'RELEASED' | 'EXPIRED' = INVENTORY_RESERVATION_STATUS.RELEASED,
+    actor: ReservationActorContext = { actorType: 'SYSTEM' },
   ): Promise<ReservationResult> {
     this.ensurePersistence();
     const token = reservationToken.trim();
@@ -219,9 +230,10 @@ export class InventoryReservationService {
           `);
           const reservation = await transaction.inventoryReservation.findUnique({
             where: { reservationToken: token },
-            include: { items: true },
+            include: { items: true, checkoutSession: { select: { cartId: true } } },
           });
           if (!reservation) throw new BadRequestException('Inventory reservation was not found');
+          this.assertCartOwnership(reservation.checkoutSession.cartId, actor);
           if (
             reservation.status === INVENTORY_RESERVATION_STATUS.RELEASED ||
             reservation.status === INVENTORY_RESERVATION_STATUS.EXPIRED
@@ -306,7 +318,8 @@ export class InventoryReservationService {
               requestId,
               sequenceNo: 1,
               actorType:
-                targetStatus === INVENTORY_RESERVATION_STATUS.EXPIRED ? 'SYSTEM' : 'GUEST',
+                targetStatus === INVENTORY_RESERVATION_STATUS.EXPIRED ? 'SYSTEM' : actor.actorType,
+              actorUserId: actor.userId,
               action: CHECKOUT_AUDIT_ACTION.RESERVATION_RELEASE,
               entityType: 'INVENTORY_RESERVATION',
               entityId: toEntityId(reservation.id),
@@ -392,6 +405,12 @@ export class InventoryReservationService {
     if (!key) throw new BadRequestException('Idempotency-Key is required');
     if (key.length > 150) throw new BadRequestException('Idempotency-Key is too long');
     return key;
+  }
+
+  private assertCartOwnership(checkoutCartId: bigint, actor: ReservationActorContext): void {
+    if (actor.cartId !== undefined && actor.cartId !== checkoutCartId) {
+      throw new NotFoundException('Checkout or reservation was not found for this cart');
+    }
   }
 
   private toResult(reservation: {

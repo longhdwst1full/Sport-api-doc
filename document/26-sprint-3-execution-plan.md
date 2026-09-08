@@ -1,10 +1,10 @@
 # Sprint 3 — Customer, Cart, Checkout, Reservation & Shipping Quote
 
-> **Document version:** 2.1.0
+> **Document version:** 3.0.0
 >
 > **Last updated:** 2026-09-08
 >
-> **Change summary:** Chuyển TTL reservation từ bảng `system_settings` sang environment đã validate; Sprint 3 còn 10 bảng nghiệp vụ.
+> **Change summary:** Mở rộng Sprint 3 với branch auto-selection, miễn phí 10 km, GHN/GHTK fallback, tư vấn giao thủ công và snapshot BANK_TRANSFER/COD.
 
 ## 1. Mục tiêu và giới hạn
 
@@ -17,7 +17,7 @@ Milestone `M3 — Checkout Safe` đạt khi guest hoặc customer đăng nhập 
 5. xác nhận quote để reserve đủ toàn bộ SKU/component combo;
 6. release reservation khi hết TTL hoặc hủy checkout.
 
-Sprint 3 chưa tạo Order/Payment/Fulfillment. Cart không giữ tồn. Checkout không được tin giá, tổng tiền, branch hoặc tồn do frontend gửi lên.
+Sprint 3 chưa tạo Order/Payment/Fulfillment vật lý. Checkout snapshot phương thức `BANK_TRANSFER` hoặc `COD` để Sprint 4 tạo Payment đúng loại. Cart không giữ tồn. Checkout không được tin giá, tổng tiền, branch hoặc tồn do frontend gửi lên.
 
 ## 2. Đánh giá bảng trước khi migrate
 
@@ -50,8 +50,9 @@ Không thêm bảng event riêng cho reservation trong V1. Lifecycle row + Audit
 - Combo không reserve SKU combo ảo; reserve component SKU sau khi gộp quantity.
 - `reservation_token` và idempotency key unique; cùng key khác request hash trả conflict.
 - Chỉ `ACTIVE` mới được release/expire/commit; retry cùng command trả cùng kết quả.
-- Khi Sprint 4 tạo Order thành công: trong cùng transaction, `on_hand -= quantity`, `reserved -= quantity`, reservation thành `COMMITTED` và ghi movement. `SHIPPED` chỉ đổi trạng thái fulfillment.
-- Hủy sau khi Order đã commit không release reservation; phải tạo movement hoàn kho bù trừ có reason. Hàng giao thất bại chỉ restock sau khi thực nhận/inspection.
+- Order được chấp nhận hoặc payment thành công vẫn giữ reservation `ACTIVE`; không giảm `on_hand` khi hàng còn trong kho.
+- Khi fulfillment chuyển `SHIPPED/HANDED_OVER`: trong cùng transaction, `on_hand -= quantity`, `reserved -= quantity`, reservation thành `COMMITTED` và ghi movement `SALE_SHIP`.
+- Hủy trước bàn giao release `reserved`; sau bàn giao phải đi qua return/failed-delivery. Hàng chỉ restock sau khi warehouse thực nhận và inspection.
 - Worker expiry lấy batch bằng `FOR UPDATE SKIP LOCKED`; không dùng `setInterval` trong Vercel function.
 - Guest cart dùng anonymous token dạng hash; không lưu raw bearer token có thể dùng để chiếm cart.
 - Quote hết hạn hoặc price/stock/shipping thay đổi phải quote lại và customer xác nhận lại.
@@ -67,22 +68,25 @@ Không thêm bảng event riêng cho reservation trong V1. Lifecycle row + Audit
 | RSV-01 | Confirm reservation | Storefront v1 | Atomic all-or-nothing; idempotent; no oversell; combo component demand đúng. |
 | RSV-02 | Release/expire reservation | Internal + Storefront v1 | Atomic decrement reserved; retry-safe; reason/audit; batch worker safe. |
 | SHP-Q01 | Quote shipping | Storefront v1 | Chỉ đọc active rate; deterministic; fee/ETA snapshot và re-confirm khi thay đổi. |
+| SHP-Q02 | Carrier quote orchestration | Storefront v1 | Miễn phí trong 10 km; ngoài phạm vi gọi provider có timeout; không có quote thì chuyển consultation. |
+| SHP-M01 | Manual external agreement | Admin v1 | Branch scope; lưu fee/ETA/provider/note/actor; reset quote expiry; customer phải confirm lại. |
+| PAY-S01 | Select payment method | Storefront v1 | Chỉ BANK_TRANSFER hoặc COD; snapshot vào checkout; không đánh dấu đã thu tiền. |
 
 ## 5. Decision gate bắt buộc trước migration
 
 ### D01 — Thời điểm trừ tồn vật lý — DECIDED
 
-Owner chốt: checkout confirm chỉ tăng `reserved`; khi backend tạo Order thành công thì giảm đồng thời `on_hand` và `reserved`, chuyển reservation sang `COMMITTED` và ghi movement trong **cùng một database transaction**. `SHIPPED` không thay đổi tồn lần nữa.
+Owner chốt: checkout/Order accepted chỉ tăng hoặc tiếp tục giữ `reserved`. Payment success xác nhận tiền nhưng không giảm `on_hand` nếu hàng còn trong kho. Khi kho/cửa hàng thực sự bàn giao hàng tại `SHIPPED/HANDED_OVER`, backend giảm đồng thời `on_hand` và `reserved`, chuyển reservation sang `COMMITTED` và ghi movement trong **cùng một database transaction**.
 
-Ví dụ `on_hand=10`: checkout 2 sản phẩm → `reserved=2`, `available=8`; tạo Order thành công → `on_hand=8`, `reserved=0`, `available=8`; ship → vẫn `8/0/8`.
+Ví dụ `on_hand=10`: checkout 2 sản phẩm → `reserved=2`, `available=8`; payment success → vẫn `10/2/8`; bàn giao cho carrier/khách → `on_hand=8`, `reserved=0`, `available=8`.
 
 Rủi ro và kiểm soát:
 
-- đơn chưa trả tiền hoặc bị hủy đã làm giảm tồn vật lý trên hệ thống: bắt buộc command hủy tạo movement hoàn kho bù trừ, không sửa counter trực tiếp;
-- retry request có thể trừ hai lần: Order command và movement dùng idempotency key unique;
-- tạo Order thành công nhưng commit kho lỗi hoặc ngược lại: hai thao tác phải nằm trong cùng transaction và lock balance theo thứ tự ổn định;
-- số hệ thống đã giảm trước khi nhân viên lấy hàng khỏi kệ: dashboard cần phân biệt tồn sổ sách với trạng thái fulfillment; kiểm kê xử lý chênh lệch bằng adjustment;
-- hủy sau commit khác expire trước commit: trước commit giảm `reserved`; sau commit tăng lại `on_hand` bằng movement bù trừ.
+- retry ship có thể trừ hai lần: fulfillment transition và movement dùng idempotency key unique;
+- fulfillment SHIPPED nhưng commit kho lỗi hoặc ngược lại: transition, balance, reservation, movement và history phải cùng transaction;
+- payment success nhưng hủy trước ship: refund payment và release `reserved`, không tạo movement vì hàng chưa rời kho;
+- COD ship khi payment còn pending: vẫn commit tồn tại SHIPPED; giao thất bại chỉ restock sau khi hàng thực tế quay về kho;
+- trạng thái sàn giữ/giải ngân tiền thuộc Payment/Settlement và không thay đổi quy tắc vật lý của `on_hand`.
 
 ### D02 — TTL — DECIDED
 
@@ -93,6 +97,14 @@ Reservation checkout giữ 30 phút tính từ lúc confirm quote. Hết hạn t
 Đề xuất: dùng header `inventory_reservations` + child `inventory_reservation_items`, thay mô hình một bảng phẳng trong DBML. Không thêm event table trong V1.
 
 Ba quyết định đã được OWNER xác nhận ngày 2026-09-08. Schema, migration, tài liệu canonical và workbook phải cùng mang change ID `DB-20260908-SPRINT3-CHECKOUT` trước khi handoff.
+
+### D34 — COD và vận chuyển — DECIDED
+
+- Online tự chọn đúng một branch/warehouse đủ toàn bộ cart; khách chọn branch vẫn tắt.
+- Có tọa độ thì branch gần nhất thắng; trong 10 km miễn phí. Không có tọa độ thì xếp quote khả dụng theo phí và ETA.
+- Ngoài 10 km ưu tiên carrier adapter GHN/GHTK. Timeout/lỗi provider không làm crash checkout; hệ thống dùng bảng phí nội bộ hoặc chuyển tư vấn thủ công.
+- Manual external/xe khách bắt buộc nhân viên lưu phí, ETA, provider và nội dung khách đã đồng ý; checkout chỉ `QUOTED` lại sau thao tác này.
+- `BANK_TRANSFER` trả đủ một lần trước giao. `COD` được ship khi payment chưa SUCCESS; carrier/nhân viên xác nhận thu đủ mới SUCCESS. Báo cáo doanh thu chỉ nhận khi Order COMPLETED.
 
 ## 6. Thứ tự triển khai
 
@@ -107,6 +119,8 @@ Ba quyết định đã được OWNER xác nhận ngày 2026-09-08. Schema, mig
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 3.0.0 | 2026-09-08 | Thêm branch auto-selection, free 10 km, carrier/fallback/manual shipping và BANK_TRANSFER/COD snapshot. | D34 / DBAPI-20260908-CHECKOUT-SHIPPING-COD |
+| 2.2.0 | 2026-09-08 | Chốt on_hand giảm tại SHIPPED/HANDED_OVER; payment/reservation/fulfillment độc lập. | D01 / DB-20260908-INVENTORY-HANDOVER |
 | 2.1.0 | 2026-09-08 | Chuyển TTL sang validated environment; tạo migration bù xóa system_settings; foundation còn 10 bảng. | D02 / D45 / DB-20260908-CONFIG-ENV |
 | 2.0.0 | 2026-09-08 | Chốt trừ tồn tại Order success; TTL 30 phút qua typed setting; header/items; thêm 11 bảng vật lý foundation. | D01 / D02 / S3-D03 / DB-20260908-SPRINT3-CHECKOUT |
 | 1.0.0 | 2026-09-07 | Tạo baseline, bảng đề xuất, invariant, function matrix và decision gate Sprint 3. | Master Plan M3 / D01 / D02 / S3-D03 |

@@ -23,6 +23,11 @@ const CONTRACT_SLICES: ContractSlice[] = [
   { relativePath: 'storefront/auth.yaml', tags: ['Storefront Auth'] },
   { relativePath: 'storefront/content.yaml', tags: ['Storefront Content'] },
   { relativePath: 'storefront/reviews.yaml', tags: ['Storefront Reviews'] },
+  { relativePath: 'storefront/cart.yaml', tags: ['Storefront Guest Cart', 'Storefront Account Cart'] },
+  { relativePath: 'storefront/customer.yaml', tags: ['Storefront Customer'] },
+  { relativePath: 'storefront/shipping.yaml', tags: ['Storefront Shipping'] },
+  { relativePath: 'storefront/checkout.yaml', tags: ['Storefront Guest Checkout', 'Storefront Account Checkout'] },
+  { relativePath: 'admin/checkout.yaml', tags: ['Admin Checkout'] },
 ];
 
 function collectReferences(value: unknown, references: Set<string>): void {

@@ -4,6 +4,11 @@ export interface Address {
   addressLine: string;
   district: string;
   province: string;
+  provinceCode?: string;
+  districtCode?: string;
+  wardCode?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface Branch {

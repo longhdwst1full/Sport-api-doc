@@ -14,6 +14,15 @@ describe('validateEnvironment', () => {
     expect(environment.AUTH_BYPASS).toBe(false);
     expect(environment.TELEGRAM_BOT_ENABLED).toBe(false);
     expect(environment.CHECKOUT_RESERVATION_TTL_MINUTES).toBe(30);
+    expect(environment.GUEST_CART_TTL_DAYS).toBe(30);
+    expect(environment.SHIPPING_FREE_RADIUS_KM).toBe(10);
+    expect(environment.SHIPPING_SMALL_MAX_WEIGHT_GRAMS).toBe(5000);
+    expect(environment.SHIPPING_MEDIUM_MAX_WEIGHT_GRAMS).toBe(20000);
+    expect(environment.SHIPPING_SMALL_FEE_VND).toBe(50000);
+    expect(environment.SHIPPING_MEDIUM_FEE_VND).toBe(100000);
+    expect(environment.SHIPPING_LARGE_FEE_VND).toBe(200000);
+    expect(environment.GHN_ENABLED).toBe(false);
+    expect(environment.GHTK_ENABLED).toBe(false);
   });
 
   it('allows development to opt in to permission bypass explicitly', () => {
@@ -49,6 +58,24 @@ describe('validateEnvironment', () => {
     expect(() =>
       validateEnvironment({ CHECKOUT_RESERVATION_TTL_MINUTES: value }),
     ).toThrow('CHECKOUT_RESERVATION_TTL_MINUTES');
+  });
+
+  it.each(['0', '366', '1.5'])('rejects invalid guest cart TTL %s', (value) => {
+    expect(() => validateEnvironment({ GUEST_CART_TTL_DAYS: value })).toThrow(
+      'GUEST_CART_TTL_DAYS',
+    );
+  });
+
+  it('requires carrier credentials only when that carrier is enabled', () => {
+    expect(() => validateEnvironment({ GHN_ENABLED: 'true' })).toThrow('GHN_API_URL');
+    expect(() => validateEnvironment({ GHTK_ENABLED: 'true' })).toThrow('GHTK_API_URL');
+  });
+
+  it('rejects overlapping default shipping weight tiers', () => {
+    expect(() => validateEnvironment({
+      SHIPPING_SMALL_MAX_WEIGHT_GRAMS: '20000',
+      SHIPPING_MEDIUM_MAX_WEIGHT_GRAMS: '5000',
+    })).toThrow('SHIPPING_SMALL_MAX_WEIGHT_GRAMS must be less');
   });
 
   it('rejects wildcard CORS in production', () => {

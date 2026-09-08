@@ -1,10 +1,10 @@
 # V1 model và quan hệ — bản review
 
-> **Document version:** 3.1.0
+> **Document version:** 3.2.0
 >
 > **Last updated:** 2026-09-08
 >
-> **Change summary:** Loại `system_settings` khỏi V1; parameter vận hành dùng validated environment theo deployment.
+> **Change summary:** Mở rộng checkout snapshot cho auto branch, carrier/manual shipping và BANK_TRANSFER/COD mà không tạo bảng mới.
 
 File nguồn ERD: `09-v1-model.dbml`. Copy toàn bộ nội dung vào dbdiagram.io để xem và kéo thả sơ đồ.
 
@@ -112,6 +112,7 @@ Sơ đồ trên chỉ hiển thị aggregate lõi. File DBML chứa toàn bộ 7
 | `payments` | `payment_transactions` | 1 → n | RESTRICT | Attempt/webhook append-only |
 | `orders` | `fulfillments` | 1 → 1 | RESTRICT | Đây là giới hạn V1; V2 đổi 1 → n khi split shipment |
 | `shipping_zones` | `shipping_rates` | 1 → n | RESTRICT | Rate có thể mặc định hoặc override theo branch |
+| `carts/customers/branches/warehouses` | `checkout_sessions` | n → 1 | RESTRICT | Quote snapshot một branch đủ toàn bộ cart; payment/shipping dimension dùng cho Order/Payment Sprint 4 |
 | `orders` | `return_requests` | 1 → 0..1 active | RESTRICT | Chọn item/quantity; combo trả nguyên bộ |
 | `return_requests` | `return_items` | 1 → n | RESTRICT | Mỗi item tham chiếu order item gốc |
 | `approval_requests` | `refunds` và stock adjustment nâng cao sau V1 | 1 → 0..1 mỗi loại | RESTRICT | Sprint 1 stock adjustment cơ bản post trực tiếp; threshold approval mở ở sprint sau |
@@ -276,6 +277,7 @@ Quy tắc:
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 3.2.0 | 2026-09-08 | Thêm checkout auto-branch, carrier/manual shipping và BANK_TRANSFER/COD snapshot, không thêm bảng. | DBAPI-20260908-CHECKOUT-SHIPPING-COD |
 | 3.1.0 | 2026-09-08 | Bỏ system_settings; TTL reservation chuyển sang validated environment. | D02 / D45 / DB-20260908-CONFIG-ENV |
 | 3.0.0 | 2026-09-07 | Bỏ warehouse is_primary, biểu diễn cardinality 1–1 nhất quán; ghi nhận RLS/least-privilege và cursor index. | DBSEC-20260907-WAREHOUSE-RLS-CURSOR |
 | 2.1.0 | 2026-09-05 | Chốt adjustment/receipt type, external reference unique và invariant tồn đầu kỳ. | DBAPI-20260905-INVENTORY-RECEIPT |

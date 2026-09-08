@@ -740,7 +740,13 @@ model CheckoutSession {
   branchId             BigInt    @map("branch_id")
   warehouseId          BigInt    @map("warehouse_id")
   shippingRateId       BigInt?   @map("shipping_rate_id")
-  status               String    @default("QUOTED") @db.VarChar(24)
+  status               String    @default("QUOTED") @db.VarChar(40)
+  paymentMethod        String    @default("BANK_TRANSFER") @map("payment_method") @db.VarChar(24)
+  shippingMethod       String    @default("MANUAL_EXTERNAL") @map("shipping_method") @db.VarChar(32)
+  shippingProvider     String?   @map("shipping_provider") @db.VarChar(32)
+  providerQuoteRef     String?   @map("provider_quote_ref") @db.VarChar(150)
+  distanceKm          Decimal?  @map("distance_km") @db.Decimal(10, 2)
+  customerNote        String?   @map("customer_note") @db.VarChar(1000)
   currencyCode         String    @default("VND") @map("currency_code") @db.Char(3)
   pricesIncludeTax     Boolean   @default(true) @map("prices_include_tax")
   itemSubtotal         Decimal   @map("item_subtotal") @db.Decimal(19, 2)
@@ -770,6 +776,8 @@ model CheckoutSession {
   @@index([customerId, createdAt])
   @@index([branchId, status])
   @@index([expiresAt, status])
+  @@index([paymentMethod, status])
+  @@index([shippingMethod, status])
   @@map("checkout_sessions")
 }
 

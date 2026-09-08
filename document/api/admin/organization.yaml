@@ -648,6 +648,28 @@ components:
         province:
           type: string
           example: TP. Hồ Chí Minh
+        provinceCode:
+          type: string
+          example: "79"
+          description: Canonical/provider province code when available
+        districtCode:
+          type: string
+          example: "1454"
+          description: Carrier district code when available
+        wardCode:
+          type: string
+          example: "21211"
+          description: Carrier ward code when available
+        latitude:
+          type: number
+          example: 10.7769
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          example: 106.7009
+          minimum: -180
+          maximum: 180
       required:
         - addressLine
         - district

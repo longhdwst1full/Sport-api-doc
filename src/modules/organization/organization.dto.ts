@@ -2,6 +2,7 @@ import { Type } from 'class-transformer';
 import {
   IsEmail,
   IsInt,
+  IsNumber,
   IsNotEmpty,
   IsOptional,
   IsPhoneNumber,
@@ -9,6 +10,7 @@ import {
   Matches,
   MaxLength,
   Min,
+  Max,
   ValidateNested,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -32,6 +34,38 @@ export class AddressDto {
   @IsNotEmpty()
   @MaxLength(100)
   province: string;
+
+  @ApiPropertyOptional({ example: '79', description: 'Canonical/provider province code when available' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  provinceCode?: string;
+
+  @ApiPropertyOptional({ example: '1454', description: 'Carrier district code when available' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  districtCode?: string;
+
+  @ApiPropertyOptional({ example: '21211', description: 'Carrier ward code when available' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  wardCode?: string;
+
+  @ApiPropertyOptional({ example: 10.7769, minimum: -90, maximum: 90 })
+  @IsOptional()
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  latitude?: number;
+
+  @ApiPropertyOptional({ example: 106.7009, minimum: -180, maximum: 180 })
+  @IsOptional()
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  longitude?: number;
 }
 
 export class BranchDto {

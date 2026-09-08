@@ -1499,6 +1499,115 @@
           }
         }
       ]
+    },
+    {
+      "id": "DB-20260908-INVENTORY-HANDOVER",
+      "date": "2026-09-08",
+      "scope": "INVENTORY+CHECKOUT+FULFILLMENT+DOCUMENTATION",
+      "summary": "Chốt payment không trực tiếp thay đổi tồn; reservation ACTIVE giữ hàng và chỉ COMMITTED đồng thời giảm on_hand/reserved khi SHIPPED/HANDED_OVER.",
+      "sources": [
+        "decision:D01",
+        "document:03-database-v1.md@2.3.0",
+        "document:06-rules-and-state-machines.md@1.1.0",
+        "document:26-sprint-3-execution-plan.md@2.2.0",
+        "document:28-sprint-3-execution-status.md@1.3.0"
+      ],
+      "targets": [],
+      "upsertRows": [
+        {
+          "sheet": "Open Decisions",
+          "match": { "ID": "D01" },
+          "values": {
+            "ID": "D01",
+            "Chủ đề": "Thời điểm trừ tồn checkout",
+            "Quyết định đề xuất": "Order accepted giữ reserved; payment độc lập; SHIPPED/HANDED_OVER mới giảm on_hand và reserved rồi COMMITTED",
+            "Tại sao quan trọng": "Tách rõ tiền, quyền bán và hàng vật lý; tránh báo đã xuất kho khi hàng vẫn còn tại warehouse",
+            "Owner": "Business",
+            "Blocking wave": "3/4",
+            "Status": "DECIDED",
+            "Kết luận review / ghi chú": "Cancel trước bàn giao release reserved; sau bàn giao chỉ restock khi kho nhận và inspection."
+          }
+        }
+      ]
+    },
+    {
+      "id": "API-20260908-SPRINT3-COMMERCE-FOUNDATION",
+      "date": "2026-09-08",
+      "scope": "CART+CUSTOMER+SHIPPING+OPENAPI+CLIENT-SDK",
+      "summary": "Thêm persisted Cart CRUD, Customer Address lifecycle và Shipping Quote API v1; xuất ba OpenAPI slice và sinh Orval SDK cho Storefront.",
+      "sources": [
+        "operation:createGuestCart/getGuestCart/setGuestCartItem/updateGuestCartItem/removeGuestCartItem",
+        "operation:getAccountCart/setAccountCartItem/updateAccountCartItem/removeAccountCartItem",
+        "operation:listCustomerAddresses/createCustomerAddress/updateCustomerAddress/removeCustomerAddress",
+        "operation:quoteShipping",
+        "test:src/modules/cart/cart.service.spec.ts",
+        "test:src/modules/customer/customer-address.service.spec.ts",
+        "test:src/modules/shipping/shipping-quote.service.spec.ts",
+        "contract:document/api/storefront/cart.yaml/customer.yaml/shipping.yaml",
+        "document:28-sprint-3-execution-status.md@1.3.0"
+      ],
+      "targets": []
+    },
+    {
+      "id": "DBAPI-20260908-CHECKOUT-SHIPPING-COD",
+      "date": "2026-09-08",
+      "scope": "CHECKOUT+SHIPPING+PAYMENT-SNAPSHOT+OPENAPI+DOCUMENTATION",
+      "summary": "Không thêm bảng mới; mở rộng checkout_sessions để tự chọn branch đủ hàng, snapshot BANK_TRANSFER/COD, free 10 km, carrier/fallback và manual external agreement.",
+      "sources": [
+        "decision:D34",
+        "migration:20260908120000_add_checkout_delivery_payment_dimensions",
+        "operation:quoteGuestCheckout/quoteAccountCheckout/confirmGuestCheckout/confirmAccountCheckout/releaseGuestReservation/releaseAccountReservation/updateAdminManualShippingQuote",
+        "source:src/modules/checkout/checkout.service.ts",
+        "source:src/modules/shipping/providers/ghn-rate.provider.ts/src/modules/shipping/providers/ghtk-rate.provider.ts",
+        "test:src/modules/shipping/shipping-quote.service.spec.ts/src/modules/shipping/shipping-distance.spec.ts/src/modules/checkout/checkout.service.spec.ts/src/modules/checkout/inventory-reservation.service.spec.ts/test/sprint3-checkout-foundation.integration-spec.ts",
+        "document:03-database-v1.md@2.4.0",
+        "document:06-rules-and-state-machines.md@1.2.0",
+        "document:26-sprint-3-execution-plan.md@3.0.0",
+        "document:28-sprint-3-execution-status.md@1.5.0"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "checkout_sessions" },
+          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính", "Retention"]
+        }
+      ],
+      "upsertRows": [
+        {
+          "sheet": "Open Decisions",
+          "match": { "ID": "D34" },
+          "values": {
+            "ID": "D34",
+            "Chủ đề": "COD và orchestration giao hàng V1",
+            "Quyết định đề xuất": "BANK_TRANSFER trả trước một lần hoặc COD; auto branch đủ hàng gần nhất; free 10 km; GHN/GHTK/fallback/manual consultation",
+            "Tại sao quan trọng": "Phân biệt tiền đã thu, COD đang thu hộ và hàng vật lý; giữ checkout hoạt động khi carrier không quote được",
+            "Owner": "Product+Finance+Ops",
+            "Blocking wave": "3/4",
+            "Status": "DECIDED",
+            "Kết luận review / ghi chú": "Branch selection thủ công tắt; manual external bắt buộc fee/ETA/provider/note và customer confirm lại."
+          }
+        }
+      ]
+    },
+    {
+      "id": "DBAPI-20260908-DEFAULT-SHIPPING-RATES",
+      "date": "2026-09-08",
+      "scope": "CHECKOUT+SHIPPING+OPENAPI+STOREFRONT",
+      "summary": "Không thêm bảng; thêm STANDARD_DELIVERY và phí mặc định 50k/100k/200k theo ngưỡng cân nặng env, carrier mặc định tắt.",
+      "sources": [
+        "migration:20260908230000_add_standard_delivery_method",
+        "operation:quoteGuestCheckout/quoteAccountCheckout",
+        "document:03-database-v1.md@2.5.0",
+        "document:06-rules-and-state-machines.md@1.3.0",
+        "document:28-sprint-3-execution-status.md@1.6.0"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "checkout_sessions" },
+          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính"]
+        }
+      ]
     }
   ]
 }

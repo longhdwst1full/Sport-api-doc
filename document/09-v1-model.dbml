@@ -756,7 +756,13 @@ Table checkout_sessions {
   branch_id bigint [not null]
   warehouse_id bigint [not null]
   shipping_rate_id bigint
-  status varchar(24) [not null, default: 'QUOTED']
+  status varchar(40) [not null, default: 'QUOTED']
+  payment_method varchar(24) [not null, default: 'BANK_TRANSFER']
+  shipping_method varchar(32) [not null, default: 'MANUAL_EXTERNAL']
+  shipping_provider varchar(32)
+  provider_quote_ref varchar(150)
+  distance_km decimal(10,2)
+  customer_note varchar(1000)
   currency_code char(3) [not null, default: 'VND']
   prices_include_tax boolean [not null, default: true]
   item_subtotal decimal(19,2) [not null]
@@ -773,7 +779,7 @@ Table checkout_sessions {
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
-  Note: '[P0] QUOTED|CONFIRMED|EXPIRED|COMPLETED|CANCELLED; giá, địa chỉ, fee và ETA là snapshot.'
+  Note: '[P0] AWAITING_SHIPPING_CONSULTATION|QUOTED|CONFIRMED|EXPIRED|COMPLETED|CANCELLED; BANK_TRANSFER hoặc COD; BRANCH_FREE, STANDARD_DELIVERY, THIRD_PARTY hoặc MANUAL_EXTERNAL; giá, địa chỉ, fee và ETA là snapshot.'
 }
 
 Table checkout_session_items {

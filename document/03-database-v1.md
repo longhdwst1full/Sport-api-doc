@@ -1,10 +1,10 @@
 # Thiết kế dữ liệu V1
 
-> **Document version:** 2.2.0
+> **Document version:** 2.5.0
 >
-> **Last updated:** 2026-09-07
+> **Last updated:** 2026-09-08
 >
-> **Change summary:** Chốt 1 branch = 1 warehouse bằng `branch_id UNIQUE`, bỏ `is_primary`; khóa truy cập Data API trực tiếp và bổ sung index cho cursor inventory.
+> **Change summary:** Bổ sung STANDARD_DELIVERY để phân biệt phí giao mặc định nội bộ với carrier thật; không thêm bảng.
 
 ## 1. Chuẩn chung
 
@@ -91,7 +91,7 @@ Khóa payment/order → kiểm tra idempotency → payment `SUCCESS` → reserva
 
 ### Ship
 
-Khóa fulfillment/order/balance theo thứ tự cố định → bảo đảm reservation COMMITTED → giảm đồng thời `on_hand` và `reserved` → ghi movement `SALE_SHIP` → fulfillment `SHIPPED` → history/outbox.
+Khóa fulfillment/order/reservation/balance theo thứ tự cố định → bảo đảm reservation còn ACTIVE → giảm đồng thời `on_hand` và `reserved` → chuyển reservation COMMITTED → ghi movement `SALE_SHIP` → fulfillment `SHIPPED` → history/outbox. Payment success không tự giảm tồn khi hàng còn trong kho.
 
 ### Cancel trước payment
 
@@ -137,11 +137,15 @@ Fulfillment ghi reason bắt buộc rồi chuyển `DELIVERY_FAILED -> RETURNING
 - Không gộp balance và ledger; balance để đọc nhanh, ledger để đối soát.
 - Không dùng cart làm reservation; cart có thể tồn tại dài ngày.
 - Không dùng boolean `is_paid/is_delivered`; dùng state machine + history.
+- `checkout_sessions` giữ payment/shipping method, provider, khoảng cách, note và snapshot quote. `AWAITING_SHIPPING_CONSULTATION` không được confirm/reserve cho tới khi nhân viên nhập phí/ETA đã thỏa thuận.
 
 ## Revision history
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 2.5.0 | 2026-09-08 | Thêm STANDARD_DELIVERY và phí mặc định theo ba ngưỡng cân nặng cấu hình bằng env. | DBAPI-20260908-DEFAULT-SHIPPING-RATES |
+| 2.4.0 | 2026-09-08 | Thêm checkout payment/shipping dimensions và trạng thái tư vấn giao hàng, không thêm bảng mới. | DBAPI-20260908-CHECKOUT-SHIPPING-COD |
+| 2.3.0 | 2026-09-08 | Chốt reservation ACTIVE qua payment và commit/trừ tồn tại SHIPPED/HANDED_OVER. | D01 / DB-20260908-INVENTORY-HANDOVER |
 | 2.2.0 | 2026-09-07 | Bỏ warehouse is_primary theo D13; revoke Data API role, bật RLS inventory và thêm cursor index. | DBSEC-20260907-WAREHOUSE-RLS-CURSOR |
 | 2.1.0 | 2026-09-06 | Hiện thực transfer state machine, damaged inspection, idempotency, branch scope và ledger OUT/IN; chốt D11. | DBAPI-20260906-STOCK-TRANSFER / D11 |
 | 2.0.3 | 2026-09-06 | Khôi phục composite PK của hai bảng nối sau D43. | DB-20260906-REPAIR-COMPOSITE-PK |

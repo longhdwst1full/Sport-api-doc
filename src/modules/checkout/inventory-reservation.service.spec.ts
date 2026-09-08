@@ -1,4 +1,4 @@
-import { ServiceUnavailableException } from '@nestjs/common';
+import { NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
 import { InventoryReservationService } from './inventory-reservation.service';
@@ -42,5 +42,12 @@ describe('InventoryReservationService demand expansion', () => {
         },
       ]),
     ).toThrow(ServiceUnavailableException);
+  });
+
+  it('does not allow one cart to confirm or release another cart checkout', () => {
+    expect(() => service['assertCartOwnership'](11n, {
+      actorType: 'GUEST',
+      cartId: 12n,
+    })).toThrow(NotFoundException);
   });
 });

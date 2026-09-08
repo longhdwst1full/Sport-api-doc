@@ -1,10 +1,10 @@
 # Business rules và state machine V1
 
-> **Document version:** 1.0.0
+> **Document version:** 1.3.0
 >
 > **Last updated:** 2026-09-08
 >
-> **Change summary:** Chuẩn hóa quy tắc parameter vận hành qua validated environment; không dùng bảng cấu hình trong V1.
+> **Change summary:** Tạm tắt carrier; dùng STANDARD_DELIVERY 50k/100k/200k theo cân nặng và vẫn giữ manual consultation.
 
 ## 0. Customer identity V1
 
@@ -22,7 +22,7 @@
 2. Một order chỉ có một branch và warehouse; mọi reservation/fulfillment của order phải cùng warehouse.
 3. Số tiền order/item là snapshot; catalog/price đổi sau đó không làm đổi đơn.
 4. Payment success là idempotent và chỉ commit reservation một lần.
-5. Ship chỉ xảy ra sau payment success; ship trừ `on_hand` và `reserved` cùng transaction.
+5. Payment success không trực tiếp sửa tồn. Ship/handover trừ `on_hand` và `reserved`, commit reservation trong cùng transaction; COD được ship khi payment còn pending và chỉ success sau khi xác nhận thu đủ tiền.
 6. Ledger/history/audit là append-only. Sai nghiệp vụ được sửa bằng reversal/transition mới.
 7. Backend kiểm tra permission + scope trên từng command/query; frontend không phải security boundary.
 8. Maker không được duyệt yêu cầu do chính mình tạo.
@@ -43,7 +43,7 @@ PENDING_PAYMENT ──payment success──> CONFIRMED ──pick──> PROCESS
 | From | To | Điều kiện | Side effect |
 |---|---|---|---|
 | create | PENDING_PAYMENT | Quote còn hạn; reserve toàn bộ | Tạo payment và outbox |
-| PENDING_PAYMENT | CONFIRMED | Payment SUCCESS; reservation ACTIVE | Reservation COMMITTED; tạo fulfillment |
+| PENDING_PAYMENT | CONFIRMED | Payment SUCCESS; reservation ACTIVE | Giữ reservation ACTIVE; tạo fulfillment |
 | PENDING_PAYMENT | CANCELLED | Chưa payment success | Release reservation/quota |
 | CONFIRMED | PROCESSING | Fulfillment bắt đầu pick | Ghi history |
 | PROCESSING | COMPLETED | Delivered và hết hold/được confirm | Ghi nhận revenue event |
@@ -64,6 +64,9 @@ SUCCESS -> REFUND_PENDING -> REFUNDED
 - Payment đến sau order/reservation expiry → `NEED_REVIEW`; nhân viên quyết định tạo lại đơn/reservation hoặc refund thủ công.
 - File evidence chỉ là bằng chứng, không phải sự thật payment.
 - Provider webhook nếu có phải verify signature, lưu payload đã redaction và deduplicate external event ID.
+- `BANK_TRANSFER`: khách thanh toán đủ một lần trước khi xử lý giao; thiếu/thừa tiền vào `NEED_REVIEW`.
+- `COD`: payment giữ `PENDING/AWAITING_COLLECTION` khi tạo đơn và trong quá trình giao; chỉ carrier callback hoặc nhân viên có quyền xác nhận thu đủ mới chuyển `SUCCESS`.
+- COD phải lưu method, số tiền cần thu/thực thu, carrier/reference, thời điểm thu và note/reason. Doanh thu chỉ ghi nhận khi Order `COMPLETED`, không ghi nhận khi vừa tạo COD.
 
 ## 4. Fulfillment
 
@@ -87,7 +90,7 @@ ACTIVE -> COMMITTED -> RELEASED_AFTER_SHIP
 ```
 
 - `ACTIVE` tăng `reserved`; `RELEASED/EXPIRED` giảm `reserved`.
-- `COMMITTED` vẫn giữ `reserved`; khi ship giảm đồng thời `on_hand` và `reserved`, rồi reservation đóng.
+- `ACTIVE` được giữ qua payment success; khi ship/handover giảm đồng thời `on_hand` và `reserved`, sau đó chuyển reservation `COMMITTED`.
 - Job expiry dùng conditional update `WHERE status='ACTIVE' AND expires_at<=now()`; chạy lặp không double release.
 - Lock/conditional update theo thứ tự `(warehouse_id, variant_id)` để giảm deadlock.
 
@@ -138,11 +141,12 @@ Không áp dụng mặc định cho sửa tên sản phẩm, nội dung CMS hay 
 
 ## 9. Quy tắc branch fallback
 
-1. Tính availability tại branch khách chọn.
-2. Nếu thiếu bất kỳ item nào, tìm branch có đủ toàn bộ cart; không ghép nhiều branch.
-3. Xếp hạng theo đủ hàng → ETA → phí ship → khoảng cách.
-4. Khi khách chọn branch mới, server tạo quote mới và tính lại giá/ship/ETA.
-5. Chỉ sau xác nhận mới reserve và tạo order. Không tự động đổi branch sau order creation.
+1. Online V1 không nhận `branch_id` từ khách; backend chỉ xét branch ACTIVE có warehouse ACTIVE và đủ toàn bộ cart, không ghép nhiều branch.
+2. Khi có tọa độ hợp lệ, chọn branch đủ hàng gần nhất. Trong bán kính cấu hình mặc định 10 km dùng `BRANCH_FREE`, phí 0.
+3. Khi carrier chưa có key, ngoài 10 km dùng `STANDARD_DELIVERY`: đến 5 kg = 50.000đ; trên 5–20 kg = 100.000đ; trên 20 kg = 200.000đ. Ngưỡng và phí đọc từ validated env, không hard-code tại FE.
+4. GHN/GHTK mặc định tắt và chỉ được bật khi có key/shop/pickup mapping thật. Hàng đặc thù hoặc giao xe khách vẫn chuyển `AWAITING_SHIPPING_CONSULTATION`; nhân viên ghi phí/ETA/provider/note đã đồng ý rồi mở lại quote.
+5. Khi thiếu tọa độ, ưu tiên branch đủ hàng có quote tự động tốt nhất theo phí rồi ETA; branch selection thủ công vẫn tắt trong V1.
+6. Chỉ sau xác nhận quote mới reserve. Không tự động đổi branch sau khi reservation/order đã tạo.
 
 ## 10. Concurrency và error semantics
 
@@ -196,4 +200,7 @@ UPLOADING -> ACTIVE -> DELETING -> DELETED
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.3.0 | 2026-09-08 | Thêm STANDARD_DELIVERY với ba mức phí env; carrier mặc định tắt đến khi có credential thật. | DBAPI-20260908-DEFAULT-SHIPPING-RATES |
+| 1.2.0 | 2026-09-08 | Chốt COD, branch auto-selection, miễn phí 10 km, GHN/GHTK và manual external consultation. | D34 / DBAPI-20260908-CHECKOUT-SHIPPING-COD |
+| 1.1.0 | 2026-09-08 | Chốt payment không sửa tồn; ship/handover commit reservation và giảm on_hand+reserved. | D01 / DB-20260908-INVENTORY-HANDOVER |
 | 1.0.0 | 2026-09-08 | Ghi nhận parameter vận hành và secret chỉ dùng backend environment/secret manager. | D45 / DB-20260908-CONFIG-ENV |

@@ -1,0 +1,234 @@
+# Generated from NestJS decorators. Do not edit by hand.
+openapi: 3.0.0
+info:
+  title: DCTD-UTC Commerce API
+  description: Contract for storefront and admin applications
+  version: 1.0.0
+  contact: {}
+servers:
+  - url: http://localhost:4000
+    description: Local
+paths:
+  /api/v1/admin/checkouts/{checkoutToken}/shipping-consultation:
+    patch:
+      operationId: updateAdminManualShippingQuote
+      parameters:
+        - name: checkoutToken
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateManualShippingQuoteDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutQuoteDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "422":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Record an agreed manual/coach shipping fee and reopen the quote for customer confirmation
+      tags:
+        - Admin Checkout
+components:
+  schemas:
+    UpdateManualShippingQuoteDto:
+      type: object
+      properties:
+        shippingFee:
+          type: string
+          example: "150000.00"
+        etaMinDays:
+          type: number
+          minimum: 0
+          example: 1
+        etaMaxDays:
+          type: number
+          minimum: 0
+          example: 2
+        provider:
+          type: string
+          example: XE_KHACH
+        agreementNote:
+          type: string
+          example: Khách đồng ý phí 150.000đ qua điện thoại lúc 10:30
+        expectedVersion:
+          type: number
+          minimum: 0
+          example: 0
+      required:
+        - shippingFee
+        - etaMinDays
+        - etaMaxDays
+        - agreementNote
+        - expectedVersion
+    CheckoutQuoteDto:
+      type: object
+      properties:
+        checkoutToken:
+          type: string
+          description: Opaque token used to confirm this exact quote
+        status:
+          type: string
+          enum:
+            - QUOTED
+            - AWAITING_SHIPPING_CONSULTATION
+        branchId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        warehouseId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        branchName:
+          type: string
+        paymentMethod:
+          type: string
+          enum:
+            - BANK_TRANSFER
+            - COD
+        shippingMethod:
+          type: string
+          enum:
+            - BRANCH_FREE
+            - STANDARD_DELIVERY
+            - THIRD_PARTY
+            - MANUAL_EXTERNAL
+        shippingProvider:
+          type: string
+          nullable: true
+        distanceKm:
+          type: string
+          nullable: true
+        itemSubtotal:
+          type: string
+        shippingTotal:
+          type: string
+          nullable: true
+        grandTotal:
+          type: string
+          nullable: true
+        etaMinDays:
+          type: number
+          nullable: true
+        etaMaxDays:
+          type: number
+          nullable: true
+        requiresShippingConsultation:
+          type: boolean
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CheckoutQuoteItemDto"
+        expiresAt:
+          type: string
+          format: date-time
+      required:
+        - checkoutToken
+        - status
+        - branchId
+        - warehouseId
+        - branchName
+        - paymentMethod
+        - shippingMethod
+        - itemSubtotal
+        - requiresShippingConsultation
+        - items
+        - expiresAt
+    ErrorResponseDto:
+      type: object
+      properties:
+        statusCode:
+          type: number
+          example: 400
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: Request validation failed
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorDetailDto"
+        path:
+          type: string
+          example: /api/v1/catalog/products
+        method:
+          type: string
+          example: POST
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+      required:
+        - statusCode
+        - code
+        - message
+        - path
+        - method
+        - timestamp
+    CheckoutQuoteItemDto:
+      type: object
+      properties:
+        productVariantId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        sku:
+          type: string
+        name:
+          type: string
+        quantity:
+          type: number
+        unitPrice:
+          type: string
+        lineTotal:
+          type: string
+      required:
+        - productVariantId
+        - sku
+        - name
+        - quantity
+        - unitPrice
+        - lineTotal
+    ErrorDetailDto:
+      type: object
+      properties:
+        field:
+          type: string
+          example: name
+        code:
+          type: string
+          example: INVALID_VALUE
+        message:
+          type: string
+          example: name should not be empty
+      required:
+        - code
+        - message
+  securitySchemes:
+    bearer:
+      scheme: bearer
+      bearerFormat: JWT
+      type: http

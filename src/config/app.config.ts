@@ -32,4 +32,33 @@ export default registerAs('app', () => ({
   checkout: {
     reservationTtlMinutes: Number(process.env.CHECKOUT_RESERVATION_TTL_MINUTES ?? 30),
   },
+  cart: {
+    guestTtlDays: Number(process.env.GUEST_CART_TTL_DAYS ?? 30),
+  },
+  shipping: {
+    freeRadiusKm: Number(process.env.SHIPPING_FREE_RADIUS_KM ?? 10),
+    providerTimeoutMs: Number(process.env.SHIPPING_PROVIDER_TIMEOUT_MS ?? 5_000),
+    defaultRates: {
+      smallMaxWeightGrams: Number(process.env.SHIPPING_SMALL_MAX_WEIGHT_GRAMS ?? 5_000),
+      mediumMaxWeightGrams: Number(process.env.SHIPPING_MEDIUM_MAX_WEIGHT_GRAMS ?? 20_000),
+      smallFeeVnd: Number(process.env.SHIPPING_SMALL_FEE_VND ?? 50_000),
+      mediumFeeVnd: Number(process.env.SHIPPING_MEDIUM_FEE_VND ?? 100_000),
+      largeFeeVnd: Number(process.env.SHIPPING_LARGE_FEE_VND ?? 200_000),
+    },
+    ghn: {
+      enabled: process.env.GHN_ENABLED === 'true',
+      apiUrl:
+        process.env.GHN_API_URL ??
+        'https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/fee',
+      token: process.env.GHN_TOKEN,
+      shopId: process.env.GHN_SHOP_ID,
+    },
+    ghtk: {
+      enabled: process.env.GHTK_ENABLED === 'true',
+      apiUrl:
+        process.env.GHTK_API_URL ??
+        'https://services.giaohangtietkiem.vn/services/shipment/fee',
+      token: process.env.GHTK_TOKEN,
+    },
+  },
 }));

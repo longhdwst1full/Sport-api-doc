@@ -1,0 +1,532 @@
+# Generated from NestJS decorators. Do not edit by hand.
+openapi: 3.0.0
+info:
+  title: DCTD-UTC Commerce API
+  description: Contract for storefront and admin applications
+  version: 1.0.0
+  contact: {}
+servers:
+  - url: http://localhost:4000
+    description: Local
+paths:
+  /api/v1/checkouts/guest/quote:
+    post:
+      operationId: quoteGuestCheckout
+      parameters:
+        - name: x-cart-token
+          required: true
+          in: header
+          schema:
+            type: string
+        - name: idempotency-key
+          required: true
+          in: header
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCheckoutQuoteDto"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutQuoteDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "422":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      summary: Revalidate a guest cart and choose an eligible fulfillment branch
+      tags:
+        - Storefront Guest Checkout
+  /api/v1/checkouts/guest/{checkoutToken}:
+    get:
+      operationId: getGuestCheckoutQuote
+      parameters:
+        - name: checkoutToken
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: x-cart-token
+          required: true
+          in: header
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutQuoteDto"
+      summary: Reload an owned guest quote after staff consultation
+      tags:
+        - Storefront Guest Checkout
+  /api/v1/checkouts/guest/{checkoutToken}/confirm:
+    post:
+      operationId: confirmGuestCheckout
+      parameters:
+        - name: checkoutToken
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: x-cart-token
+          required: true
+          in: header
+          schema:
+            type: string
+        - name: idempotency-key
+          required: true
+          in: header
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReservationDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      summary: Confirm a guest quote and reserve its physical SKU demand atomically
+      tags:
+        - Storefront Guest Checkout
+  /api/v1/checkouts/guest/reservations/{reservationToken}/release:
+    post:
+      operationId: releaseGuestReservation
+      parameters:
+        - name: reservationToken
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: x-cart-token
+          required: true
+          in: header
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReleaseReservationDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReservationDto"
+      summary: Release a guest reservation before fulfillment handover
+      tags:
+        - Storefront Guest Checkout
+  /api/v1/account/checkouts/quote:
+    post:
+      operationId: quoteAccountCheckout
+      parameters:
+        - name: idempotency-key
+          required: true
+          in: header
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCheckoutQuoteDto"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutQuoteDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "422":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Revalidate an account cart and choose an eligible fulfillment branch
+      tags:
+        - Storefront Account Checkout
+  /api/v1/account/checkouts/{checkoutToken}:
+    get:
+      operationId: getAccountCheckoutQuote
+      parameters:
+        - name: checkoutToken
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutQuoteDto"
+      security:
+        - bearer: []
+      summary: Reload an owned account quote after staff consultation
+      tags:
+        - Storefront Account Checkout
+  /api/v1/account/checkouts/{checkoutToken}/confirm:
+    post:
+      operationId: confirmAccountCheckout
+      parameters:
+        - name: checkoutToken
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: idempotency-key
+          required: true
+          in: header
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReservationDto"
+      security:
+        - bearer: []
+      summary: Confirm an account quote and reserve its physical SKU demand atomically
+      tags:
+        - Storefront Account Checkout
+  /api/v1/account/checkouts/reservations/{reservationToken}/release:
+    post:
+      operationId: releaseAccountReservation
+      parameters:
+        - name: reservationToken
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReleaseReservationDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReservationDto"
+      security:
+        - bearer: []
+      summary: Release an account reservation before fulfillment handover
+      tags:
+        - Storefront Account Checkout
+components:
+  schemas:
+    CreateCheckoutQuoteDto:
+      type: object
+      properties:
+        recipient:
+          $ref: "#/components/schemas/CheckoutRecipientDto"
+        paymentMethod:
+          type: string
+          enum:
+            - BANK_TRANSFER
+            - COD
+          example: BANK_TRANSFER
+        requestShippingConsultation:
+          type: boolean
+          default: false
+          description: Request a staff-agreed fee/ETA for coach bus or special delivery
+        note:
+          type: string
+          maxLength: 1000
+          example: Gọi trước khi giao hàng
+      required:
+        - recipient
+        - paymentMethod
+    CheckoutQuoteDto:
+      type: object
+      properties:
+        checkoutToken:
+          type: string
+          description: Opaque token used to confirm this exact quote
+        status:
+          type: string
+          enum:
+            - QUOTED
+            - AWAITING_SHIPPING_CONSULTATION
+        branchId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        warehouseId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        branchName:
+          type: string
+        paymentMethod:
+          type: string
+          enum:
+            - BANK_TRANSFER
+            - COD
+        shippingMethod:
+          type: string
+          enum:
+            - BRANCH_FREE
+            - STANDARD_DELIVERY
+            - THIRD_PARTY
+            - MANUAL_EXTERNAL
+        shippingProvider:
+          type: string
+          nullable: true
+        distanceKm:
+          type: string
+          nullable: true
+        itemSubtotal:
+          type: string
+        shippingTotal:
+          type: string
+          nullable: true
+        grandTotal:
+          type: string
+          nullable: true
+        etaMinDays:
+          type: number
+          nullable: true
+        etaMaxDays:
+          type: number
+          nullable: true
+        requiresShippingConsultation:
+          type: boolean
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CheckoutQuoteItemDto"
+        expiresAt:
+          type: string
+          format: date-time
+      required:
+        - checkoutToken
+        - status
+        - branchId
+        - warehouseId
+        - branchName
+        - paymentMethod
+        - shippingMethod
+        - itemSubtotal
+        - requiresShippingConsultation
+        - items
+        - expiresAt
+    ErrorResponseDto:
+      type: object
+      properties:
+        statusCode:
+          type: number
+          example: 400
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: Request validation failed
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorDetailDto"
+        path:
+          type: string
+          example: /api/v1/catalog/products
+        method:
+          type: string
+          example: POST
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+      required:
+        - statusCode
+        - code
+        - message
+        - path
+        - method
+        - timestamp
+    ReservationDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        reservationToken:
+          type: string
+          description: Opaque token used to release this reservation
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - RELEASED
+            - EXPIRED
+            - COMMITTED
+        expiresAt:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReservationItemDto"
+      required:
+        - id
+        - reservationToken
+        - status
+        - expiresAt
+        - items
+    ReleaseReservationDto:
+      type: object
+      properties:
+        reason:
+          type: string
+          example: Khách đổi ý trước khi bàn giao hàng
+      required:
+        - reason
+    CheckoutRecipientDto:
+      type: object
+      properties:
+        recipient:
+          type: string
+          example: Nguyễn Văn An
+        phone:
+          type: string
+          example: "0912345678"
+        email:
+          type: string
+          example: an@example.com
+        addressLine:
+          type: string
+          example: 12 Nguyễn Trãi
+        ward:
+          type: string
+          example: Phường Bến Thành
+        district:
+          type: string
+          example: Quận 1
+        province:
+          type: string
+          example: TP. Hồ Chí Minh
+        provinceCode:
+          type: string
+          example: "79"
+        districtCode:
+          type: string
+          example: "1454"
+        wardCode:
+          type: string
+          example: "21211"
+        latitude:
+          type: number
+          example: 10.7769
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          example: 106.7009
+          minimum: -180
+          maximum: 180
+      required:
+        - recipient
+        - phone
+        - addressLine
+        - district
+        - province
+        - provinceCode
+    CheckoutQuoteItemDto:
+      type: object
+      properties:
+        productVariantId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        sku:
+          type: string
+        name:
+          type: string
+        quantity:
+          type: number
+        unitPrice:
+          type: string
+        lineTotal:
+          type: string
+      required:
+        - productVariantId
+        - sku
+        - name
+        - quantity
+        - unitPrice
+        - lineTotal
+    ErrorDetailDto:
+      type: object
+      properties:
+        field:
+          type: string
+          example: name
+        code:
+          type: string
+          example: INVALID_VALUE
+        message:
+          type: string
+          example: name should not be empty
+      required:
+        - code
+        - message
+    ReservationItemDto:
+      type: object
+      properties:
+        productVariantId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        quantity:
+          type: number
+          minimum: 1
+      required:
+        - productVariantId
+        - quantity
+  securitySchemes:
+    bearer:
+      scheme: bearer
+      bearerFormat: JWT
+      type: http

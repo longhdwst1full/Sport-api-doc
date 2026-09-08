@@ -1,0 +1,455 @@
+# Generated from NestJS decorators. Do not edit by hand.
+openapi: 3.0.0
+info:
+  title: DCTD-UTC Commerce API
+  description: Contract for storefront and admin applications
+  version: 1.0.0
+  contact: {}
+servers:
+  - url: http://localhost:4000
+    description: Local
+paths:
+  /api/v1/carts/guest:
+    post:
+      operationId: createGuestCart
+      parameters: []
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GuestCartDto"
+      summary: Create an anonymous server-side cart
+      tags:
+        - Storefront Guest Cart
+    get:
+      operationId: getGuestCart
+      parameters:
+        - name: x-cart-token
+          in: header
+          description: Opaque guest cart token returned only when the cart is created
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CartDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      summary: Get the active anonymous cart
+      tags:
+        - Storefront Guest Cart
+  /api/v1/carts/guest/items:
+    post:
+      operationId: setGuestCartItem
+      parameters:
+        - name: x-cart-token
+          in: header
+          description: Opaque guest cart token returned only when the cart is created
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetCartItemDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CartDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "422":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      summary: Set quantity for a variant in the guest cart
+      tags:
+        - Storefront Guest Cart
+  /api/v1/carts/guest/items/{itemId}:
+    patch:
+      operationId: updateGuestCartItem
+      parameters:
+        - name: itemId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: x-cart-token
+          in: header
+          description: Opaque guest cart token returned only when the cart is created
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCartItemDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CartDto"
+      summary: Update a guest cart item quantity
+      tags:
+        - Storefront Guest Cart
+    delete:
+      operationId: removeGuestCartItem
+      parameters:
+        - name: itemId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: x-cart-token
+          in: header
+          description: Opaque guest cart token returned only when the cart is created
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MutateCartDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CartDto"
+      summary: Remove an item from the guest cart
+      tags:
+        - Storefront Guest Cart
+  /api/v1/account/cart:
+    get:
+      operationId: getAccountCart
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CartDto"
+      security:
+        - bearer: []
+      summary: Get or create the signed-in customer cart
+      tags:
+        - Storefront Account Cart
+  /api/v1/account/cart/items:
+    post:
+      operationId: setAccountCartItem
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetCartItemDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CartDto"
+      security:
+        - bearer: []
+      summary: Set quantity for a variant in the account cart
+      tags:
+        - Storefront Account Cart
+  /api/v1/account/cart/items/{itemId}:
+    patch:
+      operationId: updateAccountCartItem
+      parameters:
+        - name: itemId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCartItemDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CartDto"
+      security:
+        - bearer: []
+      summary: Update an account cart item quantity
+      tags:
+        - Storefront Account Cart
+    delete:
+      operationId: removeAccountCartItem
+      parameters:
+        - name: itemId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MutateCartDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CartDto"
+      security:
+        - bearer: []
+      summary: Remove an item from the account cart
+      tags:
+        - Storefront Account Cart
+components:
+  schemas:
+    GuestCartDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        status:
+          type: string
+          enum:
+            - ACTIVE
+        currencyCode:
+          type: string
+          enum:
+            - VND
+        version:
+          type: number
+          minimum: 0
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CartItemDto"
+        subtotalPreview:
+          type: string
+          example: "1780000.00"
+        expiresAt:
+          type: object
+          format: date-time
+          nullable: true
+        cartToken:
+          type: string
+          description: Returned only when a new guest cart is created; store securely on the client
+      required:
+        - id
+        - status
+        - currencyCode
+        - version
+        - items
+        - subtotalPreview
+    CartDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        status:
+          type: string
+          enum:
+            - ACTIVE
+        currencyCode:
+          type: string
+          enum:
+            - VND
+        version:
+          type: number
+          minimum: 0
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CartItemDto"
+        subtotalPreview:
+          type: string
+          example: "1780000.00"
+        expiresAt:
+          type: object
+          format: date-time
+          nullable: true
+      required:
+        - id
+        - status
+        - currencyCode
+        - version
+        - items
+        - subtotalPreview
+    ErrorResponseDto:
+      type: object
+      properties:
+        statusCode:
+          type: number
+          example: 400
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: Request validation failed
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorDetailDto"
+        path:
+          type: string
+          example: /api/v1/catalog/products
+        method:
+          type: string
+          example: POST
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+      required:
+        - statusCode
+        - code
+        - message
+        - path
+        - method
+        - timestamp
+    SetCartItemDto:
+      type: object
+      properties:
+        productVariantId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        quantity:
+          type: number
+          minimum: 1
+          example: 2
+        expectedCartVersion:
+          type: number
+          minimum: 0
+          example: 0
+      required:
+        - productVariantId
+        - quantity
+        - expectedCartVersion
+    UpdateCartItemDto:
+      type: object
+      properties:
+        quantity:
+          type: number
+          minimum: 1
+          example: 2
+        expectedCartVersion:
+          type: number
+          minimum: 0
+          example: 1
+      required:
+        - quantity
+        - expectedCartVersion
+    MutateCartDto:
+      type: object
+      properties:
+        expectedCartVersion:
+          type: number
+          minimum: 0
+          example: 1
+      required:
+        - expectedCartVersion
+    CartItemDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        productVariantId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        sku:
+          type: string
+        name:
+          type: string
+        productName:
+          type: string
+        productSlug:
+          type: string
+        quantity:
+          type: number
+          minimum: 1
+        unitPricePreview:
+          type: string
+          example: "890000.00"
+          nullable: true
+        lineTotalPreview:
+          type: string
+          example: "1780000.00"
+          nullable: true
+        imageUrl:
+          type: string
+          format: uri
+          nullable: true
+      required:
+        - id
+        - productVariantId
+        - sku
+        - name
+        - productName
+        - productSlug
+        - quantity
+    ErrorDetailDto:
+      type: object
+      properties:
+        field:
+          type: string
+          example: name
+        code:
+          type: string
+          example: INVALID_VALUE
+        message:
+          type: string
+          example: name should not be empty
+      required:
+        - code
+        - message
+  securitySchemes:
+    bearer:
+      scheme: bearer
+      bearerFormat: JWT
+      type: http

@@ -83,6 +83,76 @@ class EnvironmentVariables {
   @Max(1_440)
   CHECKOUT_RESERVATION_TTL_MINUTES = 30;
 
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(365)
+  GUEST_CART_TTL_DAYS = 30;
+
+  @Type(() => Number)
+  @Min(0)
+  @Max(100)
+  SHIPPING_FREE_RADIUS_KM = 10;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(500)
+  @Max(30_000)
+  SHIPPING_PROVIDER_TIMEOUT_MS = 5_000;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  SHIPPING_SMALL_MAX_WEIGHT_GRAMS = 5_000;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  SHIPPING_MEDIUM_MAX_WEIGHT_GRAMS = 20_000;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  SHIPPING_SMALL_FEE_VND = 50_000;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  SHIPPING_MEDIUM_FEE_VND = 100_000;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  SHIPPING_LARGE_FEE_VND = 200_000;
+
+  @Transform(toBoolean)
+  @IsBoolean()
+  GHN_ENABLED = false;
+
+  @ValidateIf((environment: EnvironmentVariables) => environment.GHN_ENABLED)
+  @IsString()
+  GHN_API_URL?: string;
+
+  @ValidateIf((environment: EnvironmentVariables) => environment.GHN_ENABLED)
+  @IsString()
+  GHN_TOKEN?: string;
+
+  @ValidateIf((environment: EnvironmentVariables) => environment.GHN_ENABLED)
+  @Matches(/^\d+$/, { message: 'GHN_SHOP_ID must be numeric' })
+  GHN_SHOP_ID?: string;
+
+  @Transform(toBoolean)
+  @IsBoolean()
+  GHTK_ENABLED = false;
+
+  @ValidateIf((environment: EnvironmentVariables) => environment.GHTK_ENABLED)
+  @IsString()
+  GHTK_API_URL?: string;
+
+  @ValidateIf((environment: EnvironmentVariables) => environment.GHTK_ENABLED)
+  @IsString()
+  GHTK_TOKEN?: string;
+
   @Transform(toBoolean)
   @IsBoolean()
   DATABASE_ENABLED = false;
@@ -158,6 +228,11 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
   if (errors.length > 0) {
     const messages = errors.flatMap((error) => Object.values(error.constraints ?? {}));
     throw new Error(`Environment validation failed: ${messages.join('; ')}`);
+  }
+  if (environment.SHIPPING_SMALL_MAX_WEIGHT_GRAMS >= environment.SHIPPING_MEDIUM_MAX_WEIGHT_GRAMS) {
+    throw new Error(
+      'Environment validation failed: SHIPPING_SMALL_MAX_WEIGHT_GRAMS must be less than SHIPPING_MEDIUM_MAX_WEIGHT_GRAMS',
+    );
   }
   if (environment.NODE_ENV === NodeEnvironment.PRODUCTION) {
     if (environment.CORS_ORIGINS.split(',').some((origin) => origin.trim() === '*')) {

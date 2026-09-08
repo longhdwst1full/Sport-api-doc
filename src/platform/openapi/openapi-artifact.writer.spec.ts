@@ -121,4 +121,36 @@ describe('writeOpenApiArtifacts', () => {
     expect(storefrontAuthContract).toContain('registerCustomer');
     expect(storefrontAuthContract).not.toContain('loginAdmin');
   });
+
+  it('writes guest and account cart operations to one isolated cart contract', async () => {
+    const document: OpenAPIObject = {
+      openapi: '3.0.0',
+      info: { title: 'Test', version: '1.0.0' },
+      paths: {
+        '/carts/guest': {
+          post: {
+            operationId: 'createGuestCart',
+            tags: ['Storefront Guest Cart'],
+            responses: { 201: { description: 'created' } },
+          },
+        },
+        '/account/cart': {
+          get: {
+            operationId: 'getAccountCart',
+            tags: ['Storefront Account Cart'],
+            responses: { 200: { description: 'ok' } },
+          },
+        },
+      },
+    };
+
+    await writeOpenApiArtifacts(document, join(temporaryRoot, 'api'));
+    const cartContract = await readFile(
+      join(temporaryRoot, 'api', 'document', 'api', 'storefront', 'cart.yaml'),
+      'utf8',
+    );
+
+    expect(cartContract).toContain('createGuestCart');
+    expect(cartContract).toContain('getAccountCart');
+  });
 });

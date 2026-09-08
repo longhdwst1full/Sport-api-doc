@@ -1,0 +1,294 @@
+# Generated from NestJS decorators. Do not edit by hand.
+openapi: 3.0.0
+info:
+  title: DCTD-UTC Commerce API
+  description: Contract for storefront and admin applications
+  version: 1.0.0
+  contact: {}
+servers:
+  - url: http://localhost:4000
+    description: Local
+paths:
+  /api/v1/account/addresses:
+    get:
+      operationId: listCustomerAddresses
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CustomerAddressDto"
+      security:
+        - bearer: []
+      summary: List active delivery addresses
+      tags:
+        - Storefront Customer
+    post:
+      operationId: createCustomerAddress
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCustomerAddressDto"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerAddressDto"
+      security:
+        - bearer: []
+      summary: Create a delivery address
+      tags:
+        - Storefront Customer
+  /api/v1/account/addresses/{addressId}:
+    patch:
+      operationId: updateCustomerAddress
+      parameters:
+        - name: addressId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCustomerAddressDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerAddressDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Update an owned delivery address
+      tags:
+        - Storefront Customer
+    delete:
+      operationId: removeCustomerAddress
+      parameters:
+        - name: addressId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "204":
+          description: ""
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Deactivate an owned delivery address
+      tags:
+        - Storefront Customer
+components:
+  schemas:
+    CustomerAddressDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        recipient:
+          type: string
+        phone:
+          type: string
+        addressLine:
+          type: string
+        ward:
+          type: object
+          nullable: true
+        district:
+          type: object
+          nullable: true
+        provinceCode:
+          type: string
+        postalCode:
+          type: object
+          nullable: true
+        countryCode:
+          type: string
+          enum:
+            - VN
+        isDefault:
+          type: boolean
+        version:
+          type: number
+          minimum: 0
+      required:
+        - id
+        - recipient
+        - phone
+        - addressLine
+        - provinceCode
+        - countryCode
+        - isDefault
+        - version
+    CreateCustomerAddressDto:
+      type: object
+      properties:
+        recipient:
+          type: string
+          example: Nguyễn Văn An
+          maxLength: 255
+        phone:
+          type: string
+          example: "0912345678"
+          maxLength: 32
+        addressLine:
+          type: string
+          example: 12 Nguyễn Trãi
+          maxLength: 500
+        ward:
+          type: string
+          example: Phường Bến Thành
+          maxLength: 255
+        district:
+          type: string
+          example: Quận 1
+          maxLength: 255
+        provinceCode:
+          type: string
+          example: "79"
+          maxLength: 32
+        postalCode:
+          type: string
+          example: "700000"
+          maxLength: 20
+        isDefault:
+          type: boolean
+          default: false
+      required:
+        - recipient
+        - phone
+        - addressLine
+        - provinceCode
+    UpdateCustomerAddressDto:
+      type: object
+      properties:
+        recipient:
+          type: string
+          example: Nguyễn Văn An
+          maxLength: 255
+        phone:
+          type: string
+          example: "0912345678"
+          maxLength: 32
+        addressLine:
+          type: string
+          example: 12 Nguyễn Trãi
+          maxLength: 500
+        ward:
+          type: string
+          example: Phường Bến Thành
+          maxLength: 255
+        district:
+          type: string
+          example: Quận 1
+          maxLength: 255
+        provinceCode:
+          type: string
+          example: "79"
+          maxLength: 32
+        postalCode:
+          type: string
+          example: "700000"
+          maxLength: 20
+        isDefault:
+          type: boolean
+          default: false
+        expectedVersion:
+          type: number
+          minimum: 0
+          example: 0
+      required:
+        - expectedVersion
+    ErrorResponseDto:
+      type: object
+      properties:
+        statusCode:
+          type: number
+          example: 400
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: Request validation failed
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorDetailDto"
+        path:
+          type: string
+          example: /api/v1/catalog/products
+        method:
+          type: string
+          example: POST
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+      required:
+        - statusCode
+        - code
+        - message
+        - path
+        - method
+        - timestamp
+    ErrorDetailDto:
+      type: object
+      properties:
+        field:
+          type: string
+          example: name
+        code:
+          type: string
+          example: INVALID_VALUE
+        message:
+          type: string
+          example: name should not be empty
+      required:
+        - code
+        - message
+  securitySchemes:
+    bearer:
+      scheme: bearer
+      bearerFormat: JWT
+      type: http
