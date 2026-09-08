@@ -1,5 +1,11 @@
 # Business rules và state machine V1
 
+> **Document version:** 1.0.0
+>
+> **Last updated:** 2026-09-08
+>
+> **Change summary:** Chuẩn hóa quy tắc parameter vận hành qua validated environment; không dùng bảng cấu hình trong V1.
+
 ## 0. Customer identity V1
 
 - Public registration chỉ tạo `users.user_type=CUSTOMER`; staff vẫn do Admin tạo.
@@ -184,4 +190,10 @@ UPLOADING -> ACTIVE -> DELETING -> DELETED
 - Finalize phải xác minh provider asset ID, folder, MIME, size và chữ ký/webhook.
 - Asset đang được product/review/page/post/banner sử dụng không được xóa vật lý.
 - Job cleanup chạy idempotent; provider callback bị gửi lặp không tạo asset trùng.
-- Secret provider không xuất hiện trong frontend, audit log hoặc `system_settings`.
+- Secret provider không xuất hiện trong frontend hoặc audit log; chỉ cấu hình qua environment/secret manager phía backend.
+
+## Revision history
+
+| Version | Date | Change summary | Source / Change ID |
+| --- | --- | --- | --- |
+| 1.0.0 | 2026-09-08 | Ghi nhận parameter vận hành và secret chỉ dùng backend environment/secret manager. | D45 / DB-20260908-CONFIG-ENV |

@@ -5,21 +5,15 @@ describe('Sprint 3 checkout database foundation', () => {
 
   afterAll(async () => prisma.$disconnect());
 
-  it('installs the private 30-minute reservation TTL exactly once', async () => {
-    const settings = await prisma.systemSetting.findMany({
-      where: { key: 'checkout.reservation_ttl_minutes' },
-    });
+  it('keeps operational parameters out of the application schema', async () => {
+    const result = await prisma.$queryRaw<Array<{ settings_table: string | null }>>`
+      SELECT to_regclass('public.system_settings')::text AS settings_table
+    `;
 
-    expect(settings).toHaveLength(1);
-    expect(settings[0]).toMatchObject({
-      valueJson: 30,
-      valueType: 'INTEGER',
-      isPublic: false,
-      status: 'ACTIVE',
-    });
+    expect(result[0].settings_table).toBeNull();
   });
 
-  it('enables RLS on all eleven Sprint 3 tables', async () => {
+  it('enables RLS on all ten Sprint 3 business tables', async () => {
     const tables = [
       'customers',
       'customer_addresses',
@@ -31,7 +25,6 @@ describe('Sprint 3 checkout database foundation', () => {
       'checkout_session_items',
       'inventory_reservations',
       'inventory_reservation_items',
-      'system_settings',
     ];
     const result = await prisma.$queryRaw<Array<{ protected_tables: bigint }>>`
       SELECT count(*) AS protected_tables

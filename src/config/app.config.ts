@@ -29,4 +29,7 @@ export default registerAs('app', () => ({
     ttlMs: Number(process.env.RATE_LIMIT_TTL_MS ?? 60_000),
     max: Number(process.env.RATE_LIMIT_MAX ?? 120),
   },
+  checkout: {
+    reservationTtlMinutes: Number(process.env.CHECKOUT_RESERVATION_TTL_MINUTES ?? 30),
+  },
 }));

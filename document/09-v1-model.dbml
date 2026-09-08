@@ -1287,21 +1287,6 @@ Table outbox_events {
   Note: '[P0] aggregate_id polymorphic; append in same transaction.'
 }
 
-Table system_settings {
-  id bigint [pk, increment]
-  key varchar(150) [not null, unique]
-  value_json jsonb [not null]
-  value_type varchar(24) [not null]
-  description varchar(500)
-  is_public boolean [not null, default: false]
-  status varchar(24) [not null, default: 'ACTIVE']
-  version bigint [not null, default: 0]
-  updated_by bigint
-  created_at timestamptz [not null]
-  updated_at timestamptz [not null]
-  Note: '[P0] Key immutable; INTEGER|DECIMAL|BOOLEAN|STRING|JSON; không lưu secret; checkout.reservation_ttl_minutes=30, private, giới hạn 5..1440.'
-}
-
 // RELATIONSHIPS
 Ref: warehouses.branch_id > branches.id [delete: restrict]
 Ref: auth_sessions.user_id > users.id [delete: cascade]
@@ -1462,4 +1447,3 @@ Ref: notification_templates.created_by > users.id [delete: restrict]
 Ref: notifications.user_id > users.id [delete: set null]
 Ref: notifications.customer_id > customers.id [delete: set null]
 Ref: notifications.template_id > notification_templates.id [delete: set null]
-Ref: system_settings.updated_by > users.id [delete: restrict]

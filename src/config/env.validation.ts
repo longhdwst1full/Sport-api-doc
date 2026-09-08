@@ -77,6 +77,12 @@ class EnvironmentVariables {
   @Min(1)
   RATE_LIMIT_MAX = 120;
 
+  @Type(() => Number)
+  @IsInt()
+  @Min(5)
+  @Max(1_440)
+  CHECKOUT_RESERVATION_TTL_MINUTES = 30;
+
   @Transform(toBoolean)
   @IsBoolean()
   DATABASE_ENABLED = false;

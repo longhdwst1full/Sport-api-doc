@@ -1,10 +1,10 @@
 # V1 model và quan hệ — bản review
 
-> **Document version:** 3.0.0
+> **Document version:** 3.1.0
 >
-> **Last updated:** 2026-09-07
+> **Last updated:** 2026-09-08
 >
-> **Change summary:** Chốt vật lý 1 branch = 1 warehouse, bỏ `warehouses.is_primary`; bổ sung boundary bảo mật Supabase và index cursor inventory.
+> **Change summary:** Loại `system_settings` khỏi V1; parameter vận hành dùng validated environment theo deployment.
 
 File nguồn ERD: `09-v1-model.dbml`. Copy toàn bộ nội dung vào dbdiagram.io để xem và kéo thả sơ đồ.
 
@@ -265,7 +265,7 @@ Admin/Customer
 Quy tắc:
 
 - Database không lưu binary/base64; chỉ lưu provider ID, secure URL, kích thước, checksum và metadata.
-- Secret/API key của provider chỉ ở backend/secret manager, không lưu `system_settings` và không gửi ra frontend.
+- Secret/API key và parameter vận hành V1 chỉ ở backend environment/secret manager, không gửi ra frontend.
 - Customer upload dùng preset/folder/size/MIME hạn chế; file ở trạng thái pending scan/moderation trước khi public.
 - Không hard-delete provider asset nếu còn `product_media`, `product_review_media` hoặc `media_usages` tham chiếu.
 - Xóa là hai bước: đánh dấu `DELETING` -> job kiểm tra usage -> gọi provider delete -> `DELETED`.
@@ -276,6 +276,7 @@ Quy tắc:
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 3.1.0 | 2026-09-08 | Bỏ system_settings; TTL reservation chuyển sang validated environment. | D02 / D45 / DB-20260908-CONFIG-ENV |
 | 3.0.0 | 2026-09-07 | Bỏ warehouse is_primary, biểu diễn cardinality 1–1 nhất quán; ghi nhận RLS/least-privilege và cursor index. | DBSEC-20260907-WAREHOUSE-RLS-CURSOR |
 | 2.1.0 | 2026-09-05 | Chốt adjustment/receipt type, external reference unique và invariant tồn đầu kỳ. | DBAPI-20260905-INVENTORY-RECEIPT |
 | 2.0.0 | 2026-09-05 | Bổ sung mô hình ID số, legacy UUID, ranh giới API và lưu ý vận hành migration. | D43 / `20260905120000_migrate_uuid_ids_to_bigint_identity` |

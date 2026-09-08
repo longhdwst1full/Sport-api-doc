@@ -1,10 +1,10 @@
 # Sprint 3 — Customer, Cart, Checkout, Reservation & Shipping Quote
 
-> **Document version:** 2.0.0
+> **Document version:** 2.1.0
 >
 > **Last updated:** 2026-09-08
 >
-> **Change summary:** Chốt thời điểm trừ tồn tại lúc tạo Order thành công, TTL 30 phút đọc từ `system_settings`, cấu trúc reservation header/items và schema foundation Sprint 3.
+> **Change summary:** Chuyển TTL reservation từ bảng `system_settings` sang environment đã validate; Sprint 3 còn 10 bảng nghiệp vụ.
 
 ## 1. Mục tiêu và giới hạn
 
@@ -28,9 +28,8 @@ Sprint 3 chưa tạo Order/Payment/Fulfillment. Cart không giữ tồn. Checkou
 | Checkout | Chưa có | `checkout_sessions`, `checkout_session_items` | Quote cần snapshot/version/expiry riêng để thay đổi cart không làm sai nội dung đã confirm. |
 | Reservation | `inventory_balances.reserved` mới chỉ có counter | `inventory_reservations`, `inventory_reservation_items` | Header quản lý token/idempotency/TTL/status một lần; item biểu diễn nhu cầu vật lý đã gộp theo SKU, kể cả component combo. |
 | Shipping quote | Chưa có | `shipping_zones`, `shipping_rates` | V1 giữ danh sách mã tỉnh trong zone để không thêm bảng mapping chưa cần thiết; snapshot fee/ETA nằm trong checkout session. |
-| Platform config | Chưa có | `system_settings` | Tham số nghiệp vụ có kiểu, version và audit actor; không hard-code TTL và tuyệt đối không lưu secret. |
 
-Sprint 3 thêm 10 bảng nghiệp vụ và 1 bảng cấu hình dùng chung. Đây không phải tạo toàn bộ model 74 bảng; mỗi migration chỉ chứa bảng mà use case Sprint 3 thực sự đọc/ghi. T62 `system_settings` được kéo từ P1 lên foundation vì đã có nhu cầu thật là TTL reservation.
+Sprint 3 thêm đúng 10 bảng nghiệp vụ. TTL là cấu hình deployment nên dùng `CHECKOUT_RESERVATION_TTL_MINUTES` trong environment, được validate khi khởi động và không tạo thêm database query trong checkout.
 
 ### Vì sao không giữ một bảng `inventory_reservations` phẳng như DBML cũ
 
@@ -87,7 +86,7 @@ Rủi ro và kiểm soát:
 
 ### D02 — TTL — DECIDED
 
-Reservation checkout giữ 30 phút tính từ lúc confirm quote. Hết hạn thì worker chuyển `ACTIVE → EXPIRED` và trả `reserved`; cart vẫn còn để khách quote lại. Giá trị đọc từ setting private `checkout.reservation_ttl_minutes`, kiểu `INTEGER`, giới hạn 5–1440 phút; setting thiếu/sai kiểu thì fail closed, không âm thầm dùng giá trị khác.
+Reservation checkout giữ 30 phút tính từ lúc confirm quote. Hết hạn thì worker chuyển `ACTIVE → EXPIRED` và trả `reserved`; cart vẫn còn để khách quote lại. Giá trị đọc từ env `CHECKOUT_RESERVATION_TTL_MINUTES`, kiểu integer, giới hạn 5–1440 phút; app fail-fast khi cấu hình sai. `.env.local`, `.env.example`, `.env.local.example` và `.env.production` cùng khai báo giá trị mặc định 30.
 
 ### S3-D03 — Cấu trúc reservation — DECIDED
 
@@ -108,5 +107,6 @@ Ba quyết định đã được OWNER xác nhận ngày 2026-09-08. Schema, mig
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 2.1.0 | 2026-09-08 | Chuyển TTL sang validated environment; tạo migration bù xóa system_settings; foundation còn 10 bảng. | D02 / D45 / DB-20260908-CONFIG-ENV |
 | 2.0.0 | 2026-09-08 | Chốt trừ tồn tại Order success; TTL 30 phút qua typed setting; header/items; thêm 11 bảng vật lý foundation. | D01 / D02 / S3-D03 / DB-20260908-SPRINT3-CHECKOUT |
 | 1.0.0 | 2026-09-07 | Tạo baseline, bảng đề xuất, invariant, function matrix và decision gate Sprint 3. | Master Plan M3 / D01 / D02 / S3-D03 |

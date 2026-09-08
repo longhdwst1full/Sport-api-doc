@@ -1309,7 +1309,7 @@
       "targets": [
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": ["customers", "customer_addresses", "carts", "cart_items", "inventory_reservations", "shipping_zones", "shipping_rates", "system_settings"] },
+          "match": { "Tên bảng": ["customers", "customer_addresses", "carts", "cart_items", "inventory_reservations", "shipping_zones", "shipping_rates"] },
           "columns": ["Priority", "Ý nghĩa", "Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính", "Retention"]
         },
         {
@@ -1322,19 +1322,6 @@
             "Unique / CHECK": "checkout_session UQ; reservation_token UQ; idempotency_key UQ; lifecycle CHECK",
             "Các cột chính": "reservation_token,idempotency_key,request_hash,status,expires_at,committed_at,released_at,release_reason,version",
             "Retention": "2 years proposed; lifecycle only through idempotent commands"
-          }
-        },
-        {
-          "sheet": "Tables",
-          "match": { "Tên bảng": "system_settings" },
-          "columns": ["Priority", "Ý nghĩa", "Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính", "Retention"],
-          "set": {
-            "Priority": "P0",
-            "Ý nghĩa": "Cấu hình nghiệp vụ không bí mật",
-            "Khóa ngoại quan trọng": "updated_by->users",
-            "Unique / CHECK": "key UQ; value_type/status CHECK",
-            "Các cột chính": "key,value_json,value_type,description,is_public,status,version,updated_by",
-            "Retention": "key immutable; audit/version; never store secret"
           }
         },
         {
@@ -1456,6 +1443,59 @@
             "Blocking wave": "3",
             "Status": "DECIDED",
             "Kết luận review / ghi chú": "Kế thừa ý tưởng Parameter của fund-ops, bỏ maker-checker phức tạp khỏi V1."
+          }
+        }
+      ]
+    },
+    {
+      "id": "DB-20260908-CONFIG-ENV",
+      "date": "2026-09-08",
+      "scope": "DATABASE+CONFIG+CHECKOUT+DOCUMENTATION",
+      "summary": "Theo quyết định OWNER, bỏ system_settings khỏi V1 và chuyển reservation TTL sang CHECKOUT_RESERVATION_TTL_MINUTES được validate 5..1440 ở startup; đồng bộ local/example/production.",
+      "sources": [
+        "decision:D02/D45",
+        "migration:20260908020000_remove_system_settings_use_env",
+        "source:src/config/env.validation.ts/src/config/app.config.ts",
+        "source:.env.local/.env.example/.env.local.example/.env.production",
+        "test:src/config/env.validation.spec.ts/test/sprint3-checkout-foundation.integration-spec.ts",
+        "document:26-sprint-3-execution-plan.md@2.1.0",
+        "document:28-sprint-3-execution-status.md@1.1.0"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "system_settings" },
+          "columns": "*",
+          "archiveRemovedRowsTo": "Removed Tables"
+        }
+      ],
+      "upsertRows": [
+        {
+          "sheet": "Open Decisions",
+          "match": { "ID": "D02" },
+          "values": {
+            "ID": "D02",
+            "Chủ đề": "Reservation checkout",
+            "Quyết định đề xuất": "TTL 30 phút từ env CHECKOUT_RESERVATION_TTL_MINUTES, integer, range 5..1440",
+            "Tại sao quan trọng": "Thay đổi theo environment không cần schema hoặc DB query trong checkout",
+            "Owner": "Business",
+            "Blocking wave": "3",
+            "Status": "DECIDED",
+            "Kết luận review / ghi chú": "Đã đồng bộ .env.local, .env.example, .env.local.example và .env.production."
+          }
+        },
+        {
+          "sheet": "Open Decisions",
+          "match": { "ID": "D45" },
+          "values": {
+            "ID": "D45",
+            "Chủ đề": "Environment parameter governance",
+            "Quyết định đề xuất": "V1 dùng validated env cho parameter kỹ thuật/vận hành; không tạo system_settings",
+            "Tại sao quan trọng": "Giảm bảng và DB query; cấu hình production quản lý ở Vercel/secret manager",
+            "Owner": "Tech",
+            "Blocking wave": "3",
+            "Status": "DECIDED",
+            "Kết luận review / ghi chú": "Forward migration xóa bảng đã áp dụng trước đó; secret không ghi vào document/workbook."
           }
         }
       ]

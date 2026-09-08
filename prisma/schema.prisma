@@ -105,7 +105,6 @@ model User {
   receivedStockTransfers    StockTransfer[]      @relation("StockTransferReceiver")
   customerProfile           Customer?
   carts                     Cart[]
-  updatedSystemSettings     SystemSetting[]      @relation("SystemSettingUpdater")
 
   @@map("users")
 }
@@ -880,23 +879,4 @@ model ShippingRate {
   @@index([zoneId, status])
   @@index([branchId, status])
   @@map("shipping_rates")
-}
-
-model SystemSetting {
-  id          BigInt   @id @default(autoincrement())
-  key         String   @unique @db.VarChar(150)
-  valueJson   Json     @map("value_json") @db.JsonB
-  valueType   String   @map("value_type") @db.VarChar(24)
-  description String?  @db.VarChar(500)
-  isPublic    Boolean  @default(false) @map("is_public")
-  status      String   @default("ACTIVE") @db.VarChar(24)
-  version     BigInt   @default(0)
-  updatedBy   BigInt?  @map("updated_by")
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  updater User? @relation("SystemSettingUpdater", fields: [updatedBy], references: [id], onDelete: Restrict)
-
-  @@index([status, key])
-  @@map("system_settings")
 }

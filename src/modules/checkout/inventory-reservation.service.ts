@@ -5,12 +5,12 @@ import {
   Injectable,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 
 import { toEntityId } from '../../common/identifiers/entity-id';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditWriter } from '../audit/audit.writer';
-import { SystemSettingService } from '../system/system-setting.service';
 import {
   CHECKOUT_AUDIT_ACTION,
   CHECKOUT_ITEM_TYPE,
@@ -49,7 +49,7 @@ export interface ReservationResult {
 export class InventoryReservationService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly settings: SystemSettingService,
+    private readonly config: ConfigService,
     private readonly audit: AuditWriter,
   ) {}
 
@@ -65,7 +65,7 @@ export class InventoryReservationService {
     const requestHash = createHash('sha256').update(token).digest('hex');
     const replay = await this.findReplay(key, requestHash);
     if (replay) return replay;
-    const ttlMinutes = await this.settings.getCheckoutReservationTtlMinutes();
+    const ttlMinutes = this.config.getOrThrow<number>('app.checkout.reservationTtlMinutes');
 
     try {
       return await this.prisma.$transaction(

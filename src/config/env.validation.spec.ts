@@ -13,6 +13,7 @@ describe('validateEnvironment', () => {
     expect(environment.CORS_ORIGINS).toBe('*');
     expect(environment.AUTH_BYPASS).toBe(false);
     expect(environment.TELEGRAM_BOT_ENABLED).toBe(false);
+    expect(environment.CHECKOUT_RESERVATION_TTL_MINUTES).toBe(30);
   });
 
   it('allows development to opt in to permission bypass explicitly', () => {
@@ -35,6 +36,19 @@ describe('validateEnvironment', () => {
     const environment = validateEnvironment({ DB_MIGRATE_ON_DEPLOY: 'false' });
 
     expect(environment.DB_MIGRATE_ON_DEPLOY).toBe(false);
+  });
+
+  it('accepts a reservation TTL between 5 minutes and 24 hours', () => {
+    expect(
+      validateEnvironment({ CHECKOUT_RESERVATION_TTL_MINUTES: '45' })
+        .CHECKOUT_RESERVATION_TTL_MINUTES,
+    ).toBe(45);
+  });
+
+  it.each(['4', '1441', '30.5'])('rejects invalid reservation TTL %s', (value) => {
+    expect(() =>
+      validateEnvironment({ CHECKOUT_RESERVATION_TTL_MINUTES: value }),
+    ).toThrow('CHECKOUT_RESERVATION_TTL_MINUTES');
   });
 
   it('rejects wildcard CORS in production', () => {

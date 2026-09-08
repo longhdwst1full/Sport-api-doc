@@ -1,8 +1,8 @@
 # Sprint 3 — Execution Status
 
-> **Document version:** 1.0.0  
+> **Document version:** 1.1.0
 > **Last updated:** 2026-09-08  
-> **Change summary:** Ghi nhận decision lock, schema/migration Supabase dev, typed reservation TTL và reservation transaction core đầu tiên.
+> **Change summary:** Chuyển reservation TTL sang validated environment và loại `system_settings` khỏi schema V1.
 
 ## 1. Trạng thái tổng quan
 
@@ -11,9 +11,9 @@ Sprint 3 đang thực hiện, chưa đủ điều kiện đóng Sprint. Foundati
 | Workstream | Trạng thái | Evidence |
 | --- | --- | --- |
 | D01 thời điểm trừ tồn | Done | `08-open-decisions.csv` D01; `26-sprint-3-execution-plan.md` v2.0.0 |
-| D02 TTL 30 phút | Done | D02; migration setting; `SystemSettingService` + 6 unit tests |
+| D02 TTL 30 phút | Done | D02; env validation 5–1440; đủ local/example/production |
 | S3-D03 reservation header/items | Done | Prisma + migration `20260908010000_add_sprint3_checkout_foundation` |
-| 11 bảng foundation trên Supabase dev | Done | `yarn db:migrate`; 4 integration tests pass |
+| 10 bảng foundation trên Supabase dev | Done | migration tạo 10 bảng nghiệp vụ + migration bù xóa `system_settings` |
 | Demand combo → component SKU | Done ở domain core | `InventoryReservationService.buildPhysicalDemand` + unit tests |
 | Atomic confirm reservation | Implemented, cần concurrency integration | Serializable transaction, stable row lock, version guard, idempotency |
 | Customer/address API | Not started | CUS-01 |
@@ -27,12 +27,12 @@ Sprint 3 đang thực hiện, chưa đủ điều kiện đóng Sprint. Foundati
 
 ## 2. Checklist kiểm soát đã đạt
 
-- [x] BIGINT IDENTITY, FK, unique, CHECK và index cho 11 bảng.
+- [x] BIGINT IDENTITY, FK, unique, CHECK và index cho 10 bảng nghiệp vụ.
 - [x] Money dùng `DECIMAL(19,2)`, timestamp dùng `TIMESTAMPTZ(6)`.
 - [x] Không có `deleted_at`; master dùng status.
-- [x] RLS bật và `anon`/`authenticated` không được truy cập trực tiếp 11 bảng.
-- [x] TTL nằm trong `system_settings`, private, typed, versioned; không chứa secret.
-- [x] Migration seed setting bằng `ON CONFLICT DO NOTHING`; không chạy demo seed.
+- [x] RLS bật và `anon`/`authenticated` không được truy cập trực tiếp 10 bảng.
+- [x] TTL nằm trong validated env; local/example/production cùng có giá trị 30.
+- [x] `system_settings` đã bỏ khỏi Prisma/DBML/catalog và xóa bằng forward migration; không chạy seed.
 - [x] Reservation sử dụng idempotency key + request hash, serializable transaction và row lock theo variant.
 - [x] Combo reserve component, không reserve SKU combo ảo.
 - [ ] Test hai checkout cạnh tranh SKU cuối cùng.
@@ -60,4 +60,5 @@ Trong cùng transaction tạo Order:
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.1.0 | 2026-09-08 | Chuyển TTL sang env, xóa system_settings và cập nhật evidence/checklist. | DB-20260908-CONFIG-ENV |
 | 1.0.0 | 2026-09-08 | Tạo status/evidence/checklist sau migration foundation Sprint 3. | DB-20260908-SPRINT3-CHECKOUT |

@@ -200,7 +200,6 @@ export const BUSINESS_MODEL_REGISTRY: BusinessModuleDefinition[] = [
     models: [
       model('idempotency_keys', 'P0'),
       model('outbox_events', 'P0'),
-      model('system_settings', 'P0'),
     ],
   },
   {
