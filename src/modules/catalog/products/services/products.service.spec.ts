@@ -11,15 +11,39 @@ describe('ProductsService', () => {
     await expect(
       service.create(
         {
-          productNo: 'SP-001',
           name: 'Tạ tay',
-          slug: 'ta-tay',
           categoryIds: ['1'],
           primaryCategoryId: '2',
         },
         { requestId: 'unit-request', actorUserId: '10' },
       ),
     ).rejects.toBeInstanceOf(UnprocessableEntityException);
+  });
+
+  it('keeps a published product slug immutable', async () => {
+    const transaction = {
+      $queryRaw: jest.fn().mockResolvedValue([]),
+      product: {
+        findUnique: jest.fn().mockResolvedValue({
+          productType: 'STANDARD',
+          status: 'PUBLISHED',
+          slug: 'giay-chay-bo-prd-a1',
+          _count: { variants: 1 },
+        }),
+      },
+    };
+    const prisma = {
+      $transaction: jest.fn((work: (client: typeof transaction) => unknown) => work(transaction)),
+    } as unknown as PrismaService;
+    const catalog = new ProductsService(prisma, {} as AuditWriter);
+
+    await expect(
+      catalog.update(
+        '1',
+        { slug: 'slug-moi', expectedVersion: 1 },
+        { requestId: 'request', actorUserId: '2' },
+      ),
+    ).rejects.toThrow('Product slug cannot change after publish');
   });
 
   it('rejects retroactive price windows before accessing persistence', async () => {

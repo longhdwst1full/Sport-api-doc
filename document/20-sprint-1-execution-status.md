@@ -1,10 +1,20 @@
 # Sprint 1 execution status
 
-> **Document version:** 1.9.1
+> **Document version:** 1.10.0
 >
-> **Last updated:** 2026-09-05
+> **Last updated:** 2026-09-07
 >
-> **Change summary:** Đồng bộ điểm DoD D43 về 90%; bổ sung evidence API/Admin/Client và GitNexus sau migration ID.
+> **Change summary:** Chốt BR-PRODUCT-01/02 và BR-SKU-01/02; chuyển quyền sinh product_no/slug/sku về backend, khóa identifier và đồng bộ OpenAPI/Admin.
+
+## Delta catalog identifiers — 2026-09-07
+
+- [x] `product_no` backend tự sinh, unique constraint hiện hữu và không còn trong create/update contract.
+- [x] `slug` backend sinh từ tên + product number; đổi tên không tự đổi slug; chỉ sửa slug lúc `DRAFT`.
+- [x] `ProductVariant` là Sellable SKU; `sku` backend tự sinh và không còn trong create/update contract.
+- [x] Audit create ghi lại identifier đã sinh; có unit test format, tiếng Việt, giới hạn độ dài và uniqueness cơ bản.
+- [x] OpenAPI producer và Orval Admin/Storefront được regenerate; Admin hiển thị identifier ở chế độ tự sinh/read-only.
+- [x] DBML, table catalog, D44, business-rule document, model change log và workbook được đồng bộ.
+- [x] Verification: API lint/build, 42 unit suites/164 tests, 7 integration suites/31 tests và 2 HTTP E2E suites/11 tests; Admin lint, 11 suites/20 tests, production build và Storybook build; Storefront typecheck, 3 suites/4 tests và production build.
 
 ## Kết luận
 
@@ -300,3 +310,4 @@ Ký hiệu: `[x]` hoàn thành theo evidence hiện có; `[~]` đã có core nh�
 | 1.7.0 | 2026-09-05 | Thêm Storybook Admin cho CKEditor, feedback, management primitives và full layout; bỏ CKEditor component test theo yêu cầu. | Admin Storybook foundation 2026-09-05 |
 | 1.8.0 | 2026-09-05 | Bổ sung sáu HTTP DELETE logic, role-permission matrix, regenerate contract/SDK/workbook và xác nhận full monorepo gate. | API-20260905-LOGICAL-DELETE-V1 |
 | 1.9.0 | 2026-09-05 | Chuyển ID sang BIGINT IDENTITY, thêm migrate-at-start và ghi rõ verification Supabase còn mở. | DBAPI-20260905-BIGINT-IDENTITY / D43 |
+| 1.10.0 | 2026-09-07 | Backend sở hữu product_no/slug/sku, khóa identifier và đồng bộ contract/Admin. | API-20260907-CATALOG-AUTO-IDENTIFIERS / D44 |

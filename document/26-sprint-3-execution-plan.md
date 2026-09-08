@@ -1,10 +1,10 @@
 # Sprint 3 — Customer, Cart, Checkout, Reservation & Shipping Quote
 
-> **Document version:** 1.0.0
+> **Document version:** 2.0.0
 >
-> **Last updated:** 2026-09-07
+> **Last updated:** 2026-09-08
 >
-> **Change summary:** Tạo baseline Sprint 3 từ Master Plan, rà soát bảng mới theo aggregate và đặt decision gate trước migration.
+> **Change summary:** Chốt thời điểm trừ tồn tại lúc tạo Order thành công, TTL 30 phút đọc từ `system_settings`, cấu trúc reservation header/items và schema foundation Sprint 3.
 
 ## 1. Mục tiêu và giới hạn
 
@@ -27,9 +27,10 @@ Sprint 3 chưa tạo Order/Payment/Fulfillment. Cart không giữ tồn. Checkou
 | Cart | Chưa có | `carts`, `cart_items` | Cart là dữ liệu có thể thay đổi và không phải cam kết giá/tồn. |
 | Checkout | Chưa có | `checkout_sessions`, `checkout_session_items` | Quote cần snapshot/version/expiry riêng để thay đổi cart không làm sai nội dung đã confirm. |
 | Reservation | `inventory_balances.reserved` mới chỉ có counter | `inventory_reservations`, `inventory_reservation_items` | Header quản lý token/idempotency/TTL/status một lần; item biểu diễn nhu cầu vật lý đã gộp theo SKU, kể cả component combo. |
-| Shipping quote | Chưa có | `shipping_zones`, `shipping_rates` | Rule vận chuyển là master data; snapshot fee/ETA nằm trong checkout session, không đọc lại rate sau confirm. |
+| Shipping quote | Chưa có | `shipping_zones`, `shipping_rates` | V1 giữ danh sách mã tỉnh trong zone để không thêm bảng mapping chưa cần thiết; snapshot fee/ETA nằm trong checkout session. |
+| Platform config | Chưa có | `system_settings` | Tham số nghiệp vụ có kiểu, version và audit actor; không hard-code TTL và tuyệt đối không lưu secret. |
 
-Đề xuất Sprint 3 thêm 10 bảng, theo bốn aggregate rõ ràng. Đây không phải tạo toàn bộ model 74 bảng; mỗi migration chỉ chứa bảng mà use case Sprint 3 thực sự đọc/ghi.
+Sprint 3 thêm 10 bảng nghiệp vụ và 1 bảng cấu hình dùng chung. Đây không phải tạo toàn bộ model 74 bảng; mỗi migration chỉ chứa bảng mà use case Sprint 3 thực sự đọc/ghi. T62 `system_settings` được kéo từ P1 lên foundation vì đã có nhu cầu thật là TTL reservation.
 
 ### Vì sao không giữ một bảng `inventory_reservations` phẳng như DBML cũ
 
@@ -50,6 +51,8 @@ Không thêm bảng event riêng cho reservation trong V1. Lifecycle row + Audit
 - Combo không reserve SKU combo ảo; reserve component SKU sau khi gộp quantity.
 - `reservation_token` và idempotency key unique; cùng key khác request hash trả conflict.
 - Chỉ `ACTIVE` mới được release/expire/commit; retry cùng command trả cùng kết quả.
+- Khi Sprint 4 tạo Order thành công: trong cùng transaction, `on_hand -= quantity`, `reserved -= quantity`, reservation thành `COMMITTED` và ghi movement. `SHIPPED` chỉ đổi trạng thái fulfillment.
+- Hủy sau khi Order đã commit không release reservation; phải tạo movement hoàn kho bù trừ có reason. Hàng giao thất bại chỉ restock sau khi thực nhận/inspection.
 - Worker expiry lấy batch bằng `FOR UPDATE SKIP LOCKED`; không dùng `setInterval` trong Vercel function.
 - Guest cart dùng anonymous token dạng hash; không lưu raw bearer token có thể dùng để chiếm cart.
 - Quote hết hạn hoặc price/stock/shipping thay đổi phải quote lại và customer xác nhận lại.
@@ -68,25 +71,33 @@ Không thêm bảng event riêng cho reservation trong V1. Lifecycle row + Audit
 
 ## 5. Decision gate bắt buộc trước migration
 
-### D01 — Thời điểm trừ tồn vật lý
+### D01 — Thời điểm trừ tồn vật lý — DECIDED
 
-Đề xuất: checkout chỉ tăng `reserved`; payment success đổi reservation sang `COMMITTED` nhưng chưa giảm `on_hand`; lúc `SHIPPED` mới giảm đồng thời `on_hand` và `reserved` và ghi movement `SALE_SHIP`.
+Owner chốt: checkout confirm chỉ tăng `reserved`; khi backend tạo Order thành công thì giảm đồng thời `on_hand` và `reserved`, chuyển reservation sang `COMMITTED` và ghi movement trong **cùng một database transaction**. `SHIPPED` không thay đổi tồn lần nữa.
 
-Ví dụ `on_hand=10`: checkout 2 sản phẩm → `reserved=2`, `available=8`; payment success vẫn `10/2/8`; ship → `on_hand=8`, `reserved=0`, `available=8`.
+Ví dụ `on_hand=10`: checkout 2 sản phẩm → `reserved=2`, `available=8`; tạo Order thành công → `on_hand=8`, `reserved=0`, `available=8`; ship → vẫn `8/0/8`.
 
-### D02 — TTL
+Rủi ro và kiểm soát:
 
-Đề xuất: reservation checkout giữ 30 phút tính từ lúc confirm quote. Hết hạn thì worker chuyển `ACTIVE → EXPIRED` và trả `reserved`; cart vẫn còn để khách quote lại.
+- đơn chưa trả tiền hoặc bị hủy đã làm giảm tồn vật lý trên hệ thống: bắt buộc command hủy tạo movement hoàn kho bù trừ, không sửa counter trực tiếp;
+- retry request có thể trừ hai lần: Order command và movement dùng idempotency key unique;
+- tạo Order thành công nhưng commit kho lỗi hoặc ngược lại: hai thao tác phải nằm trong cùng transaction và lock balance theo thứ tự ổn định;
+- số hệ thống đã giảm trước khi nhân viên lấy hàng khỏi kệ: dashboard cần phân biệt tồn sổ sách với trạng thái fulfillment; kiểm kê xử lý chênh lệch bằng adjustment;
+- hủy sau commit khác expire trước commit: trước commit giảm `reserved`; sau commit tăng lại `on_hand` bằng movement bù trừ.
 
-### S3-D03 — Cấu trúc reservation
+### D02 — TTL — DECIDED
+
+Reservation checkout giữ 30 phút tính từ lúc confirm quote. Hết hạn thì worker chuyển `ACTIVE → EXPIRED` và trả `reserved`; cart vẫn còn để khách quote lại. Giá trị đọc từ setting private `checkout.reservation_ttl_minutes`, kiểu `INTEGER`, giới hạn 5–1440 phút; setting thiếu/sai kiểu thì fail closed, không âm thầm dùng giá trị khác.
+
+### S3-D03 — Cấu trúc reservation — DECIDED
 
 Đề xuất: dùng header `inventory_reservations` + child `inventory_reservation_items`, thay mô hình một bảng phẳng trong DBML. Không thêm event table trong V1.
 
-Ba quyết định trên phải được OWNER xác nhận trước khi sửa DBML/Prisma/migration. Sau xác nhận, mọi bảng/cột/index sẽ được trace vào `11-model-change-log.json` và workbook review trước khi handoff.
+Ba quyết định đã được OWNER xác nhận ngày 2026-09-08. Schema, migration, tài liệu canonical và workbook phải cùng mang change ID `DB-20260908-SPRINT3-CHECKOUT` trước khi handoff.
 
 ## 6. Thứ tự triển khai
 
-1. Chốt D01/D02/S3-D03 và cập nhật canonical model.
+1. Chốt D01/D02/S3-D03 và cập nhật canonical model. **Done**
 2. Migration customer/cart/shipping master; repository + API + unit/integration.
 3. Migration checkout/reservation; transaction/locking/idempotency + concurrency test trên database QA riêng.
 4. Storefront regenerate SDK; cart/checkout loading-empty-error-expired/requote states.
@@ -97,4 +108,5 @@ Ba quyết định trên phải được OWNER xác nhận trước khi sửa DB
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 2.0.0 | 2026-09-08 | Chốt trừ tồn tại Order success; TTL 30 phút qua typed setting; header/items; thêm 11 bảng vật lý foundation. | D01 / D02 / S3-D03 / DB-20260908-SPRINT3-CHECKOUT |
 | 1.0.0 | 2026-09-07 | Tạo baseline, bảng đề xuất, invariant, function matrix và decision gate Sprint 3. | Master Plan M3 / D01 / D02 / S3-D03 |

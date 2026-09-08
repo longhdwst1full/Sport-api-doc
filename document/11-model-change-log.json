@@ -1210,6 +1210,255 @@
           }
         }
       ]
+    },
+    {
+      "id": "API-20260907-CATALOG-AUTO-IDENTIFIERS",
+      "date": "2026-09-07",
+      "scope": "API+CATALOG+ADMIN+DOCUMENTATION",
+      "summary": "Thực thi BR-PRODUCT-01/02 và BR-SKU-01/02: backend tự sinh product_no, slug và sku; product_no/sku immutable; slug chỉ sửa khi DRAFT và không tự đổi theo name; regenerate OpenAPI và SDK FE.",
+      "sources": [
+        "decision:D44",
+        "operation:createAdminProduct/updateAdminProduct/createAdminProductVariant",
+        "source:src/modules/catalog/products/product-identifiers.ts",
+        "test:src/modules/catalog/products/product-identifiers.spec.ts/test/admin-contract.e2e-spec.ts",
+        "document:27-catalog-identifier-business-rules.md@1.0.0",
+        "document:20-sprint-1-execution-status.md@1.10.0"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "products" },
+          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính", "Retention"],
+          "set": {
+            "Ý nghĩa": "SPU chuẩn hoặc combo; product_no và slug do backend sinh khi tạo",
+            "Unique / CHECK": "slug UQ; product_no UQ; product_type CHECK STANDARD/BUNDLE",
+            "Các cột chính": "product_no,name,slug,product_type,brand_id,short_description,description,status,published_at,seo_json,version",
+            "Retention": "product_no immutable; slug chỉ sửa khi DRAFT và không tự đổi theo name; archive not delete after order"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "product_variants" },
+          "columns": ["Ý nghĩa", "Unique / CHECK", "Retention"],
+          "set": {
+            "Ý nghĩa": "Sellable SKU; sku do backend sinh khi tạo",
+            "Unique / CHECK": "sku UQ; barcode non-null partial UQ",
+            "Retention": "sku immutable; status INACTIVE; retain transaction references"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "products", "Tên cột": "product_no" },
+          "columns": ["Unique", "Ý nghĩa / trạng thái cho phép"],
+          "set": {
+            "Unique": "YES",
+            "Ý nghĩa / trạng thái cho phép": "Backend-generated on create; immutable business identifier"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "products", "Tên cột": "slug" },
+          "columns": ["Unique", "Ý nghĩa / trạng thái cho phép"],
+          "set": {
+            "Unique": "YES",
+            "Ý nghĩa / trạng thái cho phép": "Backend-generated from name+product_no on create; mutable only in DRAFT; never auto-changed with name"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "product_variants", "Tên cột": "sku" },
+          "columns": ["Unique", "Ý nghĩa / trạng thái cho phép"],
+          "set": {
+            "Unique": "YES",
+            "Ý nghĩa / trạng thái cho phép": "Backend-generated unique immutable Sellable SKU"
+          }
+        }
+      ],
+      "upsertRows": [
+        {
+          "sheet": "Open Decisions",
+          "match": { "ID": "D44" },
+          "values": {
+            "ID": "D44",
+            "Chủ đề": "Catalog identifier ownership",
+            "Quyết định đề xuất": "Backend tự sinh product_no/slug/sku; product_no và sku immutable; slug chỉ sửa khi DRAFT và không tự đổi theo name",
+            "Tại sao quan trọng": "Một nguồn sinh mã duy nhất và URL ổn định",
+            "Owner": "Product+Tech",
+            "Blocking wave": "P0",
+            "Status": "DECIDED",
+            "Kết luận review / ghi chú": "BR-PRODUCT-01/02 và BR-SKU-01/02 đã triển khai qua API contract."
+          }
+        }
+      ]
+    },
+    {
+      "id": "DB-20260908-SPRINT3-CHECKOUT",
+      "date": "2026-09-08",
+      "scope": "DATABASE+CHECKOUT+INVENTORY+DOCUMENTATION",
+      "summary": "Chốt foundation Sprint 3: customer/address, cart, shipping quote, checkout snapshot, reservation header/items và typed system settings. Checkout reserve 30 phút; Order success mới trừ on_hand và reserved nguyên tử; SHIPPED không trừ lần hai.",
+      "sources": [
+        "decision:D01/D02/D45/S3-D03",
+        "migration:20260908010000_add_sprint3_checkout_foundation",
+        "source:prisma/schema.prisma",
+        "source:src/modules/system/system-setting.service.ts",
+        "source:src/modules/checkout/inventory-reservation.service.ts",
+        "test:src/modules/system/system-setting.service.spec.ts/test/sprint3-checkout-foundation.integration-spec.ts",
+        "document:26-sprint-3-execution-plan.md@2.0.0",
+        "document:28-sprint-3-execution-status.md@1.0.0"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": ["customers", "customer_addresses", "carts", "cart_items", "inventory_reservations", "shipping_zones", "shipping_rates", "system_settings"] },
+          "columns": ["Priority", "Ý nghĩa", "Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính", "Retention"]
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "inventory_reservations" },
+          "columns": ["Ý nghĩa", "Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính", "Retention"],
+          "set": {
+            "Ý nghĩa": "Header giữ tồn checkout",
+            "Khóa ngoại quan trọng": "checkout_session_id->checkout_sessions; warehouse_id->warehouses",
+            "Unique / CHECK": "checkout_session UQ; reservation_token UQ; idempotency_key UQ; lifecycle CHECK",
+            "Các cột chính": "reservation_token,idempotency_key,request_hash,status,expires_at,committed_at,released_at,release_reason,version",
+            "Retention": "2 years proposed; lifecycle only through idempotent commands"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "system_settings" },
+          "columns": ["Priority", "Ý nghĩa", "Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính", "Retention"],
+          "set": {
+            "Priority": "P0",
+            "Ý nghĩa": "Cấu hình nghiệp vụ không bí mật",
+            "Khóa ngoại quan trọng": "updated_by->users",
+            "Unique / CHECK": "key UQ; value_type/status CHECK",
+            "Các cột chính": "key,value_json,value_type,description,is_public,status,version,updated_by",
+            "Retention": "key immutable; audit/version; never store secret"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "carts" },
+          "columns": ["Ý nghĩa", "Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính", "Retention"],
+          "set": {
+            "Ý nghĩa": "Giỏ user/customer/guest",
+            "Khóa ngoại quan trọng": "user_id->users; customer_id->customers; branch_id->branches",
+            "Unique / CHECK": "one ACTIVE per user/customer/anonymous_token_hash; owner shape CHECK",
+            "Các cột chính": "user_id,customer_id,anonymous_token_hash,status,currency_code,branch_id,expires_at,version",
+            "Retention": "purge abandoned per policy; raw guest token never persisted/logged"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "shipping_zones" },
+          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính", "Retention"],
+          "set": {
+            "Ý nghĩa": "Vùng giao hàng V1",
+            "Unique / CHECK": "code UQ; province_codes non-empty; GIN index",
+            "Các cột chính": "code,name,province_codes,status,priority,version",
+            "Retention": "status INACTIVE; mapping table deferred until province metadata/history is required"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "shipping_zone_provinces" },
+          "columns": "*",
+          "archiveRemovedRowsTo": "Removed Tables"
+        }
+      ],
+      "upsertRows": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "checkout_sessions" },
+          "values": {
+            "ID": "T75",
+            "Module": "Checkout",
+            "Tên bảng": "checkout_sessions",
+            "Priority": "P0",
+            "Ý nghĩa": "Quote checkout có expiry và snapshot",
+            "Khóa chính": "id BIGINT IDENTITY",
+            "Khóa ngoại quan trọng": "cart_id->carts; customer_id->customers; branch_id->branches; warehouse_id->warehouses; shipping_rate_id->shipping_rates",
+            "Unique / CHECK": "checkout_token UQ; idempotency_key UQ; money/ETA/status CHECK",
+            "Các cột chính": "status,totals,eta,recipient_snapshot,shipping_rule_snapshot,request_hash,expires_at,confirmed_at,version",
+            "Retention": "retain with order/audit policy"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "checkout_session_items" },
+          "values": {
+            "ID": "T76",
+            "Module": "Checkout",
+            "Tên bảng": "checkout_session_items",
+            "Priority": "P0",
+            "Ý nghĩa": "Dòng quote bất biến theo session",
+            "Khóa chính": "id BIGINT IDENTITY",
+            "Khóa ngoại quan trọng": "checkout_session_id->checkout_sessions; cart_item_id->cart_items; product_variant_id->product_variants",
+            "Unique / CHECK": "session+variant UQ; quantity/money CHECK",
+            "Các cột chính": "item_type,sku_snapshot,name_snapshot,quantity,unit_price,line_total,component_snapshot",
+            "Retention": "retain with checkout"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "inventory_reservation_items" },
+          "values": {
+            "ID": "T77",
+            "Module": "Inventory",
+            "Tên bảng": "inventory_reservation_items",
+            "Priority": "P0",
+            "Ý nghĩa": "Nhu cầu vật lý đã gộp theo SKU",
+            "Khóa chính": "id BIGINT IDENTITY",
+            "Khóa ngoại quan trọng": "reservation_id->inventory_reservations; product_variant_id->product_variants",
+            "Unique / CHECK": "reservation+variant UQ; quantity>0",
+            "Các cột chính": "quantity,source_breakdown_json",
+            "Retention": "with reservation"
+          }
+        },
+        {
+          "sheet": "Open Decisions",
+          "match": { "ID": "D01" },
+          "values": {
+            "ID": "D01",
+            "Chủ đề": "Điểm trừ tồn",
+            "Quyết định đề xuất": "Checkout confirm tăng reserved; tạo Order thành công giảm on_hand và reserved cùng transaction; SHIPPED không đổi tồn",
+            "Tại sao quan trọng": "Ngăn double-decrement và phân biệt release trước commit với hoàn kho sau commit",
+            "Owner": "Business+Tech",
+            "Blocking wave": "3",
+            "Status": "DECIDED",
+            "Kết luận review / ghi chú": "Sprint 3 reserve/release; Sprint 4 Order commit + movement trong cùng transaction."
+          }
+        },
+        {
+          "sheet": "Open Decisions",
+          "match": { "ID": "D02" },
+          "values": {
+            "ID": "D02",
+            "Chủ đề": "Reservation checkout",
+            "Quyết định đề xuất": "TTL 30 phút từ system_settings; key checkout.reservation_ttl_minutes, INTEGER, private, range 5..1440",
+            "Tại sao quan trọng": "Thay đổi vận hành không cần deploy nhưng vẫn typed và fail closed",
+            "Owner": "Business",
+            "Blocking wave": "3",
+            "Status": "DECIDED",
+            "Kết luận review / ghi chú": "Migration insert setting mặc định đúng một lần; không phải demo seed."
+          }
+        },
+        {
+          "sheet": "Open Decisions",
+          "match": { "ID": "D45" },
+          "values": {
+            "ID": "D45",
+            "Chủ đề": "System setting governance",
+            "Quyết định đề xuất": "Key immutable, JSONB typed value, status, version, updated_by; không lưu secret; V1 đọc DB trực tiếp",
+            "Tại sao quan trọng": "Trace thay đổi và tránh cache stale trên serverless",
+            "Owner": "Tech",
+            "Blocking wave": "3",
+            "Status": "DECIDED",
+            "Kết luận review / ghi chú": "Kế thừa ý tưởng Parameter của fund-ops, bỏ maker-checker phức tạp khỏi V1."
+          }
+        }
+      ]
     }
   ]
 }

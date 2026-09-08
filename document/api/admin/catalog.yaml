@@ -2124,11 +2124,7 @@ components:
             - STANDARD
             - BUNDLE
           default: STANDARD
-        productNo:
-          type: string
         name:
-          type: string
-        slug:
           type: string
         brandId:
           type: string
@@ -2150,9 +2146,7 @@ components:
           pattern: ^[1-9][0-9]*$
           example: "1"
       required:
-        - productNo
         - name
-        - slug
         - categoryIds
         - primaryCategoryId
     ProductDetailDto:
@@ -2254,11 +2248,7 @@ components:
             - STANDARD
             - BUNDLE
           default: STANDARD
-        productNo:
-          type: string
         name:
-          type: string
-        slug:
           type: string
         categoryIds:
           example:
@@ -2271,6 +2261,9 @@ components:
           type: string
           pattern: ^[1-9][0-9]*$
           example: "1"
+        slug:
+          type: string
+          description: Only mutable while the product is DRAFT
         brandId:
           type: string
           pattern: ^[1-9][0-9]*$
@@ -2298,8 +2291,6 @@ components:
     CreateVariantDto:
       type: object
       properties:
-        sku:
-          type: string
         barcode:
           type: string
         name:
@@ -2314,7 +2305,6 @@ components:
         heightMm:
           type: number
       required:
-        - sku
         - name
     UpdateVariantDto:
       type: object

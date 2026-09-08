@@ -8919,13 +8919,7 @@
             ],
             "default": "STANDARD"
           },
-          "productNo": {
-            "type": "string"
-          },
           "name": {
-            "type": "string"
-          },
-          "slug": {
             "type": "string"
           },
           "brandId": {
@@ -8956,9 +8950,7 @@
           }
         },
         "required": [
-          "productNo",
           "name",
-          "slug",
           "categoryIds",
           "primaryCategoryId"
         ]
@@ -8974,13 +8966,7 @@
             ],
             "default": "STANDARD"
           },
-          "productNo": {
-            "type": "string"
-          },
           "name": {
-            "type": "string"
-          },
-          "slug": {
             "type": "string"
           },
           "categoryIds": {
@@ -8997,6 +8983,10 @@
             "type": "string",
             "pattern": "^[1-9][0-9]*$",
             "example": "1"
+          },
+          "slug": {
+            "type": "string",
+            "description": "Only mutable while the product is DRAFT"
           },
           "brandId": {
             "type": "string",
@@ -9024,9 +9014,6 @@
       "CreateVariantDto": {
         "type": "object",
         "properties": {
-          "sku": {
-            "type": "string"
-          },
           "barcode": {
             "type": "string"
           },
@@ -9048,7 +9035,6 @@
           }
         },
         "required": [
-          "sku",
           "name"
         ]
       },

@@ -7,7 +7,7 @@ Status meanings:
 - `ACTIVE`: the module has at least one real HTTP/application vertical slice in this base.
 - `SCAFFOLDED`: the Nest boundary exists and its models are registered, but no generic CRUD API is exposed yet.
 
-Active base slices are Organization, IAM, Catalog, Inventory, CMS Content and Product Reviews. Organization and IAM implement the Sprint 1 HTTP/application flow with an in-memory adapter; this activates the contract and domain validation only, not PostgreSQL persistence, durable audit or production authentication. Remaining modules are intentionally opened by use case and delivery wave from `document/07-delivery-plan.md`; an empty generic CRUD controller would bypass state-machine, audit, idempotency and transaction rules.
+Active base slices are Organization, IAM, Catalog, Inventory, Checkout foundation, CMS Content and Product Reviews. Checkout currently exposes its transaction core to application modules; storefront cart/quote HTTP contracts stay closed until their Sprint 3 validation and ownership rules are implemented. Remaining modules are intentionally opened by use case and delivery wave from `document/07-delivery-plan.md`; an empty generic CRUD controller would bypass state-machine, audit, idempotency and transaction rules.
 
 Use two reference shapes for new V1 work:
 

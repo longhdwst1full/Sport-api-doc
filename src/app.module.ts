@@ -18,6 +18,7 @@ import { ApprovalModule } from './modules/approval/approval.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CartModule } from './modules/cart/cart.module';
+import { CheckoutModule } from './modules/checkout/checkout.module';
 import { CmsModule } from './modules/cms/cms.module';
 import { CustomerModule } from './modules/customer/customer.module';
 import { FulfillmentModule } from './modules/fulfillment/fulfillment.module';
@@ -100,6 +101,7 @@ import { SystemModule } from './modules/system/system.module';
     PricingModule,
     PromotionModule,
     CartModule,
+    CheckoutModule,
     CmsModule,
     OrderModule,
     PaymentModule,

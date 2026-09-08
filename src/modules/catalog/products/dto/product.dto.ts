@@ -137,9 +137,7 @@ export class CreateProductDto {
   @IsOptional()
   productType?: ProductType = PRODUCT_TYPE.STANDARD;
 
-  @ApiProperty() @IsString() @Matches(/^[A-Z0-9-]+$/) @MaxLength(32) productNo: string;
   @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(255) name: string;
-  @ApiProperty() @IsString() @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/) @MaxLength(255) slug: string;
   @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI }) @IsEntityId() @IsOptional() brandId?: string;
   @ApiPropertyOptional() @IsString() @MaxLength(1000) @IsOptional() shortDescription?: string;
   @ApiPropertyOptional() @IsString() @IsOptional() description?: string;
@@ -150,6 +148,13 @@ export class CreateProductDto {
 export class UpdateProductFieldsDto extends PartialType(
   OmitType(CreateProductDto, ['brandId', 'shortDescription', 'description'] as const),
 ) {
+  @ApiPropertyOptional({ description: 'Only mutable while the product is DRAFT' })
+  @IsString()
+  @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+  @MaxLength(255)
+  @IsOptional()
+  slug?: string;
+
   @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI, nullable: true })
   @IsEntityId()
   @IsOptional()
@@ -171,7 +176,6 @@ export class UpdateProductDto extends UpdateProductFieldsDto {
 }
 
 export class CreateVariantDto {
-  @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(64) sku: string;
   @ApiPropertyOptional() @IsString() @MaxLength(64) @IsOptional() barcode?: string;
   @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(255) name: string;
   @ApiPropertyOptional({ default: 0 }) @IsInt() @Min(0) @IsOptional() weightGrams = 0;

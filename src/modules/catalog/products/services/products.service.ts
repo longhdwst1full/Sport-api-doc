@@ -50,6 +50,11 @@ import {
   ProductStatus,
   ProductType,
 } from '../product.constants';
+import {
+  generateProductNo,
+  generateProductSlug,
+  generateSku,
+} from '../product-identifiers';
 
 const effectivePriceWhere = (now: Date): Prisma.ProductPriceWhereInput => ({
   status: { in: [PRODUCT_PRICE_STATUS.ACTIVE, PRODUCT_PRICE_STATUS.SCHEDULED] },
@@ -177,15 +182,17 @@ export class ProductsService {
 
   async create(input: CreateProductDto, context: MutationContext): Promise<ProductDetailDto> {
     this.validateCategorySelection(input.categoryIds, input.primaryCategoryId);
+    const productNo = generateProductNo();
+    const slug = generateProductSlug(input.name, productNo);
     try {
       const productId = await this.prisma.$transaction(async (transaction) => {
         await this.validateReferences(transaction, input.brandId, input.categoryIds);
         const product = await transaction.product.create({
           data: {
             productType: input.productType ?? PRODUCT_TYPE.STANDARD,
-            productNo: input.productNo,
+            productNo,
             name: input.name,
-            slug: input.slug,
+            slug,
             brandId: toOptionalDatabaseId(input.brandId),
             shortDescription: input.shortDescription,
             description: input.description,
@@ -210,7 +217,7 @@ export class ProductsService {
             action: PRODUCT_AUDIT_ACTION.CREATE,
             entityType: 'PRODUCT',
             entityId: toEntityId(product.id),
-            after: input as unknown as Prisma.InputJsonValue,
+            after: { ...input, productNo, slug } as unknown as Prisma.InputJsonValue,
           },
           transaction,
         );
@@ -238,9 +245,16 @@ export class ProductsService {
         await this.lockProductIds(transaction, [databaseId]);
         const current = await transaction.product.findUnique({
           where: { id: databaseId },
-          select: { productType: true, _count: { select: { variants: true } } },
+          select: { productType: true, status: true, slug: true, _count: { select: { variants: true } } },
         });
         if (!current) throw new NotFoundException(PRODUCT_ERROR.NOT_FOUND);
+        if (
+          fields.slug !== undefined &&
+          fields.slug !== current.slug &&
+          current.status !== PRODUCT_STATUS.DRAFT
+        ) {
+          throw new UnprocessableEntityException('Product slug cannot change after publish');
+        }
         if (
           fields.productType &&
           fields.productType !== current.productType &&
@@ -539,8 +553,9 @@ export class ProductsService {
           where: { id: databaseProductId, status: { not: PRODUCT_STATUS.ARCHIVED } },
         });
         if (!product) throw new NotFoundException(PRODUCT_ERROR.NOT_FOUND);
+        const sku = generateSku(product.productNo);
         const variant = await transaction.productVariant.create({
-          data: { productId: databaseProductId, ...input },
+          data: { productId: databaseProductId, sku, ...input },
         });
         await this.audit.write(
           {
@@ -551,6 +566,7 @@ export class ProductsService {
             action: PRODUCT_AUDIT_ACTION.VARIANT_CREATE,
             entityType: 'PRODUCT_VARIANT',
             entityId: toEntityId(variant.id),
+            after: { ...input, sku } as unknown as Prisma.InputJsonValue,
           },
           transaction,
         );

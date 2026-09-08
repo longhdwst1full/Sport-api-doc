@@ -103,6 +103,7 @@ export const BUSINESS_MODEL_REGISTRY: BusinessModuleDefinition[] = [
       model('inventory_balances', 'P0'),
       model('inventory_movements', 'P0'),
       model('inventory_reservations', 'P0'),
+      model('inventory_reservation_items', 'P0'),
       model('stock_adjustments', 'P0'),
       model('stock_adjustment_items', 'P0'),
       model('stocktakes', 'P1'),
@@ -116,6 +117,12 @@ export const BUSINESS_MODEL_REGISTRY: BusinessModuleDefinition[] = [
     name: 'Giỏ hàng',
     status: 'SCAFFOLDED',
     models: [model('carts', 'P0'), model('cart_items', 'P0')],
+  },
+  {
+    key: 'checkout',
+    name: 'Checkout & reservation',
+    status: 'ACTIVE',
+    models: [model('checkout_sessions', 'P0'), model('checkout_session_items', 'P0')],
   },
   {
     key: 'order',
@@ -152,7 +159,6 @@ export const BUSINESS_MODEL_REGISTRY: BusinessModuleDefinition[] = [
     status: 'SCAFFOLDED',
     models: [
       model('shipping_zones', 'P0'),
-      model('shipping_zone_provinces', 'P0'),
       model('shipping_rates', 'P0'),
     ],
   },
@@ -194,7 +200,7 @@ export const BUSINESS_MODEL_REGISTRY: BusinessModuleDefinition[] = [
     models: [
       model('idempotency_keys', 'P0'),
       model('outbox_events', 'P0'),
-      model('system_settings', 'P1'),
+      model('system_settings', 'P0'),
     ],
   },
   {

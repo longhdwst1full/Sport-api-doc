@@ -187,40 +187,36 @@ Table customers {
   id bigint [pk, increment]
   user_id bigint [unique]
   customer_no varchar(32) [not null, unique]
-  full_name varchar(255) [not null]
+  name varchar(255) [not null]
   email varchar(255)
   normalized_email varchar(255)
-  phone varchar(32) [not null]
-  normalized_phone varchar(32) [not null]
+  phone varchar(32)
+  normalized_phone varchar(32)
   status varchar(24) [not null, default: 'ACTIVE']
   marketing_consent boolean [not null, default: false]
-  consent_at timestamptz
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
-  deleted_at timestamptz
-  Note: '[P0] Customer tồn tại độc lập; guest có user_id null.'
+  Note: '[P0] Customer tồn tại độc lập; guest có user_id null; bắt buộc có normalized_email hoặc normalized_phone; partial unique từng định danh.'
 }
 
 Table customer_addresses {
   id bigint [pk, increment]
   customer_id bigint [not null]
   address_type varchar(24) [not null, default: 'SHIPPING']
-  recipient_name varchar(255) [not null]
-  recipient_phone varchar(32) [not null]
+  recipient varchar(255) [not null]
+  phone varchar(32) [not null]
   address_line varchar(500) [not null]
-  ward_code varchar(32)
-  ward_name varchar(255)
-  district_code varchar(32)
-  district_name varchar(255)
+  ward varchar(255)
+  district varchar(255)
   province_code varchar(32) [not null]
-  province_name varchar(255) [not null]
   postal_code varchar(20)
   country_code char(2) [not null, default: 'VN']
   is_default boolean [not null, default: false]
+  status varchar(24) [not null, default: 'ACTIVE']
+  version bigint [not null, default: 0]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
-  deleted_at timestamptz
   Note: '[P0] Partial unique một default active/customer/address_type.'
 }
 
@@ -320,7 +316,7 @@ Table products {
   created_by bigint
   updated_at timestamptz [not null]
   updated_by bigint
-  Note: '[P0] SPU; product_type STANDARD|BUNDLE; không trộn SKU thường/combo trong cùng product; không chứa price/stock; ngừng dùng bằng status ARCHIVED.'
+  Note: '[P0] SPU; backend tự sinh product_no unique immutable và slug unique từ name+product_no khi create; slug chỉ sửa khi DRAFT, không tự đổi theo name; product_type STANDARD|BUNDLE; không trộn SKU thường/combo; không chứa price/stock; ngừng dùng bằng ARCHIVED.'
 }
 
 Table product_categories {
@@ -347,7 +343,7 @@ Table product_variants {
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
-  Note: '[P0] Sellable SKU; price/stock đều tham chiếu variant; bundle gắn theo từng variant; storefront chỉ trả ACTIVE có giá effective và đủ điều kiện combo; ngừng bán bằng status INACTIVE.'
+  Note: '[P0] ProductVariant là Sellable SKU; backend tự sinh sku unique immutable; price/stock đều tham chiếu variant; bundle gắn theo từng variant; storefront chỉ trả ACTIVE có giá effective và đủ điều kiện combo; ngừng bán bằng status INACTIVE.'
 }
 
 Table product_bundles {
@@ -588,22 +584,31 @@ Table inventory_movements {
 
 Table inventory_reservations {
   id bigint [pk, increment]
+  checkout_session_id bigint [not null, unique]
   warehouse_id bigint [not null]
-  product_variant_id bigint [not null]
-  order_id bigint
-  order_item_id bigint
-  order_item_component_id bigint
-  token varchar(100) [not null]
-  quantity int [not null]
-  status varchar(32) [not null, default: 'ACTIVE']
+  reservation_token varchar(100) [not null, unique]
+  idempotency_key varchar(150) [not null, unique]
+  request_hash char(64) [not null]
+  status varchar(24) [not null, default: 'ACTIVE']
   expires_at timestamptz [not null]
   committed_at timestamptz
   released_at timestamptz
-  release_reason varchar(255)
+  release_reason varchar(500)
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
-  indexes { (token, warehouse_id, product_variant_id) [unique] }
-  Note: '[P0] ACTIVE|COMMITTED|RELEASED|EXPIRED|RELEASED_AFTER_SHIP.'
+  updated_at timestamptz [not null]
+  indexes { (status, expires_at, id) }
+  Note: '[P0] Header reservation: ACTIVE|COMMITTED|RELEASED|EXPIRED; Order success commit, còn hủy sau commit dùng movement hoàn kho.'
+}
+
+Table inventory_reservation_items {
+  id bigint [pk, increment]
+  reservation_id bigint [not null]
+  product_variant_id bigint [not null]
+  quantity int [not null]
+  source_breakdown_json jsonb
+  indexes { (reservation_id, product_variant_id) [unique] }
+  Note: '[P0] Nhu cầu vật lý gộp theo SKU; quantity>0; combo lưu breakdown để trace.'
 }
 
 Table stock_adjustments {
@@ -716,7 +721,8 @@ Table stock_transfer_items {
 Table carts {
   id bigint [pk, increment]
   user_id bigint
-  anonymous_token varchar(100)
+  customer_id bigint
+  anonymous_token_hash char(64)
   branch_id bigint
   status varchar(24) [not null, default: 'ACTIVE']
   currency_code char(3) [not null, default: 'VND']
@@ -724,7 +730,7 @@ Table carts {
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
-  Note: '[P0] CHECK user hoặc anonymous token; partial unique một ACTIVE cart mỗi owner.'
+  Note: '[P0] CHECK owner shape; partial unique một ACTIVE cart mỗi user/customer/token hash; không lưu raw guest token.'
 }
 
 Table cart_items {
@@ -740,6 +746,51 @@ Table cart_items {
   updated_at timestamptz [not null]
   indexes { (cart_id, product_variant_id) [unique] }
   Note: '[P0] Cart không reserve tồn; quantity>0.'
+}
+
+Table checkout_sessions {
+  id bigint [pk, increment]
+  checkout_token varchar(100) [not null, unique]
+  cart_id bigint [not null]
+  customer_id bigint
+  branch_id bigint [not null]
+  warehouse_id bigint [not null]
+  shipping_rate_id bigint
+  status varchar(24) [not null, default: 'QUOTED']
+  currency_code char(3) [not null, default: 'VND']
+  prices_include_tax boolean [not null, default: true]
+  item_subtotal decimal(19,2) [not null]
+  shipping_total decimal(19,2) [not null]
+  grand_total decimal(19,2) [not null]
+  eta_min_days int [not null]
+  eta_max_days int [not null]
+  recipient_snapshot jsonb [not null]
+  shipping_rule_snapshot jsonb [not null]
+  idempotency_key varchar(150) [not null, unique]
+  request_hash char(64) [not null]
+  expires_at timestamptz [not null]
+  confirmed_at timestamptz
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  Note: '[P0] QUOTED|CONFIRMED|EXPIRED|COMPLETED|CANCELLED; giá, địa chỉ, fee và ETA là snapshot.'
+}
+
+Table checkout_session_items {
+  id bigint [pk, increment]
+  checkout_session_id bigint [not null]
+  cart_item_id bigint
+  product_variant_id bigint [not null]
+  item_type varchar(24) [not null, default: 'STANDARD']
+  sku_snapshot varchar(64) [not null]
+  name_snapshot varchar(255) [not null]
+  quantity int [not null]
+  unit_price decimal(19,2) [not null]
+  line_total decimal(19,2) [not null]
+  component_snapshot jsonb
+  created_at timestamptz [not null]
+  indexes { (checkout_session_id, product_variant_id) [unique] }
+  Note: '[P0] Quote line immutable; component_snapshot dùng cho combo; quantity>0 và line_total=unit_price*quantity.'
 }
 
 Table orders {
@@ -972,21 +1023,13 @@ Table shipping_zones {
   id bigint [pk, increment]
   code varchar(32) [not null, unique]
   name varchar(255) [not null]
+  province_codes varchar(32)[] [not null]
   priority int [not null, default: 0]
   status varchar(24) [not null, default: 'ACTIVE']
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
-  deleted_at timestamptz
-  Note: '[P0] Zone theo tỉnh/thành.'
-}
-
-Table shipping_zone_provinces {
-  zone_id bigint [not null]
-  province_code varchar(32) [not null]
-  province_name varchar(255) [not null]
-  indexes { (zone_id, province_code) [pk] }
-  Note: '[P0] province_code chỉ thuộc một active zone; enforce partial/business rule.'
+  Note: '[P0] V1 zone giữ province_codes non-empty và GIN index; bảng mapping riêng hoãn tới khi cần metadata/lịch sử từng tỉnh.'
 }
 
 Table shipping_rates {
@@ -1002,13 +1045,11 @@ Table shipping_rates {
   free_shipping_threshold decimal(19,2)
   eta_min_days int [not null]
   eta_max_days int [not null]
-  starts_at timestamptz [not null]
-  ends_at timestamptz
   status varchar(24) [not null, default: 'ACTIVE']
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
-  Note: '[P0] branch null là rate mặc định; chống overlap cùng rule dimension.'
+  Note: '[P0] branch null là rate mặc định; validate range/fee/ETA; checkout lưu snapshot nên rate đổi không làm đổi quote đã confirm.'
 }
 
 // RETURN
@@ -1248,15 +1289,17 @@ Table outbox_events {
 
 Table system_settings {
   id bigint [pk, increment]
-  setting_key varchar(150) [not null, unique]
+  key varchar(150) [not null, unique]
   value_json jsonb [not null]
-  description text
+  value_type varchar(24) [not null]
+  description varchar(500)
   is_public boolean [not null, default: false]
+  status varchar(24) [not null, default: 'ACTIVE']
   version bigint [not null, default: 0]
-  updated_by bigint [not null]
+  updated_by bigint
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
-  Note: '[P1] Không lưu secret.'
+  Note: '[P0] Key immutable; INTEGER|DECIMAL|BOOLEAN|STRING|JSON; không lưu secret; checkout.reservation_ttl_minutes=30, private, giới hạn 5..1440.'
 }
 
 // RELATIONSHIPS
@@ -1324,11 +1367,10 @@ Ref: inventory_balances.product_variant_id > product_variants.id [delete: restri
 Ref: inventory_movements.warehouse_id > warehouses.id [delete: restrict]
 Ref: inventory_movements.product_variant_id > product_variants.id [delete: restrict]
 Ref: inventory_movements.created_by > users.id [delete: restrict]
+Ref: inventory_reservations.checkout_session_id > checkout_sessions.id [delete: restrict]
 Ref: inventory_reservations.warehouse_id > warehouses.id [delete: restrict]
-Ref: inventory_reservations.product_variant_id > product_variants.id [delete: restrict]
-Ref: inventory_reservations.order_id > orders.id [delete: restrict]
-Ref: inventory_reservations.order_item_id > order_items.id [delete: restrict]
-Ref: inventory_reservations.order_item_component_id > order_item_components.id [delete: restrict]
+Ref: inventory_reservation_items.reservation_id > inventory_reservations.id [delete: restrict]
+Ref: inventory_reservation_items.product_variant_id > product_variants.id [delete: restrict]
 Ref: stock_adjustments.warehouse_id > warehouses.id [delete: restrict]
 Ref: stock_adjustments.created_by > users.id [delete: restrict]
 Ref: stock_adjustment_items.stock_adjustment_id > stock_adjustments.id [delete: restrict]
@@ -1346,10 +1388,19 @@ Ref: stock_transfers.shipped_by > users.id [delete: restrict]
 Ref: stock_transfers.received_by > users.id [delete: restrict]
 Ref: stock_transfer_items.stock_transfer_id > stock_transfers.id [delete: cascade]
 Ref: stock_transfer_items.product_variant_id > product_variants.id [delete: restrict]
-Ref: carts.user_id > users.id [delete: cascade]
-Ref: carts.branch_id > branches.id [delete: set null]
+Ref: carts.user_id > users.id [delete: restrict]
+Ref: carts.customer_id > customers.id [delete: restrict]
+Ref: carts.branch_id > branches.id [delete: restrict]
 Ref: cart_items.cart_id > carts.id [delete: cascade]
 Ref: cart_items.product_variant_id > product_variants.id [delete: restrict]
+Ref: checkout_sessions.cart_id > carts.id [delete: restrict]
+Ref: checkout_sessions.customer_id > customers.id [delete: restrict]
+Ref: checkout_sessions.branch_id > branches.id [delete: restrict]
+Ref: checkout_sessions.warehouse_id > warehouses.id [delete: restrict]
+Ref: checkout_sessions.shipping_rate_id > shipping_rates.id [delete: restrict]
+Ref: checkout_session_items.checkout_session_id > checkout_sessions.id [delete: cascade]
+Ref: checkout_session_items.cart_item_id > cart_items.id [delete: restrict]
+Ref: checkout_session_items.product_variant_id > product_variants.id [delete: restrict]
 Ref: orders.customer_id > customers.id [delete: restrict]
 Ref: orders.branch_id > branches.id [delete: restrict]
 Ref: orders.warehouse_id > warehouses.id [delete: restrict]
@@ -1380,7 +1431,6 @@ Ref: fulfillments.shipped_by > users.id [delete: restrict]
 Ref: fulfillments.returned_to_warehouse_by > users.id [delete: restrict]
 Ref: fulfillment_status_history.fulfillment_id > fulfillments.id [delete: restrict]
 Ref: fulfillment_status_history.actor_id > users.id [delete: set null]
-Ref: shipping_zone_provinces.zone_id > shipping_zones.id [delete: cascade]
 Ref: shipping_rates.zone_id > shipping_zones.id [delete: restrict]
 Ref: shipping_rates.branch_id > branches.id [delete: restrict]
 Ref: return_policies.created_by > users.id [delete: restrict]

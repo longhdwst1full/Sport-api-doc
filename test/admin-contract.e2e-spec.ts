@@ -469,29 +469,32 @@ describe('Admin v1 contract', () => {
       .expect(200);
     expect(updatedCategory.body).toMatchObject({ name: 'E2E Category Updated', version: 1 });
 
-    const slug = `e2e-product-${suffix}`;
     const productResponse = await request(server())
       .post('/api/v1/admin/products')
       .set(authorization)
       .send({
-        productNo: `SP-${suffix.slice(-8)}`.toUpperCase(),
         name: 'E2E Product',
-        slug,
         brandId: catalogFixture.brandId,
         categoryIds: [catalogFixture.categoryId],
         primaryCategoryId: catalogFixture.categoryId,
       })
       .expect(201);
-    catalogFixture.productId = (productResponse.body as { id: string }).id;
+    const createdProduct = productResponse.body as { id: string; productNo: string; slug: string };
+    catalogFixture.productId = createdProduct.id;
+    const slug = createdProduct.slug;
+    expect(createdProduct.productNo).toMatch(/^PRD-[A-F0-9]{24}$/);
+    expect(slug).toMatch(/^e2e-product-prd-[a-f0-9]{24}$/);
 
     const variantResponse = await request(server())
       .post(`/api/v1/admin/products/${catalogFixture.productId}/variants`)
       .set(authorization)
-      .send({ sku: `SKU-${suffix}`.toUpperCase(), name: 'Default SKU' })
+      .send({ name: 'Default SKU' })
       .expect(201);
-    catalogFixture.variantId = (
-      variantResponse.body as { variants: Array<{ id: string }> }
-    ).variants[0].id;
+    const createdVariant = (
+      variantResponse.body as { variants: Array<{ id: string; name: string; sku: string }> }
+    ).variants.find(({ name }) => name === 'Default SKU');
+    expect(createdVariant?.sku).toMatch(new RegExp(`^${createdProduct.productNo}-SKU-[A-F0-9]{20}$`));
+    catalogFixture.variantId = createdVariant!.id;
 
     const updatedVariant = await request(server())
       .patch(`/api/v1/admin/products/variants/${catalogFixture.variantId}`)
@@ -586,11 +589,11 @@ describe('Admin v1 contract', () => {
     const inactiveVariantResponse = await request(server())
       .post(`/api/v1/admin/products/${catalogFixture.productId}/variants`)
       .set(authorization)
-      .send({ sku: `SKU-INACTIVE-${suffix}`.toUpperCase(), name: 'Inactive cheap SKU' })
+      .send({ name: 'Inactive cheap SKU' })
       .expect(201);
     const inactiveVariantId = (
-      inactiveVariantResponse.body as { variants: Array<{ id: string; sku: string }> }
-    ).variants.find(({ sku }) => sku === `SKU-INACTIVE-${suffix}`.toUpperCase())?.id;
+      inactiveVariantResponse.body as { variants: Array<{ id: string; name: string }> }
+    ).variants.find(({ name }) => name === 'Inactive cheap SKU')?.id;
     expect(inactiveVariantId).toBeDefined();
     await request(server())
       .post(`/api/v1/admin/products/variants/${inactiveVariantId}/prices`)
@@ -685,9 +688,7 @@ describe('Admin v1 contract', () => {
         .set(authorization)
         .send({
           productType: kind,
-          productNo: `${kind.slice(0, 3)}-${label}-${suffix}`,
           name: `${label} ${kind}`,
-          slug: `${label.toLowerCase()}-${kind.toLowerCase()}-${suffix.toLowerCase()}`,
           categoryIds: [concurrencyCategoryId],
           primaryCategoryId: concurrencyCategoryId,
         })
@@ -701,31 +702,33 @@ describe('Admin v1 contract', () => {
     const componentResponse = await request(server())
       .post(`/api/v1/admin/products/${componentProductId}/variants`)
       .set(authorization)
-      .send({ sku: `COMPONENT-${suffix}`, name: 'Component SKU' })
+      .send({ name: 'Component SKU' })
       .expect(201);
-    const componentVariantId = (
-      componentResponse.body as { variants: Array<{ id: string }> }
-    ).variants[0].id;
+    const componentVariant = (
+      componentResponse.body as { variants: Array<{ id: string; name: string; sku: string }> }
+    ).variants.find(({ name }) => name === 'Component SKU');
+    const componentVariantId = componentVariant!.id;
 
     const comboProductId = await createProduct('BUNDLE', 'COMBO');
     const comboVariantResponse = await request(server())
       .post(`/api/v1/admin/products/${comboProductId}/variants`)
       .set(authorization)
-      .send({ sku: `COMBO-${suffix}`, name: 'Combo SKU' })
+      .send({ name: 'Combo SKU' })
       .expect(201);
-    const comboVariantId = (
-      comboVariantResponse.body as { variants: Array<{ id: string }> }
-    ).variants[0].id;
+    const comboVariant = (
+      comboVariantResponse.body as { variants: Array<{ id: string; name: string; sku: string }> }
+    ).variants.find(({ name }) => name === 'Combo SKU');
+    const comboVariantId = comboVariant!.id;
     const activeVariants = await request(server())
-      .get(`/api/v1/admin/products/variants/active?search=${suffix}&page=1&limit=20`)
+      .get(`/api/v1/admin/products/variants/active?search=${componentVariant!.sku}&page=1&limit=20`)
       .set(authorization)
       .expect(200);
     expect(
       (activeVariants.body as LookupBody).items.map(({ code }) => code),
-    ).toContain(`COMPONENT-${suffix}`);
+    ).toContain(componentVariant!.sku);
     expect(
       (activeVariants.body as LookupBody).items.map(({ code }) => code),
-    ).not.toContain(`COMBO-${suffix}`);
+    ).not.toContain(comboVariant!.sku);
     await request(server())
       .post(`/api/v1/admin/products/variants/${comboVariantId}/prices`)
       .set(authorization)

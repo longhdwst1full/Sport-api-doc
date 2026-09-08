@@ -57,6 +57,16 @@ export const PRODUCT_CURRENCY = {
   VND: 'VND',
 } as const;
 
+export const PRODUCT_IDENTIFIER = {
+  PRODUCT_NO_PREFIX: 'PRD',
+  PRODUCT_NO_RANDOM_LENGTH: 24,
+  SKU_PREFIX: 'SKU',
+  SKU_RANDOM_LENGTH: 20,
+  MAX_PRODUCT_NO_LENGTH: 32,
+  MAX_SKU_LENGTH: 64,
+  MAX_SLUG_LENGTH: 255,
+} as const;
+
 export const PRODUCT_AUDIT_ACTION = {
   CREATE: 'catalog.product.create',
   UPDATE: 'catalog.product.update',

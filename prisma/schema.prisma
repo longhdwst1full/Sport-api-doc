@@ -28,8 +28,11 @@ model Branch {
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
   updatedBy   BigInt?  @map("updated_by")
 
-  warehouses     Warehouse[]
-  roleAssignments UserRoleAssignment[]
+  warehouses       Warehouse[]
+  roleAssignments  UserRoleAssignment[]
+  carts            Cart[]
+  checkoutSessions CheckoutSession[]
+  shippingRates    ShippingRate[]
 
   @@map("branches")
 }
@@ -47,76 +50,81 @@ model Warehouse {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
   updatedBy BigInt?  @map("updated_by")
 
-  branch          Branch               @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  roleAssignments UserRoleAssignment[]
-  inventoryBalances InventoryBalance[]
-  inventoryMovements InventoryMovement[]
-  stockAdjustments StockAdjustment[]
-  outgoingStockTransfers StockTransfer[] @relation("StockTransferSource")
-  incomingStockTransfers StockTransfer[] @relation("StockTransferDestination")
+  branch                 Branch                 @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  roleAssignments        UserRoleAssignment[]
+  inventoryBalances      InventoryBalance[]
+  inventoryMovements     InventoryMovement[]
+  stockAdjustments       StockAdjustment[]
+  outgoingStockTransfers StockTransfer[]        @relation("StockTransferSource")
+  incomingStockTransfers StockTransfer[]        @relation("StockTransferDestination")
+  checkoutSessions       CheckoutSession[]
+  inventoryReservations  InventoryReservation[]
 
   @@map("warehouses")
 }
 
 model User {
-  id                BigInt   @id @default(autoincrement())
-  legacyId          String?  @unique @map("legacy_id") @db.Uuid
-  userType          String   @map("user_type") @db.VarChar(24)
-  email             String?  @db.VarChar(255)
-  normalizedEmail   String?  @map("normalized_email") @db.VarChar(255)
-  phone             String?  @db.VarChar(32)
-  normalizedPhone   String?  @map("normalized_phone") @db.VarChar(32)
-  passwordHash      String?  @map("password_hash") @db.VarChar(255)
-  displayName       String   @map("display_name") @db.VarChar(255)
-  status            String   @default("ACTIVE") @db.VarChar(24)
-  failedLoginAttempts Int     @default(0) @map("failed_login_attempts")
-  mustChangePassword Boolean  @default(false) @map("must_change_password")
-  lockedAt          DateTime? @map("locked_at") @db.Timestamptz(6)
-  lockReason        String?   @map("lock_reason") @db.VarChar(255)
-  emailVerifiedAt   DateTime? @map("email_verified_at") @db.Timestamptz(6)
-  phoneVerifiedAt   DateTime? @map("phone_verified_at") @db.Timestamptz(6)
-  permissionVersion BigInt   @default(0) @map("permission_version")
-  lastLoginAt       DateTime? @map("last_login_at") @db.Timestamptz(6)
-  version           BigInt   @default(0)
-  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                  BigInt    @id @default(autoincrement())
+  legacyId            String?   @unique @map("legacy_id") @db.Uuid
+  userType            String    @map("user_type") @db.VarChar(24)
+  email               String?   @db.VarChar(255)
+  normalizedEmail     String?   @map("normalized_email") @db.VarChar(255)
+  phone               String?   @db.VarChar(32)
+  normalizedPhone     String?   @map("normalized_phone") @db.VarChar(32)
+  passwordHash        String?   @map("password_hash") @db.VarChar(255)
+  displayName         String    @map("display_name") @db.VarChar(255)
+  status              String    @default("ACTIVE") @db.VarChar(24)
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  mustChangePassword  Boolean   @default(false) @map("must_change_password")
+  lockedAt            DateTime? @map("locked_at") @db.Timestamptz(6)
+  lockReason          String?   @map("lock_reason") @db.VarChar(255)
+  emailVerifiedAt     DateTime? @map("email_verified_at") @db.Timestamptz(6)
+  phoneVerifiedAt     DateTime? @map("phone_verified_at") @db.Timestamptz(6)
+  permissionVersion   BigInt    @default(0) @map("permission_version")
+  lastLoginAt         DateTime? @map("last_login_at") @db.Timestamptz(6)
+  version             BigInt    @default(0)
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  sessions               AuthSession[]
-  roleAssignments        UserRoleAssignment[] @relation("AssignedUser")
-  assignedRoleAssignments UserRoleAssignment[] @relation("AssignmentActor")
-  permissionGrants       RolePermission[]     @relation("PermissionGrantActor")
-  auditLogs              AuditLog[]
-  uploadedMedia          MediaAsset[]         @relation("MediaUploader")
-  createdProducts        Product[]            @relation("ProductCreator")
-  updatedProducts        Product[]            @relation("ProductUpdater")
-  createdBundles         ProductBundle[]      @relation("BundleCreator")
-  updatedBundles         ProductBundle[]      @relation("BundleUpdater")
-  createdPrices          ProductPrice[]       @relation("PriceCreator")
-  updatedPrices          ProductPrice[]       @relation("PriceUpdater")
-  createdInventoryMovements InventoryMovement[] @relation("InventoryMovementCreator")
-  createdStockAdjustments StockAdjustment[]    @relation("StockAdjustmentCreator")
-  createdStockTransfers StockTransfer[] @relation("StockTransferCreator")
-  shippedStockTransfers StockTransfer[] @relation("StockTransferShipper")
-  receivedStockTransfers StockTransfer[] @relation("StockTransferReceiver")
+  sessions                  AuthSession[]
+  roleAssignments           UserRoleAssignment[] @relation("AssignedUser")
+  assignedRoleAssignments   UserRoleAssignment[] @relation("AssignmentActor")
+  permissionGrants          RolePermission[]     @relation("PermissionGrantActor")
+  auditLogs                 AuditLog[]
+  uploadedMedia             MediaAsset[]         @relation("MediaUploader")
+  createdProducts           Product[]            @relation("ProductCreator")
+  updatedProducts           Product[]            @relation("ProductUpdater")
+  createdBundles            ProductBundle[]      @relation("BundleCreator")
+  updatedBundles            ProductBundle[]      @relation("BundleUpdater")
+  createdPrices             ProductPrice[]       @relation("PriceCreator")
+  updatedPrices             ProductPrice[]       @relation("PriceUpdater")
+  createdInventoryMovements InventoryMovement[]  @relation("InventoryMovementCreator")
+  createdStockAdjustments   StockAdjustment[]    @relation("StockAdjustmentCreator")
+  createdStockTransfers     StockTransfer[]      @relation("StockTransferCreator")
+  shippedStockTransfers     StockTransfer[]      @relation("StockTransferShipper")
+  receivedStockTransfers    StockTransfer[]      @relation("StockTransferReceiver")
+  customerProfile           Customer?
+  carts                     Cart[]
+  updatedSystemSettings     SystemSetting[]      @relation("SystemSettingUpdater")
 
   @@map("users")
 }
 
 model AuthSession {
-  id                BigInt   @id @default(autoincrement())
-  legacyId          String?  @unique @map("legacy_id") @db.Uuid
-  userId            BigInt   @map("user_id")
-  refreshTokenHash  String   @unique @map("refresh_token_hash") @db.VarChar(255)
-  rotatedFromId     BigInt?  @unique @map("rotated_from_id")
-  deviceId          String?  @map("device_id") @db.VarChar(128)
-  deviceInfo        Json?    @map("device_info") @db.JsonB
-  ipHash            String?  @map("ip_hash") @db.VarChar(128)
-  userAgentHash     String?  @map("user_agent_hash") @db.VarChar(128)
-  expiresAt         DateTime @map("expires_at") @db.Timestamptz(6)
-  lastUsedAt        DateTime? @map("last_used_at") @db.Timestamptz(6)
-  revokedAt         DateTime? @map("revoked_at") @db.Timestamptz(6)
-  revokeReason      String?  @map("revoke_reason") @db.VarChar(255)
-  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id               BigInt    @id @default(autoincrement())
+  legacyId         String?   @unique @map("legacy_id") @db.Uuid
+  userId           BigInt    @map("user_id")
+  refreshTokenHash String    @unique @map("refresh_token_hash") @db.VarChar(255)
+  rotatedFromId    BigInt?   @unique @map("rotated_from_id")
+  deviceId         String?   @map("device_id") @db.VarChar(128)
+  deviceInfo       Json?     @map("device_info") @db.JsonB
+  ipHash           String?   @map("ip_hash") @db.VarChar(128)
+  userAgentHash    String?   @map("user_agent_hash") @db.VarChar(128)
+  expiresAt        DateTime  @map("expires_at") @db.Timestamptz(6)
+  lastUsedAt       DateTime? @map("last_used_at") @db.Timestamptz(6)
+  revokedAt        DateTime? @map("revoked_at") @db.Timestamptz(6)
+  revokeReason     String?   @map("revoke_reason") @db.VarChar(255)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
   user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   rotatedFrom AuthSession?  @relation("SessionRotation", fields: [rotatedFromId], references: [id], onDelete: SetNull)
@@ -179,26 +187,26 @@ model RolePermission {
 }
 
 model UserRoleAssignment {
-  id          BigInt   @id @default(autoincrement())
-  legacyId    String?  @unique @map("legacy_id") @db.Uuid
-  userId      BigInt   @map("user_id")
-  roleId      BigInt   @map("role_id")
-  scopeType   String   @map("scope_type") @db.VarChar(24)
-  branchId    BigInt?  @map("branch_id")
-  warehouseId BigInt?  @map("warehouse_id")
-  validFrom   DateTime @default(now()) @map("valid_from") @db.Timestamptz(6)
+  id          BigInt    @id @default(autoincrement())
+  legacyId    String?   @unique @map("legacy_id") @db.Uuid
+  userId      BigInt    @map("user_id")
+  roleId      BigInt    @map("role_id")
+  scopeType   String    @map("scope_type") @db.VarChar(24)
+  branchId    BigInt?   @map("branch_id")
+  warehouseId BigInt?   @map("warehouse_id")
+  validFrom   DateTime  @default(now()) @map("valid_from") @db.Timestamptz(6)
   validTo     DateTime? @map("valid_to") @db.Timestamptz(6)
-  status      String   @default("ACTIVE") @db.VarChar(24)
-  assignedBy  BigInt   @map("assigned_by")
-  version     BigInt   @default(0)
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  status      String    @default("ACTIVE") @db.VarChar(24)
+  assignedBy  BigInt    @map("assigned_by")
+  version     BigInt    @default(0)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  user       User       @relation("AssignedUser", fields: [userId], references: [id], onDelete: Restrict)
-  role       Role       @relation(fields: [roleId], references: [id], onDelete: Restrict)
-  branch     Branch?    @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  warehouse  Warehouse? @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
-  assignActor User      @relation("AssignmentActor", fields: [assignedBy], references: [id], onDelete: Restrict)
+  user        User       @relation("AssignedUser", fields: [userId], references: [id], onDelete: Restrict)
+  role        Role       @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  branch      Branch?    @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  warehouse   Warehouse? @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  assignActor User       @relation("AssignmentActor", fields: [assignedBy], references: [id], onDelete: Restrict)
 
   @@index([userId])
   @@index([roleId])
@@ -273,18 +281,18 @@ model MediaAsset {
 }
 
 model Brand {
-  id          BigInt    @id @default(autoincrement())
-  legacyId    String?   @unique @map("legacy_id") @db.Uuid
-  code        String    @unique @db.VarChar(32)
-  name        String    @db.VarChar(255)
-  slug        String    @unique @db.VarChar(255)
+  id          BigInt   @id @default(autoincrement())
+  legacyId    String?  @unique @map("legacy_id") @db.Uuid
+  code        String   @unique @db.VarChar(32)
+  name        String   @db.VarChar(255)
+  slug        String   @unique @db.VarChar(255)
   description String?
-  logoAssetId BigInt?   @map("logo_asset_id")
-  status      String    @default("ACTIVE") @db.VarChar(24)
-  seoJson     Json?     @map("seo_json") @db.JsonB
-  version     BigInt    @default(0)
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  logoAssetId BigInt?  @map("logo_asset_id")
+  status      String   @default("ACTIVE") @db.VarChar(24)
+  seoJson     Json?    @map("seo_json") @db.JsonB
+  version     BigInt   @default(0)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   logoAsset MediaAsset? @relation("BrandLogo", fields: [logoAssetId], references: [id], onDelete: SetNull)
   products  Product[]
@@ -295,22 +303,22 @@ model Brand {
 }
 
 model Category {
-  id           BigInt    @id @default(autoincrement())
-  legacyId     String?   @unique @map("legacy_id") @db.Uuid
-  parentId     BigInt?   @map("parent_id")
-  code         String    @unique @db.VarChar(32)
-  name         String    @db.VarChar(255)
-  slug         String    @unique @db.VarChar(255)
-  path         String    @db.VarChar(1000)
-  depth        Int       @default(0)
+  id           BigInt   @id @default(autoincrement())
+  legacyId     String?  @unique @map("legacy_id") @db.Uuid
+  parentId     BigInt?  @map("parent_id")
+  code         String   @unique @db.VarChar(32)
+  name         String   @db.VarChar(255)
+  slug         String   @unique @db.VarChar(255)
+  path         String   @db.VarChar(1000)
+  depth        Int      @default(0)
   description  String?
-  imageAssetId BigInt?   @map("image_asset_id")
-  sortOrder    Int       @default(0) @map("sort_order")
-  status       String    @default("ACTIVE") @db.VarChar(24)
-  seoJson      Json?     @map("seo_json") @db.JsonB
-  version      BigInt    @default(0)
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  imageAssetId BigInt?  @map("image_asset_id")
+  sortOrder    Int      @default(0) @map("sort_order")
+  status       String   @default("ACTIVE") @db.VarChar(24)
+  seoJson      Json?    @map("seo_json") @db.JsonB
+  version      BigInt   @default(0)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   parent     Category?         @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
   children   Category[]        @relation("CategoryTree")
@@ -370,30 +378,33 @@ model ProductCategory {
 }
 
 model ProductVariant {
-  id          BigInt    @id @default(autoincrement())
-  legacyId    String?   @unique @map("legacy_id") @db.Uuid
-  productId   BigInt    @map("product_id")
-  sku         String    @unique @db.VarChar(64)
-  barcode     String?   @db.VarChar(64)
-  name        String    @db.VarChar(255)
-  weightGrams Int       @default(0) @map("weight_grams")
-  lengthMm    Int?      @map("length_mm")
-  widthMm     Int?      @map("width_mm")
-  heightMm    Int?      @map("height_mm")
-  status      String    @default("ACTIVE") @db.VarChar(24)
-  version     BigInt    @default(0)
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id          BigInt   @id @default(autoincrement())
+  legacyId    String?  @unique @map("legacy_id") @db.Uuid
+  productId   BigInt   @map("product_id")
+  sku         String   @unique @db.VarChar(64)
+  barcode     String?  @db.VarChar(64)
+  name        String   @db.VarChar(255)
+  weightGrams Int      @default(0) @map("weight_grams")
+  lengthMm    Int?     @map("length_mm")
+  widthMm     Int?     @map("width_mm")
+  heightMm    Int?     @map("height_mm")
+  status      String   @default("ACTIVE") @db.VarChar(24)
+  version     BigInt   @default(0)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  product          Product        @relation(fields: [productId], references: [id], onDelete: Restrict)
-  media            ProductMedia[]
-  bundleDefinition ProductBundle? @relation("BundleVariant")
-  bundleComponents BundleItem[]   @relation("BundleComponent")
-  prices           ProductPrice[]
-  inventoryBalances InventoryBalance[]
-  inventoryMovements InventoryMovement[]
-  stockAdjustmentItems StockAdjustmentItem[]
-  stockTransferItems StockTransferItem[]
+  product                   Product                    @relation(fields: [productId], references: [id], onDelete: Restrict)
+  media                     ProductMedia[]
+  bundleDefinition          ProductBundle?             @relation("BundleVariant")
+  bundleComponents          BundleItem[]               @relation("BundleComponent")
+  prices                    ProductPrice[]
+  inventoryBalances         InventoryBalance[]
+  inventoryMovements        InventoryMovement[]
+  cartItems                 CartItem[]
+  checkoutSessionItems      CheckoutSessionItem[]
+  inventoryReservationItems InventoryReservationItem[]
+  stockAdjustmentItems      StockAdjustmentItem[]
+  stockTransferItems        StockTransferItem[]
 
   @@index([productId, status])
   @@map("product_variants")
@@ -420,12 +431,12 @@ model ProductBundle {
 }
 
 model BundleItem {
-  id                 BigInt @id @default(autoincrement())
+  id                 BigInt  @id @default(autoincrement())
   legacyId           String? @unique @map("legacy_id") @db.Uuid
-  productBundleId    BigInt @map("product_bundle_id")
-  componentVariantId BigInt @map("component_variant_id")
+  productBundleId    BigInt  @map("product_bundle_id")
+  componentVariantId BigInt  @map("component_variant_id")
   quantity           Int
-  sortOrder          Int    @default(0) @map("sort_order")
+  sortOrder          Int     @default(0) @map("sort_order")
 
   productBundle    ProductBundle  @relation(fields: [productBundleId], references: [id], onDelete: Cascade)
   componentVariant ProductVariant @relation("BundleComponent", fields: [componentVariantId], references: [id], onDelete: Restrict)
@@ -436,17 +447,17 @@ model BundleItem {
 }
 
 model ProductMedia {
-  id           BigInt    @id @default(autoincrement())
-  legacyId     String?   @unique @map("legacy_id") @db.Uuid
-  productId    BigInt    @map("product_id")
-  variantId    BigInt?   @map("variant_id")
-  mediaAssetId BigInt    @map("media_asset_id")
-  mediaType    String    @default("IMAGE") @map("media_type") @db.VarChar(24)
-  altText      String?   @map("alt_text") @db.VarChar(500)
-  sortOrder    Int       @default(0) @map("sort_order")
-  isPrimary    Boolean   @default(false) @map("is_primary")
-  status       String    @default("ACTIVE") @db.VarChar(24)
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  id           BigInt   @id @default(autoincrement())
+  legacyId     String?  @unique @map("legacy_id") @db.Uuid
+  productId    BigInt   @map("product_id")
+  variantId    BigInt?  @map("variant_id")
+  mediaAssetId BigInt   @map("media_asset_id")
+  mediaType    String   @default("IMAGE") @map("media_type") @db.VarChar(24)
+  altText      String?  @map("alt_text") @db.VarChar(500)
+  sortOrder    Int      @default(0) @map("sort_order")
+  isPrimary    Boolean  @default(false) @map("is_primary")
+  status       String   @default("ACTIVE") @db.VarChar(24)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   product    Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   variant    ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Cascade)
@@ -530,27 +541,27 @@ model InventoryMovement {
 }
 
 model StockAdjustment {
-  id               BigInt   @id @default(autoincrement())
-  legacyId         String?  @unique @map("legacy_id") @db.Uuid
-  adjustmentNo     String   @unique @map("adjustment_no") @db.VarChar(32)
-  warehouseId      BigInt   @map("warehouse_id")
-  adjustmentType   String   @default("CORRECTION") @map("adjustment_type") @db.VarChar(32)
-  reasonCode       String   @default("MANUAL") @map("reason_code") @db.VarChar(64)
-  externalReference String? @map("external_reference") @db.VarChar(100)
-  sourceName       String?  @map("source_name") @db.VarChar(255)
-  reason           String
-  status           String   @default("POSTED") @db.VarChar(24)
-  idempotencyKey   String   @unique @map("idempotency_key") @db.VarChar(150)
-  requestHash      String   @map("request_hash") @db.Char(64)
-  resultJson       Json     @map("result_json") @db.JsonB
-  createdBy        BigInt   @map("created_by")
-  postedAt         DateTime @map("posted_at") @db.Timestamptz(6)
-  version          BigInt   @default(0)
-  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                BigInt   @id @default(autoincrement())
+  legacyId          String?  @unique @map("legacy_id") @db.Uuid
+  adjustmentNo      String   @unique @map("adjustment_no") @db.VarChar(32)
+  warehouseId       BigInt   @map("warehouse_id")
+  adjustmentType    String   @default("CORRECTION") @map("adjustment_type") @db.VarChar(32)
+  reasonCode        String   @default("MANUAL") @map("reason_code") @db.VarChar(64)
+  externalReference String?  @map("external_reference") @db.VarChar(100)
+  sourceName        String?  @map("source_name") @db.VarChar(255)
+  reason            String
+  status            String   @default("POSTED") @db.VarChar(24)
+  idempotencyKey    String   @unique @map("idempotency_key") @db.VarChar(150)
+  requestHash       String   @map("request_hash") @db.Char(64)
+  resultJson        Json     @map("result_json") @db.JsonB
+  createdBy         BigInt   @map("created_by")
+  postedAt          DateTime @map("posted_at") @db.Timestamptz(6)
+  version           BigInt   @default(0)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
-  creator   User      @relation("StockAdjustmentCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  warehouse Warehouse             @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  creator   User                  @relation("StockAdjustmentCreator", fields: [createdBy], references: [id], onDelete: Restrict)
   items     StockAdjustmentItem[]
 
   @@index([warehouseId, postedAt(sort: Desc), id(sort: Desc)])
@@ -558,13 +569,13 @@ model StockAdjustment {
 }
 
 model StockAdjustmentItem {
-  id                BigInt @id @default(autoincrement())
+  id                BigInt  @id @default(autoincrement())
   legacyId          String? @unique @map("legacy_id") @db.Uuid
-  stockAdjustmentId BigInt @map("stock_adjustment_id")
-  productVariantId  BigInt @map("product_variant_id")
-  quantityDelta     Int    @map("quantity_delta")
-  expectedOnHand    Int    @map("expected_on_hand")
-  actualOnHand      Int    @map("actual_on_hand")
+  stockAdjustmentId BigInt  @map("stock_adjustment_id")
+  productVariantId  BigInt  @map("product_variant_id")
+  quantityDelta     Int     @map("quantity_delta")
+  expectedOnHand    Int     @map("expected_on_hand")
+  actualOnHand      Int     @map("actual_on_hand")
   note              String?
 
   stockAdjustment StockAdjustment @relation(fields: [stockAdjustmentId], references: [id], onDelete: Restrict)
@@ -576,29 +587,29 @@ model StockAdjustmentItem {
 }
 
 model StockTransfer {
-  id                  BigInt    @id @default(autoincrement())
-  transferNo          String    @unique @map("transfer_no") @db.VarChar(32)
-  fromWarehouseId     BigInt    @map("from_warehouse_id")
-  toWarehouseId       BigInt    @map("to_warehouse_id")
-  status              String    @default("DRAFT") @db.VarChar(24)
-  reason              String
-  idempotencyKey      String    @unique @map("idempotency_key") @db.VarChar(150)
-  requestHash         String    @map("request_hash") @db.Char(64)
-  createdBy           BigInt    @map("created_by")
-  submittedAt         DateTime? @map("submitted_at") @db.Timestamptz(6)
-  shippedBy           BigInt?   @map("shipped_by")
-  shippedAt           DateTime? @map("shipped_at") @db.Timestamptz(6)
-  receivedBy          BigInt?   @map("received_by")
-  receivedAt          DateTime? @map("received_at") @db.Timestamptz(6)
-  version             BigInt    @default(0)
-  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id              BigInt    @id @default(autoincrement())
+  transferNo      String    @unique @map("transfer_no") @db.VarChar(32)
+  fromWarehouseId BigInt    @map("from_warehouse_id")
+  toWarehouseId   BigInt    @map("to_warehouse_id")
+  status          String    @default("DRAFT") @db.VarChar(24)
+  reason          String
+  idempotencyKey  String    @unique @map("idempotency_key") @db.VarChar(150)
+  requestHash     String    @map("request_hash") @db.Char(64)
+  createdBy       BigInt    @map("created_by")
+  submittedAt     DateTime? @map("submitted_at") @db.Timestamptz(6)
+  shippedBy       BigInt?   @map("shipped_by")
+  shippedAt       DateTime? @map("shipped_at") @db.Timestamptz(6)
+  receivedBy      BigInt?   @map("received_by")
+  receivedAt      DateTime? @map("received_at") @db.Timestamptz(6)
+  version         BigInt    @default(0)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  fromWarehouse Warehouse @relation("StockTransferSource", fields: [fromWarehouseId], references: [id], onDelete: Restrict)
-  toWarehouse   Warehouse @relation("StockTransferDestination", fields: [toWarehouseId], references: [id], onDelete: Restrict)
-  creator       User      @relation("StockTransferCreator", fields: [createdBy], references: [id], onDelete: Restrict)
-  shipper       User?     @relation("StockTransferShipper", fields: [shippedBy], references: [id], onDelete: Restrict)
-  receiver      User?     @relation("StockTransferReceiver", fields: [receivedBy], references: [id], onDelete: Restrict)
+  fromWarehouse Warehouse           @relation("StockTransferSource", fields: [fromWarehouseId], references: [id], onDelete: Restrict)
+  toWarehouse   Warehouse           @relation("StockTransferDestination", fields: [toWarehouseId], references: [id], onDelete: Restrict)
+  creator       User                @relation("StockTransferCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  shipper       User?               @relation("StockTransferShipper", fields: [shippedBy], references: [id], onDelete: Restrict)
+  receiver      User?               @relation("StockTransferReceiver", fields: [receivedBy], references: [id], onDelete: Restrict)
   items         StockTransferItem[]
 
   @@index([fromWarehouseId, status, createdAt])
@@ -622,4 +633,270 @@ model StockTransferItem {
   @@unique([stockTransferId, productVariantId])
   @@index([productVariantId])
   @@map("stock_transfer_items")
+}
+
+model Customer {
+  id               BigInt   @id @default(autoincrement())
+  userId           BigInt?  @unique @map("user_id")
+  customerNo       String   @unique @map("customer_no") @db.VarChar(32)
+  name             String   @db.VarChar(255)
+  email            String?  @db.VarChar(255)
+  normalizedEmail  String?  @map("normalized_email") @db.VarChar(255)
+  phone            String?  @db.VarChar(32)
+  normalizedPhone  String?  @map("normalized_phone") @db.VarChar(32)
+  status           String   @default("ACTIVE") @db.VarChar(24)
+  marketingConsent Boolean  @default(false) @map("marketing_consent")
+  version          BigInt   @default(0)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user             User?             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  addresses        CustomerAddress[]
+  carts            Cart[]
+  checkoutSessions CheckoutSession[]
+
+  @@index([normalizedEmail])
+  @@index([normalizedPhone])
+  @@index([status, createdAt])
+  @@map("customers")
+}
+
+model CustomerAddress {
+  id           BigInt   @id @default(autoincrement())
+  customerId   BigInt   @map("customer_id")
+  addressType  String   @default("SHIPPING") @map("address_type") @db.VarChar(24)
+  recipient    String   @db.VarChar(255)
+  phone        String   @db.VarChar(32)
+  addressLine  String   @map("address_line") @db.VarChar(500)
+  ward         String?  @db.VarChar(255)
+  district     String?  @db.VarChar(255)
+  provinceCode String   @map("province_code") @db.VarChar(32)
+  postalCode   String?  @map("postal_code") @db.VarChar(20)
+  countryCode  String   @default("VN") @map("country_code") @db.Char(2)
+  isDefault    Boolean  @default(false) @map("is_default")
+  status       String   @default("ACTIVE") @db.VarChar(24)
+  version      BigInt   @default(0)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+
+  @@index([customerId, status])
+  @@map("customer_addresses")
+}
+
+model Cart {
+  id                 BigInt    @id @default(autoincrement())
+  userId             BigInt?   @map("user_id")
+  customerId         BigInt?   @map("customer_id")
+  anonymousTokenHash String?   @map("anonymous_token_hash") @db.Char(64)
+  status             String    @default("ACTIVE") @db.VarChar(24)
+  currencyCode       String    @default("VND") @map("currency_code") @db.Char(3)
+  branchId           BigInt?   @map("branch_id")
+  expiresAt          DateTime? @map("expires_at") @db.Timestamptz(6)
+  version            BigInt    @default(0)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user             User?             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  customer         Customer?         @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  branch           Branch?           @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  items            CartItem[]
+  checkoutSessions CheckoutSession[]
+
+  @@index([userId, status])
+  @@index([customerId, status])
+  @@index([anonymousTokenHash, status])
+  @@index([branchId])
+  @@index([expiresAt])
+  @@map("carts")
+}
+
+model CartItem {
+  id               BigInt    @id @default(autoincrement())
+  cartId           BigInt    @map("cart_id")
+  productVariantId BigInt    @map("product_variant_id")
+  quantity         Int
+  priceSeenAt      DateTime? @map("price_seen_at") @db.Timestamptz(6)
+  unitPricePreview Decimal?  @map("unit_price_preview") @db.Decimal(19, 2)
+  metadataJson     Json?     @map("metadata_json") @db.JsonB
+  version          BigInt    @default(0)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  cart           Cart                  @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productVariant ProductVariant        @relation(fields: [productVariantId], references: [id], onDelete: Restrict)
+  checkoutItems  CheckoutSessionItem[]
+
+  @@unique([cartId, productVariantId])
+  @@index([productVariantId])
+  @@map("cart_items")
+}
+
+model CheckoutSession {
+  id                   BigInt    @id @default(autoincrement())
+  checkoutToken        String    @unique @map("checkout_token") @db.VarChar(100)
+  cartId               BigInt    @map("cart_id")
+  customerId           BigInt?   @map("customer_id")
+  branchId             BigInt    @map("branch_id")
+  warehouseId          BigInt    @map("warehouse_id")
+  shippingRateId       BigInt?   @map("shipping_rate_id")
+  status               String    @default("QUOTED") @db.VarChar(24)
+  currencyCode         String    @default("VND") @map("currency_code") @db.Char(3)
+  pricesIncludeTax     Boolean   @default(true) @map("prices_include_tax")
+  itemSubtotal         Decimal   @map("item_subtotal") @db.Decimal(19, 2)
+  shippingTotal        Decimal   @map("shipping_total") @db.Decimal(19, 2)
+  grandTotal           Decimal   @map("grand_total") @db.Decimal(19, 2)
+  etaMinDays           Int       @map("eta_min_days")
+  etaMaxDays           Int       @map("eta_max_days")
+  recipientSnapshot    Json      @map("recipient_snapshot") @db.JsonB
+  shippingRuleSnapshot Json      @map("shipping_rule_snapshot") @db.JsonB
+  idempotencyKey       String    @unique @map("idempotency_key") @db.VarChar(150)
+  requestHash          String    @map("request_hash") @db.Char(64)
+  expiresAt            DateTime  @map("expires_at") @db.Timestamptz(6)
+  confirmedAt          DateTime? @map("confirmed_at") @db.Timestamptz(6)
+  version              BigInt    @default(0)
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  cart         Cart                  @relation(fields: [cartId], references: [id], onDelete: Restrict)
+  customer     Customer?             @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  branch       Branch                @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  warehouse    Warehouse             @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  shippingRate ShippingRate?         @relation(fields: [shippingRateId], references: [id], onDelete: Restrict)
+  items        CheckoutSessionItem[]
+  reservation  InventoryReservation?
+
+  @@index([cartId, status])
+  @@index([customerId, createdAt])
+  @@index([branchId, status])
+  @@index([expiresAt, status])
+  @@map("checkout_sessions")
+}
+
+model CheckoutSessionItem {
+  id                BigInt   @id @default(autoincrement())
+  checkoutSessionId BigInt   @map("checkout_session_id")
+  cartItemId        BigInt?  @map("cart_item_id")
+  productVariantId  BigInt   @map("product_variant_id")
+  itemType          String   @default("STANDARD") @map("item_type") @db.VarChar(24)
+  skuSnapshot       String   @map("sku_snapshot") @db.VarChar(64)
+  nameSnapshot      String   @map("name_snapshot") @db.VarChar(255)
+  quantity          Int
+  unitPrice         Decimal  @map("unit_price") @db.Decimal(19, 2)
+  lineTotal         Decimal  @map("line_total") @db.Decimal(19, 2)
+  componentSnapshot Json?    @map("component_snapshot") @db.JsonB
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  checkoutSession CheckoutSession @relation(fields: [checkoutSessionId], references: [id], onDelete: Cascade)
+  cartItem        CartItem?       @relation(fields: [cartItemId], references: [id], onDelete: Restrict)
+  productVariant  ProductVariant  @relation(fields: [productVariantId], references: [id], onDelete: Restrict)
+
+  @@unique([checkoutSessionId, productVariantId])
+  @@index([cartItemId])
+  @@index([productVariantId])
+  @@map("checkout_session_items")
+}
+
+model InventoryReservation {
+  id                BigInt    @id @default(autoincrement())
+  checkoutSessionId BigInt    @unique @map("checkout_session_id")
+  warehouseId       BigInt    @map("warehouse_id")
+  reservationToken  String    @unique @map("reservation_token") @db.VarChar(100)
+  idempotencyKey    String    @unique @map("idempotency_key") @db.VarChar(150)
+  requestHash       String    @map("request_hash") @db.Char(64)
+  status            String    @default("ACTIVE") @db.VarChar(24)
+  expiresAt         DateTime  @map("expires_at") @db.Timestamptz(6)
+  committedAt       DateTime? @map("committed_at") @db.Timestamptz(6)
+  releasedAt        DateTime? @map("released_at") @db.Timestamptz(6)
+  releaseReason     String?   @map("release_reason") @db.VarChar(500)
+  version           BigInt    @default(0)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  checkoutSession CheckoutSession            @relation(fields: [checkoutSessionId], references: [id], onDelete: Restrict)
+  warehouse       Warehouse                  @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  items           InventoryReservationItem[]
+
+  @@index([warehouseId, status])
+  @@index([status, expiresAt, id])
+  @@map("inventory_reservations")
+}
+
+model InventoryReservationItem {
+  id                  BigInt @id @default(autoincrement())
+  reservationId       BigInt @map("reservation_id")
+  productVariantId    BigInt @map("product_variant_id")
+  quantity            Int
+  sourceBreakdownJson Json?  @map("source_breakdown_json") @db.JsonB
+
+  reservation    InventoryReservation @relation(fields: [reservationId], references: [id], onDelete: Restrict)
+  productVariant ProductVariant       @relation(fields: [productVariantId], references: [id], onDelete: Restrict)
+
+  @@unique([reservationId, productVariantId])
+  @@index([productVariantId])
+  @@map("inventory_reservation_items")
+}
+
+model ShippingZone {
+  id            BigInt   @id @default(autoincrement())
+  code          String   @unique @db.VarChar(32)
+  name          String   @db.VarChar(255)
+  provinceCodes String[] @map("province_codes") @db.VarChar(32)
+  status        String   @default("ACTIVE") @db.VarChar(24)
+  priority      Int      @default(0)
+  version       BigInt   @default(0)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  rates ShippingRate[]
+
+  @@index([status, priority])
+  @@map("shipping_zones")
+}
+
+model ShippingRate {
+  id                    BigInt   @id @default(autoincrement())
+  zoneId                BigInt   @map("zone_id")
+  branchId              BigInt?  @map("branch_id")
+  minWeightGrams        Int      @default(0) @map("min_weight_grams")
+  maxWeightGrams        Int?     @map("max_weight_grams")
+  minSubtotal           Decimal  @default(0) @map("min_subtotal") @db.Decimal(19, 2)
+  maxSubtotal           Decimal? @map("max_subtotal") @db.Decimal(19, 2)
+  baseFee               Decimal  @map("base_fee") @db.Decimal(19, 2)
+  perKgFee              Decimal  @default(0) @map("per_kg_fee") @db.Decimal(19, 2)
+  freeShippingThreshold Decimal? @map("free_shipping_threshold") @db.Decimal(19, 2)
+  etaMinDays            Int      @map("eta_min_days")
+  etaMaxDays            Int      @map("eta_max_days")
+  status                String   @default("ACTIVE") @db.VarChar(24)
+  version               BigInt   @default(0)
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  zone             ShippingZone      @relation(fields: [zoneId], references: [id], onDelete: Restrict)
+  branch           Branch?           @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  checkoutSessions CheckoutSession[]
+
+  @@index([zoneId, status])
+  @@index([branchId, status])
+  @@map("shipping_rates")
+}
+
+model SystemSetting {
+  id          BigInt   @id @default(autoincrement())
+  key         String   @unique @db.VarChar(150)
+  valueJson   Json     @map("value_json") @db.JsonB
+  valueType   String   @map("value_type") @db.VarChar(24)
+  description String?  @db.VarChar(500)
+  isPublic    Boolean  @default(false) @map("is_public")
+  status      String   @default("ACTIVE") @db.VarChar(24)
+  version     BigInt   @default(0)
+  updatedBy   BigInt?  @map("updated_by")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  updater User? @relation("SystemSettingUpdater", fields: [updatedBy], references: [id], onDelete: Restrict)
+
+  @@index([status, key])
+  @@map("system_settings")
 }
