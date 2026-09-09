@@ -1,10 +1,10 @@
 # Thiết kế dữ liệu V1
 
-> **Document version:** 2.5.0
+> **Document version:** 2.6.0
 >
-> **Last updated:** 2026-09-08
+> **Last updated:** 2026-09-09
 >
-> **Change summary:** Bổ sung STANDARD_DELIVERY để phân biệt phí giao mặc định nội bộ với carrier thật; không thêm bảng.
+> **Change summary:** Harden toàn bộ Supabase public schema: mọi base table kể cả `_prisma_migrations` bật RLS, Data API roles bị thu hồi quyền và function default chuyển sang opt-in.
 
 ## 1. Chuẩn chung
 
@@ -21,7 +21,8 @@
 - Aggregate hay tranh chấp có `version bigint not null default 0` để optimistic locking.
 - Master data dùng lifecycle `status`; không dùng `deleted_at` trong model V1 đã triển khai. Ledger, transaction và history không physical-delete, không sửa nội dung nghiệp vụ đã chốt.
 - Mã nghiệp vụ (`order_no`, `sku`, `payment_ref`) tách khỏi PK, có unique index và không tái sử dụng.
-- NestJS/Prisma là data-access boundary duy nhất. Supabase role `anon` và `authenticated` không có table/sequence privilege trên `public`; các bảng inventory bật RLS defense-in-depth và migration owner `postgres` không cấp quyền mặc định cho hai role này.
+- NestJS/Prisma là data-access boundary duy nhất. Mọi base table đã persist trong Supabase `public`, kể cả `_prisma_migrations`, đều bật RLS deny-by-default; role `anon` và `authenticated` không có table/sequence privilege hoặc quyền gọi trực tiếp application-owned function. Migration owner `postgres` không cấp mặc định table/sequence/function privilege cho hai role này.
+- Không dùng `FORCE ROW LEVEL SECURITY` trong V1 vì Prisma kết nối trực tiếp bằng owner `postgres`; browser không có database credential và chỉ gọi NestJS API. Nếu sau này mở Supabase Data API cho FE, phải tạo contract/policy/grant/test theo từng operation, không mở policy `USING (true)` hàng loạt.
 
 ## 2. Aggregate và quan hệ chính
 
@@ -143,6 +144,7 @@ Fulfillment ghi reason bắt buộc rồi chuyển `DELIVERY_FAILED -> RETURNING
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 2.6.0 | 2026-09-09 | Bật RLS cho toàn bộ public base table gồm Prisma history; revoke direct/default table, sequence và application-function access khỏi Data API roles. | DBSEC-20260909-PUBLIC-RLS-COMPLETE |
 | 2.5.0 | 2026-09-08 | Thêm STANDARD_DELIVERY và phí mặc định theo ba ngưỡng cân nặng cấu hình bằng env. | DBAPI-20260908-DEFAULT-SHIPPING-RATES |
 | 2.4.0 | 2026-09-08 | Thêm checkout payment/shipping dimensions và trạng thái tư vấn giao hàng, không thêm bảng mới. | DBAPI-20260908-CHECKOUT-SHIPPING-COD |
 | 2.3.0 | 2026-09-08 | Chốt reservation ACTIVE qua payment và commit/trừ tồn tại SHIPPED/HANDED_OVER. | D01 / DB-20260908-INVENTORY-HANDOVER |

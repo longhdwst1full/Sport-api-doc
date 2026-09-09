@@ -1608,6 +1608,82 @@
           "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính"]
         }
       ]
+    },
+    {
+      "id": "API-20260908-CHECKOUT-CONSULTATION-ROUNDTRIP",
+      "date": "2026-09-08",
+      "scope": "CHECKOUT+OPENAPI+STOREFRONT+ADMIN",
+      "summary": "Không đổi schema; thêm API Admin list manual consultation theo branch scope, API Client đọc lại owned quote và request flag; cả hai FE dùng SDK sinh từ OpenAPI.",
+      "sources": [
+        "operation:listAdminShippingConsultations/updateAdminManualShippingQuote",
+        "operation:getGuestCheckoutQuote/getAccountCheckoutQuote/quoteGuestCheckout/quoteAccountCheckout",
+        "test:src/modules/checkout/checkout.service.spec.ts",
+        "contract:document/api/admin/checkout.yaml/document/api/storefront/checkout.yaml",
+        "document:06-rules-and-state-machines.md@1.4.0",
+        "document:28-sprint-3-execution-status.md@1.7.0"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260908-RESERVATION-EXPIRY-WORKER",
+      "date": "2026-09-08",
+      "scope": "CHECKOUT+INVENTORY+AUDIT+OPERATIONS+DOCUMENTATION",
+      "summary": "Không đổi schema; thêm expiry worker batch-safe, secured internal endpoint và bộ cấu hình Supabase Cron/pg_net/Vault.",
+      "sources": [
+        "operation:ReservationExpiryService.run",
+        "endpoint:GET /api/v1/internal/jobs/reservations/expire",
+        "script:scripts/configure-reservation-expiry-cron.cjs",
+        "test:src/modules/checkout/reservation-expiry.service.spec.ts/src/modules/checkout/reservation-expiry.controller.spec.ts",
+        "document:06-rules-and-state-machines.md@1.5.0",
+        "document:28-sprint-3-execution-status.md@1.8.0",
+        "document:29-reservation-expiry-worker-runbook.md@1.0.0"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260909-VIETNAMESE-ERROR-MESSAGES",
+      "date": "2026-09-09",
+      "scope": "API+OPENAPI+ADMIN+STOREFRONT+DOCUMENTATION",
+      "summary": "Không đổi schema; chuẩn hóa toàn bộ message và details[].message lỗi HTTP sang tiếng Việt tại global exception filter, giữ nguyên code máy và error envelope v1.",
+      "sources": [
+        "source:src/common/exceptions/client-error-message.vi.ts",
+        "source:src/common/filters/http-exception.filter.ts",
+        "test:src/common/exceptions/client-error-message.vi.spec.ts/src/common/filters/http-exception.filter.spec.ts/test/admin-contract.e2e-spec.ts",
+        "contract:document/api/openapi-v1.yaml",
+        "document:19-admin-api-v1-contract-integration.md@1.3.0"
+      ],
+      "targets": []
+    },
+    {
+      "id": "DBSEC-20260909-PUBLIC-RLS-COMPLETE",
+      "date": "2026-09-09",
+      "scope": "DATABASE+SUPABASE+SECURITY+TEST+DOCUMENTATION",
+      "summary": "Không đổi mô hình nghiệp vụ; bật RLS deny-by-default cho mọi public base table kể cả _prisma_migrations, thu hồi quyền Data API hiện tại và khóa default privilege của table, sequence, application-owned function.",
+      "sources": [
+        "migration:20260909010000_harden_all_public_tables_rls",
+        "test:test/database-security.integration-spec.ts",
+        "decision:D46",
+        "document:03-database-v1.md@2.6.0",
+        "document:25-sprint-2-execution-status.md@1.3.1",
+        "evidence:live Supabase public-schema RLS and privilege audit 2026-09-09"
+      ],
+      "targets": [],
+      "upsertRows": [
+        {
+          "sheet": "Open Decisions",
+          "match": { "ID": "D46" },
+          "values": {
+            "ID": "D46",
+            "Chủ đề": "Supabase Data API boundary",
+            "Quyết định đề xuất": "V1 chỉ truy cập dữ liệu qua NestJS/Prisma; mọi public base table bật RLS deny-by-default; anon/authenticated không có table, sequence hoặc application-function privilege; không FORCE RLS cho owner connection",
+            "Tại sao quan trọng": "Đóng truy cập PostgREST trực tiếp nhưng vẫn giữ Prisma migration/runtime; Data API tương lai phải opt-in theo contract và có policy test",
+            "Owner": "Security+Tech",
+            "Blocking wave": "0",
+            "Status": "DECIDED",
+            "Kết luận review / ghi chú": "Live audit trước migration: 35/35 bảng nghiệp vụ đã bật RLS và không cấp anon/authenticated; chỉ _prisma_migrations thiếu RLS. Migration mới bao phủ toàn bộ public base table và thu hồi EXECUTE trực tiếp trên application-owned function."
+          }
+        }
+      ]
     }
   ]
 }

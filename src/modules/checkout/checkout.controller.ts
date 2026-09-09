@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Headers, Param, Patch, Post, Req } from '@nestjs/common';
-import { ApiBearerAuth, ApiConflictResponse, ApiCreatedResponse, ApiHeader, ApiOkResponse, ApiOperation, ApiTags, ApiUnprocessableEntityResponse } from '@nestjs/swagger';
+import { Body, Controller, Get, Headers, Param, Patch, Post, Query, Req } from '@nestjs/common';
+import { ApiBearerAuth, ApiConflictResponse, ApiCreatedResponse, ApiForbiddenResponse, ApiHeader, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiTags, ApiUnprocessableEntityResponse } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { RequireAuthentication } from '../../common/decorators/require-authentication.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
@@ -7,7 +7,7 @@ import { ErrorResponseDto } from '../../common/exceptions/error-response.dto';
 import { AuthenticatedRequest, getAuthPrincipal } from '../../common/request/request-context';
 import { CART_HEADER } from '../cart/cart.constants';
 import { CartService } from '../cart/cart.service';
-import { CheckoutQuoteDto, CreateCheckoutQuoteDto, ReleaseReservationDto, ReservationDto, UpdateManualShippingQuoteDto } from './checkout.dto';
+import { AdminShippingConsultationListDto, AdminShippingConsultationQueryDto, CheckoutQuoteDto, CreateCheckoutQuoteDto, ReleaseReservationDto, ReservationDto, UpdateManualShippingQuoteDto } from './checkout.dto';
 import { CheckoutService } from './checkout.service';
 import { InventoryReservationService } from './inventory-reservation.service';
 
@@ -48,6 +48,7 @@ export class GuestCheckoutController {
   @ApiHeader({ name: CART_HEADER.GUEST_TOKEN, required: true })
   @ApiOperation({ operationId: 'getGuestCheckoutQuote', summary: 'Reload an owned guest quote after staff consultation' })
   @ApiOkResponse({ type: CheckoutQuoteDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
   getQuote(
     @Param('checkoutToken') checkoutToken: string,
     @Headers(CART_HEADER.GUEST_TOKEN) cartToken: string,
@@ -121,6 +122,7 @@ export class AccountCheckoutController {
   @Get(':checkoutToken')
   @ApiOperation({ operationId: 'getAccountCheckoutQuote', summary: 'Reload an owned account quote after staff consultation' })
   @ApiOkResponse({ type: CheckoutQuoteDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
   getQuote(
     @Param('checkoutToken') checkoutToken: string,
     @Req() request: AuthenticatedRequest,
@@ -169,6 +171,18 @@ export class AccountCheckoutController {
 @Controller('admin/checkouts')
 export class AdminCheckoutController {
   constructor(private readonly checkout: CheckoutService) {}
+
+  @Get('shipping-consultations')
+  @RequirePermissions('order.view')
+  @ApiOperation({ operationId: 'listAdminShippingConsultations', summary: 'List manual shipping quotes visible in the assigned branch scope' })
+  @ApiOkResponse({ type: AdminShippingConsultationListDto })
+  @ApiForbiddenResponse({ type: ErrorResponseDto })
+  listShippingConsultations(
+    @Query() query: AdminShippingConsultationQueryDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<AdminShippingConsultationListDto> {
+    return this.checkout.listShippingConsultations(query, getAuthPrincipal(request));
+  }
 
   @Patch(':checkoutToken/shipping-consultation')
   @RequirePermissions('order.manage')

@@ -1,10 +1,10 @@
 # Sprint 2 — Branch, Warehouse & Inventory Core
 
-> **Document version:** 1.3.0
+> **Document version:** 1.3.1
 >
-> **Last updated:** 2026-09-07
+> **Last updated:** 2026-09-09
 >
-> **Change summary:** Đóng gói engineering Sprint 2: áp dụng D13 1 branch = 1 warehouse, harden Supabase public schema/RLS, thêm cursor index và đồng bộ generated Admin SDK.
+> **Change summary:** Bổ sung security follow-up: toàn bộ public base table gồm Prisma migration history bật RLS; khóa default/function grants và mở rộng integration regression.
 
 ## 1. Sprint goal và exit milestone
 
@@ -80,7 +80,7 @@ D11 ban đầu đề xuất maker-checker khi giảm hơn 10 đơn vị hoặc g
 - [x] Schema/permission integration; unit scope query không lộ transfer ngoài branch.
 - [x] Concurrent transfer/adjustment dùng SERIALIZABLE + row lock + optimistic version; P2034 map 409 và có unit regression.
 - [x] Reconciliation `opening + movement delta = on_hand`; seed mới ghi opening movement và migration đã repair dữ liệu demo lịch sử.
-- [x] Supabase `public` revoke table/sequence privilege khỏi `anon/authenticated`; default privilege tương lai bị khóa; toàn bộ bảng inventory bật RLS.
+- [x] Supabase `public` revoke table/sequence/function privilege khỏi `anon/authenticated`; default privilege tương lai bị khóa; toàn bộ base table kể cả `_prisma_migrations` bật RLS.
 - [x] Ledger/adjustment có composite index khớp keyset cursor thực tế.
 
 ### Admin
@@ -112,6 +112,7 @@ Engineering scope Sprint 2 đạt 100%. Formal DoD vẫn chờ BA/QA acceptance 
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.3.1 | 2026-09-09 | Đóng cảnh báo `rls_disabled_in_public` cho Prisma history và thêm regression toàn schema/default grants/application functions. | DBSEC-20260909-PUBLIC-RLS-COMPLETE |
 | 1.3.0 | 2026-09-07 | Chốt D13, harden Supabase/RLS, thêm cursor index, 18 migration; API 159 unit + 31 integration và Admin full gate pass. | DBSEC-20260907-WAREHOUSE-RLS-CURSOR |
 | 1.2.1 | 2026-09-07 | Bổ sung HTTP next-cursor regression cho inventory movement ledger và đồng bộ trạng thái D11 thành DECIDED; không thay đổi API contract. | S2-LEDGER-CURSOR-HTTP-20260907 / D11-SYNC-20260907 |
 | 1.2.0 | 2026-09-06 | Chốt S2-D01/02/03; hoàn tất transfer API/Admin, D11, migration 15, generated SDK và evidence test. | DBAPI-20260906-STOCK-TRANSFER / D11 |

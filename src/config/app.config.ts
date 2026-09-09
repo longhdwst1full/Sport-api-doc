@@ -32,6 +32,13 @@ export default registerAs('app', () => ({
   checkout: {
     reservationTtlMinutes: Number(process.env.CHECKOUT_RESERVATION_TTL_MINUTES ?? 30),
   },
+  jobs: {
+    cronSecret: process.env.CRON_SECRET,
+    reservationExpiry: {
+      enabled: process.env.RESERVATION_EXPIRY_JOB_ENABLED === 'true',
+      batchSize: Number(process.env.RESERVATION_EXPIRY_JOB_BATCH_SIZE ?? 50),
+    },
+  },
   cart: {
     guestTtlDays: Number(process.env.GUEST_CART_TTL_DAYS ?? 30),
   },

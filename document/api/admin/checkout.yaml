@@ -9,6 +9,59 @@ servers:
   - url: http://localhost:4000
     description: Local
 paths:
+  /api/v1/admin/checkouts/shipping-consultations:
+    get:
+      operationId: listAdminShippingConsultations
+      parameters:
+        - name: page
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            default: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 20
+            type: number
+        - name: status
+          required: false
+          in: query
+          schema:
+            default: AWAITING_SHIPPING_CONSULTATION
+            type: string
+            enum:
+              - AWAITING_SHIPPING_CONSULTATION
+              - QUOTED
+        - name: branchId
+          required: false
+          in: query
+          schema:
+            pattern: ^[1-9][0-9]*$
+            example: "1"
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminShippingConsultationListDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: List manual shipping quotes visible in the assigned branch scope
+      tags:
+        - Admin Checkout
   /api/v1/admin/checkouts/{checkoutToken}/shipping-consultation:
     patch:
       operationId: updateAdminManualShippingQuote
@@ -50,6 +103,61 @@ paths:
         - Admin Checkout
 components:
   schemas:
+    AdminShippingConsultationListDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminShippingConsultationDto"
+        page:
+          type: number
+          example: 1
+        limit:
+          type: number
+          example: 20
+        total:
+          type: number
+          example: 1
+      required:
+        - items
+        - page
+        - limit
+        - total
+    ErrorResponseDto:
+      type: object
+      properties:
+        statusCode:
+          type: number
+          example: 400
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: Dữ liệu gửi lên không hợp lệ.
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorDetailDto"
+        path:
+          type: string
+          example: /api/v1/catalog/products
+        method:
+          type: string
+          example: POST
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+      required:
+        - statusCode
+        - code
+        - message
+        - path
+        - method
+        - timestamp
     UpdateManualShippingQuoteDto:
       type: object
       properties:
@@ -154,40 +262,109 @@ components:
         - requiresShippingConsultation
         - items
         - expiresAt
-    ErrorResponseDto:
+    AdminShippingConsultationDto:
       type: object
       properties:
-        statusCode:
+        checkoutToken:
+          type: string
+          description: Opaque token used to confirm this exact quote
+        status:
+          type: string
+          enum:
+            - QUOTED
+            - AWAITING_SHIPPING_CONSULTATION
+        branchId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        warehouseId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        branchName:
+          type: string
+        paymentMethod:
+          type: string
+          enum:
+            - BANK_TRANSFER
+            - COD
+        shippingMethod:
+          type: string
+          enum:
+            - BRANCH_FREE
+            - STANDARD_DELIVERY
+            - THIRD_PARTY
+            - MANUAL_EXTERNAL
+        shippingProvider:
+          type: string
+          nullable: true
+        distanceKm:
+          type: string
+          nullable: true
+        itemSubtotal:
+          type: string
+        shippingTotal:
+          type: string
+          nullable: true
+        grandTotal:
+          type: string
+          nullable: true
+        etaMinDays:
           type: number
-          example: 400
-        code:
-          type: string
-          example: VALIDATION_ERROR
-        message:
-          type: string
-          example: Request validation failed
-        details:
+          nullable: true
+        etaMaxDays:
+          type: number
+          nullable: true
+        requiresShippingConsultation:
+          type: boolean
+        items:
           type: array
           items:
-            $ref: "#/components/schemas/ErrorDetailDto"
-        path:
-          type: string
-          example: /api/v1/catalog/products
-        method:
-          type: string
-          example: POST
-        timestamp:
+            $ref: "#/components/schemas/CheckoutQuoteItemDto"
+        expiresAt:
           type: string
           format: date-time
-        requestId:
+        version:
+          type: number
+          example: 0
+        recipient:
+          $ref: "#/components/schemas/CheckoutRecipientDto"
+        customerNote:
           type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
       required:
-        - statusCode
+        - checkoutToken
+        - status
+        - branchId
+        - warehouseId
+        - branchName
+        - paymentMethod
+        - shippingMethod
+        - itemSubtotal
+        - requiresShippingConsultation
+        - items
+        - expiresAt
+        - version
+        - recipient
+        - createdAt
+    ErrorDetailDto:
+      type: object
+      properties:
+        field:
+          type: string
+          example: name
+        code:
+          type: string
+          example: INVALID_VALUE
+        message:
+          type: string
+          example: 'Trường "name": Trường này không được để trống.'
+      required:
         - code
         - message
-        - path
-        - method
-        - timestamp
     CheckoutQuoteItemDto:
       type: object
       properties:
@@ -212,21 +389,56 @@ components:
         - quantity
         - unitPrice
         - lineTotal
-    ErrorDetailDto:
+    CheckoutRecipientDto:
       type: object
       properties:
-        field:
+        recipient:
           type: string
-          example: name
-        code:
+          example: Nguyễn Văn An
+        phone:
           type: string
-          example: INVALID_VALUE
-        message:
+          example: "0912345678"
+        email:
           type: string
-          example: name should not be empty
+          example: an@example.com
+        addressLine:
+          type: string
+          example: 12 Nguyễn Trãi
+        ward:
+          type: string
+          example: Phường Bến Thành
+        district:
+          type: string
+          example: Quận 1
+        province:
+          type: string
+          example: TP. Hồ Chí Minh
+        provinceCode:
+          type: string
+          example: "79"
+        districtCode:
+          type: string
+          example: "1454"
+        wardCode:
+          type: string
+          example: "21211"
+        latitude:
+          type: number
+          example: 10.7769
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          example: 106.7009
+          minimum: -180
+          maximum: 180
       required:
-        - code
-        - message
+        - recipient
+        - phone
+        - addressLine
+        - district
+        - province
+        - provinceCode
   securitySchemes:
     bearer:
       scheme: bearer

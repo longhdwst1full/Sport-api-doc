@@ -1,6 +1,6 @@
 Project dctd_utc_v1 {
   database_type: 'PostgreSQL'
-  Note: 'V1 unified model. Entity IDs are BIGINT IDENTITY; APIs expose decimal strings. Migrated physical tables keep old UUID in nullable unique legacy_id. Tables marked [P0] are launch core; [P1] are V1 extensions.'
+  Note: 'V1 unified model. Entity IDs are BIGINT IDENTITY; APIs expose decimal strings. Migrated physical tables keep old UUID in nullable unique legacy_id. Tables marked [P0] are launch core; [P1] are V1 extensions. Persisted tables in Supabase public use RLS deny-by-default; anon/authenticated have no direct data privilege because NestJS/Prisma is the only V1 access boundary.'
 }
 
 // ORGANIZATION + IAM

@@ -1,10 +1,10 @@
 # Admin và Storefront API v1 contract integration
 
-> **Document version:** 1.2.2
+> **Document version:** 1.3.0
 >
-> **Last updated:** 2026-09-06
+> **Last updated:** 2026-09-09
 >
-> **Change summary:** Sửa production guard cho endpoint chỉ yêu cầu xác thực; `/admin/auth/me` không còn lỗi 500 khi không khai báo permission cụ thể.
+> **Change summary:** Chuẩn hóa toàn bộ thông báo lỗi HTTP gửi tới Admin/Storefront sang tiếng Việt tại global exception boundary; giữ nguyên machine code và error envelope.
 
 ## Nguyên tắc đã áp dụng
 
@@ -76,8 +76,8 @@ Mọi exception đi qua global filter và trả cùng envelope:
 {
   "statusCode": 400,
   "code": "VALIDATION_ERROR",
-  "message": "Request validation failed",
-  "details": [{ "field": "limit", "code": "MAX", "message": "..." }],
+  "message": "Dữ liệu gửi lên không hợp lệ.",
+  "details": [{ "field": "limit", "code": "MAX", "message": "Trường limit: Giá trị vượt quá giới hạn tối đa." }],
   "path": "/api/v1/admin/iam/roles/active?limit=100",
   "method": "GET",
   "timestamp": "2026-08-29T00:00:00.000Z",
@@ -86,6 +86,8 @@ Mọi exception đi qua global filter và trả cùng envelope:
 ```
 
 Admin dùng `getApiErrorMessage` cho lỗi form/query và `getApiFieldErrors` để map `details[].field` về React Hook Form. Lỗi mạng/legacy vẫn có fallback, không làm hỏng transport.
+
+`code` và `details[].code` là mã máy ổn định, không dịch, để FE xử lý nhánh lỗi. `message` và `details[].message` là nội dung hiển thị và luôn được chuẩn hóa sang tiếng Việt. Lỗi nghiệp vụ đã có bản dịch giữ thông tin cụ thể; lỗi tiếng Anh chưa biết từ framework/provider dùng thông báo tiếng Việt an toàn theo HTTP status và không lộ nội dung kỹ thuật. Log server vẫn giữ lỗi gốc để vận hành điều tra.
 
 ## Evidence và checklist
 
@@ -141,3 +143,4 @@ Admin dùng `getApiErrorMessage` cho lỗi form/query và `getApiFieldErrors` đ
 | 1.2.0 | 2026-09-05 | Mở rộng DELETE logic cho content post, review và staff; generated SDK được ghép vào ba màn Admin. | API-20260905-ADMIN-DELETE-EXTENSION |
 | 1.2.1 | 2026-09-05 | Đồng bộ development OWNER permissions qua `/admin/auth/me`; production guard không thay đổi. | API-20260905-DEV-OWNER-PERMISSIONS |
 | 1.2.2 | 2026-09-06 | Sửa production authentication-only guard gây `/admin/auth/me` 500 sau khi login thành công. | API-20260906-AUTH-ME-GUARD-FIX |
+| 1.3.0 | 2026-09-09 | Chuẩn hóa `message` và `details[].message` trả về client sang tiếng Việt; giữ nguyên machine code và format v1. | API-20260909-VIETNAMESE-ERROR-MESSAGES |

@@ -121,7 +121,7 @@ components:
           example: VALIDATION_ERROR
         message:
           type: string
-          example: Request validation failed
+          example: Dữ liệu gửi lên không hợp lệ.
         details:
           type: array
           items:
@@ -206,7 +206,7 @@ components:
           example: INVALID_VALUE
         message:
           type: string
-          example: name should not be empty
+          example: 'Trường "name": Trường này không được để trống.'
       required:
         - code
         - message

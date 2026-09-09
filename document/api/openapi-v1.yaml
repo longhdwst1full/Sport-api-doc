@@ -4238,6 +4238,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CheckoutQuoteDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
       summary: Reload an owned guest quote after staff consultation
       tags:
         - Storefront Guest Checkout
@@ -4361,6 +4367,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CheckoutQuoteDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
       security:
         - bearer: []
       summary: Reload an owned account quote after staff consultation
@@ -4419,6 +4431,59 @@ paths:
       summary: Release an account reservation before fulfillment handover
       tags:
         - Storefront Account Checkout
+  /api/v1/admin/checkouts/shipping-consultations:
+    get:
+      operationId: listAdminShippingConsultations
+      parameters:
+        - name: page
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            default: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 20
+            type: number
+        - name: status
+          required: false
+          in: query
+          schema:
+            default: AWAITING_SHIPPING_CONSULTATION
+            type: string
+            enum:
+              - AWAITING_SHIPPING_CONSULTATION
+              - QUOTED
+        - name: branchId
+          required: false
+          in: query
+          schema:
+            pattern: ^[1-9][0-9]*$
+            example: "1"
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminShippingConsultationListDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: List manual shipping quotes visible in the assigned branch scope
+      tags:
+        - Admin Checkout
   /api/v1/admin/checkouts/{checkoutToken}/shipping-consultation:
     patch:
       operationId: updateAdminManualShippingQuote
@@ -5003,7 +5068,7 @@ components:
           example: INVALID_VALUE
         message:
           type: string
-          example: name should not be empty
+          example: 'Trường "name": Trường này không được để trống.'
       required:
         - code
         - message
@@ -5018,7 +5083,7 @@ components:
           example: VALIDATION_ERROR
         message:
           type: string
-          example: Request validation failed
+          example: Dữ liệu gửi lên không hợp lệ.
         details:
           type: array
           items:
@@ -7717,6 +7782,115 @@ components:
           example: Khách đổi ý trước khi bàn giao hàng
       required:
         - reason
+    AdminShippingConsultationDto:
+      type: object
+      properties:
+        checkoutToken:
+          type: string
+          description: Opaque token used to confirm this exact quote
+        status:
+          type: string
+          enum:
+            - QUOTED
+            - AWAITING_SHIPPING_CONSULTATION
+        branchId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        warehouseId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        branchName:
+          type: string
+        paymentMethod:
+          type: string
+          enum:
+            - BANK_TRANSFER
+            - COD
+        shippingMethod:
+          type: string
+          enum:
+            - BRANCH_FREE
+            - STANDARD_DELIVERY
+            - THIRD_PARTY
+            - MANUAL_EXTERNAL
+        shippingProvider:
+          type: string
+          nullable: true
+        distanceKm:
+          type: string
+          nullable: true
+        itemSubtotal:
+          type: string
+        shippingTotal:
+          type: string
+          nullable: true
+        grandTotal:
+          type: string
+          nullable: true
+        etaMinDays:
+          type: number
+          nullable: true
+        etaMaxDays:
+          type: number
+          nullable: true
+        requiresShippingConsultation:
+          type: boolean
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CheckoutQuoteItemDto"
+        expiresAt:
+          type: string
+          format: date-time
+        version:
+          type: number
+          example: 0
+        recipient:
+          $ref: "#/components/schemas/CheckoutRecipientDto"
+        customerNote:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - checkoutToken
+        - status
+        - branchId
+        - warehouseId
+        - branchName
+        - paymentMethod
+        - shippingMethod
+        - itemSubtotal
+        - requiresShippingConsultation
+        - items
+        - expiresAt
+        - version
+        - recipient
+        - createdAt
+    AdminShippingConsultationListDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminShippingConsultationDto"
+        page:
+          type: number
+          example: 1
+        limit:
+          type: number
+          example: 20
+        total:
+          type: number
+          example: 1
+      required:
+        - items
+        - page
+        - limit
+        - total
     UpdateManualShippingQuoteDto:
       type: object
       properties:

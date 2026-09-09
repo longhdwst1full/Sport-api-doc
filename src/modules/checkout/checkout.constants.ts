@@ -24,6 +24,11 @@ export const CHECKOUT_AUDIT_ACTION = {
   QUOTE_MANUAL_UPDATE: 'checkout.quote.manual-update',
   RESERVATION_CONFIRM: 'checkout.reservation.confirm',
   RESERVATION_RELEASE: 'checkout.reservation.release',
+  RESERVATION_EXPIRE: 'checkout.reservation.expire',
+} as const;
+
+export const RESERVATION_EXPIRY_REASON = {
+  TTL_EXPIRED: 'RESERVATION_TTL_EXPIRED',
 } as const;
 
 export const CHECKOUT_PAYMENT_METHOD = {

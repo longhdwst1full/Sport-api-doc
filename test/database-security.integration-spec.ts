@@ -30,22 +30,18 @@ describe('Public schema security and warehouse cardinality', () => {
     expect(uniqueIndex).toHaveLength(1);
   });
 
-  it('enables RLS on all persisted inventory tables', async () => {
+  it('enables RLS on every public base table, including Prisma migration history', async () => {
     const tables = await prisma.$queryRaw<Array<{ table_name: string; rls_enabled: boolean }>>`
       SELECT relname AS table_name, relrowsecurity AS rls_enabled
-      FROM pg_class
-      WHERE oid IN (
-        'public.inventory_balances'::regclass,
-        'public.inventory_movements'::regclass,
-        'public.stock_adjustments'::regclass,
-        'public.stock_adjustment_items'::regclass,
-        'public.stock_transfers'::regclass,
-        'public.stock_transfer_items'::regclass
-      )
+      FROM pg_class table_row
+      JOIN pg_namespace namespace_row ON namespace_row.oid = table_row.relnamespace
+      WHERE namespace_row.nspname = 'public'
+        AND table_row.relkind = 'r'
       ORDER BY relname
     `;
 
-    expect(tables).toHaveLength(6);
+    expect(tables.length).toBeGreaterThan(0);
+    expect(tables).toContainEqual({ table_name: '_prisma_migrations', rls_enabled: true });
     expect(tables.every(({ rls_enabled: enabled }) => enabled)).toBe(true);
   });
 
@@ -64,6 +60,43 @@ describe('Public schema security and warehouse cardinality', () => {
     );
 
     expect(result[0]?.accessible_tables).toBe(0);
+  });
+
+  it('keeps future postgres-owned tables, sequences and functions private by default', async () => {
+    const rows = await prisma.$queryRaw<Array<{ object_type: string; access_control: string }>>`
+      SELECT
+        default_acl.defaclobjtype AS object_type,
+        COALESCE(array_to_string(default_acl.defaclacl, ','), '') AS access_control
+      FROM pg_default_acl default_acl
+      WHERE default_acl.defaclnamespace = 'public'::regnamespace
+        AND default_acl.defaclrole = 'postgres'::regrole
+        AND default_acl.defaclobjtype IN ('r', 'S', 'f')
+      ORDER BY default_acl.defaclobjtype
+    `;
+
+    expect(rows).toHaveLength(3);
+    expect(rows.every(({ access_control: acl }) => !/(anon|authenticated)=/.test(acl))).toBe(true);
+  });
+
+  it('denies browser-facing roles direct execution of application-owned functions', async () => {
+    const rows = await prisma.$queryRaw<Array<{ function_name: string }>>`
+      SELECT function_row.oid::regprocedure::text AS function_name
+      FROM pg_proc function_row
+      JOIN pg_namespace namespace_row ON namespace_row.oid = function_row.pronamespace
+      LEFT JOIN pg_depend dependency_row
+        ON dependency_row.classid = 'pg_proc'::regclass
+       AND dependency_row.objid = function_row.oid
+       AND dependency_row.deptype = 'e'
+      WHERE namespace_row.nspname = 'public'
+        AND function_row.proowner = 'postgres'::regrole
+        AND dependency_row.objid IS NULL
+        AND (
+          has_function_privilege('anon', function_row.oid, 'EXECUTE')
+          OR has_function_privilege('authenticated', function_row.oid, 'EXECUTE')
+        )
+    `;
+
+    expect(rows).toHaveLength(0);
   });
 
   it('installs indexes that match inventory keyset pagination', async () => {

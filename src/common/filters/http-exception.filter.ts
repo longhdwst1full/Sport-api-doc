@@ -7,6 +7,10 @@ import {
   Logger,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import {
+  clientMessageVi,
+  validationMessageVi,
+} from '../exceptions/client-error-message.vi';
 
 interface ErrorDetail {
   field?: string;
@@ -48,7 +52,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       typeof body?.code === 'string' && body.code.trim()
         ? body.code
         : (ERROR_CODES[status] ?? `HTTP_${status}`);
-    const message = this.extractMessage(raw, status, details);
+    const message = clientMessageVi(this.extractMessage(raw, status, details), status);
     const responseRequestId = response.getHeader('x-request-id');
     const requestId =
       request.header('x-request-id') ??
@@ -95,7 +99,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     if (!Array.isArray(raw)) return [];
     return raw.flatMap((item) => {
       if (typeof item === 'string') {
-        return [{ code: 'INVALID_VALUE', message: item }];
+        return [{ code: 'INVALID_VALUE', message: validationMessageVi('INVALID_VALUE', item) }];
       }
       if (!item || typeof item !== 'object' || !('message' in item)) return [];
       const detail = item as Partial<ErrorDetail>;
@@ -104,7 +108,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
         {
           ...(typeof detail.field === 'string' ? { field: detail.field } : {}),
           code: typeof detail.code === 'string' ? detail.code : 'INVALID_VALUE',
-          message: detail.message,
+          message: validationMessageVi(
+            typeof detail.code === 'string' ? detail.code : 'INVALID_VALUE',
+            detail.message,
+            typeof detail.field === 'string' ? detail.field : undefined,
+          ),
         },
       ];
     });

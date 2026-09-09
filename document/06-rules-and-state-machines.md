@@ -1,10 +1,10 @@
 # Business rules và state machine V1
 
-> **Document version:** 1.3.0
+> **Document version:** 1.5.0
 >
 > **Last updated:** 2026-09-08
 >
-> **Change summary:** Tạm tắt carrier; dùng STANDARD_DELIVERY 50k/100k/200k theo cân nặng và vẫn giữ manual consultation.
+> **Change summary:** Bổ sung quy tắc hết hạn reservation và worker chạy định kỳ trên Supabase Cron.
 
 ## 0. Customer identity V1
 
@@ -30,6 +30,15 @@
 10. Mọi external event và command rủi ro có idempotency key/request ID.
 11. Giá hiển thị và thanh toán đã gồm VAT; `tax_total` chỉ là phần VAT thông tin, không cộng vào tổng lần nữa.
 12. Guest checkout vẫn tạo customer nội bộ `user_id=null`; không tự tạo tài khoản/mật khẩu.
+
+### 1.1 Reservation expiry
+
+- TTL mặc định 30 phút, cấu hình bằng `CHECKOUT_RESERVATION_TTL_MINUTES`.
+- Worker quét mỗi 5 phút nên thời điểm release thực tế nằm trong khoảng ngay sau expiry đến tối đa khoảng 5 phút sau trong điều kiện scheduler bình thường.
+- Chỉ reservation `ACTIVE` mới được expire. `COMMITTED`, `RELEASED`, `EXPIRED` là retry-safe và không bị trừ `reserved` lần hai.
+- Hai worker đồng thời claim bằng `FOR UPDATE SKIP LOCKED`; balance được khóa theo warehouse/SKU ổn định để giảm deadlock.
+- Giảm `reserved`, chuyển trạng thái reservation/checkout và ghi audit phải commit hoặc rollback cùng nhau.
+- Job dùng internal Bearer secret, không dùng quyền người dùng và không xuất vào OpenAPI FE.
 
 ## 2. Order
 
@@ -144,7 +153,7 @@ Không áp dụng mặc định cho sửa tên sản phẩm, nội dung CMS hay 
 1. Online V1 không nhận `branch_id` từ khách; backend chỉ xét branch ACTIVE có warehouse ACTIVE và đủ toàn bộ cart, không ghép nhiều branch.
 2. Khi có tọa độ hợp lệ, chọn branch đủ hàng gần nhất. Trong bán kính cấu hình mặc định 10 km dùng `BRANCH_FREE`, phí 0.
 3. Khi carrier chưa có key, ngoài 10 km dùng `STANDARD_DELIVERY`: đến 5 kg = 50.000đ; trên 5–20 kg = 100.000đ; trên 20 kg = 200.000đ. Ngưỡng và phí đọc từ validated env, không hard-code tại FE.
-4. GHN/GHTK mặc định tắt và chỉ được bật khi có key/shop/pickup mapping thật. Hàng đặc thù hoặc giao xe khách vẫn chuyển `AWAITING_SHIPPING_CONSULTATION`; nhân viên ghi phí/ETA/provider/note đã đồng ý rồi mở lại quote.
+4. GHN/GHTK mặc định tắt và chỉ được bật khi có key/shop/pickup mapping thật. Hàng đặc thù hoặc giao xe khách chuyển `AWAITING_SHIPPING_CONSULTATION`; Admin chỉ thấy quote thuộc branch scope, dùng `version` hiện tại để ghi phí/ETA/provider/note đã đồng ý. Client phải đọc lại quote thuộc đúng cart và chỉ được confirm sau khi trạng thái trở lại `QUOTED`.
 5. Khi thiếu tọa độ, ưu tiên branch đủ hàng có quote tự động tốt nhất theo phí rồi ETA; branch selection thủ công vẫn tắt trong V1.
 6. Chỉ sau xác nhận quote mới reserve. Không tự động đổi branch sau khi reservation/order đã tạo.
 
@@ -200,6 +209,8 @@ UPLOADING -> ACTIVE -> DELETING -> DELETED
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.5.0 | 2026-09-08 | Thêm invariant và vận hành expiry reservation bằng Supabase Cron. | API-20260908-RESERVATION-EXPIRY-WORKER |
+| 1.4.0 | 2026-09-08 | Chốt vòng tư vấn giao hàng có scoped Admin list, optimistic version và Client reload quote. | API-20260908-CHECKOUT-CONSULTATION-ROUNDTRIP |
 | 1.3.0 | 2026-09-08 | Thêm STANDARD_DELIVERY với ba mức phí env; carrier mặc định tắt đến khi có credential thật. | DBAPI-20260908-DEFAULT-SHIPPING-RATES |
 | 1.2.0 | 2026-09-08 | Chốt COD, branch auto-selection, miễn phí 10 km, GHN/GHTK và manual external consultation. | D34 / DBAPI-20260908-CHECKOUT-SHIPPING-COD |
 | 1.1.0 | 2026-09-08 | Chốt payment không sửa tồn; ship/handover commit reservation và giảm on_hand+reserved. | D01 / DB-20260908-INVENTORY-HANDOVER |

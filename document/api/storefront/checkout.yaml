@@ -72,6 +72,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CheckoutQuoteDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
       summary: Reload an owned guest quote after staff consultation
       tags:
         - Storefront Guest Checkout
@@ -195,6 +201,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CheckoutQuoteDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
       security:
         - bearer: []
       summary: Reload an owned account quote after staff consultation
@@ -362,7 +374,7 @@ components:
           example: VALIDATION_ERROR
         message:
           type: string
-          example: Request validation failed
+          example: Dữ liệu gửi lên không hợp lệ.
         details:
           type: array
           items:
@@ -508,7 +520,7 @@ components:
           example: INVALID_VALUE
         message:
           type: string
-          example: name should not be empty
+          example: 'Trường "name": Trường này không được để trống.'
       required:
         - code
         - message

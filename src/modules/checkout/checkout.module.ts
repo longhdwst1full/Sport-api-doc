@@ -6,11 +6,13 @@ import { ShippingModule } from '../shipping/shipping.module';
 import { AccountCheckoutController, AdminCheckoutController, GuestCheckoutController } from './checkout.controller';
 import { CheckoutService } from './checkout.service';
 import { InventoryReservationService } from './inventory-reservation.service';
+import { ReservationExpiryController } from './reservation-expiry.controller';
+import { ReservationExpiryService } from './reservation-expiry.service';
 
 @Module({
   imports: [AuditModule, CartModule, ShippingModule],
-  controllers: [GuestCheckoutController, AccountCheckoutController, AdminCheckoutController],
-  providers: [CheckoutService, InventoryReservationService],
+  controllers: [GuestCheckoutController, AccountCheckoutController, AdminCheckoutController, ReservationExpiryController],
+  providers: [CheckoutService, InventoryReservationService, ReservationExpiryService],
   exports: [CheckoutService, InventoryReservationService],
 })
 export class CheckoutModule {}

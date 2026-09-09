@@ -1,10 +1,11 @@
-import { ConflictException, UnprocessableEntityException } from '@nestjs/common';
+import { ConflictException, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditWriter } from '../audit/audit.writer';
 import { CartService } from '../cart/cart.service';
 import { ShippingQuoteService } from '../shipping/shipping-quote.service';
+import { ScopeType } from '../iam/iam.types';
 import { CreateCheckoutQuoteDto } from './checkout.dto';
 import { CheckoutService } from './checkout.service';
 
@@ -12,16 +13,31 @@ describe('CheckoutService', () => {
   const resolveGuestCartId = jest.fn().mockResolvedValue(1n);
   const findCart = jest.fn();
   const findCheckout = jest.fn();
+  const findOwnedCheckout = jest.fn();
+  const listCheckouts = jest.fn();
+  const countCheckouts = jest.fn();
+  const findWarehouses = jest.fn();
+  const findCustomer = jest.fn();
+  const createCustomer = jest.fn();
+  const shippingQuote = jest.fn();
+  const transaction = {
+    $queryRaw: jest.fn(),
+    cart: { findFirst: jest.fn() },
+    checkoutSession: { create: jest.fn() },
+  };
   const prisma = {
     cart: { findFirst: findCart },
-    checkoutSession: { findUnique: findCheckout },
+    checkoutSession: { findUnique: findCheckout, findFirst: findOwnedCheckout, findMany: listCheckouts, count: countCheckouts },
+    warehouse: { findMany: findWarehouses },
+    customer: { findFirst: findCustomer, create: createCustomer },
+    $transaction: jest.fn((callback: (client: typeof transaction) => unknown) => callback(transaction)),
   } as unknown as PrismaService;
   const service = new CheckoutService(
     prisma,
     { resolveGuestCartId } as unknown as CartService,
-    {} as ShippingQuoteService,
-    {} as ConfigService,
-    {} as AuditWriter,
+    { quoteCandidate: shippingQuote } as unknown as ShippingQuoteService,
+    { getOrThrow: jest.fn().mockReturnValue(30) } as unknown as ConfigService,
+    { write: jest.fn() } as unknown as AuditWriter,
   );
   const input: CreateCheckoutQuoteDto = {
     recipient: {
@@ -61,6 +77,8 @@ describe('CheckoutService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     resolveGuestCartId.mockResolvedValue(1n);
+    findCustomer.mockResolvedValue({ id: 20n });
+    transaction.cart.findFirst.mockResolvedValue({ id: 1n });
   });
 
   it('returns an idempotent checkout replay without quoting shipping again', async () => {
@@ -112,5 +130,85 @@ describe('CheckoutService', () => {
 
     await expect(service.quoteGuest('cart-token', input, 'used-key', 'request-3'))
       .rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('creates an awaiting quote without calling a carrier when staff consultation is requested', async () => {
+    findCart.mockResolvedValue(sellableCart);
+    findCheckout.mockResolvedValue(null);
+    findWarehouses.mockResolvedValue([{
+      id: 3n,
+      branchId: 2n,
+      status: 'ACTIVE',
+      branch: {
+        id: 2n,
+        name: 'Chi nhánh HCM',
+        status: 'ACTIVE',
+        addressJson: {
+          addressLine: '123 Nguyễn Huệ',
+          district: 'Quận 1',
+          province: 'TP. Hồ Chí Minh',
+          latitude: 10.775,
+          longitude: 106.703,
+        },
+      },
+      inventoryBalances: [{ productVariantId: 7n, onHand: 5, reserved: 0 }],
+    }]);
+    transaction.checkoutSession.create.mockImplementation(({ data }: { data: Record<string, unknown> }) => Promise.resolve({
+      ...data,
+      id: 30n,
+      checkoutToken: data.checkoutToken,
+      branchId: 2n,
+      warehouseId: 3n,
+      branch: { name: 'Chi nhánh HCM' },
+      items: [{
+        productVariantId: 7n,
+        skuSnapshot: 'SKU-7',
+        nameSnapshot: 'Tạ tay',
+        quantity: 1,
+        unitPrice: new Prisma.Decimal(500000),
+        lineTotal: new Prisma.Decimal(500000),
+      }],
+    }));
+
+    await expect(service.quoteGuest('cart-token', {
+      ...input,
+      requestShippingConsultation: true,
+      recipient: { ...input.recipient, latitude: 10.776, longitude: 106.7 },
+    }, 'consult-key', 'request-4')).resolves.toMatchObject({
+      status: 'AWAITING_SHIPPING_CONSULTATION',
+      shippingMethod: 'MANUAL_EXTERNAL',
+      requiresShippingConsultation: true,
+      shippingTotal: null,
+      grandTotal: null,
+    });
+    expect(shippingQuote).not.toHaveBeenCalled();
+  });
+
+  it('loads a quote only when it belongs to the caller cart', async () => {
+    findOwnedCheckout.mockResolvedValue(null);
+
+    await expect(service.getGuest('cart-token', 'another-cart-checkout'))
+      .rejects.toBeInstanceOf(NotFoundException);
+    expect(findOwnedCheckout).toHaveBeenCalledWith(expect.objectContaining({
+      where: { checkoutToken: 'another-cart-checkout', cartId: 1n },
+    }));
+  });
+
+  it('limits the admin consultation list to assigned branches', async () => {
+    listCheckouts.mockResolvedValue([]);
+    countCheckouts.mockResolvedValue(0);
+
+    await expect(service.listShippingConsultations({ page: 1, limit: 20, status: 'AWAITING_SHIPPING_CONSULTATION' }, {
+      userId: '2',
+      sessionId: '3',
+      displayName: 'Branch manager',
+      permissionVersion: '1',
+      permissions: ['order.manage'],
+      scopes: [{ type: ScopeType.BRANCH, branchId: '12' }],
+      mustChangePassword: false,
+    })).resolves.toEqual({ items: [], page: 1, limit: 20, total: 0 });
+    expect(listCheckouts).toHaveBeenCalledWith(expect.objectContaining({
+      where: { AND: [{ branchId: { in: [12n] } }, {}, { status: 'AWAITING_SHIPPING_CONSULTATION' }] },
+    }));
   });
 });

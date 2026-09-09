@@ -175,7 +175,7 @@ describe('Admin v1 contract', () => {
     const body = response.body as unknown as ErrorBody;
     expect(body.statusCode).toBe(400);
     expect(body.code).toBe('VALIDATION_ERROR');
-    expect(body.message).toBe('Request validation failed');
+    expect(body.message).toBe('Dữ liệu gửi lên không hợp lệ.');
     expect(body.method).toBe('GET');
     expect(body.path).toBe('/api/v1/admin/iam/roles/active?limit=100');
     expect(typeof body.requestId).toBe('string');

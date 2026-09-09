@@ -3,13 +3,13 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 export class ErrorDetailDto {
   @ApiPropertyOptional({ example: 'name' }) field?: string;
   @ApiProperty({ example: 'INVALID_VALUE' }) code: string;
-  @ApiProperty({ example: 'name should not be empty' }) message: string;
+  @ApiProperty({ example: 'Trường "name": Trường này không được để trống.' }) message: string;
 }
 
 export class ErrorResponseDto {
   @ApiProperty({ example: 400 }) statusCode: number;
   @ApiProperty({ example: 'VALIDATION_ERROR' }) code: string;
-  @ApiProperty({ example: 'Request validation failed' }) message: string;
+  @ApiProperty({ example: 'Dữ liệu gửi lên không hợp lệ.' }) message: string;
   @ApiPropertyOptional({ type: [ErrorDetailDto] }) details?: ErrorDetailDto[];
   @ApiProperty({ example: '/api/v1/catalog/products' }) path: string;
   @ApiProperty({ example: 'POST' }) method: string;

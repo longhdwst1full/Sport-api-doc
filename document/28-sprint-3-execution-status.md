@@ -1,14 +1,14 @@
 # Sprint 3 — Execution Status
 
-> **Document version:** 1.6.0
+> **Document version:** 1.8.0
 > **Last updated:** 2026-09-08  
-> **Change summary:** Thêm phí STANDARD_DELIVERY theo env và ghép Storefront checkout với generated cart/checkout SDK.
+> **Change summary:** Hoàn thiện code worker hết hạn reservation, secured internal endpoint và bộ cấu hình Supabase Cron/Vault.
 
 ## 1. Trạng thái tổng quan
 
-Sprint 3 đang thực hiện, chưa đủ điều kiện đóng Sprint. Foundation database và rule tồn đã chốt; storefront API/SDK/UI vẫn là phần việc tiếp theo.
+Sprint 3 đang thực hiện, chưa đủ điều kiện đóng Sprint. Foundation database, checkout quote, generated SDK, vòng tư vấn giao hàng và expiry worker đã hoàn thành ở mức code; kích hoạt lịch trên environment đã deploy và PostgreSQL concurrency test vẫn là blocker đóng Sprint.
 
-**Tiến độ có trọng số: 72%.** Cách tính không coi module stub, codegen hoặc UI mock là function hoàn thành: schema/rule 20% × 100%; Backend API/domain 35% × 85%; OpenAPI/SDK 15% × 100%; Storefront/Admin UI 20% × 15%; QA/worker/provider production 10% × 45%.
+**Tiến độ có trọng số: 91%.** Cách tính không coi module stub, codegen hoặc UI mock là function hoàn thành: schema/rule 20% × 100%; Backend API/domain 35% × 96%; OpenAPI/SDK 15% × 100%; Storefront/Admin UI 20% × 78%; QA/worker/provider production 10% × 72%.
 
 | Workstream | Trạng thái | Evidence |
 | --- | --- | --- |
@@ -24,9 +24,10 @@ Sprint 3 đang thực hiện, chưa đủ điều kiện đóng Sprint. Foundati
 | Checkout create/requote API | Done-code, migration đã áp dụng; cần business integration | Guest/account quote; revalidate giá/cart; tự chọn branch đủ hàng; idempotency |
 | Payment method selection | Done-code | BANK_TRANSFER/COD snapshot; Payment aggregate thực tế thuộc Sprint 4 |
 | Atomic release command | Implemented, cần integration | ACTIVE giảm reserved; COMMITTED bị từ chối và yêu cầu movement bù trừ |
-| Expiry batch worker | Not started | RSV-02 cần `FOR UPDATE SKIP LOCKED` và internal secret/scheduler |
-| OpenAPI + generated SDK | Done-contract/codegen | Storefront có cart/customer/shipping/checkout quote-confirm-release; Admin có manual shipping quote SDK |
-| Storefront checkout UI | Done-code, cần E2E thật | Đồng bộ local cart → server cart; quote → hiển thị branch/fee/ETA → confirm reservation qua generated SDK |
+| Expiry batch worker | Done-code + PostgreSQL concurrency test; chưa kích hoạt scheduler | `FOR UPDATE SKIP LOCKED`, stable balance lock, Serializable retry, SYSTEM audit, secured internal endpoint; Supabase Cron/Vault configurator, runbook 29 và `reservation-expiry.integration-spec.ts` |
+| OpenAPI + generated SDK | Done-contract/codegen | Storefront có cart/customer/shipping/checkout quote-read-confirm-release; Admin có list/update manual shipping quote SDK |
+| Storefront checkout UI | Done-code, cần E2E thật | Đồng bộ local cart → server cart; quote → hiển thị branch/fee/ETA; yêu cầu tư vấn → reload quote; confirm reservation qua generated SDK |
+| Admin shipping consultation UI | Done-code, cần E2E thật | Danh sách phân trang theo branch scope; dùng version từ API để chốt fee/ETA/provider/note; không nhập token/version thủ công |
 | Fulfillment handover stock commit | Deferred đúng scope Sprint 4 | D01 yêu cầu SHIPPED/HANDED_OVER + reservation + movement cùng transaction |
 
 ## 2. Checklist kiểm soát đã đạt
@@ -52,8 +53,10 @@ Sprint 3 đang thực hiện, chưa đủ điều kiện đóng Sprint. Foundati
 - [ ] Cấu hình merchant credentials/pickup location thật cho GHN/GHTK trên environment triển khai.
 - [ ] PostgreSQL integration test cho idempotency, auto branch selection và checkout/manual quote race.
 - [x] Audit actor phân biệt USER/GUEST từ HTTP auth/cart context khi confirm/release.
-- [ ] Expiry worker dùng `FOR UPDATE SKIP LOCKED`, không dùng timer trong Vercel.
-- [ ] API v1, OpenAPI, generated SDK và FE states hoàn thành.
+- [x] Expiry worker dùng `FOR UPDATE SKIP LOCKED`, không dùng timer trong Vercel.
+- [x] Hai worker đồng thời không expire/trừ reserved trùng; raw PostgreSQL `40001` được retry có giới hạn.
+- [ ] Deploy worker rồi chạy `yarn cron:reservation:set`; xác nhận lịch và recent runs trên Supabase.
+- [x] API v1, OpenAPI, generated SDK và FE states cho checkout/manual consultation hoàn thành.
 
 ## 3. Quy tắc Fulfillment dành cho Sprint 4
 
@@ -73,6 +76,8 @@ Hủy trước bước bàn giao release `reserved` và refund nếu đã thu ti
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.8.0 | 2026-09-08 | Thêm expiry worker transaction-safe, internal Bearer secret và bộ cấu hình Supabase Cron dùng Vault. | API-20260908-RESERVATION-EXPIRY-WORKER |
+| 1.7.0 | 2026-09-08 | Hoàn thiện manual consultation round-trip: Admin list scoped quote, cập nhật bằng version API; Client reload rồi mới cho confirm. | API-20260908-CHECKOUT-CONSULTATION-ROUNDTRIP |
 | 1.6.0 | 2026-09-08 | Phí mặc định 50k/100k/200k bằng env và Storefront checkout dùng generated SDK thay local order giả. | DBAPI-20260908-DEFAULT-SHIPPING-RATES |
 | 1.5.0 | 2026-09-08 | Áp dụng migration Supabase dev, mở confirm/release API có cart ownership và sinh Checkout SDK cho Storefront/Admin. | DBAPI-20260908-CHECKOUT-SHIPPING-COD |
 | 1.4.0 | 2026-09-08 | Thêm checkout quote orchestration, branch auto-selection, free 10 km, carrier adapters, manual consultation và COD snapshot. | D34 / DBAPI-20260908-CHECKOUT-SHIPPING-COD |

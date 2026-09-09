@@ -1,8 +1,8 @@
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsBoolean, IsEmail, IsIn, IsInt, IsNumber, IsNumberString, IsOptional, IsString, Length, Max, MaxLength, Min, ValidateNested } from 'class-validator';
-import { ENTITY_ID_OPENAPI } from '../../common/identifiers/entity-id';
-import { CHECKOUT_PAYMENT_METHOD } from './checkout.constants';
+import { ENTITY_ID_OPENAPI, IsEntityId } from '../../common/identifiers/entity-id';
+import { CHECKOUT_PAYMENT_METHOD, CHECKOUT_STATUS } from './checkout.constants';
 
 export class CheckoutRecipientDto {
   @ApiProperty({ example: 'Nguyễn Văn An' })
@@ -124,6 +124,38 @@ export class CheckoutQuoteDto {
   @ApiProperty() requiresShippingConsultation: boolean;
   @ApiProperty({ type: [CheckoutQuoteItemDto] }) items: CheckoutQuoteItemDto[];
   @ApiProperty({ format: 'date-time' }) expiresAt: string;
+}
+
+export class AdminShippingConsultationDto extends CheckoutQuoteDto {
+  @ApiProperty({ example: 0 }) version: number;
+  @ApiProperty({ type: CheckoutRecipientDto }) recipient: CheckoutRecipientDto;
+  @ApiPropertyOptional({ type: String, nullable: true }) customerNote: string | null;
+  @ApiProperty({ format: 'date-time' }) createdAt: string;
+}
+
+export class AdminShippingConsultationListDto {
+  @ApiProperty({ type: [AdminShippingConsultationDto] }) items: AdminShippingConsultationDto[];
+  @ApiProperty({ example: 1 }) page: number;
+  @ApiProperty({ example: 20 }) limit: number;
+  @ApiProperty({ example: 1 }) total: number;
+}
+
+export class AdminShippingConsultationQueryDto {
+  @ApiPropertyOptional({ default: 1, minimum: 1 })
+  @Type(() => Number) @IsInt() @Min(1) @IsOptional() page: number = 1;
+
+  @ApiPropertyOptional({ default: 20, minimum: 1, maximum: 100 })
+  @Type(() => Number) @IsInt() @Min(1) @Max(100) @IsOptional() limit: number = 20;
+
+  @ApiPropertyOptional({ enum: [CHECKOUT_STATUS.AWAITING_SHIPPING_CONSULTATION, CHECKOUT_STATUS.QUOTED], default: CHECKOUT_STATUS.AWAITING_SHIPPING_CONSULTATION })
+  @IsIn([CHECKOUT_STATUS.AWAITING_SHIPPING_CONSULTATION, CHECKOUT_STATUS.QUOTED])
+  @IsOptional()
+  status: string = CHECKOUT_STATUS.AWAITING_SHIPPING_CONSULTATION;
+
+  @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI })
+  @IsEntityId()
+  @IsOptional()
+  branchId?: string;
 }
 
 export class UpdateManualShippingQuoteDto {

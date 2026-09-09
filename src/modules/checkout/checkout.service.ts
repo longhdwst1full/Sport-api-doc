@@ -14,7 +14,7 @@ import { ScopeType } from '../iam/iam.types';
 import { distanceKm } from '../shipping/shipping-distance';
 import { DeliveryQuoteOption, ShippingQuoteService } from '../shipping/shipping-quote.service';
 import { CHECKOUT_AUDIT_ACTION, CHECKOUT_ITEM_TYPE, CHECKOUT_STATUS } from './checkout.constants';
-import { CheckoutQuoteDto, CreateCheckoutQuoteDto, UpdateManualShippingQuoteDto } from './checkout.dto';
+import { AdminShippingConsultationDto, AdminShippingConsultationListDto, AdminShippingConsultationQueryDto, CheckoutQuoteDto, CheckoutRecipientDto, CreateCheckoutQuoteDto, UpdateManualShippingQuoteDto } from './checkout.dto';
 
 type ActorContext = { type: 'GUEST' | 'USER'; userId?: string; requestId: string };
 type Demand = { productVariantId: bigint; quantity: number };
@@ -45,6 +45,30 @@ export class CheckoutService {
 
   async getAccount(userId: string, checkoutToken: string): Promise<CheckoutQuoteDto> {
     return this.getOwnedCheckout(await this.carts.resolveAccountCartId(userId), checkoutToken);
+  }
+
+  async listShippingConsultations(query: AdminShippingConsultationQueryDto, principal: AuthPrincipal): Promise<AdminShippingConsultationListDto> {
+    const scope = this.checkoutScopeWhere(principal);
+    const requestedBranch = query.branchId ? { branchId: toDatabaseId(query.branchId) } : {};
+    const where: Prisma.CheckoutSessionWhereInput = {
+      AND: [scope, requestedBranch, { status: query.status }],
+    };
+    const [records, total] = await Promise.all([
+      this.prisma.checkoutSession.findMany({
+        where,
+        include: { branch: true, items: true },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        skip: (query.page - 1) * query.limit,
+        take: query.limit,
+      }),
+      this.prisma.checkoutSession.count({ where }),
+    ]);
+    return {
+      items: records.map((record) => this.toAdminDto(record)),
+      page: query.page,
+      limit: query.limit,
+      total,
+    };
   }
 
   async updateManualShipping(checkoutToken: string, input: UpdateManualShippingQuoteDto, principal: AuthPrincipal, requestId: string): Promise<CheckoutQuoteDto> {
@@ -287,6 +311,15 @@ export class CheckoutService {
     return this.toDto(checkout);
   }
 
+  private checkoutScopeWhere(principal: AuthPrincipal): Prisma.CheckoutSessionWhereInput {
+    if (principal.scopes.some(({ type }) => type === ScopeType.GLOBAL)) return {};
+    const branchIds = principal.scopes
+      .filter((scope) => scope.type === ScopeType.BRANCH && scope.branchId)
+      .map((scope) => toDatabaseId(scope.branchId!));
+    if (branchIds.length === 0) throw new ForbiddenException('No branch scope is assigned');
+    return { branchId: { in: branchIds } };
+  }
+
   private snapshotItems(items: Awaited<ReturnType<CheckoutService['loadSellableCart']>>['items']) {
     return items.map((item) => {
       const variant = item.productVariant;
@@ -458,6 +491,16 @@ export class CheckoutService {
         lineTotal: item.lineTotal.toFixed(2),
       })),
       expiresAt: checkout.expiresAt.toISOString(),
+    };
+  }
+
+  private toAdminDto(checkout: Parameters<CheckoutService['toDto']>[0] & { version: bigint; recipientSnapshot: Prisma.JsonValue; customerNote: string | null; createdAt: Date }): AdminShippingConsultationDto {
+    return {
+      ...this.toDto(checkout),
+      version: Number(checkout.version),
+      recipient: checkout.recipientSnapshot as unknown as CheckoutRecipientDto,
+      customerNote: checkout.customerNote,
+      createdAt: checkout.createdAt.toISOString(),
     };
   }
 }
