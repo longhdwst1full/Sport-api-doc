@@ -38,6 +38,16 @@ interface PhysicalDemand {
   sources: Array<{ type: string; productVariantId: string; quantity: number }>;
 }
 
+export function isSerializationConflict(error: unknown): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
+  const rawPostgresCode = error.meta?.code;
+  // PostgreSQL row-lock conflicts may surface either as Prisma P2034/P2010 or
+  // directly as SQLSTATE 40001 depending on whether the failing call is raw SQL.
+  return error.code === 'P2034'
+    || error.code === '40001'
+    || (error.code === 'P2010' && rawPostgresCode === '40001');
+}
+
 export interface ReservationResult {
   id: string;
   reservationToken: string;
@@ -71,7 +81,7 @@ export class InventoryReservationService {
     const key = this.requireIdempotencyKey(idempotencyKey);
     if (!token) throw new BadRequestException('Checkout token is required');
     const requestHash = createHash('sha256').update(token).digest('hex');
-    const replay = await this.findReplay(key, requestHash);
+    const replay = await this.findReplay(key, requestHash, actor);
     if (replay) return replay;
     const ttlMinutes = this.config.getOrThrow<number>('app.checkout.reservationTtlMinutes');
 
@@ -196,11 +206,11 @@ export class InventoryReservationService {
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034') {
-        throw new ConflictException('Inventory changed concurrently; retry with the same key');
+      if (isSerializationConflict(error)) {
+        throw new ConflictException('Tồn kho vừa thay đổi bởi giao dịch khác; vui lòng thử lại với cùng khóa yêu cầu');
       }
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        const racedReplay = await this.findReplay(key, requestHash);
+        const racedReplay = await this.findReplay(key, requestHash, actor);
         if (racedReplay) return racedReplay;
       }
       throw error;
@@ -334,8 +344,8 @@ export class InventoryReservationService {
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034') {
-        throw new ConflictException('Inventory changed concurrently; retry release');
+      if (isSerializationConflict(error)) {
+        throw new ConflictException('Tồn kho vừa thay đổi bởi giao dịch khác; vui lòng thử giải phóng lại');
       }
       throw error;
     }
@@ -388,12 +398,21 @@ export class InventoryReservationService {
     );
   }
 
-  private async findReplay(key: string, requestHash: string): Promise<ReservationResult | undefined> {
+  private async findReplay(
+    key: string,
+    requestHash: string,
+    actor: ReservationActorContext,
+  ): Promise<ReservationResult | undefined> {
     const reservation = await this.prisma.inventoryReservation.findUnique({
       where: { idempotencyKey: key },
-      include: { items: true },
+      include: {
+        items: true,
+        checkoutSession: { select: { cartId: true } },
+      },
     });
     if (!reservation) return undefined;
+    // SECURITY: Replay is still a data read and must enforce the same cart ownership as first execution.
+    this.assertCartOwnership(reservation.checkoutSession.cartId, actor);
     if (reservation.requestHash !== requestHash) {
       throw new ConflictException('Idempotency-Key was already used with another checkout');
     }

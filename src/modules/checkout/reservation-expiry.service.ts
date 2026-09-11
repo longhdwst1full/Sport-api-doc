@@ -59,11 +59,17 @@ export class ReservationExpiryService {
     const expired = await this.withSerializationRetry(() => this.prisma.$transaction(async (transaction) => {
       // SKIP LOCKED cho phép nhiều worker chạy đồng thời nhưng không cùng claim một reservation.
       const claimed = await transaction.$queryRaw<LockedReservationId[]>(Prisma.sql`
-        SELECT id
-        FROM inventory_reservations
-        WHERE status = ${INVENTORY_RESERVATION_STATUS.ACTIVE}
-          AND expires_at <= ${completedAt}
-        ORDER BY expires_at, id
+        SELECT reservation.id
+        FROM inventory_reservations reservation
+        WHERE reservation.status = ${INVENTORY_RESERVATION_STATUS.ACTIVE}
+          AND reservation.expires_at <= ${completedAt}
+          -- Khi checkout đã thành Order, vòng đời cancel/payment/fulfillment sở hữu việc release/commit.
+          -- Cron TTL checkout không được trả tồn của một đơn đã được tiếp nhận.
+          AND NOT EXISTS (
+            SELECT 1 FROM orders placed_order
+            WHERE placed_order.reservation_id = reservation.id
+          )
+        ORDER BY reservation.expires_at, reservation.id
         LIMIT ${batchSize}
         FOR UPDATE SKIP LOCKED
       `);

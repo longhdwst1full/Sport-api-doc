@@ -1,10 +1,10 @@
 # Checkout module — maintenance note
 
-> **Document version:** 1.0.0
+> **Document version:** 1.1.0
 >
-> **Last updated:** 2026-09-09
+> **Last updated:** 2026-09-10
 >
-> **Change summary:** Ghi rõ ranh giới, invariant và luồng vận hành Checkout/Reservation Sprint 3.
+> **Change summary:** Bổ sung semantics lỗi cạnh tranh PostgreSQL và evidence không oversell/idempotency trên Supabase.
 
 ## Trách nhiệm
 
@@ -51,6 +51,7 @@ QUOTED ──confirm──> CONFIRMED ──TTL worker──> EXPIRED
 - Cùng một transaction phải: decrement `reserved` → mark reservation `EXPIRED` → mark checkout `EXPIRED` → append audit.
 - Chỉ retry lỗi serialization/write conflict. Invariant mismatch phải fail và báo vận hành, không được bỏ qua.
 - `hasMore=true` báo scheduler còn batch; không tăng batch vô hạn vì môi trường serverless có timeout.
+- SQLSTATE `40001` có thể được Prisma trả trực tiếp cho raw row-lock query hoặc bọc trong `P2010`/`P2034`; API phải chuẩn hóa thành `409`, không để lọt thành lỗi 500.
 
 Tham khảo vận hành tại `document/29-reservation-expiry-worker-runbook.md`.
 
@@ -80,4 +81,5 @@ Giá trị phải được đồng bộ ở `.env.example`, `.env.local.example`
 
 | Version | Date | Change summary | Source |
 | --- | --- | --- | --- |
+| 1.1.0 | 2026-09-10 | Ghi nhận mapping lỗi serialization và integration test tranh SKU cuối/idempotency trên Supabase. | API-20260910-CHECKOUT-CONCURRENCY |
 | 1.0.0 | 2026-09-09 | Tạo maintenance note cho Checkout/Reservation expiry. | DOC-20260909-FEATURE-MAINTENANCE-NOTES |

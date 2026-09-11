@@ -4712,6 +4712,173 @@ paths:
       summary: Logically delete a content post by archiving it
       tags:
         - Admin Content
+  /api/v1/orders/guest/from-checkout/{checkoutToken}:
+    post:
+      operationId: placeGuestOrder
+      parameters:
+        - name: checkoutToken
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: x-cart-token
+          required: true
+          in: header
+          schema:
+            type: string
+        - name: idempotency-key
+          required: true
+          in: header
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderDetailDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      summary: Tạo đơn idempotent từ checkout và reservation đã xác nhận của khách vãng lai
+      tags:
+        - Storefront Guest Orders
+  /api/v1/account/orders/from-checkout/{checkoutToken}:
+    post:
+      operationId: placeAccountOrder
+      parameters:
+        - name: checkoutToken
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: idempotency-key
+          required: true
+          in: header
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderDetailDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Tạo đơn idempotent từ checkout và reservation đã xác nhận của khách đăng nhập
+      tags:
+        - Storefront Account Orders
+  /api/v1/admin/orders:
+    get:
+      operationId: listAdminOrders
+      parameters:
+        - name: page
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            default: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 20
+            type: number
+        - name: statusGroup
+          required: false
+          in: query
+          description: Nhóm trạng thái dùng trực tiếp cho các tab màn quản lý đơn hàng
+          schema:
+            type: string
+            enum:
+              - PENDING_CONFIRMATION
+              - CONFIRMED
+              - IN_TRANSIT
+              - DELIVERED
+        - name: search
+          required: false
+          in: query
+          description: Tìm theo mã đơn, tên/SĐT/email người nhận
+          schema:
+            maxLength: 100
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminOrderListDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Danh sách đơn hàng theo tab trạng thái, tìm kiếm và phạm vi chi nhánh
+      tags:
+        - Admin Orders
+  /api/v1/admin/orders/{id}:
+    get:
+      operationId: getAdminOrder
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderDetailDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Chi tiết và lịch sử đơn hàng trong phạm vi chi nhánh
+      tags:
+        - Admin Orders
   /api/v1/catalog/products/{slug}/reviews:
     get:
       operationId: listProductReviews
@@ -8092,6 +8259,341 @@ components:
       required:
         - expectedVersion
         - reason
+    OrderRecipientDto:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+          nullable: true
+        addressLine:
+          type: string
+        ward:
+          type: string
+          nullable: true
+        district:
+          type: string
+          nullable: true
+        province:
+          type: string
+      required:
+        - name
+        - phone
+        - addressLine
+        - province
+    OrderItemComponentDto:
+      type: object
+      properties:
+        productVariantId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        sku:
+          type: string
+        name:
+          type: string
+        quantityPerBundle:
+          type: number
+        totalQuantity:
+          type: number
+      required:
+        - productVariantId
+        - sku
+        - name
+        - quantityPerBundle
+        - totalQuantity
+    OrderItemDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        lineNo:
+          type: number
+        itemType:
+          type: string
+        sku:
+          type: string
+        productName:
+          type: string
+        variantName:
+          type: string
+        imageUrl:
+          type: string
+          nullable: true
+        quantity:
+          type: number
+        unitPrice:
+          type: string
+        lineTotal:
+          type: string
+        components:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItemComponentDto"
+      required:
+        - id
+        - lineNo
+        - itemType
+        - sku
+        - productName
+        - variantName
+        - quantity
+        - unitPrice
+        - lineTotal
+        - components
+    OrderStatusHistoryDto:
+      type: object
+      properties:
+        sequenceNo:
+          type: number
+        fromStatus:
+          type: string
+          enum:
+            - PENDING_CONFIRMATION
+            - CONFIRMED
+            - PICKING
+            - PACKED
+            - SHIPPED
+            - DELIVERED
+            - COMPLETED
+            - CANCELLED
+          nullable: true
+        toStatus:
+          type: string
+          enum:
+            - PENDING_CONFIRMATION
+            - CONFIRMED
+            - PICKING
+            - PACKED
+            - SHIPPED
+            - DELIVERED
+            - COMPLETED
+            - CANCELLED
+        reason:
+          type: string
+          nullable: true
+        actorType:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - sequenceNo
+        - toStatus
+        - actorType
+        - createdAt
+    OrderDetailDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        orderNo:
+          type: string
+        status:
+          type: string
+          enum:
+            - PENDING_CONFIRMATION
+            - CONFIRMED
+            - PICKING
+            - PACKED
+            - SHIPPED
+            - DELIVERED
+            - COMPLETED
+            - CANCELLED
+        paymentStatus:
+          type: string
+          enum:
+            - PENDING
+            - AWAITING_CONFIRMATION
+            - SUCCESS
+            - FAILED
+            - CANCELLED
+            - REFUNDED
+        fulfillmentStatus:
+          type: string
+          enum:
+            - PENDING
+            - PICKING
+            - PACKED
+            - SHIPPED
+            - DELIVERED
+            - FAILED
+            - RETURNED
+            - CANCELLED
+        paymentMethod:
+          type: string
+        shippingMethod:
+          type: string
+        branchId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        branchName:
+          type: string
+        warehouseName:
+          type: string
+        grandTotal:
+          type: string
+        itemCount:
+          type: number
+        recipient:
+          $ref: "#/components/schemas/OrderRecipientDto"
+        placedAt:
+          type: string
+          format: date-time
+        version:
+          type: number
+        currencyCode:
+          type: string
+        pricesIncludeTax:
+          type: boolean
+        subtotal:
+          type: string
+        discountTotal:
+          type: string
+        shippingTotal:
+          type: string
+        taxTotal:
+          type: string
+        customerNote:
+          type: string
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItemDto"
+        statusHistory:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderStatusHistoryDto"
+      required:
+        - id
+        - orderNo
+        - status
+        - paymentStatus
+        - fulfillmentStatus
+        - paymentMethod
+        - shippingMethod
+        - branchId
+        - branchName
+        - warehouseName
+        - grandTotal
+        - itemCount
+        - recipient
+        - placedAt
+        - version
+        - currencyCode
+        - pricesIncludeTax
+        - subtotal
+        - discountTotal
+        - shippingTotal
+        - taxTotal
+        - items
+        - statusHistory
+    AdminOrderSummaryDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        orderNo:
+          type: string
+        status:
+          type: string
+          enum:
+            - PENDING_CONFIRMATION
+            - CONFIRMED
+            - PICKING
+            - PACKED
+            - SHIPPED
+            - DELIVERED
+            - COMPLETED
+            - CANCELLED
+        paymentStatus:
+          type: string
+          enum:
+            - PENDING
+            - AWAITING_CONFIRMATION
+            - SUCCESS
+            - FAILED
+            - CANCELLED
+            - REFUNDED
+        fulfillmentStatus:
+          type: string
+          enum:
+            - PENDING
+            - PICKING
+            - PACKED
+            - SHIPPED
+            - DELIVERED
+            - FAILED
+            - RETURNED
+            - CANCELLED
+        paymentMethod:
+          type: string
+        shippingMethod:
+          type: string
+        branchId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        branchName:
+          type: string
+        warehouseName:
+          type: string
+        grandTotal:
+          type: string
+        itemCount:
+          type: number
+        recipient:
+          $ref: "#/components/schemas/OrderRecipientDto"
+        placedAt:
+          type: string
+          format: date-time
+        version:
+          type: number
+      required:
+        - id
+        - orderNo
+        - status
+        - paymentStatus
+        - fulfillmentStatus
+        - paymentMethod
+        - shippingMethod
+        - branchId
+        - branchName
+        - warehouseName
+        - grandTotal
+        - itemCount
+        - recipient
+        - placedAt
+        - version
+    AdminOrderListDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminOrderSummaryDto"
+        page:
+          type: number
+        limit:
+          type: number
+        total:
+          type: number
+      required:
+        - items
+        - page
+        - limit
+        - total
     ReviewCommentDto:
       type: object
       properties:

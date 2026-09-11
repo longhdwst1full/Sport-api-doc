@@ -138,6 +138,25 @@ export class CartService {
     return (await this.findGuest(rawToken)).id;
   }
 
+  /**
+   * Order retry vẫn phải xác thực bằng đúng guest token sau khi cart đã chuyển CONVERTED.
+   * Không dùng `findGuest` vì method đó cố ý chỉ phục vụ giỏ ACTIVE.
+   */
+  async resolveGuestCartIdForOrder(rawToken: string): Promise<bigint> {
+    this.ensurePersistence();
+    const token = rawToken.trim();
+    if (!token) throw new NotFoundException('Không tìm thấy giỏ hàng của khách');
+    const cart = await this.prisma.cart.findFirst({
+      where: {
+        anonymousTokenHash: this.hashToken(token),
+        status: { in: [CART_STATUS.ACTIVE, CART_STATUS.CONVERTED] },
+      },
+      select: { id: true },
+    });
+    if (!cart) throw new NotFoundException('Không tìm thấy giỏ hàng của khách');
+    return cart.id;
+  }
+
   async resolveAccountCartId(userId: string): Promise<bigint> {
     return (await this.getOrCreateAccountRow(userId)).id;
   }

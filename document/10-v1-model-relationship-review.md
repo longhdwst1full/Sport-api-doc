@@ -1,10 +1,10 @@
 # V1 model và quan hệ — bản review
 
-> **Document version:** 3.2.0
+> **Document version:** 3.3.0
 >
-> **Last updated:** 2026-09-08
+> **Last updated:** 2026-09-11
 >
-> **Change summary:** Mở rộng checkout snapshot cho auto branch, carrier/manual shipping và BANK_TRANSFER/COD mà không tạo bảng mới.
+> **Change summary:** Áp dụng Order foundation vật lý: mỗi checkout/reservation tối đa một Order, recipient email snapshot và 5 bảng RLS deny-by-default.
 
 File nguồn ERD: `09-v1-model.dbml`. Copy toàn bộ nội dung vào dbdiagram.io để xem và kéo thả sơ đồ.
 
@@ -103,7 +103,8 @@ Sơ đồ trên chỉ hiển thị aggregate lõi. File DBML chứa toàn bộ 7
 | `product_variants` | `product_prices` | 1 → n | RESTRICT | Price effective-dated, amount > 0; future scheduling; cấm retroactive; replace atomic; history bất biến; giảm >20% cần reason + OWNER confirm |
 | `warehouses + variants` | `inventory_balances` | n ↔ n qua balance | RESTRICT | Unique warehouse+variant; on_hand/reserved nonnegative; mutation khóa row và optimistic version |
 | `warehouses + variants` | `inventory_movements` | 1 → n | RESTRICT | Append-only ledger; DB reject UPDATE/DELETE/TRUNCATE; movement idempotency unique |
-| `orders` | `inventory_reservations` | 1 → n | RESTRICT | Một reservation cho mỗi SKU/kho trong order |
+| `checkout_sessions` | `orders` | 1 → 0..1 | RESTRICT | Chỉ checkout CONFIRMED và còn reservation ACTIVE mới tạo một Order |
+| `inventory_reservations` | `orders` | 1 → 0..1 | RESTRICT | Một reservation header giữ nhiều SKU; Order link duy nhất và từ đó sở hữu cancel/commit |
 | `carts` | `cart_items` | 1 → n | CASCADE | Cart là dữ liệu tạm; không reserve stock |
 | `customers` | `orders` | 1 → n | RESTRICT | Guest checkout vẫn tạo customer record |
 | `orders` | `order_items` | 1 → n | RESTRICT | Item snapshot bất biến |
@@ -277,6 +278,7 @@ Quy tắc:
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 3.3.0 | 2026-09-11 | Vật lý hóa Order foundation, unique checkout/reservation và snapshot email người nhận. | API-20260911-ORDER-FOUNDATION |
 | 3.2.0 | 2026-09-08 | Thêm checkout auto-branch, carrier/manual shipping và BANK_TRANSFER/COD snapshot, không thêm bảng. | DBAPI-20260908-CHECKOUT-SHIPPING-COD |
 | 3.1.0 | 2026-09-08 | Bỏ system_settings; TTL reservation chuyển sang validated environment. | D02 / D45 / DB-20260908-CONFIG-ENV |
 | 3.0.0 | 2026-09-07 | Bỏ warehouse is_primary, biểu diễn cardinality 1–1 nhất quán; ghi nhận RLS/least-privilege và cursor index. | DBSEC-20260907-WAREHOUSE-RLS-CURSOR |

@@ -1,7 +1,10 @@
 import { NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
-import { InventoryReservationService } from './inventory-reservation.service';
+import {
+  InventoryReservationService,
+  isSerializationConflict,
+} from './inventory-reservation.service';
 
 describe('InventoryReservationService demand expansion', () => {
   const service = new InventoryReservationService({} as never, {} as never, {} as never);
@@ -49,5 +52,27 @@ describe('InventoryReservationService demand expansion', () => {
       actorType: 'GUEST',
       cartId: 12n,
     })).toThrow(NotFoundException);
+  });
+});
+
+describe('InventoryReservationService serialization conflict mapping', () => {
+  const knownError = (code: string, meta?: Record<string, unknown>) =>
+    new Prisma.PrismaClientKnownRequestError('Concurrent transaction', {
+      code,
+      clientVersion: '6.19.3',
+      meta,
+    });
+
+  it.each([
+    ['P2034 transaction conflict', knownError('P2034')],
+    ['P2010 raw SQLSTATE conflict', knownError('P2010', { code: '40001' })],
+    ['direct SQLSTATE conflict', knownError('40001')],
+  ])('recognizes %s', (_caseName, error) => {
+    expect(isSerializationConflict(error)).toBe(true);
+  });
+
+  it('does not classify unrelated Prisma errors as serialization conflicts', () => {
+    expect(isSerializationConflict(knownError('P2002'))).toBe(false);
+    expect(isSerializationConflict(new Error('40001'))).toBe(false);
   });
 });

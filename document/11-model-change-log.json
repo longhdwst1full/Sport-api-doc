@@ -1684,6 +1684,121 @@
           }
         }
       ]
+    },
+    {
+      "id": "API-20260910-CHECKOUT-CONCURRENCY",
+      "date": "2026-09-10",
+      "scope": "CHECKOUT+INVENTORY+ERROR-CONTRACT+TEST+DOCUMENTATION",
+      "summary": "Không đổi schema; xác minh hai checkout tranh SKU cuối không oversell, replay idempotency không giữ tồn hai lần và chuẩn hóa raw PostgreSQL SQLSTATE 40001 thành HTTP 409 tiếng Việt.",
+      "sources": [
+        "operation:InventoryReservationService.confirm/InventoryReservationService.release",
+        "test:test/checkout-reservation.integration-spec.ts",
+        "document:28-sprint-3-execution-status.md@1.9.0",
+        "source:src/modules/checkout/README.md@1.1.0"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260911-RESERVATION-REPLAY-OWNERSHIP",
+      "date": "2026-09-11",
+      "scope": "CHECKOUT+INVENTORY+SECURITY+TEST+DOCUMENTATION",
+      "summary": "Không đổi schema; replay idempotency bắt buộc kiểm tra cart ownership như lần chạy đầu, serialization mapper có test trực tiếp và PostgreSQL fixture độc lập từng test.",
+      "sources": [
+        "operation:InventoryReservationService.confirm/findReplay",
+        "test:src/modules/checkout/inventory-reservation.service.spec.ts",
+        "test:test/checkout-reservation.integration-spec.ts",
+        "document:28-sprint-3-execution-status.md@1.10.0"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260911-ORDER-FOUNDATION",
+      "date": "2026-09-11",
+      "scope": "DATABASE+ORDER+CHECKOUT+OPENAPI+ADMIN+STOREFRONT+TEST",
+      "summary": "Tạo 5 bảng Order BIGINT identity trên Supabase dev; mỗi checkout/reservation tối đa một Order; snapshot recipient email; create idempotent, Admin list/detail theo branch scope và Storefront placement dùng generated SDK.",
+      "sources": [
+        "migration:20260911090000_add_order_foundation",
+        "operation:placeGuestOrder/placeAccountOrder/listAdminOrders/getAdminOrder",
+        "test:test/order.integration-spec.ts",
+        "contract:document/api/admin/orders.yaml/document/api/storefront/orders.yaml",
+        "document:30-sprint-4-execution-plan.md@1.1.0"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": ["orders", "order_items", "order_item_components", "order_addresses", "order_status_history"] },
+          "columns": ["Khóa chính", "Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính"]
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "orders" },
+          "columns": ["Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính"],
+          "set": {
+            "Khóa ngoại quan trọng": "checkout_session_id->checkout_sessions; reservation_id->inventory_reservations; customer_id->customers; branch_id->branches; warehouse_id->warehouses",
+            "Unique / CHECK": "order_no UQ; idempotency_key UQ; checkout_session_id UQ; reservation_id UQ; state/money CHECK",
+            "Các cột chính": "request_hash,channel,status,payment_status,fulfillment_status,currency_code,prices_include_tax,subtotal,discount_total,shipping_total,tax_total,grand_total,utm_json,cancel_reason,version"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "order_addresses" },
+          "columns": ["Các cột chính"],
+          "set": { "Các cột chính": "address_type,recipient_name,recipient_phone,recipient_email,address_line,ward,district,province_code,postal_code,country_code" }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": ["orders", "order_items", "order_item_components", "order_addresses", "order_status_history"], "Tên cột": "id" },
+          "columns": ["Kiểu dữ liệu", "Primary key"],
+          "set": { "Kiểu dữ liệu": "bigint", "Primary key": "YES" }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "orders", "Tên cột": "status" },
+          "columns": ["Default", "Ý nghĩa / trạng thái cho phép"],
+          "set": {
+            "Default": "PENDING_CONFIRMATION",
+            "Ý nghĩa / trạng thái cho phép": "PENDING_CONFIRMATION|CONFIRMED|PICKING|PACKED|SHIPPED|DELIVERED|COMPLETED|CANCELLED"
+          }
+        },
+        {
+          "sheet": "Relationships",
+          "match": { "Bảng con": "inventory_reservations", "Cột FK": "order_id" },
+          "columns": "*",
+          "archiveRemovedRowsTo": "Removed Relationships"
+        }
+      ],
+      "upsertRows": [
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "orders", "Tên cột": "request_hash" },
+          "values": { "Tên bảng": "orders", "STT": "28", "Tên cột": "request_hash", "Kiểu dữ liệu": "char(64)", "Cho phép NULL": "NO", "Ý nghĩa / trạng thái cho phép": "Hash payload để phát hiện reuse idempotency key sai intent" }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "orders", "Tên cột": "checkout_session_id" },
+          "values": { "Tên bảng": "orders", "STT": "29", "Tên cột": "checkout_session_id", "Kiểu dữ liệu": "bigint", "Cho phép NULL": "NO", "Unique": "YES", "Ý nghĩa / trạng thái cho phép": "Một checkout chỉ tạo tối đa một Order" }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "orders", "Tên cột": "reservation_id" },
+          "values": { "Tên bảng": "orders", "STT": "30", "Tên cột": "reservation_id", "Kiểu dữ liệu": "bigint", "Cho phép NULL": "NO", "Unique": "YES", "Ý nghĩa / trạng thái cho phép": "Reservation ACTIVE được Order sở hữu đến cancel hoặc fulfillment commit" }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "order_addresses", "Tên cột": "recipient_email" },
+          "values": { "Tên bảng": "order_addresses", "STT": "15", "Tên cột": "recipient_email", "Kiểu dữ liệu": "varchar(255)", "Cho phép NULL": "YES", "Ý nghĩa / trạng thái cho phép": "Snapshot email người nhận; hỗ trợ Admin search" }
+        },
+        {
+          "sheet": "Relationships",
+          "match": { "Bảng con": "orders", "Cột FK": "checkout_session_id" },
+          "values": { "Bảng con": "orders", "Cột FK": "checkout_session_id", "Bảng cha": "checkout_sessions", "Cột PK": "id", "Cardinality": "1 → 0..1", "ON DELETE": "RESTRICT", "Điểm cần kiểm tra": "Unique; checkout CONFIRMED mới tạo Order" }
+        },
+        {
+          "sheet": "Relationships",
+          "match": { "Bảng con": "orders", "Cột FK": "reservation_id" },
+          "values": { "Bảng con": "orders", "Cột FK": "reservation_id", "Bảng cha": "inventory_reservations", "Cột PK": "id", "Cardinality": "1 → 0..1", "ON DELETE": "RESTRICT", "Điểm cần kiểm tra": "Unique; TTL cron không release reservation đã có Order" }
+        }
+      ]
     }
   ]
 }

@@ -33,6 +33,7 @@ model Branch {
   carts            Cart[]
   checkoutSessions CheckoutSession[]
   shippingRates    ShippingRate[]
+  orders           Order[]
 
   @@map("branches")
 }
@@ -59,6 +60,7 @@ model Warehouse {
   incomingStockTransfers StockTransfer[]        @relation("StockTransferDestination")
   checkoutSessions       CheckoutSession[]
   inventoryReservations  InventoryReservation[]
+  orders                 Order[]
 
   @@map("warehouses")
 }
@@ -402,6 +404,8 @@ model ProductVariant {
   cartItems                 CartItem[]
   checkoutSessionItems      CheckoutSessionItem[]
   inventoryReservationItems InventoryReservationItem[]
+  orderItems                OrderItem[]
+  orderItemComponents       OrderItemComponent[]
   stockAdjustmentItems      StockAdjustmentItem[]
   stockTransferItems        StockTransferItem[]
 
@@ -425,6 +429,7 @@ model ProductBundle {
   creator       User           @relation("BundleCreator", fields: [createdBy], references: [id], onDelete: Restrict)
   updater       User           @relation("BundleUpdater", fields: [updatedBy], references: [id], onDelete: Restrict)
   items         BundleItem[]
+  orderItems    OrderItem[]
 
   @@map("product_bundles")
 }
@@ -437,8 +442,9 @@ model BundleItem {
   quantity           Int
   sortOrder          Int     @default(0) @map("sort_order")
 
-  productBundle    ProductBundle  @relation(fields: [productBundleId], references: [id], onDelete: Cascade)
-  componentVariant ProductVariant @relation("BundleComponent", fields: [componentVariantId], references: [id], onDelete: Restrict)
+  productBundle       ProductBundle        @relation(fields: [productBundleId], references: [id], onDelete: Cascade)
+  componentVariant    ProductVariant       @relation("BundleComponent", fields: [componentVariantId], references: [id], onDelete: Restrict)
+  orderItemComponents OrderItemComponent[]
 
   @@unique([productBundleId, componentVariantId])
   @@index([componentVariantId])
@@ -653,6 +659,7 @@ model Customer {
   addresses        CustomerAddress[]
   carts            Cart[]
   checkoutSessions CheckoutSession[]
+  orders           Order[]
 
   @@index([normalizedEmail])
   @@index([normalizedPhone])
@@ -745,8 +752,8 @@ model CheckoutSession {
   shippingMethod       String    @default("MANUAL_EXTERNAL") @map("shipping_method") @db.VarChar(32)
   shippingProvider     String?   @map("shipping_provider") @db.VarChar(32)
   providerQuoteRef     String?   @map("provider_quote_ref") @db.VarChar(150)
-  distanceKm          Decimal?  @map("distance_km") @db.Decimal(10, 2)
-  customerNote        String?   @map("customer_note") @db.VarChar(1000)
+  distanceKm           Decimal?  @map("distance_km") @db.Decimal(10, 2)
+  customerNote         String?   @map("customer_note") @db.VarChar(1000)
   currencyCode         String    @default("VND") @map("currency_code") @db.Char(3)
   pricesIncludeTax     Boolean   @default(true) @map("prices_include_tax")
   itemSubtotal         Decimal   @map("item_subtotal") @db.Decimal(19, 2)
@@ -771,6 +778,7 @@ model CheckoutSession {
   shippingRate ShippingRate?         @relation(fields: [shippingRateId], references: [id], onDelete: Restrict)
   items        CheckoutSessionItem[]
   reservation  InventoryReservation?
+  order        Order?
 
   @@index([cartId, status])
   @@index([customerId, createdAt])
@@ -824,6 +832,7 @@ model InventoryReservation {
   checkoutSession CheckoutSession            @relation(fields: [checkoutSessionId], references: [id], onDelete: Restrict)
   warehouse       Warehouse                  @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
   items           InventoryReservationItem[]
+  order           Order?
 
   @@index([warehouseId, status])
   @@index([status, expiresAt, id])
@@ -843,6 +852,153 @@ model InventoryReservationItem {
   @@unique([reservationId, productVariantId])
   @@index([productVariantId])
   @@map("inventory_reservation_items")
+}
+
+model Order {
+  id                BigInt    @id @default(autoincrement())
+  orderNo           String    @unique @map("order_no") @db.VarChar(32)
+  idempotencyKey    String    @unique @map("idempotency_key") @db.VarChar(150)
+  requestHash       String    @map("request_hash") @db.Char(64)
+  checkoutSessionId BigInt    @unique @map("checkout_session_id")
+  reservationId     BigInt    @unique @map("reservation_id")
+  customerId        BigInt    @map("customer_id")
+  branchId          BigInt    @map("branch_id")
+  warehouseId       BigInt    @map("warehouse_id")
+  channel           String    @default("WEB") @db.VarChar(24)
+  status            String    @default("PENDING_CONFIRMATION") @db.VarChar(32)
+  paymentStatus     String    @default("PENDING") @map("payment_status") @db.VarChar(32)
+  fulfillmentStatus String    @default("PENDING") @map("fulfillment_status") @db.VarChar(32)
+  currencyCode      String    @default("VND") @map("currency_code") @db.Char(3)
+  pricesIncludeTax  Boolean   @default(true) @map("prices_include_tax")
+  subtotal          Decimal   @db.Decimal(19, 2)
+  discountTotal     Decimal   @default(0) @map("discount_total") @db.Decimal(19, 2)
+  shippingTotal     Decimal   @default(0) @map("shipping_total") @db.Decimal(19, 2)
+  taxTotal          Decimal   @default(0) @map("tax_total") @db.Decimal(19, 2)
+  grandTotal        Decimal   @map("grand_total") @db.Decimal(19, 2)
+  customerNote      String?   @map("customer_note") @db.VarChar(1000)
+  internalNote      String?   @map("internal_note") @db.VarChar(2000)
+  utmJson           Json?     @map("utm_json") @db.JsonB
+  placedAt          DateTime  @default(now()) @map("placed_at") @db.Timestamptz(6)
+  cancelledAt       DateTime? @map("cancelled_at") @db.Timestamptz(6)
+  cancelReason      String?   @map("cancel_reason") @db.VarChar(500)
+  completedAt       DateTime? @map("completed_at") @db.Timestamptz(6)
+  version           BigInt    @default(0)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  checkoutSession CheckoutSession      @relation(fields: [checkoutSessionId], references: [id], onDelete: Restrict)
+  reservation     InventoryReservation @relation(fields: [reservationId], references: [id], onDelete: Restrict)
+  customer        Customer             @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  branch          Branch               @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  warehouse       Warehouse            @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  items           OrderItem[]
+  addresses       OrderAddress[]
+  statusHistory   OrderStatusHistory[]
+
+  @@index([customerId, placedAt(sort: Desc), id(sort: Desc)])
+  @@index([branchId, status, placedAt(sort: Desc), id(sort: Desc)])
+  @@index([warehouseId, fulfillmentStatus])
+  @@index([paymentStatus, placedAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id                  BigInt   @id @default(autoincrement())
+  orderId             BigInt   @map("order_id")
+  lineNo              Int      @map("line_no")
+  productVariantId    BigInt   @map("product_variant_id")
+  productBundleId     BigInt?  @map("product_bundle_id")
+  itemType            String   @default("STANDARD") @map("item_type") @db.VarChar(24)
+  skuSnapshot         String   @map("sku_snapshot") @db.VarChar(64)
+  productNameSnapshot String   @map("product_name_snapshot") @db.VarChar(255)
+  variantNameSnapshot String   @map("variant_name_snapshot") @db.VarChar(255)
+  attributesSnapshot  Json?    @map("attributes_snapshot") @db.JsonB
+  imageUrlSnapshot    String?  @map("image_url_snapshot")
+  quantity            Int
+  listUnitPrice       Decimal  @map("list_unit_price") @db.Decimal(19, 2)
+  discountAmount      Decimal  @default(0) @map("discount_amount") @db.Decimal(19, 2)
+  finalUnitPrice      Decimal  @map("final_unit_price") @db.Decimal(19, 2)
+  taxAmount           Decimal  @default(0) @map("tax_amount") @db.Decimal(19, 2)
+  lineTotal           Decimal  @map("line_total") @db.Decimal(19, 2)
+  unitCostSnapshot    Decimal? @map("unit_cost_snapshot") @db.Decimal(19, 2)
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  order          Order                @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  productVariant ProductVariant       @relation(fields: [productVariantId], references: [id], onDelete: Restrict)
+  productBundle  ProductBundle?       @relation(fields: [productBundleId], references: [id], onDelete: Restrict)
+  components     OrderItemComponent[]
+
+  @@unique([orderId, lineNo])
+  @@index([productVariantId])
+  @@index([productBundleId])
+  @@map("order_items")
+}
+
+model OrderItemComponent {
+  id                 BigInt   @id @default(autoincrement())
+  orderItemId        BigInt   @map("order_item_id")
+  bundleItemId       BigInt?  @map("bundle_item_id")
+  componentVariantId BigInt   @map("component_variant_id")
+  skuSnapshot        String   @map("sku_snapshot") @db.VarChar(64)
+  nameSnapshot       String   @map("name_snapshot") @db.VarChar(255)
+  quantityPerBundle  Int      @map("quantity_per_bundle")
+  totalQuantity      Int      @map("total_quantity")
+  unitCostSnapshot   Decimal? @map("unit_cost_snapshot") @db.Decimal(19, 2)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  orderItem        OrderItem      @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
+  bundleItem       BundleItem?    @relation(fields: [bundleItemId], references: [id], onDelete: Restrict)
+  componentVariant ProductVariant @relation(fields: [componentVariantId], references: [id], onDelete: Restrict)
+
+  @@unique([orderItemId, componentVariantId])
+  @@index([bundleItemId])
+  @@index([componentVariantId])
+  @@map("order_item_components")
+}
+
+model OrderAddress {
+  id             BigInt  @id @default(autoincrement())
+  orderId        BigInt  @map("order_id")
+  addressType    String  @default("SHIPPING") @map("address_type") @db.VarChar(24)
+  recipientName  String  @map("recipient_name") @db.VarChar(255)
+  recipientPhone String  @map("recipient_phone") @db.VarChar(32)
+  recipientEmail String? @map("recipient_email") @db.VarChar(255)
+  addressLine    String  @map("address_line") @db.VarChar(500)
+  wardCode       String? @map("ward_code") @db.VarChar(32)
+  wardName       String? @map("ward_name") @db.VarChar(255)
+  districtCode   String? @map("district_code") @db.VarChar(32)
+  districtName   String? @map("district_name") @db.VarChar(255)
+  provinceCode   String  @map("province_code") @db.VarChar(32)
+  provinceName   String  @map("province_name") @db.VarChar(255)
+  postalCode     String? @map("postal_code") @db.VarChar(20)
+  countryCode    String  @default("VN") @map("country_code") @db.Char(2)
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  @@unique([orderId, addressType])
+  @@index([recipientPhone])
+  @@index([recipientEmail])
+  @@map("order_addresses")
+}
+
+model OrderStatusHistory {
+  id         BigInt   @id @default(autoincrement())
+  orderId    BigInt   @map("order_id")
+  sequenceNo Int      @map("sequence_no")
+  fromStatus String?  @map("from_status") @db.VarChar(32)
+  toStatus   String   @map("to_status") @db.VarChar(32)
+  reason     String?  @db.VarChar(500)
+  actorType  String   @map("actor_type") @db.VarChar(24)
+  actorId    BigInt?  @map("actor_id")
+  requestId  String   @map("request_id") @db.VarChar(100)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  @@unique([orderId, sequenceNo])
+  @@index([orderId, createdAt])
+  @@index([requestId])
+  @@map("order_status_history")
 }
 
 model ShippingZone {
