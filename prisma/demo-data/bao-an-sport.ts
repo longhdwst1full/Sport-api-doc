@@ -22,83 +22,12 @@ export const BAO_AN_BRANDS = [
   { code: '729', name: '729', slug: '729' },
 ] as const;
 
-export interface BaoAnDemoCategory {
-  code: string;
-  name: string;
-  slug: string;
-  sortOrder: number;
-  description: string;
-  /** Ảnh nguồn; seed tải lên Cloudinary rồi gắn vào `Category.imageAssetId`. */
-  imageUrl?: string;
-  sourceUrl?: string;
-}
-
-/** Ba danh mục gốc của seed nền, gom cùng chỗ để script categories dùng chung manifest. */
-export const CORE_CATEGORIES: readonly BaoAnDemoCategory[] = [
-  {
-    code: 'GYM', name: 'Gym & Sức mạnh', slug: 'tap-gym', sortOrder: 10,
-    description: 'Tạ đơn, tạ đòn, ghế tập, giàn tạ đa năng và phụ kiện thể hình chuyên nghiệp.',
-    imageUrl: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?auto=format&fit=crop&w=1200&q=80',
-    sourceUrl: 'https://baoansport.vn/thiet-bi-gym/',
-  },
-  {
-    code: 'RUNNING', name: 'Chạy bộ & Cardio', slug: 'chay-bo', sortOrder: 20,
-    description: 'Máy chạy bộ gia đình, máy chèo thuyền, xe đạp tập và phụ kiện marathon.',
-    imageUrl: 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?auto=format&fit=crop&w=1200&q=80',
-    sourceUrl: 'https://baoansport.vn/chay-bo/',
-  },
-  {
-    code: 'ACCESSORY', name: 'Phụ kiện thể thao', slug: 'phu-kien-the-thao', sortOrder: 30,
-    description: 'Phụ kiện bảo hộ, bình nước, túi tập và thiết bị đo lường cho mọi bộ môn.',
-    imageUrl: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1200&q=80',
-    sourceUrl: 'https://baoansport.vn/phu-kien-the-thao/',
-  },
-];
-
-export const BAO_AN_CATEGORIES: readonly BaoAnDemoCategory[] = [
-  {
-    code: 'TREADMILL', name: 'Máy chạy bộ', slug: 'may-chay-bo', sortOrder: 40,
-    description: 'Máy chạy bộ gia đình và phòng gym, băng tải rộng, hỗ trợ bài tập cardio hằng ngày.',
-    imageUrl: 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?auto=format&fit=crop&w=1200&q=80',
-    sourceUrl: 'https://baoansport.vn/may-chay-bo/',
-  },
-  {
-    code: 'WEIGHT_BENCH', name: 'Ghế tập tạ', slug: 'ghe-tap-ta', sortOrder: 50,
-    description: 'Ghế tập đa năng, giàn tạ và phụ kiện thể hình cho phòng tập tại gia.',
-    imageUrl: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?auto=format&fit=crop&w=1200&q=80',
-    sourceUrl: 'https://baoansport.vn/ghe-tap-ta/',
-  },
-  {
-    code: 'MARTIAL_ARTS', name: 'Võ thuật & Boxing', slug: 'dung-cu-vo-thuat', sortOrder: 60,
-    description: 'Bao cát đấm bốc, găng tay đối kháng boxing và băng quấn tay thể thao.',
-    imageUrl: 'https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?auto=format&fit=crop&w=1200&q=80',
-    sourceUrl: 'https://baoansport.vn/dung-cu-vo-thuat/',
-  },
-  {
-    code: 'TABLE_TENNIS', name: 'Dụng cụ bóng bàn', slug: 'dung-cu-bong-ban', sortOrder: 70,
-    description: 'Bàn bóng bàn thi đấu đạt chuẩn ITTF, vợt carbon và máy bắn bóng tự động.',
-    imageUrl: 'https://images.unsplash.com/photo-1534158914592-062992fbe900?auto=format&fit=crop&w=1200&q=80',
-    sourceUrl: 'https://baoansport.vn/dung-cu-bong-ban/',
-  },
-  {
-    code: 'FOOTBALL', name: 'Bóng đá & Đồng đội', slug: 'bong-da', sortOrder: 80,
-    description: 'Quả bóng tiêu chuẩn FIFA, giày đinh sân cỏ nhân tạo và phụ kiện thủ môn.',
-    imageUrl: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=1200&q=80',
-    sourceUrl: 'https://baoansport.vn/bong-da/',
-  },
-  {
-    code: 'YOGA', name: 'Yoga & Phục hồi cơ', slug: 'yoga-phuc-hoi', sortOrder: 90,
-    description: 'Thảm định tuyến, con lăn foam roller, bóng gai massage và dây kháng lực.',
-    imageUrl: 'https://images.unsplash.com/photo-1599447421416-3414500d18a5?auto=format&fit=crop&w=1200&q=80',
-    sourceUrl: 'https://baoansport.vn/yoga/',
-  },
-  {
-    code: 'CYCLING', name: 'Xe đạp thể thao', slug: 'xe-dap-the-thao', sortOrder: 100,
-    description: 'Xe đạp kháng lực từ, xe đạp spinning và phụ kiện đồng hồ đo nhịp tim.',
-    imageUrl: 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=1200&q=80',
-    sourceUrl: 'https://baoansport.vn/xe-dap-the-thao/',
-  },
-];
+export const BAO_AN_CATEGORIES = [
+  { code: 'TREADMILL', name: 'Máy chạy bộ', slug: 'may-chay-bo', sortOrder: 40 },
+  { code: 'WEIGHT_BENCH', name: 'Ghế tập tạ', slug: 'ghe-tap-ta', sortOrder: 50 },
+  { code: 'MARTIAL_ARTS', name: 'Dụng cụ võ thuật', slug: 'dung-cu-vo-thuat', sortOrder: 60 },
+  { code: 'TABLE_TENNIS', name: 'Dụng cụ bóng bàn', slug: 'dung-cu-bong-ban', sortOrder: 70 },
+] as const;
 
 export const BAO_AN_PRODUCTS: readonly BaoAnDemoProduct[] = [
   {

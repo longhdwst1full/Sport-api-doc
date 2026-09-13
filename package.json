@@ -48,9 +48,7 @@
     "test:watch": "jest --watch",
     "test:e2e": "node --env-file-if-exists=.env.local scripts/run-jest.cjs --config test/jest-e2e.json",
     "verify": "yarn lint && yarn test && yarn build",
-    "gitnexus:analyze": "npx --yes gitnexus@1.6.9 analyze",
-    "prisma:seed:categories": "tsx --env-file-if-exists=.env.local prisma/seed-categories.ts",
-    "db:seed:categories": "yarn prisma:seed:categories"
+    "gitnexus:analyze": "npx --yes gitnexus@1.6.9 analyze"
   },
   "dependencies": {
     "@nestjs/common": "11.1.6",
