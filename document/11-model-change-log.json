@@ -1799,6 +1799,222 @@
           "values": { "Bảng con": "orders", "Cột FK": "reservation_id", "Bảng cha": "inventory_reservations", "Cột PK": "id", "Cardinality": "1 → 0..1", "ON DELETE": "RESTRICT", "Điểm cần kiểm tra": "Unique; TTL cron không release reservation đã có Order" }
         }
       ]
+    },
+    {
+      "id": "API-20260911-ORDER-OWN-TRANSITIONS",
+      "date": "2026-09-11",
+      "scope": "DATABASE+ORDER+OPENAPI+ADMIN+STOREFRONT+TEST+DOCUMENTATION",
+      "summary": "Bổ sung idempotency/request hash cho Order transition; guest/account own access và cancel release reservation atomically; Admin cancel hoặc complete sớm chỉ khi DELIVERED và Payment SUCCESS.",
+      "sources": [
+        "migration:20260911230000_add_order_transition_idempotency",
+        "operation:getGuestOrder/listAccountOrders/getAccountOrder/cancelGuestOrder/cancelAccountOrder/cancelAdminOrder/completeAdminOrder",
+        "test:test/order.integration-spec.ts",
+        "contract:document/api/admin/orders.yaml/document/api/storefront/orders.yaml",
+        "document:30-sprint-4-execution-plan.md@1.2.0",
+        "document:06-rules-and-state-machines.md@1.6.0"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "order_status_history" },
+          "columns": ["Unique / CHECK", "Các cột chính"],
+          "set": {
+            "Unique / CHECK": "order+sequence UQ; order+idempotency_key UQ; idempotency_key/request_hash both null or both set",
+            "Các cột chính": "from_status,to_status,reason,actor_type,actor_id,request_id,idempotency_key,request_hash,created_at"
+          }
+        }
+      ],
+      "upsertRows": [
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "order_status_history", "Tên cột": "idempotency_key" },
+          "values": { "Tên bảng": "order_status_history", "STT": "11", "Tên cột": "idempotency_key", "Kiểu dữ liệu": "varchar(150)", "Cho phép NULL": "YES", "Unique": "YES (theo order_id)", "Ý nghĩa / trạng thái cho phép": "Khóa retry-safe cho named transition; luôn đi cùng request_hash" }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "order_status_history", "Tên cột": "request_hash" },
+          "values": { "Tên bảng": "order_status_history", "STT": "12", "Tên cột": "request_hash", "Kiểu dữ liệu": "char(64)", "Cho phép NULL": "YES", "Ý nghĩa / trạng thái cho phép": "Phát hiện cùng idempotency key nhưng khác expectedVersion/reason/action" }
+        }
+      ]
+    },
+    {
+      "id": "API-20260911-ORDER-S41-HARDENING",
+      "date": "2026-09-11",
+      "scope": "ORDER+OPENAPI+ADMIN+STOREFRONT+PWA+TEST+DOCUMENTATION",
+      "summary": "Hardening S4.1: request hash transition bao gồm expectedVersion; list dùng summary projection; OpenAPI mô tả lỗi đầy đủ; Customer cache cô lập và Order routes luôn network-only trong PWA.",
+      "sources": [
+        "operation:getGuestOrder/cancelGuestOrder/placeAccountOrder/getAccountOrder/cancelAccountOrder/cancelAdminOrder/completeAdminOrder",
+        "test:test/order.integration-spec.ts/src/modules/order/services/order.service.spec.ts",
+        "document:30-sprint-4-execution-plan.md@1.2.1",
+        "document:06-rules-and-state-machines.md@1.6.1",
+        "client:src/features/orders/README.md@1.1.0/src/pwa/README.md@1.0.0",
+        "admin:src/features/orders/README.md@1.1.1"
+      ],
+      "targets": [],
+      "upsertRows": []
+    },
+    {
+      "id": "DBAPI-20260912-PAYMENT-S42",
+      "date": "2026-09-12",
+      "scope": "DATABASE+PAYMENT+ORDER+OPENAPI+ADMIN+STOREFRONT+TEST+DOCUMENTATION",
+      "summary": "Vật lý hóa Payment V1 bằng ba bảng BIGINT identity/RLS; transaction ledger append-only; evidence tham chiếu media asset đã verify; Admin/Storefront dùng SDK sinh từ OpenAPI và COD chỉ thu sau DELIVERED.",
+      "sources": [
+        "migration:20260912010000_add_payment_foundation",
+        "migration:20260912011000_backfill_order_payments",
+        "operation:getGuestPayment/createGuestPaymentEvidenceUpload/submitGuestPaymentEvidence/getAccountPayment/createAccountPaymentEvidenceUpload/submitAccountPaymentEvidence/listAdminPayments/getAdminPayment/confirmAdminPayment/rejectAdminPayment",
+        "test:src/modules/payment/services/payment.service.spec.ts/test/payment.integration-spec.ts",
+        "contract:document/api/admin/payments.yaml/document/api/storefront/payments.yaml",
+        "document:30-sprint-4-execution-plan.md@1.3.0",
+        "document:06-rules-and-state-machines.md@1.7.0"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": ["payments", "payment_transactions", "payment_evidences"] },
+          "columns": ["Khóa chính", "Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính"]
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "payments" },
+          "columns": ["Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính"],
+          "set": {
+            "Khóa ngoại quan trọng": "order_id->orders; confirmed_by->users",
+            "Unique / CHECK": "order_id UQ; payment_ref UQ; method/status/money CHECK",
+            "Các cột chính": "method,status,expected_amount,received_amount,currency_code,expires_at,confirmed_by,confirmed_at,failure_reason,version,created_at,updated_at"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "payment_transactions" },
+          "columns": ["Unique / CHECK", "Các cột chính"],
+          "set": {
+            "Unique / CHECK": "idempotency_key UQ; amount/status/type CHECK; UPDATE/DELETE/TRUNCATE blocked",
+            "Các cột chính": "transaction_type,provider,external_id,external_event_id,idempotency_key,request_hash,amount,currency_code,status,raw_payload_redacted,occurred_at,created_at"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "payment_evidences" },
+          "columns": ["Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính"],
+          "set": {
+            "Khóa ngoại quan trọng": "payment_id->payments; media_asset_id->media_assets; uploaded_by/reviewed_by->users",
+            "Unique / CHECK": "media_asset_id UQ; payment_id+file_hash UQ; uploader/status CHECK",
+            "Các cột chính": "uploader_type,guest_access_id,file_hash,note,status,reviewed_at,review_reason,created_at"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "payment_evidences", "Tên cột": ["file_url", "file_type", "file_size_bytes"] },
+          "columns": "*",
+          "archiveRemovedRowsTo": "Removed Columns"
+        }
+      ],
+      "upsertRows": [
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "payment_transactions", "Tên cột": "request_hash" },
+          "values": { "Tên bảng": "payment_transactions", "STT": "13", "Tên cột": "request_hash", "Kiểu dữ liệu": "char(64)", "Cho phép NULL": "NO", "Ý nghĩa / trạng thái cho phép": "Hash intent để phát hiện reuse Idempotency-Key khác payload" }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "payment_evidences", "Tên cột": "media_asset_id" },
+          "values": { "Tên bảng": "payment_evidences", "STT": "14", "Tên cột": "media_asset_id", "Kiểu dữ liệu": "bigint", "Cho phép NULL": "NO", "Unique": "YES", "Ý nghĩa / trạng thái cho phép": "FK media_assets đã được provider adapter verify" }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "payment_evidences", "Tên cột": "uploader_type" },
+          "values": { "Tên bảng": "payment_evidences", "STT": "15", "Tên cột": "uploader_type", "Kiểu dữ liệu": "varchar(24)", "Cho phép NULL": "NO", "Ý nghĩa / trạng thái cho phép": "GUEST|CUSTOMER" }
+        },
+        {
+          "sheet": "Relationships",
+          "match": { "Bảng con": "payment_evidences", "Cột FK": "media_asset_id" },
+          "values": { "Bảng con": "payment_evidences", "Cột FK": "media_asset_id", "Bảng cha": "media_assets", "Cột PK": "id", "Cardinality": "1 → 0..1", "ON DELETE": "RESTRICT", "Điểm cần kiểm tra": "Asset đã verify; media_asset_id unique" }
+        }
+      ]
+    },
+    {
+      "id": "API-20260912-ORDER-GUEST-HARDENING",
+      "date": "2026-09-12",
+      "scope": "ORDER+PAYMENT+OPENAPI+ADMIN+STOREFRONT+CACHE+IDEMPOTENCY+DOCUMENTATION",
+      "summary": "Manual complete được phép bất kỳ lúc nào sau DELIVERED và Payment SUCCESS; Guest token có TTL browser cấu hình và terminal cleanup; Payment mutation invalidate Payment/Order caches và chỉ reuse idempotency key khi payload không đổi.",
+      "sources": [
+        "operation:completeAdminOrder",
+        "test:test/order.integration-spec.ts",
+        "client:src/features/orders/guest-order-access.store.ts/src/features/orders/pages/order-detail-page.tsx",
+        "admin:src/features/payments/components/payment-detail-drawer.tsx",
+        "document:30-sprint-4-execution-plan.md@1.3.1",
+        "document:06-rules-and-state-machines.md@1.7.1"
+      ],
+      "targets": [],
+      "upsertRows": []
+    },
+    {
+      "id": "DBAPI-20260913-FULFILLMENT-S43",
+      "date": "2026-09-13",
+      "scope": "DATABASE+FULFILLMENT+INVENTORY+ORDER+PAYMENT+OPENAPI+ADMIN+WORKER+TEST+DOCUMENTATION",
+      "summary": "Vật lý hóa Fulfillment V1 và history append-only/idempotent; ship commit reservation và trừ tồn atomic; hàng giao thất bại quay về kho và chỉ SELLABLE restock; thêm payment-expiry/order-completion cron worker.",
+      "sources": [
+        "migration:20260912020000_add_fulfillment_foundation",
+        "migration:20260913010000_drop_unused_fulfillment_number_sequence",
+        "migration:20260913011000_add_fulfillment_delivery_permission",
+        "operation:confirmAdminOrder/listAdminFulfillments/getAdminFulfillmentByOrder/getAdminFulfillment/pickAdminFulfillment/packAdminFulfillment/shipAdminFulfillment/deliverAdminFulfillment/failAdminFulfillmentDelivery/receiveAdminFulfillmentReturn",
+        "test:test/fulfillment.integration-spec.ts/src/modules/payment/services/payment-expiry.service.spec.ts/src/modules/order/services/order-completion.service.spec.ts",
+        "contract:document/api/admin/fulfillments.yaml/document/api/admin/orders.yaml",
+        "document:30-sprint-4-execution-plan.md@1.4.0",
+        "document:06-rules-and-state-machines.md@1.8.0",
+        "document:31-order-maintenance-worker-runbook.md@1.0.0"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "fulfillments" },
+          "columns": ["Khóa chính", "Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính"],
+          "set": {
+            "Khóa chính": "id BIGINT IDENTITY",
+            "Khóa ngoại quan trọng": "order_id->orders; warehouse_id->warehouses",
+            "Unique / CHECK": "order_id UQ; fulfillment_no UQ; status/timestamp/return condition CHECK; RLS ON",
+            "Các cột chính": "status,carrier_code,tracking_no,picked_at,packed_at,shipped_at,delivered_at,delivery_failure_reason_code,returned_to_warehouse_at,return_condition,version"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": { "Tên bảng": "fulfillment_status_history" },
+          "columns": ["Khóa chính", "Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính"],
+          "set": {
+            "Khóa chính": "id BIGINT IDENTITY",
+            "Khóa ngoại quan trọng": "fulfillment_id->fulfillments; actor_id->users",
+            "Unique / CHECK": "fulfillment+sequence UQ; fulfillment+idempotency UQ; key/hash pair CHECK; append-only",
+            "Các cột chính": "from_status,to_status,reason,actor_id,request_id,idempotency_key,request_hash,metadata_json,created_at"
+          }
+        }
+      ],
+      "upsertRows": [
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "fulfillment_status_history", "Tên cột": "idempotency_key" },
+          "values": { "Tên bảng": "fulfillment_status_history", "STT": "11", "Tên cột": "idempotency_key", "Kiểu dữ liệu": "varchar(150)", "Cho phép NULL": "YES", "Unique": "YES (theo fulfillment_id)", "Ý nghĩa / trạng thái cho phép": "Khóa retry-safe cho transition; luôn đi cùng request_hash" }
+        },
+        {
+          "sheet": "Columns",
+          "match": { "Tên bảng": "fulfillment_status_history", "Tên cột": "request_hash" },
+          "values": { "Tên bảng": "fulfillment_status_history", "STT": "12", "Tên cột": "request_hash", "Kiểu dữ liệu": "char(64)", "Cho phép NULL": "YES", "Ý nghĩa / trạng thái cho phép": "Hash intent action/ID/version/payload" }
+        },
+        {
+          "sheet": "Relationships",
+          "match": { "Bảng con": "fulfillments", "Cột FK": "order_id" },
+          "values": { "Bảng con": "fulfillments", "Cột FK": "order_id", "Bảng cha": "orders", "Cột PK": "id", "Cardinality": "1 → 1", "ON DELETE": "RESTRICT", "Điểm cần kiểm tra": "Unique; đúng một Fulfillment cho mỗi Order V1" }
+        },
+        {
+          "sheet": "Relationships",
+          "match": { "Bảng con": "fulfillments", "Cột FK": "warehouse_id" },
+          "values": { "Bảng con": "fulfillments", "Cột FK": "warehouse_id", "Bảng cha": "warehouses", "Cột PK": "id", "Cardinality": "1 → n", "ON DELETE": "RESTRICT", "Điểm cần kiểm tra": "Phải bằng orders.warehouse_id và reservation.warehouse_id" }
+        },
+        {
+          "sheet": "Relationships",
+          "match": { "Bảng con": "fulfillment_status_history", "Cột FK": "fulfillment_id" },
+          "values": { "Bảng con": "fulfillment_status_history", "Cột FK": "fulfillment_id", "Bảng cha": "fulfillments", "Cột PK": "id", "Cardinality": "1 → n", "ON DELETE": "RESTRICT", "Điểm cần kiểm tra": "Append-only; sequence/idempotency unique" }
+        }
+      ]
     }
   ]
 }

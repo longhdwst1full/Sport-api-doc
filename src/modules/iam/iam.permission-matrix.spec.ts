@@ -27,6 +27,7 @@ describe('V1 complete role-permission matrix', () => {
     'fulfillment.pick',
     'fulfillment.pack',
     'fulfillment.ship',
+    'fulfillment.delivery_update',
     'return.view',
     'return.decide',
     'return.receive',
@@ -50,6 +51,7 @@ describe('V1 complete role-permission matrix', () => {
     'fulfillment.pick',
     'fulfillment.pack',
     'fulfillment.ship',
+    'fulfillment.delivery_update',
     'return.view',
     'return.receive',
   ];

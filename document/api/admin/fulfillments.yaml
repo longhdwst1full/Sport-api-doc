@@ -1,0 +1,718 @@
+# Generated from NestJS decorators. Do not edit by hand.
+openapi: 3.0.0
+info:
+  title: DCTD-UTC Commerce API
+  description: Contract for storefront and admin applications
+  version: 1.0.0
+  contact: {}
+servers:
+  - url: http://localhost:4000
+    description: Local
+paths:
+  /api/v1/admin/fulfillments:
+    get:
+      operationId: listAdminFulfillments
+      parameters:
+        - name: page
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            default: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 20
+            type: number
+        - name: status
+          required: false
+          in: query
+          schema:
+            type: string
+            enum:
+              - PENDING
+              - PICKING
+              - PACKED
+              - SHIPPED
+              - DELIVERED
+              - DELIVERY_FAILED
+              - RETURNING_TO_WAREHOUSE
+              - RETURNED_TO_WAREHOUSE
+              - CANCELLED
+        - name: search
+          required: false
+          in: query
+          description: Mã fulfillment, mã đơn, tracking, tên hoặc SĐT người nhận
+          schema:
+            maxLength: 100
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminFulfillmentListDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Danh sách giao vận theo kho, trạng thái và thông tin đơn hàng
+      tags:
+        - Admin Fulfillments
+  /api/v1/admin/fulfillments/by-order/{orderId}:
+    get:
+      operationId: getAdminFulfillmentByOrder
+      parameters:
+        - name: orderId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FulfillmentDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Chi tiết giao vận của một đơn hàng
+      tags:
+        - Admin Fulfillments
+  /api/v1/admin/fulfillments/{id}:
+    get:
+      operationId: getAdminFulfillment
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FulfillmentDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Chi tiết và lịch sử giao vận
+      tags:
+        - Admin Fulfillments
+  /api/v1/admin/fulfillments/{id}/pick:
+    post:
+      operationId: pickAdminFulfillment
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: idempotency-key
+          required: true
+          in: header
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FulfillmentTransitionDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FulfillmentDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Bắt đầu lấy hàng trong kho
+      tags:
+        - Admin Fulfillments
+  /api/v1/admin/fulfillments/{id}/pack:
+    post:
+      operationId: packAdminFulfillment
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: idempotency-key
+          required: true
+          in: header
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FulfillmentTransitionDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FulfillmentDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Xác nhận đã đóng gói toàn bộ đơn
+      tags:
+        - Admin Fulfillments
+  /api/v1/admin/fulfillments/{id}/ship:
+    post:
+      operationId: shipAdminFulfillment
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: idempotency-key
+          required: true
+          in: header
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShipFulfillmentDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FulfillmentDetailDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Bàn giao vận chuyển và commit tồn kho atomically
+      tags:
+        - Admin Fulfillments
+  /api/v1/admin/fulfillments/{id}/deliver:
+    post:
+      operationId: deliverAdminFulfillment
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: idempotency-key
+          required: true
+          in: header
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FulfillmentTransitionDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FulfillmentDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Xác nhận khách đã nhận đủ hàng
+      tags:
+        - Admin Fulfillments
+  /api/v1/admin/fulfillments/{id}/fail-delivery:
+    post:
+      operationId: failAdminFulfillmentDelivery
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: idempotency-key
+          required: true
+          in: header
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FailDeliveryDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FulfillmentDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Ghi nhận giao thất bại và đưa hàng về kho xuất
+      tags:
+        - Admin Fulfillments
+  /api/v1/admin/fulfillments/{id}/receive-return:
+    post:
+      operationId: receiveAdminFulfillmentReturn
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: idempotency-key
+          required: true
+          in: header
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReceiveReturnDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FulfillmentDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Kho nhận hàng giao thất bại; chỉ SELLABLE được hoàn tồn bán
+      tags:
+        - Admin Fulfillments
+components:
+  schemas:
+    AdminFulfillmentListDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/FulfillmentSummaryDto"
+        page:
+          type: number
+        limit:
+          type: number
+        total:
+          type: number
+      required:
+        - items
+        - page
+        - limit
+        - total
+    ErrorResponseDto:
+      type: object
+      properties:
+        statusCode:
+          type: number
+          example: 400
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: Dữ liệu gửi lên không hợp lệ.
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorDetailDto"
+        path:
+          type: string
+          example: /api/v1/catalog/products
+        method:
+          type: string
+          example: POST
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+      required:
+        - statusCode
+        - code
+        - message
+        - path
+        - method
+        - timestamp
+    FulfillmentDetailDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        fulfillmentNo:
+          type: string
+        orderId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        orderNo:
+          type: string
+        warehouseId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        warehouseName:
+          type: string
+        status:
+          type: string
+          enum:
+            - PENDING
+            - PICKING
+            - PACKED
+            - SHIPPED
+            - DELIVERED
+            - DELIVERY_FAILED
+            - RETURNING_TO_WAREHOUSE
+            - RETURNED_TO_WAREHOUSE
+            - CANCELLED
+        carrierCode:
+          type: string
+          nullable: true
+        trackingNo:
+          type: string
+          nullable: true
+        recipientName:
+          type: string
+        recipientPhone:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        version:
+          type: string
+        orderStatus:
+          type: string
+        paymentStatus:
+          type: string
+        paymentMethod:
+          type: string
+        pickedAt:
+          type: string
+          format: date-time
+          nullable: true
+        packedAt:
+          type: string
+          format: date-time
+          nullable: true
+        shippedAt:
+          type: string
+          format: date-time
+          nullable: true
+        deliveredAt:
+          type: string
+          format: date-time
+          nullable: true
+        deliveryFailureReasonCode:
+          type: string
+          nullable: true
+        returnedToWarehouseAt:
+          type: string
+          format: date-time
+          nullable: true
+        returnCondition:
+          type: string
+          nullable: true
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/FulfillmentHistoryDto"
+      required:
+        - id
+        - fulfillmentNo
+        - orderId
+        - orderNo
+        - warehouseId
+        - warehouseName
+        - status
+        - recipientName
+        - recipientPhone
+        - createdAt
+        - version
+        - orderStatus
+        - paymentStatus
+        - paymentMethod
+        - history
+    FulfillmentTransitionDto:
+      type: object
+      properties:
+        expectedVersion:
+          type: string
+          pattern: ^\d+$
+        note:
+          type: string
+          maxLength: 500
+      required:
+        - expectedVersion
+    ShipFulfillmentDto:
+      type: object
+      properties:
+        expectedVersion:
+          type: string
+          pattern: ^\d+$
+        note:
+          type: string
+          maxLength: 500
+        carrierCode:
+          type: string
+          maxLength: 64
+        trackingNo:
+          type: string
+          maxLength: 128
+      required:
+        - expectedVersion
+    FailDeliveryDto:
+      type: object
+      properties:
+        expectedVersion:
+          type: string
+          pattern: ^\d+$
+        note:
+          type: string
+          maxLength: 500
+        reasonCode:
+          type: string
+          minLength: 2
+          maxLength: 64
+        reason:
+          type: string
+          minLength: 5
+          maxLength: 500
+      required:
+        - expectedVersion
+        - reasonCode
+        - reason
+    ReceiveReturnDto:
+      type: object
+      properties:
+        expectedVersion:
+          type: string
+          pattern: ^\d+$
+        note:
+          type: string
+          maxLength: 500
+        condition:
+          type: string
+          enum:
+            - SELLABLE
+            - DAMAGED
+            - MISSING
+        reason:
+          type: string
+          minLength: 5
+          maxLength: 500
+      required:
+        - expectedVersion
+        - condition
+        - reason
+    FulfillmentSummaryDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        fulfillmentNo:
+          type: string
+        orderId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        orderNo:
+          type: string
+        warehouseId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        warehouseName:
+          type: string
+        status:
+          type: string
+          enum:
+            - PENDING
+            - PICKING
+            - PACKED
+            - SHIPPED
+            - DELIVERED
+            - DELIVERY_FAILED
+            - RETURNING_TO_WAREHOUSE
+            - RETURNED_TO_WAREHOUSE
+            - CANCELLED
+        carrierCode:
+          type: string
+          nullable: true
+        trackingNo:
+          type: string
+          nullable: true
+        recipientName:
+          type: string
+        recipientPhone:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        version:
+          type: string
+      required:
+        - id
+        - fulfillmentNo
+        - orderId
+        - orderNo
+        - warehouseId
+        - warehouseName
+        - status
+        - recipientName
+        - recipientPhone
+        - createdAt
+        - version
+    ErrorDetailDto:
+      type: object
+      properties:
+        field:
+          type: string
+          example: name
+        code:
+          type: string
+          example: INVALID_VALUE
+        message:
+          type: string
+          example: 'Trường "name": Trường này không được để trống.'
+      required:
+        - code
+        - message
+    FulfillmentHistoryDto:
+      type: object
+      properties:
+        sequenceNo:
+          type: number
+        fromStatus:
+          type: string
+          nullable: true
+        toStatus:
+          type: string
+          enum:
+            - PENDING
+            - PICKING
+            - PACKED
+            - SHIPPED
+            - DELIVERED
+            - DELIVERY_FAILED
+            - RETURNING_TO_WAREHOUSE
+            - RETURNED_TO_WAREHOUSE
+            - CANCELLED
+        reason:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - sequenceNo
+        - toStatus
+        - createdAt
+  securitySchemes:
+    bearer:
+      scheme: bearer
+      bearerFormat: JWT
+      type: http

@@ -1,10 +1,10 @@
 # Business rules và state machine V1
 
-> **Document version:** 1.5.0
+> **Document version:** 1.8.0
 >
-> **Last updated:** 2026-09-08
+> **Last updated:** 2026-09-13
 >
-> **Change summary:** Bổ sung quy tắc hết hạn reservation và worker chạy định kỳ trên Supabase Cron.
+> **Change summary:** Hiện thực Fulfillment transition, payment-expiry và auto-completion bằng secured cron worker.
 
 ## 0. Customer identity V1
 
@@ -43,19 +43,21 @@
 ## 2. Order
 
 ```text
-PENDING_PAYMENT ──payment success──> CONFIRMED ──pick──> PROCESSING
-       │                                  │                 │
-       ├──customer/admin cancel──────────> CANCELLED         ├──delivered/close──> COMPLETED
-       └──payment expiry─────────────────> CANCELLED         └──exception───────> PROCESSING
+PENDING_CONFIRMATION -> CONFIRMED -> PICKING -> PACKED -> SHIPPED -> DELIVERED -> COMPLETED
+        │
+        └── customer/admin cancel trước payment/fulfillment ───────────────> CANCELLED
 ```
 
 | From | To | Điều kiện | Side effect |
 |---|---|---|---|
-| create | PENDING_PAYMENT | Quote còn hạn; reserve toàn bộ | Tạo payment và outbox |
-| PENDING_PAYMENT | CONFIRMED | Payment SUCCESS; reservation ACTIVE | Giữ reservation ACTIVE; tạo fulfillment |
-| PENDING_PAYMENT | CANCELLED | Chưa payment success | Release reservation/quota |
-| CONFIRMED | PROCESSING | Fulfillment bắt đầu pick | Ghi history |
-| PROCESSING | COMPLETED | Delivered và hết hold/được confirm | Ghi nhận revenue event |
+| create | PENDING_CONFIRMATION | Checkout CONFIRMED; reservation ACTIVE | Tạo Order snapshot; Payment được tạo ở S4.2 |
+| PENDING_CONFIRMATION | CANCELLED | Payment PENDING; Fulfillment PENDING | Release reservation atomically; history + audit |
+| PENDING_CONFIRMATION | CONFIRMED | Payment/ops policy hợp lệ | Tạo fulfillment và ghi history |
+| CONFIRMED | PICKING | Kho bắt đầu pick | Ghi fulfillment/order history |
+| PICKING | PACKED | Đủ toàn bộ item/component | Ghi history |
+| PACKED | SHIPPED | Payment precondition đúng | Commit reservation và trừ kho atomically |
+| SHIPPED | DELIVERED | Carrier/nhân viên xác nhận giao | Bắt đầu hold 72 giờ |
+| DELIVERED | COMPLETED | Hết 72 giờ không khiếu nại, hoặc Admin manual complete bất kỳ lúc nào khi Payment SUCCESS | Ghi nhận revenue event; reason/audit nếu complete tay |
 
 Không có transition quay lại. Sửa sai bằng command riêng và history. `CANCELLED`/`COMPLETED` là terminal trong V1.
 
@@ -76,6 +78,10 @@ SUCCESS -> REFUND_PENDING -> REFUNDED
 - `BANK_TRANSFER`: khách thanh toán đủ một lần trước khi xử lý giao; thiếu/thừa tiền vào `NEED_REVIEW`.
 - `COD`: payment giữ `PENDING/AWAITING_COLLECTION` khi tạo đơn và trong quá trình giao; chỉ carrier callback hoặc nhân viên có quyền xác nhận thu đủ mới chuyển `SUCCESS`.
 - COD phải lưu method, số tiền cần thu/thực thu, carrier/reference, thời điểm thu và note/reason. Doanh thu chỉ ghi nhận khi Order `COMPLETED`, không ghi nhận khi vừa tạo COD.
+- Mỗi review gửi `expectedVersion` và `Idempotency-Key`; cùng key/payload replay kết quả, cùng key khác payload trả conflict.
+- `payment_transactions` append-only. Payment và `orders.payment_status` phải đổi cùng transaction hoặc cùng rollback.
+- `PAYMENT_TIMEOUT_MINUTES` mặc định 30 phút; evidence hợp lệ đã nộp chuyển `AWAITING_CONFIRMATION` và không được worker tự expire.
+- Worker payment expiry claim theo `FOR UPDATE SKIP LOCKED`; trong cùng transaction release `reserved`, cancel reservation/payment/order/fulfillment và ghi ledger/audit. Số `claimed` và `expired` được báo riêng để nhận biết race có evidence.
 
 ## 4. Fulfillment
 
@@ -88,7 +94,8 @@ PENDING -> PICKING -> PACKED -> SHIPPED -> DELIVERED
 - V1 một fulfillment/order. Không giao một phần.
 - `SHIPPED` là điểm trừ tồn vật lý. Mọi item phải có committed reservation đủ số lượng.
 - `DELIVERED` không trực tiếp thay order thành completed nếu còn hold window.
-- Giao thất bại bắt buộc reason; hàng về đúng kho xuất. Chỉ hàng kiểm tra `RESTOCK` mới tăng lại sellable stock.
+- Giao thất bại bắt buộc reason; hàng về đúng kho xuất. Chỉ condition `SELLABLE` mới tăng lại sellable stock; `DAMAGED/MISSING` không cộng tồn bán.
+- Worker completion chỉ claim Order `DELIVERED + Payment SUCCESS + Fulfillment DELIVERED` quá `ORDER_COMPLETION_HOLD_HOURS`; Admin manual complete vẫn cần reason/audit và không phải chờ hold.
 
 ## 5. Inventory reservation
 
@@ -163,6 +170,7 @@ Không áp dụng mặc định cho sửa tên sản phẩm, nội dung CMS hay 
 - `422 UNPROCESSABLE_ENTITY`: rule nghiệp vụ không đạt.
 - `403 FORBIDDEN`: permission hoặc data scope không đạt; không dùng 404 để che nếu policy không yêu cầu.
 - Retry chỉ an toàn cho command có idempotency key. Client dùng exponential backoff với network/5xx, không retry mù 4xx.
+- Request hash của Order transition tối thiểu gồm action, Order ID, `expectedVersion` và payload nghiệp vụ đã normalize; cùng key nhưng khác một trường phải trả `409`.
 - Test concurrency tối thiểu 20–100 request tranh cùng SKU/quota và chứng minh không oversell.
 
 ## 10A. Combo cố định
@@ -209,6 +217,11 @@ UPLOADING -> ACTIVE -> DELETING -> DELETED
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.8.0 | 2026-09-13 | Hiện thực Fulfillment, hàng hoàn SELLABLE và maintenance worker payment-expiry/auto-complete. | DBAPI-20260913-FULFILLMENT-S43 |
+| 1.7.1 | 2026-09-12 | Chốt manual complete không giới hạn trong ngày sau khi giao đủ và thu đủ tiền. | API-20260912-ORDER-GUEST-HARDENING |
+| 1.7.0 | 2026-09-12 | Đồng bộ state, exact amount, COD delivery gate và idempotent review của Payment V1. | DBAPI-20260912-PAYMENT-S42 |
+| 1.6.1 | 2026-09-11 | Khóa semantics request hash Order transition theo action/ID/version/payload. | API-20260911-ORDER-S41-HARDENING |
+| 1.6.0 | 2026-09-11 | Đồng bộ Order state thật; cancel release atomic; auto-complete 72 giờ và Admin complete sớm có điều kiện. | API-20260911-ORDER-OWN-TRANSITIONS / D05 |
 | 1.5.0 | 2026-09-08 | Thêm invariant và vận hành expiry reservation bằng Supabase Cron. | API-20260908-RESERVATION-EXPIRY-WORKER |
 | 1.4.0 | 2026-09-08 | Chốt vòng tư vấn giao hàng có scoped Admin list, optimistic version và Client reload quote. | API-20260908-CHECKOUT-CONSULTATION-ROUNDTRIP |
 | 1.3.0 | 2026-09-08 | Thêm STANDARD_DELIVERY với ba mức phí env; carrier mặc định tắt đến khi có credential thật. | DBAPI-20260908-DEFAULT-SHIPPING-RATES |

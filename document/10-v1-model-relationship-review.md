@@ -1,10 +1,10 @@
 # V1 model và quan hệ — bản review
 
-> **Document version:** 3.3.0
+> **Document version:** 3.5.0
 >
-> **Last updated:** 2026-09-11
+> **Last updated:** 2026-09-13
 >
-> **Change summary:** Áp dụng Order foundation vật lý: mỗi checkout/reservation tối đa một Order, recipient email snapshot và 5 bảng RLS deny-by-default.
+> **Change summary:** Áp dụng Fulfillment V1 vật lý, một fulfillment/order/warehouse và history append-only idempotent.
 
 File nguồn ERD: `09-v1-model.dbml`. Copy toàn bộ nội dung vào dbdiagram.io để xem và kéo thả sơ đồ.
 
@@ -111,7 +111,9 @@ Sơ đồ trên chỉ hiển thị aggregate lõi. File DBML chứa toàn bộ 7
 | `orders` | `order_addresses` | 1 → 1 shipping | RESTRICT | Snapshot, không FK customer address |
 | `orders` | `payments` | 1 → 1 | RESTRICT | Đây là giới hạn V1; V2 đổi 1 → n nếu split/retry payment aggregate |
 | `payments` | `payment_transactions` | 1 → n | RESTRICT | Attempt/webhook append-only |
+| `media_assets` | `payment_evidences` | 1 → 0..1 | RESTRICT | Chỉ lưu evidence sau provider verify; một asset không gắn nhiều evidence |
 | `orders` | `fulfillments` | 1 → 1 | RESTRICT | Đây là giới hạn V1; V2 đổi 1 → n khi split shipment |
+| `fulfillments` | `fulfillment_status_history` | 1 → n | RESTRICT | History append-only; sequence và idempotency unique theo fulfillment |
 | `shipping_zones` | `shipping_rates` | 1 → n | RESTRICT | Rate có thể mặc định hoặc override theo branch |
 | `carts/customers/branches/warehouses` | `checkout_sessions` | n → 1 | RESTRICT | Quote snapshot một branch đủ toàn bộ cart; payment/shipping dimension dùng cho Order/Payment Sprint 4 |
 | `orders` | `return_requests` | 1 → 0..1 active | RESTRICT | Chọn item/quantity; combo trả nguyên bộ |
@@ -278,6 +280,8 @@ Quy tắc:
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 3.5.0 | 2026-09-13 | Vật lý hóa quan hệ Order–Fulfillment–History và khóa retry-safe cho transition. | DBAPI-20260913-FULFILLMENT-S43 |
+| 3.4.0 | 2026-09-12 | Vật lý hóa Payment aggregate và quan hệ evidence-media asset. | DBAPI-20260912-PAYMENT-S42 |
 | 3.3.0 | 2026-09-11 | Vật lý hóa Order foundation, unique checkout/reservation và snapshot email người nhận. | API-20260911-ORDER-FOUNDATION |
 | 3.2.0 | 2026-09-08 | Thêm checkout auto-branch, carrier/manual shipping và BANK_TRANSFER/COD snapshot, không thêm bảng. | DBAPI-20260908-CHECKOUT-SHIPPING-COD |
 | 3.1.0 | 2026-09-08 | Bỏ system_settings; TTL reservation chuyển sang validated environment. | D02 / D45 / DB-20260908-CONFIG-ENV |

@@ -117,6 +117,8 @@ paths:
               - RECEIVE
               - TRANSFER_OUT
               - TRANSFER_IN
+              - SALE_SHIP
+              - DELIVERY_RETURN_RESTOCK
         - name: referenceType
           required: false
           in: query
@@ -1131,6 +1133,8 @@ components:
             - RECEIVE
             - TRANSFER_OUT
             - TRANSFER_IN
+            - SALE_SHIP
+            - DELIVERY_RETURN_RESTOCK
         quantityDelta:
           type: number
         balanceAfter:

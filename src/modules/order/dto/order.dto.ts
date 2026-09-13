@@ -1,6 +1,6 @@
 import { Transform, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
 import { ENTITY_ID_OPENAPI } from '../../../common/identifiers/entity-id';
 import {
   ORDER_FULFILLMENT_STATUS,
@@ -45,6 +45,68 @@ export class AdminOrderQueryDto {
   @MaxLength(100)
   @IsOptional()
   search?: string;
+}
+
+export class AccountOrderQueryDto {
+  @ApiPropertyOptional({ type: Number, default: 1, minimum: 1 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  page = 1;
+
+  @ApiPropertyOptional({ type: Number, default: 20, minimum: 1, maximum: 100 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  @IsOptional()
+  limit = 20;
+}
+
+export class OrderCancelCommandDto {
+  @ApiProperty({ type: Number, minimum: 0, description: 'Version đơn hàng mà người dùng đang xem' })
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  expectedVersion: number;
+
+  @ApiProperty({ minLength: 3, maxLength: 500 })
+  @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
+  @IsString()
+  @MinLength(3)
+  @MaxLength(500)
+  reason: string;
+}
+
+export class CompleteOrderCommandDto {
+  @ApiProperty({ type: Number, minimum: 0, description: 'Version đơn hàng mà Admin đang xem' })
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  expectedVersion: number;
+
+  @ApiProperty({ minLength: 5, maxLength: 500, description: 'Lý do chắc chắn giao đủ và hoàn tất sớm' })
+  @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
+  @IsString()
+  @MinLength(5)
+  @MaxLength(500)
+  reason: string;
+}
+
+export class ConfirmOrderCommandDto {
+  @ApiProperty({ type: Number, minimum: 0, description: 'Version đơn hàng mà Admin đang xem' })
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  expectedVersion: number;
+
+  @ApiPropertyOptional({ maxLength: 500, description: 'Ghi chú xác nhận để kho bắt đầu xử lý' })
+  @Transform(trimOptional)
+  @IsString()
+  @MaxLength(500)
+  @IsOptional()
+  note?: string;
 }
 
 export class OrderRecipientDto {
@@ -113,6 +175,8 @@ export class AdminOrderListDto {
   @ApiProperty() total: number;
 }
 
+export class AccountOrderListDto extends AdminOrderListDto {}
+
 export class OrderDetailDto extends AdminOrderSummaryDto {
   @ApiProperty() currencyCode: string;
   @ApiProperty() pricesIncludeTax: boolean;
@@ -125,3 +189,9 @@ export class OrderDetailDto extends AdminOrderSummaryDto {
   @ApiProperty({ type: [OrderStatusHistoryDto] }) statusHistory: OrderStatusHistoryDto[];
 }
 
+export class GuestOrderPlacementDto extends OrderDetailDto {
+  @ApiProperty({
+    description: 'Token bí mật dùng cùng mã đơn để Guest xem/hủy đơn; hiện dùng cùng token của guest cart',
+  })
+  guestAccessToken: string;
+}

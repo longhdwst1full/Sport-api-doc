@@ -1,5 +1,6 @@
 import { PrismaService } from '../../../database/prisma.service';
 import { Prisma } from '@prisma/client';
+import { ConfigService } from '@nestjs/config';
 import type { AuthPrincipal } from '../../auth/auth.types';
 import { AuditWriter } from '../../audit/audit.writer';
 import { CartService } from '../../cart/cart.service';
@@ -17,6 +18,7 @@ describe('OrderService admin query', () => {
     prisma,
     {} as CartService,
     {} as AuditWriter,
+    { get: jest.fn().mockReturnValue(30) } as unknown as ConfigService,
   );
   const principal = (scopes: AuthPrincipal['scopes']): AuthPrincipal => ({
     userId: '1',
@@ -44,6 +46,9 @@ describe('OrderService admin query', () => {
         ],
       },
     }));
+    const include = findMany.mock.calls[0]?.[0].include as Record<string, unknown>;
+    expect(include).not.toHaveProperty('statusHistory');
+    expect(include.items).toEqual({ select: { quantity: true } });
   });
 
   it('applies branch scope and server-side recipient/order search together', async () => {

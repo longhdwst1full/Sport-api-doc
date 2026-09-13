@@ -1,10 +1,10 @@
 # Sprint 4 — Order, Payment & Fulfillment Safe Flow
 
-> **Document version:** 1.1.0
+> **Document version:** 1.4.0
 >
-> **Last updated:** 2026-09-11
+> **Last updated:** 2026-09-13
 >
-> **Change summary:** Hoàn thành S4.1 Order foundation, OpenAPI/SDK và Admin/Storefront round-trip; giữ Payment/Fulfillment ở các wave kế tiếp.
+> **Change summary:** Hoàn thiện Fulfillment, stock commit/return, worker Payment expiry/Order completion, OpenAPI và Admin workflow.
 
 ## 1. Mục tiêu Sprint
 
@@ -109,58 +109,70 @@ Retry cùng key/payload trả kết quả cũ; cùng key khác payload trả `40
 - [x] Create Order idempotent guest/account; ownership và unique checkout/reservation.
 - [x] Admin list/detail theo branch scope, 5 tab và search server-side order/recipient.
 - [x] OpenAPI export + Admin/Storefront SDK generation; Storefront chỉ clear cart sau khi Order tạo thành công.
-- [ ] Cancel own order và guest/account order detail route; thực hiện cùng release reservation trong wave tiếp theo.
+- [x] Guest/account order list-detail và cancel atomic với release reservation; Admin cancel/manual complete theo scope.
+- [x] Transition dùng expected version + idempotency key/request hash; OpenAPI và hai SDK đã regenerate.
+- [x] Hardening list projection, branch-scope/replay-conflict evidence, Account cache isolation và PWA offline boundary.
 
 ### S4.2 — Payment
 
-- Payment/evidence/transaction persistence và state policy.
-- BANK_TRANSFER manual confirmation + COD collection.
-- Admin payment queue/detail/action; Storefront instruction/evidence state.
+- [x] Payment/evidence/transaction persistence, RLS deny-by-default và append-only transaction ledger.
+- [x] BANK_TRANSFER manual evidence/confirmation, exact-amount review và COD collection gate sau `DELIVERED`.
+- [x] Admin payment queue/detail/action; Storefront instruction/evidence state; OpenAPI và hai SDK regenerate.
+- [x] Unit + PostgreSQL integration cho branch scope, amount mismatch, optimistic version và idempotency replay/conflict.
+- [x] Expiry worker cho BANK_TRANSFER quá hạn; evidence đã nộp chặn auto-expire; claim/processed metric tách biệt.
 
 ### S4.3 — Fulfillment và stock commit
 
-- Fulfillment persistence và transition policy.
-- Atomic ship transaction + movement/reconciliation/concurrency tests.
-- Admin picking/packing/shipping/delivery UI.
+- [x] Fulfillment persistence, history append-only, RLS deny-by-default và transition policy.
+- [x] Atomic ship transaction giảm `on_hand + reserved`, commit reservation, movement idempotent và integration test.
+- [x] Delivery failed quay về đúng kho; chỉ `SELLABLE` restock sau khi kho nhận thực tế.
+- [x] Admin confirm/pick/pack/ship/deliver/fail/receive-return qua generated SDK và cache invalidation.
+- [x] Worker auto-complete sau hold env; Admin vẫn được complete tay sau DELIVERED + Payment SUCCESS.
 
 ### S4.4 — Hardening/close
 
-- API unit/integration/E2E; FE generated-contract drift, build/Storybook/browser E2E.
-- RLS audit, permission/scope/IDOR, idempotency/concurrency evidence.
-- Cập nhật DBML/catalog/relationship/decision/change-log/workbook/OpenAPI/status.
+- [x] API unit/integration, FE generated-contract drift, build và Storybook.
+- [x] RLS audit, permission/scope/IDOR, idempotency/concurrency evidence ở service/integration level.
+- [x] Cập nhật DBML/catalog/relationship/decision/change-log/workbook/OpenAPI/status.
+- [ ] Browser E2E trên deployment chung và quan sát Supabase Cron là release evidence ngoài codebase.
 
 ## 7. Decision gate cho các wave còn lại
 
-### S4-D01 — Order completion/revenue
+### S4-D01 — Order completion/revenue — DECIDED
 
-Đề xuất: `DELIVERED` chưa ghi nhận doanh thu ngay; tự chuyển `COMPLETED` sau 3 ngày không có khiếu nại, hoặc Admin có quyền xác nhận sớm. Hold time dùng env `ORDER_COMPLETION_HOLD_HOURS=72`.
+`DELIVERED` chưa ghi nhận doanh thu ngay; tự chuyển `COMPLETED` sau 72 giờ không có khiếu nại. Admin được manual complete bất kỳ thời điểm nào sau khi Order/Fulfillment đã `DELIVERED` và Payment `SUCCESS`; reason và audit bắt buộc. Hold time dùng validated env `ORDER_COMPLETION_HOLD_HOURS=72`.
 
-### S4-D02 — Bank transfer V1
+### S4-D02 — Bank transfer V1 — DECIDED
 
-Đề xuất: chuyển khoản thủ công một lần đủ tiền, customer có thể gửi evidence; Admin xác nhận reference/amount rồi mới `SUCCESS`. Chưa tích hợp gateway/QR production; COD vẫn theo D34.
+Chuyển khoản thủ công một lần đủ tiền, customer có thể gửi evidence; Admin xác nhận reference/amount rồi mới `SUCCESS`. Chưa tích hợp gateway/QR production; COD vẫn theo D34.
 
-### S4-D03 — Guest order access
+### S4-D03 — Guest order access — DECIDED
 
-Đề xuất: khi tạo Order trả raw guest access token đúng một lần, database chỉ lưu hash. Guest dùng `order_no + token` để xem/hủy trước payment; chưa gửi SMS/email tự động khi chưa có provider. Account chỉ truy cập order thuộc chính customer đã link.
+Khi tạo Order trả guest access token về đúng trình duyệt đặt hàng; database chỉ giữ SHA-256 hash trên cart. Guest dùng `order_no + token` để xem/hủy đơn; browser lưu tối đa `NEXT_PUBLIC_GUEST_ORDER_TOKEN_TTL_DAYS` (mặc định 90 ngày) và dọn persistent token ngay khi đọc thấy `COMPLETED/CANCELLED`. Chưa gửi SMS/email tự động khi chưa có provider. Account chỉ truy cập Order thuộc chính customer đã link.
 
-Order foundation không phụ thuộc completion worker hoặc guest read token nên đã được triển khai theo xác nhận ngày 2026-09-11. Chưa tạo Payment/Fulfillment completion worker và guest read/cancel API cho đến khi các decision tương ứng được xác nhận hoặc sửa rõ ràng.
+Ba decision được chốt ngày 2026-09-11. S4.1 đã triển khai guest/account own access, cancel và Admin complete sớm; worker auto-complete được triển khai cùng Fulfillment để không chạy trước khi có delivery aggregate thật.
 
 ## 8. Definition of Done Sprint 4
 
 - [x] Order migration chạy trên Supabase dev; RLS deny-by-default; migration forward-only rõ.
 - [x] Tạo Order retry-safe, không tạo Order trùng; Payment aggregate thực hiện ở S4.2.
-- [ ] Payment state/amount/reference/evidence/audit đúng một lần đủ tiền.
-- [ ] Ship atomic: không double decrement và không `reserved > on_hand`/âm tồn.
-- [ ] Permission + branch/warehouse/OWN scope test pass.
-- [ ] API error envelope/code ổn định, message tiếng Việt.
+- [x] Payment state/amount/reference/evidence/audit đúng một lần đủ tiền.
+- [x] Ship atomic: không double decrement và không `reserved > on_hand`/âm tồn.
+- [x] Permission + branch/warehouse/OWN scope test pass ở API integration đã triển khai.
+- [x] API error envelope/code ổn định, message tiếng Việt.
 - [x] OpenAPI sinh từ NestJS; Admin/Client SDK regenerate, không sửa tay.
-- [ ] Admin/Storefront đủ loading/empty/error/forbidden/stale/success.
-- [ ] Unit + PostgreSQL integration + concurrency + API E2E + browser E2E pass.
-- [ ] DBML/catalog/relationship/decision/change-log/workbook/status đồng bộ.
+- [x] Admin/Storefront có loading/empty/error/success và stale/idempotency protection cho flow Sprint 4.
+- [x] Unit + PostgreSQL integration + concurrency/API integration pass; browser deployment smoke còn là release evidence.
+- [x] DBML/catalog/relationship/decision/change-log/workbook/status đồng bộ.
 
 ## Revision history
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.4.0 | 2026-09-13 | Hoàn thiện Fulfillment/stock commit, Admin workflow và hai maintenance worker có Supabase Cron configurator. | DBAPI-20260913-FULFILLMENT-S43 |
+| 1.3.1 | 2026-09-12 | Chốt manual complete sau DELIVERED không giới hạn ngày; Guest token TTL env và terminal cleanup. | API-20260912-ORDER-GUEST-HARDENING |
+| 1.3.0 | 2026-09-12 | Hoàn thiện Payment V1 BE/OpenAPI/Admin/Storefront và PostgreSQL integration; còn worker expiry trước khi đóng S4.2 tuyệt đối. | DBAPI-20260912-PAYMENT-S42 |
+| 1.2.1 | 2026-09-11 | Hardening idempotency/list query, cache riêng tư và PWA online-only cho Order. | API-20260911-ORDER-S41-HARDENING |
+| 1.2.0 | 2026-09-11 | Hoàn tất own read/cancel, Admin transition và chốt completion/payment/guest-access policy. | API-20260911-ORDER-OWN-TRANSITIONS / D05 / D07 / D08 |
 | 1.1.0 | 2026-09-11 | Hoàn thành Order schema/create/admin list-detail/OpenAPI/SDK và Storefront placement round-trip; ghi rõ phần cancel/read còn lại. | API-20260911-ORDER-FOUNDATION |
 | 1.0.0 | 2026-09-10 | Tạo Sprint 4 plan, dependency order, transaction/lock rule và ba decision gate trước migration. | PLAN-20260910-SPRINT4 |

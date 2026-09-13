@@ -32,11 +32,25 @@ export default registerAs('app', () => ({
   checkout: {
     reservationTtlMinutes: Number(process.env.CHECKOUT_RESERVATION_TTL_MINUTES ?? 30),
   },
+  order: {
+    completionHoldHours: Number(process.env.ORDER_COMPLETION_HOLD_HOURS ?? 72),
+  },
+  payment: {
+    timeoutMinutes: Number(process.env.PAYMENT_TIMEOUT_MINUTES ?? 30),
+  },
   jobs: {
     cronSecret: process.env.CRON_SECRET,
     reservationExpiry: {
       enabled: process.env.RESERVATION_EXPIRY_JOB_ENABLED === 'true',
       batchSize: Number(process.env.RESERVATION_EXPIRY_JOB_BATCH_SIZE ?? 50),
+    },
+    paymentExpiry: {
+      enabled: process.env.PAYMENT_EXPIRY_JOB_ENABLED === 'true',
+      batchSize: Number(process.env.PAYMENT_EXPIRY_JOB_BATCH_SIZE ?? 50),
+    },
+    orderCompletion: {
+      enabled: process.env.ORDER_COMPLETION_JOB_ENABLED === 'true',
+      batchSize: Number(process.env.ORDER_COMPLETION_JOB_BATCH_SIZE ?? 50),
     },
   },
   cart: {

@@ -83,6 +83,18 @@ class EnvironmentVariables {
   @Max(1_440)
   CHECKOUT_RESERVATION_TTL_MINUTES = 30;
 
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(720)
+  ORDER_COMPLETION_HOLD_HOURS = 72;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(5)
+  @Max(1_440)
+  PAYMENT_TIMEOUT_MINUTES = 30;
+
   @Transform(toBoolean)
   @IsBoolean()
   RESERVATION_EXPIRY_JOB_ENABLED = false;
@@ -93,7 +105,30 @@ class EnvironmentVariables {
   @Max(500)
   RESERVATION_EXPIRY_JOB_BATCH_SIZE = 50;
 
-  @ValidateIf((environment: EnvironmentVariables) => environment.RESERVATION_EXPIRY_JOB_ENABLED)
+  @Transform(toBoolean)
+  @IsBoolean()
+  PAYMENT_EXPIRY_JOB_ENABLED = false;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(500)
+  PAYMENT_EXPIRY_JOB_BATCH_SIZE = 50;
+
+  @Transform(toBoolean)
+  @IsBoolean()
+  ORDER_COMPLETION_JOB_ENABLED = false;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(500)
+  ORDER_COMPLETION_JOB_BATCH_SIZE = 50;
+
+  @ValidateIf((environment: EnvironmentVariables) =>
+    environment.RESERVATION_EXPIRY_JOB_ENABLED ||
+    environment.PAYMENT_EXPIRY_JOB_ENABLED ||
+    environment.ORDER_COMPLETION_JOB_ENABLED)
   @IsString()
   @MinLength(32)
   CRON_SECRET?: string;

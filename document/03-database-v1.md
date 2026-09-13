@@ -1,10 +1,10 @@
 # Thiết kế dữ liệu V1
 
-> **Document version:** 2.6.0
+> **Document version:** 2.8.0
 >
-> **Last updated:** 2026-09-09
+> **Last updated:** 2026-09-13
 >
-> **Change summary:** Harden toàn bộ Supabase public schema: mọi base table kể cả `_prisma_migrations` bật RLS, Data API roles bị thu hồi quyền và function default chuyển sang opt-in.
+> **Change summary:** Vật lý hóa Fulfillment V1, history idempotent append-only và stock commit/return theo đúng warehouse.
 
 ## 1. Chuẩn chung
 
@@ -69,6 +69,9 @@ Permission nghiệp vụ mới phải có data migration cùng release, không c
 - `stock_transfers`: source khác destination; trạng thái chỉ `DRAFT/SUBMITTED/SHIPPED/RECEIVED`; actor/timestamp phải khớp trạng thái; `transfer_no` và `idempotency_key` unique.
 - `stock_transfer_items`: một SKU mỗi phiếu; `requested > 0`, `0 <= shipped <= requested`, `received + damaged <= shipped`; khi nhận service bắt buộc `received + damaged = shipped`, hàng hỏng bắt buộc lý do.
 - `payments(order_id)` unique ở V1; payment có nhiều attempt/event qua `payment_transactions`.
+- `fulfillments(order_id)` unique ở V1; `fulfillment_no` được suy ra từ `order_no` bất biến, không có sequence riêng.
+- Fulfillment phải dùng đúng `orders.warehouse_id`; service khóa aggregate trước balance và kiểm tra lại trong transaction.
+- `fulfillment_status_history` unique theo `(fulfillment_id, sequence_no)` và `(fulfillment_id, idempotency_key)`; key/hash cùng null hoặc cùng có giá trị; DB chặn UPDATE/DELETE/TRUNCATE.
 - `warehouses(branch_id)` unique: một branch đúng một warehouse; không có `is_primary`; branch phải có warehouse trước khi ACTIVE.
 - Guest checkout luôn tạo/upsert `customers` với `user_id` null; bắt buộc normalized phone. Đăng ký sau sẽ link user vào customer cũ sau xác minh.
 - `order_items`: quantity > 0; unit/list/discount/final price và tên/SKU/thuế được snapshot.
@@ -144,6 +147,8 @@ Fulfillment ghi reason bắt buộc rồi chuyển `DELIVERY_FAILED -> RETURNING
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 2.8.0 | 2026-09-13 | Thêm Fulfillment persisted, history append-only/idempotent, stock commit tại SHIPPED và restock SELLABLE sau hàng hoàn thực nhận. | DBAPI-20260913-FULFILLMENT-S43 |
+| 2.7.0 | 2026-09-12 | Thêm payments, payment_transactions và payment_evidences theo migration forward-only; không lưu binary trong DB. | DBAPI-20260912-PAYMENT-S42 |
 | 2.6.0 | 2026-09-09 | Bật RLS cho toàn bộ public base table gồm Prisma history; revoke direct/default table, sequence và application-function access khỏi Data API roles. | DBSEC-20260909-PUBLIC-RLS-COMPLETE |
 | 2.5.0 | 2026-09-08 | Thêm STANDARD_DELIVERY và phí mặc định theo ba ngưỡng cân nặng cấu hình bằng env. | DBAPI-20260908-DEFAULT-SHIPPING-RATES |
 | 2.4.0 | 2026-09-08 | Thêm checkout payment/shipping dimensions và trạng thái tư vấn giao hàng, không thêm bảng mới. | DBAPI-20260908-CHECKOUT-SHIPPING-COD |

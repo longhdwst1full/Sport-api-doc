@@ -61,6 +61,7 @@ model Warehouse {
   checkoutSessions       CheckoutSession[]
   inventoryReservations  InventoryReservation[]
   orders                 Order[]
+  fulfillments           Fulfillment[]
 
   @@map("warehouses")
 }
@@ -107,6 +108,10 @@ model User {
   receivedStockTransfers    StockTransfer[]      @relation("StockTransferReceiver")
   customerProfile           Customer?
   carts                     Cart[]
+  confirmedPayments         Payment[]         @relation("PaymentConfirmer")
+  uploadedPaymentEvidences  PaymentEvidence[] @relation("PaymentEvidenceUploader")
+  reviewedPaymentEvidences  PaymentEvidence[] @relation("PaymentEvidenceReviewer")
+  fulfillmentActions        FulfillmentStatusHistory[] @relation("FulfillmentHistoryActor")
 
   @@map("users")
 }
@@ -274,6 +279,7 @@ model MediaAsset {
   brandLogos     Brand[]        @relation("BrandLogo")
   categoryImages Category[]     @relation("CategoryImage")
   productMedia   ProductMedia[]
+  paymentEvidence PaymentEvidence?
 
   @@unique([provider, providerAssetId])
   @@index([uploadedBy])
@@ -894,6 +900,8 @@ model Order {
   items           OrderItem[]
   addresses       OrderAddress[]
   statusHistory   OrderStatusHistory[]
+  payment         Payment?
+  fulfillment     Fulfillment?
 
   @@index([customerId, placedAt(sort: Desc), id(sort: Desc)])
   @@index([branchId, status, placedAt(sort: Desc), id(sort: Desc)])
@@ -991,14 +999,149 @@ model OrderStatusHistory {
   actorType  String   @map("actor_type") @db.VarChar(24)
   actorId    BigInt?  @map("actor_id")
   requestId  String   @map("request_id") @db.VarChar(100)
+  idempotencyKey String? @map("idempotency_key") @db.VarChar(150)
+  requestHash String? @map("request_hash") @db.Char(64)
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Restrict)
 
   @@unique([orderId, sequenceNo])
+  @@unique([orderId, idempotencyKey])
   @@index([orderId, createdAt])
   @@index([requestId])
   @@map("order_status_history")
+}
+
+model Payment {
+  id             BigInt    @id @default(autoincrement())
+  orderId        BigInt    @unique @map("order_id")
+  paymentRef     String    @unique @map("payment_ref") @db.VarChar(64)
+  method         String    @db.VarChar(32)
+  status         String    @default("PENDING") @db.VarChar(32)
+  expectedAmount Decimal   @map("expected_amount") @db.Decimal(19, 2)
+  receivedAmount Decimal   @default(0) @map("received_amount") @db.Decimal(19, 2)
+  currencyCode   String    @default("VND") @map("currency_code") @db.Char(3)
+  expiresAt      DateTime? @map("expires_at") @db.Timestamptz(6)
+  confirmedBy    BigInt?   @map("confirmed_by")
+  confirmedAt    DateTime? @map("confirmed_at") @db.Timestamptz(6)
+  failureReason  String?   @map("failure_reason") @db.VarChar(500)
+  version        BigInt    @default(0)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  order        Order                @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  confirmer    User?                @relation("PaymentConfirmer", fields: [confirmedBy], references: [id], onDelete: Restrict)
+  transactions PaymentTransaction[]
+  evidences    PaymentEvidence[]
+
+  @@index([status, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([method, status, expiresAt])
+  @@index([confirmedBy])
+  @@map("payments")
+}
+
+model PaymentTransaction {
+  id                 BigInt   @id @default(autoincrement())
+  paymentId          BigInt   @map("payment_id")
+  transactionType    String   @map("transaction_type") @db.VarChar(32)
+  provider           String?  @db.VarChar(64)
+  externalId         String?  @map("external_id") @db.VarChar(255)
+  externalEventId    String?  @map("external_event_id") @db.VarChar(255)
+  idempotencyKey     String   @unique @map("idempotency_key") @db.VarChar(150)
+  requestHash        String   @map("request_hash") @db.Char(64)
+  amount             Decimal  @db.Decimal(19, 2)
+  currencyCode       String   @map("currency_code") @db.Char(3)
+  status             String   @db.VarChar(32)
+  rawPayloadRedacted Json?    @map("raw_payload_redacted") @db.JsonB
+  occurredAt         DateTime @map("occurred_at") @db.Timestamptz(6)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@index([paymentId, occurredAt(sort: Desc), id(sort: Desc)])
+  @@index([provider, externalId])
+  @@map("payment_transactions")
+}
+
+model PaymentEvidence {
+  id           BigInt    @id @default(autoincrement())
+  paymentId    BigInt    @map("payment_id")
+  mediaAssetId BigInt    @unique @map("media_asset_id")
+  uploadedBy   BigInt?   @map("uploaded_by")
+  uploaderType String    @map("uploader_type") @db.VarChar(24)
+  guestAccessId String?  @map("guest_access_id") @db.VarChar(100)
+  fileHash     String    @map("file_hash") @db.VarChar(128)
+  note         String?   @db.VarChar(1000)
+  status       String    @default("PENDING_REVIEW") @db.VarChar(24)
+  reviewedBy   BigInt?   @map("reviewed_by")
+  reviewedAt   DateTime? @map("reviewed_at") @db.Timestamptz(6)
+  reviewReason String?   @map("review_reason") @db.VarChar(500)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  payment   Payment    @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  mediaAsset MediaAsset @relation(fields: [mediaAssetId], references: [id], onDelete: Restrict)
+  uploader  User?      @relation("PaymentEvidenceUploader", fields: [uploadedBy], references: [id], onDelete: Restrict)
+  reviewer  User?      @relation("PaymentEvidenceReviewer", fields: [reviewedBy], references: [id], onDelete: Restrict)
+
+  @@unique([paymentId, fileHash])
+  @@index([paymentId, status, createdAt(sort: Desc)])
+  @@index([uploadedBy])
+  @@index([reviewedBy])
+  @@map("payment_evidences")
+}
+
+model Fulfillment {
+  id                         BigInt    @id @default(autoincrement())
+  orderId                    BigInt    @unique @map("order_id")
+  warehouseId                BigInt    @map("warehouse_id")
+  fulfillmentNo              String    @unique @map("fulfillment_no") @db.VarChar(40)
+  status                     String    @default("PENDING") @db.VarChar(40)
+  carrierCode                String?   @map("carrier_code") @db.VarChar(64)
+  trackingNo                 String?   @map("tracking_no") @db.VarChar(128)
+  pickedAt                   DateTime? @map("picked_at") @db.Timestamptz(6)
+  packedAt                   DateTime? @map("packed_at") @db.Timestamptz(6)
+  shippedAt                  DateTime? @map("shipped_at") @db.Timestamptz(6)
+  deliveredAt                DateTime? @map("delivered_at") @db.Timestamptz(6)
+  deliveryFailureReasonCode  String?   @map("delivery_failure_reason_code") @db.VarChar(64)
+  returnedToWarehouseAt      DateTime? @map("returned_to_warehouse_at") @db.Timestamptz(6)
+  returnCondition            String?   @map("return_condition") @db.VarChar(24)
+  version                    BigInt    @default(0)
+  createdAt                  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  order      Order                      @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  warehouse  Warehouse                  @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  history    FulfillmentStatusHistory[]
+
+  @@index([warehouseId, status, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([status, updatedAt])
+  @@index([trackingNo])
+  @@map("fulfillments")
+}
+
+model FulfillmentStatusHistory {
+  id              BigInt   @id @default(autoincrement())
+  fulfillmentId   BigInt   @map("fulfillment_id")
+  sequenceNo      Int      @map("sequence_no")
+  fromStatus      String?  @map("from_status") @db.VarChar(40)
+  toStatus        String   @map("to_status") @db.VarChar(40)
+  reason          String?  @db.VarChar(500)
+  actorId         BigInt?  @map("actor_id")
+  requestId       String   @map("request_id") @db.VarChar(100)
+  idempotencyKey  String?  @map("idempotency_key") @db.VarChar(150)
+  requestHash     String?  @map("request_hash") @db.Char(64)
+  metadataJson    Json?    @map("metadata_json") @db.JsonB
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  fulfillment Fulfillment @relation(fields: [fulfillmentId], references: [id], onDelete: Restrict)
+  actor       User?       @relation("FulfillmentHistoryActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([fulfillmentId, sequenceNo])
+  @@unique([fulfillmentId, idempotencyKey])
+  @@index([fulfillmentId, createdAt])
+  @@index([requestId])
+  @@index([actorId])
+  @@map("fulfillment_status_history")
 }
 
 model ShippingZone {

@@ -72,7 +72,7 @@ Table auth_sessions {
   device_info jsonb
   ip_hash varchar(128)
   user_agent_hash varchar(128)
-  expires_at timestamptz [not null]
+  expires_at timestamptz
   last_used_at timestamptz
   revoked_at timestamptz
   revoke_reason varchar(255)
@@ -902,8 +902,13 @@ Table order_status_history {
   actor_type varchar(24) [not null]
   actor_id bigint
   request_id varchar(100) [not null]
+  idempotency_key varchar(150)
+  request_hash char(64)
   created_at timestamptz [not null]
-  indexes { (order_id, sequence_no) [unique] }
+  indexes {
+    (order_id, sequence_no) [unique]
+    (order_id, idempotency_key) [unique]
+  }
   Note: '[P0] Append-only transition history.'
 }
 
@@ -935,6 +940,7 @@ Table payment_transactions {
   external_id varchar(255)
   external_event_id varchar(255)
   idempotency_key varchar(150) [not null, unique]
+  request_hash char(64) [not null]
   amount decimal(19,2) [not null]
   currency_code char(3) [not null]
   status varchar(32) [not null]
@@ -947,14 +953,13 @@ Table payment_transactions {
 Table payment_evidences {
   id bigint [pk, increment]
   payment_id bigint [not null]
+  media_asset_id bigint [not null, unique]
   uploaded_by bigint
+  uploader_type varchar(24) [not null]
   guest_access_id varchar(100)
-  file_url text [not null]
   file_hash varchar(128) [not null]
-  file_type varchar(64) [not null]
-  file_size_bytes bigint [not null]
   note text
-  status varchar(24) [not null, default: 'PENDING_SCAN']
+  status varchar(24) [not null, default: 'PENDING_REVIEW']
   reviewed_by bigint
   reviewed_at timestamptz
   review_reason text
@@ -993,21 +998,14 @@ Table fulfillments {
   warehouse_id bigint [not null]
   status varchar(32) [not null, default: 'PENDING']
   carrier_code varchar(64)
-  tracking_no varchar(255)
-  shipping_label_url text
+  tracking_no varchar(128)
   picked_at timestamptz
-  picked_by bigint
   packed_at timestamptz
-  packed_by bigint
   shipped_at timestamptz
-  shipped_by bigint
   delivered_at timestamptz
-  failed_at timestamptz
   delivery_failure_reason_code varchar(64)
-  failure_reason text
   returned_to_warehouse_at timestamptz
-  returned_to_warehouse_by bigint
-  return_condition varchar(32)
+  return_condition varchar(24)
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
@@ -1022,11 +1020,16 @@ Table fulfillment_status_history {
   to_status varchar(32) [not null]
   reason text
   actor_id bigint
-  metadata_json jsonb
   request_id varchar(100) [not null]
+  idempotency_key varchar(150)
+  request_hash char(64)
+  metadata_json jsonb
   created_at timestamptz [not null]
-  indexes { (fulfillment_id, sequence_no) [unique] }
-  Note: '[P0] Append-only.'
+  indexes {
+    (fulfillment_id, sequence_no) [unique]
+    (fulfillment_id, idempotency_key) [unique]
+  }
+  Note: '[P0] Append-only; idempotency_key và request_hash cùng NULL hoặc cùng có giá trị.'
 }
 
 Table shipping_zones {
@@ -1413,8 +1416,9 @@ Ref: payments.order_id > orders.id [delete: restrict]
 Ref: payments.confirmed_by > users.id [delete: restrict]
 Ref: payment_transactions.payment_id > payments.id [delete: restrict]
 Ref: payment_evidences.payment_id > payments.id [delete: restrict]
-Ref: payment_evidences.uploaded_by > users.id [delete: set null]
-Ref: payment_evidences.reviewed_by > users.id [delete: set null]
+Ref: payment_evidences.media_asset_id > media_assets.id [delete: restrict]
+Ref: payment_evidences.uploaded_by > users.id [delete: restrict]
+Ref: payment_evidences.reviewed_by > users.id [delete: restrict]
 Ref: refunds.payment_id > payments.id [delete: restrict]
 Ref: refunds.return_request_id > return_requests.id [delete: restrict]
 Ref: refunds.approval_request_id > approval_requests.id [delete: restrict]
@@ -1422,10 +1426,6 @@ Ref: refunds.requested_by > users.id [delete: restrict]
 Ref: refunds.approved_by > users.id [delete: restrict]
 Ref: fulfillments.order_id > orders.id [delete: restrict]
 Ref: fulfillments.warehouse_id > warehouses.id [delete: restrict]
-Ref: fulfillments.picked_by > users.id [delete: restrict]
-Ref: fulfillments.packed_by > users.id [delete: restrict]
-Ref: fulfillments.shipped_by > users.id [delete: restrict]
-Ref: fulfillments.returned_to_warehouse_by > users.id [delete: restrict]
 Ref: fulfillment_status_history.fulfillment_id > fulfillments.id [delete: restrict]
 Ref: fulfillment_status_history.actor_id > users.id [delete: set null]
 Ref: shipping_rates.zone_id > shipping_zones.id [delete: restrict]

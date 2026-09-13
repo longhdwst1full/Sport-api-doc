@@ -16,6 +16,10 @@ describe('validateEnvironment', () => {
     expect(environment.CHECKOUT_RESERVATION_TTL_MINUTES).toBe(30);
     expect(environment.RESERVATION_EXPIRY_JOB_ENABLED).toBe(false);
     expect(environment.RESERVATION_EXPIRY_JOB_BATCH_SIZE).toBe(50);
+    expect(environment.PAYMENT_EXPIRY_JOB_ENABLED).toBe(false);
+    expect(environment.PAYMENT_EXPIRY_JOB_BATCH_SIZE).toBe(50);
+    expect(environment.ORDER_COMPLETION_JOB_ENABLED).toBe(false);
+    expect(environment.ORDER_COMPLETION_JOB_BATCH_SIZE).toBe(50);
     expect(environment.GUEST_CART_TTL_DAYS).toBe(30);
     expect(environment.SHIPPING_FREE_RADIUS_KM).toBe(10);
     expect(environment.SHIPPING_SMALL_MAX_WEIGHT_GRAMS).toBe(5000);
@@ -62,13 +66,15 @@ describe('validateEnvironment', () => {
     ).toThrow('CHECKOUT_RESERVATION_TTL_MINUTES');
   });
 
-  it('requires an independent cron secret only when reservation expiry is enabled', () => {
+  it('requires an independent cron secret when any maintenance worker is enabled', () => {
     expect(() => validateEnvironment({ RESERVATION_EXPIRY_JOB_ENABLED: 'true' }))
       .toThrow('CRON_SECRET');
     expect(validateEnvironment({
       RESERVATION_EXPIRY_JOB_ENABLED: 'true',
       CRON_SECRET: 'a'.repeat(32),
     }).RESERVATION_EXPIRY_JOB_ENABLED).toBe(true);
+    expect(() => validateEnvironment({ PAYMENT_EXPIRY_JOB_ENABLED: 'true' })).toThrow('CRON_SECRET');
+    expect(() => validateEnvironment({ ORDER_COMPLETION_JOB_ENABLED: 'true' })).toThrow('CRON_SECRET');
   });
 
   it.each(['0', '366', '1.5'])('rejects invalid guest cart TTL %s', (value) => {

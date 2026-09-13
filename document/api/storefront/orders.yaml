@@ -34,7 +34,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OrderDetailDto"
+                $ref: "#/components/schemas/GuestOrderPlacementDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
         "404":
           description: ""
           content:
@@ -48,6 +54,95 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponseDto"
       summary: Tạo đơn idempotent từ checkout và reservation đã xác nhận của khách vãng lai
+      tags:
+        - Storefront Guest Orders
+  /api/v1/orders/guest/{orderNo}:
+    get:
+      operationId: getGuestOrder
+      parameters:
+        - name: orderNo
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: x-cart-token
+          required: true
+          in: header
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderDetailDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      summary: Xem đơn bằng mã đơn và token bí mật của khách vãng lai
+      tags:
+        - Storefront Guest Orders
+  /api/v1/orders/guest/{orderNo}/cancel:
+    post:
+      operationId: cancelGuestOrder
+      parameters:
+        - name: orderNo
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: x-cart-token
+          required: true
+          in: header
+          schema:
+            type: string
+        - name: idempotency-key
+          required: true
+          in: header
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderCancelCommandDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderDetailDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      summary: Khách vãng lai hủy đơn chưa thanh toán/xử lý
       tags:
         - Storefront Guest Orders
   /api/v1/account/orders/from-checkout/{checkoutToken}:
@@ -71,6 +166,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/OrderDetailDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
         "404":
           description: ""
           content:
@@ -88,8 +195,289 @@ paths:
       summary: Tạo đơn idempotent từ checkout và reservation đã xác nhận của khách đăng nhập
       tags:
         - Storefront Account Orders
+  /api/v1/account/orders:
+    get:
+      operationId: listAccountOrders
+      parameters:
+        - name: page
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            default: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 20
+            type: number
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountOrderListDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Danh sách đơn hàng của khách đang đăng nhập
+      tags:
+        - Storefront Account Orders
+  /api/v1/account/orders/{orderNo}:
+    get:
+      operationId: getAccountOrder
+      parameters:
+        - name: orderNo
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderDetailDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Chi tiết đơn hàng thuộc khách đang đăng nhập
+      tags:
+        - Storefront Account Orders
+  /api/v1/account/orders/{orderNo}/cancel:
+    post:
+      operationId: cancelAccountOrder
+      parameters:
+        - name: orderNo
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: idempotency-key
+          required: true
+          in: header
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderCancelCommandDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderDetailDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Khách đăng nhập hủy đơn chưa thanh toán/xử lý
+      tags:
+        - Storefront Account Orders
 components:
   schemas:
+    GuestOrderPlacementDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        orderNo:
+          type: string
+        status:
+          type: string
+          enum:
+            - PENDING_CONFIRMATION
+            - CONFIRMED
+            - PICKING
+            - PACKED
+            - SHIPPED
+            - DELIVERED
+            - COMPLETED
+            - CANCELLED
+        paymentStatus:
+          type: string
+          enum:
+            - PENDING
+            - AWAITING_CONFIRMATION
+            - NEED_REVIEW
+            - SUCCESS
+            - FAILED
+            - CANCELLED
+            - REFUNDED
+        fulfillmentStatus:
+          type: string
+          enum:
+            - PENDING
+            - PICKING
+            - PACKED
+            - SHIPPED
+            - DELIVERED
+            - FAILED
+            - RETURNED
+            - CANCELLED
+        paymentMethod:
+          type: string
+        shippingMethod:
+          type: string
+        branchId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        branchName:
+          type: string
+        warehouseName:
+          type: string
+        grandTotal:
+          type: string
+        itemCount:
+          type: number
+        recipient:
+          $ref: "#/components/schemas/OrderRecipientDto"
+        placedAt:
+          type: string
+          format: date-time
+        version:
+          type: number
+        currencyCode:
+          type: string
+        pricesIncludeTax:
+          type: boolean
+        subtotal:
+          type: string
+        discountTotal:
+          type: string
+        shippingTotal:
+          type: string
+        taxTotal:
+          type: string
+        customerNote:
+          type: string
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItemDto"
+        statusHistory:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderStatusHistoryDto"
+        guestAccessToken:
+          type: string
+          description: Token bí mật dùng cùng mã đơn để Guest xem/hủy đơn; hiện dùng cùng token của guest cart
+      required:
+        - id
+        - orderNo
+        - status
+        - paymentStatus
+        - fulfillmentStatus
+        - paymentMethod
+        - shippingMethod
+        - branchId
+        - branchName
+        - warehouseName
+        - grandTotal
+        - itemCount
+        - recipient
+        - placedAt
+        - version
+        - currencyCode
+        - pricesIncludeTax
+        - subtotal
+        - discountTotal
+        - shippingTotal
+        - taxTotal
+        - items
+        - statusHistory
+        - guestAccessToken
+    ErrorResponseDto:
+      type: object
+      properties:
+        statusCode:
+          type: number
+          example: 400
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: Dữ liệu gửi lên không hợp lệ.
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorDetailDto"
+        path:
+          type: string
+          example: /api/v1/catalog/products
+        method:
+          type: string
+          example: POST
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+      required:
+        - statusCode
+        - code
+        - message
+        - path
+        - method
+        - timestamp
     OrderDetailDto:
       type: object
       properties:
@@ -115,6 +503,7 @@ components:
           enum:
             - PENDING
             - AWAITING_CONFIRMATION
+            - NEED_REVIEW
             - SUCCESS
             - FAILED
             - CANCELLED
@@ -200,40 +589,38 @@ components:
         - taxTotal
         - items
         - statusHistory
-    ErrorResponseDto:
+    OrderCancelCommandDto:
       type: object
       properties:
-        statusCode:
+        expectedVersion:
           type: number
-          example: 400
-        code:
+          minimum: 0
+          description: Version đơn hàng mà người dùng đang xem
+        reason:
           type: string
-          example: VALIDATION_ERROR
-        message:
-          type: string
-          example: Dữ liệu gửi lên không hợp lệ.
-        details:
+          minLength: 3
+          maxLength: 500
+      required:
+        - expectedVersion
+        - reason
+    AccountOrderListDto:
+      type: object
+      properties:
+        items:
           type: array
           items:
-            $ref: "#/components/schemas/ErrorDetailDto"
-        path:
-          type: string
-          example: /api/v1/catalog/products
-        method:
-          type: string
-          example: POST
-        timestamp:
-          type: string
-          format: date-time
-        requestId:
-          type: string
+            $ref: "#/components/schemas/AdminOrderSummaryDto"
+        page:
+          type: number
+        limit:
+          type: number
+        total:
+          type: number
       required:
-        - statusCode
-        - code
-        - message
-        - path
-        - method
-        - timestamp
+        - items
+        - page
+        - limit
+        - total
     OrderRecipientDto:
       type: object
       properties:
@@ -356,6 +743,86 @@ components:
       required:
         - code
         - message
+    AdminOrderSummaryDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        orderNo:
+          type: string
+        status:
+          type: string
+          enum:
+            - PENDING_CONFIRMATION
+            - CONFIRMED
+            - PICKING
+            - PACKED
+            - SHIPPED
+            - DELIVERED
+            - COMPLETED
+            - CANCELLED
+        paymentStatus:
+          type: string
+          enum:
+            - PENDING
+            - AWAITING_CONFIRMATION
+            - NEED_REVIEW
+            - SUCCESS
+            - FAILED
+            - CANCELLED
+            - REFUNDED
+        fulfillmentStatus:
+          type: string
+          enum:
+            - PENDING
+            - PICKING
+            - PACKED
+            - SHIPPED
+            - DELIVERED
+            - FAILED
+            - RETURNED
+            - CANCELLED
+        paymentMethod:
+          type: string
+        shippingMethod:
+          type: string
+        branchId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        branchName:
+          type: string
+        warehouseName:
+          type: string
+        grandTotal:
+          type: string
+        itemCount:
+          type: number
+        recipient:
+          $ref: "#/components/schemas/OrderRecipientDto"
+        placedAt:
+          type: string
+          format: date-time
+        version:
+          type: number
+      required:
+        - id
+        - orderNo
+        - status
+        - paymentStatus
+        - fulfillmentStatus
+        - paymentMethod
+        - shippingMethod
+        - branchId
+        - branchName
+        - warehouseName
+        - grandTotal
+        - itemCount
+        - recipient
+        - placedAt
+        - version
     OrderItemComponentDto:
       type: object
       properties:

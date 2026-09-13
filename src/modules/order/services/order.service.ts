@@ -7,6 +7,7 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { toDatabaseId, toEntityId } from '../../../common/identifiers/entity-id';
 import { PrismaService } from '../../../database/prisma.service';
@@ -16,9 +17,15 @@ import { CartService } from '../../cart/cart.service';
 import { CHECKOUT_ITEM_TYPE, CHECKOUT_STATUS, INVENTORY_RESERVATION_STATUS } from '../../checkout/checkout.constants';
 import { ScopeType } from '../../iam/iam.types';
 import {
+  AccountOrderListDto,
+  AccountOrderQueryDto,
   AdminOrderListDto,
   AdminOrderQueryDto,
   AdminOrderSummaryDto,
+  CompleteOrderCommandDto,
+  ConfirmOrderCommandDto,
+  GuestOrderPlacementDto,
+  OrderCancelCommandDto,
   OrderDetailDto,
   OrderRecipientDto,
 } from '../dto/order.dto';
@@ -29,11 +36,20 @@ import {
   ORDER_PAYMENT_STATUS,
   ORDER_STATUS,
   ORDER_STATUS_BY_GROUP,
+  ORDER_TRANSACTION,
+  ORDER_TRANSITION,
 } from '../order.constants';
 
 type PlacementActor =
   | { type: 'GUEST'; cartId: bigint }
   | { type: 'CUSTOMER'; userId: string };
+
+type TransitionActor = PlacementActor | { type: 'ADMIN'; principal: AuthPrincipal };
+
+interface TransitionIdempotency {
+  key: string;
+  hash: string;
+}
 
 const orderInclude = {
   checkoutSession: { select: { paymentMethod: true, shippingMethod: true, cartId: true, cart: { select: { userId: true } } } },
@@ -47,7 +63,16 @@ const orderInclude = {
   statusHistory: { orderBy: { sequenceNo: 'asc' as const } },
 } satisfies Prisma.OrderInclude;
 
+const orderSummaryInclude = {
+  checkoutSession: { select: { paymentMethod: true, shippingMethod: true } },
+  branch: { select: { name: true } },
+  warehouse: { select: { name: true } },
+  addresses: { orderBy: { id: 'asc' as const }, take: 1 },
+  items: { select: { quantity: true } },
+} satisfies Prisma.OrderInclude;
+
 type LoadedOrder = Prisma.OrderGetPayload<{ include: typeof orderInclude }>;
+type LoadedOrderSummary = Prisma.OrderGetPayload<{ include: typeof orderSummaryInclude }>;
 
 @Injectable()
 export class OrderService {
@@ -55,6 +80,7 @@ export class OrderService {
     private readonly prisma: PrismaService,
     private readonly carts: CartService,
     private readonly audit: AuditWriter,
+    private readonly config: ConfigService,
   ) {}
 
   async placeGuest(
@@ -62,9 +88,12 @@ export class OrderService {
     checkoutToken: string,
     idempotencyKey: string,
     requestId: string,
-  ): Promise<OrderDetailDto> {
+  ): Promise<GuestOrderPlacementDto> {
     const cartId = await this.carts.resolveGuestCartIdForOrder(cartToken);
-    return this.place(checkoutToken, idempotencyKey, requestId, { type: 'GUEST', cartId });
+    const order = await this.place(checkoutToken, idempotencyKey, requestId, { type: 'GUEST', cartId });
+    // SECURITY: Guest cart token đã được DB lưu dạng SHA-256 và một cart chỉ tạo một Order.
+    // Tái sử dụng token này giúp retry placement vẫn trả đúng credential, không lưu token Order dạng rõ.
+    return { ...order, guestAccessToken: cartToken.trim() };
   }
 
   async placeAccount(
@@ -82,7 +111,9 @@ export class OrderService {
     const [orders, total] = await Promise.all([
       this.prisma.order.findMany({
         where,
-        include: orderInclude,
+        // PERFORMANCE: List chỉ đọc projection phục vụ summary; item component và
+        // toàn bộ status history được giữ riêng cho endpoint detail.
+        include: orderSummaryInclude,
         orderBy: [{ placedAt: 'desc' }, { id: 'desc' }],
         skip: (query.page - 1) * query.limit,
         take: query.limit,
@@ -90,6 +121,86 @@ export class OrderService {
       this.prisma.order.count({ where }),
     ]);
     return { items: orders.map((order) => this.toSummary(order)), page: query.page, limit: query.limit, total };
+  }
+
+  async confirmAdmin(
+    id: string,
+    command: ConfirmOrderCommandDto,
+    idempotencyKey: string,
+    requestId: string,
+    principal: AuthPrincipal,
+  ): Promise<OrderDetailDto> {
+    this.ensurePersistence();
+    const orderId = toDatabaseId(id);
+    const actor: TransitionActor = { type: 'ADMIN', principal };
+    const preflight = await this.prisma.order.findFirst({
+      where: { id: orderId, AND: [this.scopeWhere(principal)] },
+      include: orderInclude,
+    });
+    if (!preflight) throw new NotFoundException('Không tìm thấy đơn hàng trong phạm vi được phân quyền');
+    const idempotency = this.transitionIdempotency(
+      idempotencyKey,
+      ORDER_TRANSITION.CONFIRM,
+      orderId,
+      command.expectedVersion,
+      command.note ?? '',
+    );
+    const replay = this.transitionReplay(preflight, idempotency.key, idempotency.hash, ORDER_STATUS.CONFIRMED);
+    if (replay) return this.toDetail(preflight);
+
+    return this.withSerializationRetry(async () => this.prisma.$transaction(async (transaction) => {
+      await transaction.$queryRaw(Prisma.sql`SELECT id FROM orders WHERE id = ${orderId} FOR UPDATE`);
+      const locked = await transaction.order.findUnique({
+        where: { id: orderId },
+        include: { ...orderInclude, payment: true, reservation: true },
+      });
+      if (!locked) throw new NotFoundException('Không tìm thấy đơn hàng');
+      this.assertTransitionOwnership(locked, actor);
+      if (this.transitionReplay(locked, idempotency.key, idempotency.hash, ORDER_STATUS.CONFIRMED)) {
+        return this.toDetail(locked);
+      }
+      if (Number(locked.version) !== command.expectedVersion) {
+        throw new ConflictException('Đơn hàng đã thay đổi; vui lòng tải lại trước khi xác nhận');
+      }
+      if (locked.status !== ORDER_STATUS.PENDING_CONFIRMATION || locked.fulfillmentStatus !== ORDER_FULFILLMENT_STATUS.PENDING) {
+        throw new ConflictException('Chỉ được xác nhận đơn đang chờ xử lý');
+      }
+      if (!locked.payment) throw new ConflictException('Đơn hàng chưa có thông tin thanh toán');
+      if (locked.checkoutSession.paymentMethod === 'BANK_TRANSFER' && locked.payment.status !== ORDER_PAYMENT_STATUS.SUCCESS) {
+        throw new ConflictException('Đơn chuyển khoản chỉ được xác nhận sau khi đã nhận đủ tiền');
+      }
+      if (locked.reservation.status !== INVENTORY_RESERVATION_STATUS.ACTIVE) {
+        throw new ConflictException('Giữ chỗ tồn kho của đơn không còn hiệu lực');
+      }
+      const updated = await transaction.order.update({
+        where: { id: orderId },
+        data: {
+          status: ORDER_STATUS.CONFIRMED,
+          version: { increment: 1 },
+          statusHistory: {
+            create: this.statusHistoryInput(locked, ORDER_STATUS.CONFIRMED, command.note ?? '', idempotency, requestId, actor),
+          },
+        },
+        include: orderInclude,
+      });
+      await this.audit.write({
+        requestId,
+        sequenceNo: 1,
+        actorType: 'USER',
+        actorUserId: principal.userId,
+        action: ORDER_AUDIT_ACTION.CONFIRM,
+        entityType: 'ORDER',
+        entityId: toEntityId(orderId),
+        before: { status: locked.status },
+        after: { status: updated.status },
+        reason: command.note,
+      }, transaction);
+      return this.toDetail(updated);
+    }, {
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      maxWait: ORDER_TRANSACTION.MAX_WAIT_MS,
+      timeout: ORDER_TRANSACTION.TIMEOUT_MS,
+    }));
   }
 
   async getAdmin(id: string, principal: AuthPrincipal): Promise<OrderDetailDto> {
@@ -100,6 +211,424 @@ export class OrderService {
     });
     if (!order) throw new NotFoundException('Không tìm thấy đơn hàng trong phạm vi được phân quyền');
     return this.toDetail(order);
+  }
+
+  async listAccount(userId: string, query: AccountOrderQueryDto): Promise<AccountOrderListDto> {
+    this.ensurePersistence();
+    const where: Prisma.OrderWhereInput = {
+      checkoutSession: { cart: { userId: toDatabaseId(userId) } },
+    };
+    const [orders, total] = await Promise.all([
+      this.prisma.order.findMany({
+        where,
+        include: orderSummaryInclude,
+        orderBy: [{ placedAt: 'desc' }, { id: 'desc' }],
+        skip: (query.page - 1) * query.limit,
+        take: query.limit,
+      }),
+      this.prisma.order.count({ where }),
+    ]);
+    return { items: orders.map((order) => this.toSummary(order)), page: query.page, limit: query.limit, total };
+  }
+
+  async getGuest(cartToken: string, orderNo: string): Promise<OrderDetailDto> {
+    this.ensurePersistence();
+    const cartId = await this.carts.resolveGuestCartIdForOrder(cartToken);
+    const order = await this.findOwnedOrder(orderNo, { type: 'GUEST', cartId });
+    return this.toDetail(order);
+  }
+
+  async getAccount(userId: string, orderNo: string): Promise<OrderDetailDto> {
+    this.ensurePersistence();
+    const order = await this.findOwnedOrder(orderNo, { type: 'CUSTOMER', userId });
+    return this.toDetail(order);
+  }
+
+  async cancelGuest(
+    cartToken: string,
+    orderNo: string,
+    command: OrderCancelCommandDto,
+    idempotencyKey: string,
+    requestId: string,
+  ): Promise<OrderDetailDto> {
+    const cartId = await this.carts.resolveGuestCartIdForOrder(cartToken);
+    const order = await this.findOwnedOrder(orderNo, { type: 'GUEST', cartId });
+    return this.cancel(order.id, command, idempotencyKey, requestId, { type: 'GUEST', cartId });
+  }
+
+  async cancelAccount(
+    userId: string,
+    orderNo: string,
+    command: OrderCancelCommandDto,
+    idempotencyKey: string,
+    requestId: string,
+  ): Promise<OrderDetailDto> {
+    const actor: TransitionActor = { type: 'CUSTOMER', userId };
+    const order = await this.findOwnedOrder(orderNo, actor);
+    return this.cancel(order.id, command, idempotencyKey, requestId, actor);
+  }
+
+  async cancelAdmin(
+    id: string,
+    command: OrderCancelCommandDto,
+    idempotencyKey: string,
+    requestId: string,
+    principal: AuthPrincipal,
+  ): Promise<OrderDetailDto> {
+    this.ensurePersistence();
+    const order = await this.prisma.order.findFirst({
+      where: { id: toDatabaseId(id), AND: [this.scopeWhere(principal)] },
+      include: orderInclude,
+    });
+    if (!order) throw new NotFoundException('Không tìm thấy đơn hàng trong phạm vi được phân quyền');
+    return this.cancel(order.id, command, idempotencyKey, requestId, { type: 'ADMIN', principal });
+  }
+
+  async completeAdmin(
+    id: string,
+    command: CompleteOrderCommandDto,
+    idempotencyKey: string,
+    requestId: string,
+    principal: AuthPrincipal,
+  ): Promise<OrderDetailDto> {
+    this.ensurePersistence();
+    const orderId = toDatabaseId(id);
+    const actor: TransitionActor = { type: 'ADMIN', principal };
+    const preflight = await this.prisma.order.findFirst({
+      where: { id: orderId, AND: [this.scopeWhere(principal)] },
+      include: orderInclude,
+    });
+    if (!preflight) throw new NotFoundException('Không tìm thấy đơn hàng trong phạm vi được phân quyền');
+    const idempotency = this.transitionIdempotency(
+      idempotencyKey,
+      ORDER_TRANSITION.COMPLETE_MANUALLY,
+      orderId,
+      command.expectedVersion,
+      command.reason,
+    );
+    const replay = this.transitionReplay(preflight, idempotency.key, idempotency.hash, ORDER_STATUS.COMPLETED);
+    if (replay) return this.toDetail(preflight);
+
+    return this.withSerializationRetry(async () =>
+      this.prisma.$transaction(async (transaction) => {
+        await transaction.$queryRaw(Prisma.sql`
+          SELECT id FROM orders WHERE id = ${orderId} FOR UPDATE
+        `);
+        const locked = await transaction.order.findUnique({ where: { id: orderId }, include: orderInclude });
+        if (!locked) throw new NotFoundException('Không tìm thấy đơn hàng');
+        this.assertTransitionOwnership(locked, actor);
+        if (this.transitionReplay(locked, idempotency.key, idempotency.hash, ORDER_STATUS.COMPLETED)) {
+          return this.toDetail(locked);
+        }
+        if (Number(locked.version) !== command.expectedVersion) {
+          throw new ConflictException('Đơn hàng đã thay đổi; vui lòng tải lại trước khi hoàn tất');
+        }
+        if (
+          locked.status !== ORDER_STATUS.DELIVERED ||
+          locked.fulfillmentStatus !== ORDER_FULFILLMENT_STATUS.DELIVERED ||
+          locked.paymentStatus !== ORDER_PAYMENT_STATUS.SUCCESS
+        ) {
+          throw new ConflictException('Chỉ được hoàn tất đơn đã giao đủ hàng và đã thu đủ tiền');
+        }
+        const now = new Date();
+        const updated = await transaction.order.update({
+          where: { id: orderId },
+          data: {
+            status: ORDER_STATUS.COMPLETED,
+            completedAt: now,
+            version: { increment: 1 },
+            statusHistory: { create: this.statusHistoryInput(locked, ORDER_STATUS.COMPLETED, command.reason, idempotency, requestId, actor) },
+          },
+          include: orderInclude,
+        });
+        await this.audit.write({
+          requestId,
+          sequenceNo: 1,
+          actorType: 'USER',
+          actorUserId: principal.userId,
+          action: ORDER_AUDIT_ACTION.COMPLETE_MANUALLY,
+          entityType: 'ORDER',
+          entityId: toEntityId(orderId),
+          before: { status: locked.status },
+          after: { status: updated.status, completedAt: now.toISOString() },
+          reason: command.reason,
+        }, transaction);
+        return this.toDetail(updated);
+      }, {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        maxWait: ORDER_TRANSACTION.MAX_WAIT_MS,
+        timeout: ORDER_TRANSACTION.TIMEOUT_MS,
+      }),
+    );
+  }
+
+  private async findOwnedOrder(orderNo: string, actor: PlacementActor): Promise<LoadedOrder> {
+    const normalizedOrderNo = orderNo.trim().toUpperCase();
+    if (!normalizedOrderNo) throw new BadRequestException('Mã đơn hàng là bắt buộc');
+    const ownership: Prisma.OrderWhereInput = actor.type === 'GUEST'
+      ? { checkoutSession: { cartId: actor.cartId } }
+      : { checkoutSession: { cart: { userId: toDatabaseId(actor.userId) } } };
+    const order = await this.prisma.order.findFirst({
+      where: { orderNo: normalizedOrderNo, AND: [ownership] },
+      include: orderInclude,
+    });
+    // SECURITY: Trả 404 thống nhất để không tiết lộ mã đơn có tồn tại nhưng thuộc người khác.
+    if (!order) throw new NotFoundException('Không tìm thấy đơn hàng thuộc tài khoản hoặc token này');
+    return order;
+  }
+
+  private async cancel(
+    orderId: bigint,
+    command: OrderCancelCommandDto,
+    rawIdempotencyKey: string,
+    requestId: string,
+    actor: TransitionActor,
+  ): Promise<OrderDetailDto> {
+    this.ensurePersistence();
+    const idempotency = this.transitionIdempotency(
+      rawIdempotencyKey,
+      ORDER_TRANSITION.CANCEL,
+      orderId,
+      command.expectedVersion,
+      command.reason,
+    );
+    const preflight = await this.prisma.order.findUnique({ where: { id: orderId }, include: orderInclude });
+    if (!preflight) throw new NotFoundException('Không tìm thấy đơn hàng');
+    this.assertTransitionOwnership(preflight, actor);
+    if (this.transitionReplay(preflight, idempotency.key, idempotency.hash, ORDER_STATUS.CANCELLED)) {
+      return this.toDetail(preflight);
+    }
+
+    return this.withSerializationRetry(async () =>
+      this.prisma.$transaction(async (transaction) => {
+        // TRANSACTION: Khóa Order → Reservation → các balance theo variant để cancellation
+        // không thể chạy lệch với ship/expiry hoặc một cancellation đồng thời.
+        await transaction.$queryRaw(Prisma.sql`
+          SELECT placed_order.id
+          FROM orders placed_order
+          JOIN inventory_reservations reservation ON reservation.id = placed_order.reservation_id
+          WHERE placed_order.id = ${orderId}
+          FOR UPDATE OF placed_order, reservation
+        `);
+        const locked = await transaction.order.findUnique({ where: { id: orderId }, include: orderInclude });
+        if (!locked) throw new NotFoundException('Không tìm thấy đơn hàng');
+        this.assertTransitionOwnership(locked, actor);
+        if (this.transitionReplay(locked, idempotency.key, idempotency.hash, ORDER_STATUS.CANCELLED)) {
+          return this.toDetail(locked);
+        }
+        if (Number(locked.version) !== command.expectedVersion) {
+          throw new ConflictException('Đơn hàng đã thay đổi; vui lòng tải lại trước khi hủy');
+        }
+        if (
+          locked.status !== ORDER_STATUS.PENDING_CONFIRMATION ||
+          ![ORDER_PAYMENT_STATUS.PENDING, ORDER_PAYMENT_STATUS.FAILED].includes(locked.paymentStatus as never) ||
+          locked.fulfillmentStatus !== ORDER_FULFILLMENT_STATUS.PENDING
+        ) {
+          throw new ConflictException('Chỉ được hủy đơn chưa thanh toán và chưa bắt đầu xử lý');
+        }
+        const reservation = await transaction.inventoryReservation.findUnique({
+          where: { id: locked.reservationId },
+          include: { items: true },
+        });
+        if (!reservation || reservation.status !== INVENTORY_RESERVATION_STATUS.ACTIVE) {
+          throw new ConflictException('Reservation của đơn không còn ở trạng thái có thể giải phóng');
+        }
+        const variantIds = reservation.items
+          .map(({ productVariantId }) => productVariantId)
+          .sort((left, right) => left < right ? -1 : 1);
+        if (variantIds.length === 0) {
+          throw new ServiceUnavailableException('Reservation của đơn không có dòng tồn kho');
+        }
+        await transaction.$queryRaw(Prisma.sql`
+          SELECT id FROM inventory_balances
+          WHERE warehouse_id = ${reservation.warehouseId}
+            AND product_variant_id IN (${Prisma.join(variantIds)})
+          ORDER BY product_variant_id
+          FOR UPDATE
+        `);
+        const balances = await transaction.inventoryBalance.findMany({
+          where: { warehouseId: reservation.warehouseId, productVariantId: { in: variantIds } },
+        });
+        const balanceByVariant = new Map(balances.map((balance) => [balance.productVariantId, balance]));
+        for (const item of reservation.items) {
+          const balance = balanceByVariant.get(item.productVariantId);
+          if (!balance || balance.reserved < item.quantity) {
+            throw new ServiceUnavailableException('Số lượng giữ chỗ trong kho không nhất quán');
+          }
+          const changed = await transaction.inventoryBalance.updateMany({
+            where: { id: balance.id, version: balance.version },
+            data: { reserved: { decrement: item.quantity }, version: { increment: 1 } },
+          });
+          if (changed.count !== 1) {
+            throw new ConflictException('Tồn kho vừa thay đổi; vui lòng tải lại và hủy đơn lần nữa');
+          }
+        }
+        const now = new Date();
+        await transaction.inventoryReservation.update({
+          where: { id: reservation.id },
+          data: {
+            status: INVENTORY_RESERVATION_STATUS.RELEASED,
+            releasedAt: now,
+            releaseReason: command.reason,
+            version: { increment: 1 },
+          },
+        });
+        const payment = await transaction.payment.findUnique({ where: { orderId } });
+        if (payment) {
+          await transaction.payment.update({
+            where: { id: payment.id },
+            data: {
+              status: ORDER_PAYMENT_STATUS.CANCELLED,
+              failureReason: command.reason,
+              version: { increment: 1 },
+            },
+          });
+          await transaction.paymentTransaction.create({
+            data: {
+              paymentId: payment.id,
+              transactionType: 'CANCELLED',
+              provider: payment.method === 'COD' ? 'INTERNAL_COD' : 'MANUAL_BANK_TRANSFER',
+              idempotencyKey: `payment-cancel:${idempotency.hash}`,
+              requestHash: idempotency.hash,
+              amount: 0,
+              currencyCode: payment.currencyCode,
+              status: ORDER_PAYMENT_STATUS.CANCELLED,
+              rawPayloadRedacted: { reason: command.reason },
+              occurredAt: now,
+            },
+          });
+        }
+        const updated = await transaction.order.update({
+          where: { id: orderId },
+          data: {
+            status: ORDER_STATUS.CANCELLED,
+            paymentStatus: ORDER_PAYMENT_STATUS.CANCELLED,
+            cancelledAt: now,
+            cancelReason: command.reason,
+            version: { increment: 1 },
+            statusHistory: { create: this.statusHistoryInput(locked, ORDER_STATUS.CANCELLED, command.reason, idempotency, requestId, actor) },
+          },
+          include: orderInclude,
+        });
+        const actorUserId = actor.type === 'GUEST'
+          ? undefined
+          : actor.type === 'CUSTOMER'
+            ? actor.userId
+            : actor.principal.userId;
+        await this.audit.write({
+          requestId,
+          sequenceNo: 1,
+          actorType: actor.type === 'GUEST' ? 'GUEST' : 'USER',
+          actorUserId,
+          action: ORDER_AUDIT_ACTION.CANCEL,
+          entityType: 'ORDER',
+          entityId: toEntityId(orderId),
+          before: { status: locked.status, reservationStatus: reservation.status },
+          after: { status: updated.status, reservationStatus: INVENTORY_RESERVATION_STATUS.RELEASED },
+          reason: command.reason,
+        }, transaction);
+        return this.toDetail(updated);
+      }, {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        maxWait: ORDER_TRANSACTION.MAX_WAIT_MS,
+        timeout: ORDER_TRANSACTION.TIMEOUT_MS,
+      }),
+    );
+  }
+
+  private assertTransitionOwnership(order: LoadedOrder, actor: TransitionActor): void {
+    if (actor.type !== 'ADMIN') {
+      this.assertOrderOwnership(order, actor);
+      return;
+    }
+    if (actor.principal.scopes.some(({ type }) => type === ScopeType.GLOBAL)) return;
+    const allowed = actor.principal.scopes.some(
+      (scope) => scope.type === ScopeType.BRANCH && scope.branchId && toDatabaseId(scope.branchId) === order.branchId,
+    );
+    if (!allowed) throw new ForbiddenException('Đơn hàng không thuộc phạm vi chi nhánh được phân quyền');
+  }
+
+  private transitionIdempotency(
+    rawKey: string,
+    transition: string,
+    orderId: bigint,
+    expectedVersion: number,
+    reason: string,
+  ): TransitionIdempotency {
+    const key = rawKey.trim();
+    if (!key || key.length > 150) {
+      throw new BadRequestException('Header Idempotency-Key hợp lệ là bắt buộc');
+    }
+    // IDEMPOTENCY: expectedVersion là một phần intent. Cùng key nhưng client gửi
+    // một snapshot version khác phải conflict thay vì bị coi là replay hợp lệ.
+    const hash = createHash('sha256')
+      .update(JSON.stringify({
+        transition,
+        orderId: toEntityId(orderId),
+        expectedVersion,
+        reason: reason.trim(),
+      }))
+      .digest('hex');
+    return { key, hash };
+  }
+
+  private transitionReplay(
+    order: LoadedOrder,
+    key: string,
+    hash: string,
+    targetStatus: string,
+  ): boolean {
+    const replay = order.statusHistory.find((history) => history.idempotencyKey === key);
+    if (!replay) return false;
+    if (replay.requestHash !== hash || replay.toStatus !== targetStatus) {
+      throw new ConflictException('Idempotency-Key đã được dùng cho thao tác đơn hàng khác');
+    }
+    return true;
+  }
+
+  private statusHistoryInput(
+    order: LoadedOrder,
+    toStatus: string,
+    reason: string,
+    idempotency: TransitionIdempotency,
+    requestId: string,
+    actor: TransitionActor,
+  ): Prisma.OrderStatusHistoryUncheckedCreateWithoutOrderInput {
+    const actorUserId = actor.type === 'GUEST'
+      ? null
+      : toDatabaseId(actor.type === 'CUSTOMER' ? actor.userId : actor.principal.userId);
+    const latestSequence = order.statusHistory.reduce(
+      (highest, history) => Math.max(highest, history.sequenceNo),
+      0,
+    );
+    return {
+      sequenceNo: latestSequence + 1,
+      fromStatus: order.status,
+      toStatus,
+      reason,
+      // Domain actor ADMIN is persisted as USER; ADMIN describes the command
+      // channel, while the shared audit/history schema classifies human actors as USER.
+      actorType: actor.type === 'ADMIN' ? 'USER' : actor.type,
+      actorId: actorUserId,
+      requestId,
+      idempotencyKey: idempotency.key,
+      requestHash: idempotency.hash,
+    };
+  }
+
+  private async withSerializationRetry<T>(operation: () => Promise<T>): Promise<T> {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        return await operation();
+      } catch (error) {
+        if (this.isSerializationConflict(error) && attempt < 2) continue;
+        if (this.isSerializationConflict(error)) {
+          throw new ConflictException('Đơn hàng vừa được xử lý đồng thời; vui lòng tải lại và thử lại');
+        }
+        throw error;
+      }
+    }
+    throw new ServiceUnavailableException('Không thể xử lý đơn hàng do xung đột đồng thời');
   }
 
   private async place(
@@ -212,6 +741,10 @@ export class OrderService {
             SELECT nextval('public.order_number_seq')::bigint AS value
           `);
           const orderNo = this.orderNo(now, sequence[0]?.value);
+          const paymentTimeoutMinutes = this.config.get<number>('app.payment.timeoutMinutes') ?? 30;
+          const paymentExpiresAt = checkout.paymentMethod === 'BANK_TRANSFER'
+            ? new Date(now.getTime() + paymentTimeoutMinutes * 60_000)
+            : null;
           const recipient = this.readRecipient(checkout.recipientSnapshot);
           const created = await transaction.order.create({
             data: {
@@ -265,6 +798,45 @@ export class OrderService {
                   actorType: actor.type,
                   actorId: actor.type === 'CUSTOMER' ? toDatabaseId(actor.userId) : null,
                   requestId,
+                  idempotencyKey,
+                  requestHash,
+                },
+              },
+              payment: {
+                create: {
+                  paymentRef: `PAY-${orderNo}`,
+                  method: checkout.paymentMethod,
+                  status: ORDER_PAYMENT_STATUS.PENDING,
+                  expectedAmount: checkout.grandTotal,
+                  receivedAmount: 0,
+                  currencyCode: checkout.currencyCode,
+                  expiresAt: paymentExpiresAt,
+                  transactions: {
+                    create: {
+                      transactionType: 'CREATED',
+                      provider: checkout.paymentMethod === 'COD' ? 'INTERNAL_COD' : 'MANUAL_BANK_TRANSFER',
+                      idempotencyKey,
+                      requestHash,
+                      amount: checkout.grandTotal,
+                      currencyCode: checkout.currencyCode,
+                      status: ORDER_PAYMENT_STATUS.PENDING,
+                      occurredAt: now,
+                    },
+                  },
+                },
+              },
+              fulfillment: {
+                create: {
+                  fulfillmentNo: `FUL-${orderNo}`,
+                  warehouseId: checkout.warehouseId,
+                  status: ORDER_FULFILLMENT_STATUS.PENDING,
+                  history: {
+                    create: {
+                      sequenceNo: 1,
+                      toStatus: ORDER_FULFILLMENT_STATUS.PENDING,
+                      requestId,
+                    },
+                  },
                 },
               },
             },
@@ -294,7 +866,11 @@ export class OrderService {
             },
           }, transaction);
           return this.toDetail(created);
-        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+        }, {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+          maxWait: ORDER_TRANSACTION.MAX_WAIT_MS,
+          timeout: ORDER_TRANSACTION.TIMEOUT_MS,
+        });
       } catch (error) {
         if (this.isSerializationConflict(error) && attempt < 2) continue;
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
@@ -440,7 +1016,7 @@ export class OrderService {
     });
   }
 
-  private toSummary(order: LoadedOrder): AdminOrderSummaryDto {
+  private toSummary(order: LoadedOrder | LoadedOrderSummary): AdminOrderSummaryDto {
     const address = order.addresses[0];
     if (!address) throw new ServiceUnavailableException('Đơn hàng thiếu snapshot địa chỉ nhận hàng');
     return {

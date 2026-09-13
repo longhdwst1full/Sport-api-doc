@@ -27,14 +27,7 @@ export const ORDER_STATUS_BY_GROUP: Record<string, string[]> = {
   [ORDER_STATUS_GROUP.DELIVERED]: [ORDER_STATUS.DELIVERED, ORDER_STATUS.COMPLETED],
 };
 
-export const ORDER_PAYMENT_STATUS = {
-  PENDING: 'PENDING',
-  AWAITING_CONFIRMATION: 'AWAITING_CONFIRMATION',
-  SUCCESS: 'SUCCESS',
-  FAILED: 'FAILED',
-  CANCELLED: 'CANCELLED',
-  REFUNDED: 'REFUNDED',
-} as const;
+export { PAYMENT_STATUS as ORDER_PAYMENT_STATUS } from '../payment/payment.constants';
 
 export const ORDER_FULFILLMENT_STATUS = {
   PENDING: 'PENDING',
@@ -54,5 +47,18 @@ export const ORDER_CHANNEL = {
 
 export const ORDER_AUDIT_ACTION = {
   PLACE: 'order.place',
+  CONFIRM: 'order.confirm',
+  CANCEL: 'order.cancel',
+  COMPLETE_MANUALLY: 'order.complete-manually',
 } as const;
 
+export const ORDER_TRANSITION = {
+  CONFIRM: 'CONFIRM',
+  CANCEL: 'CANCEL',
+  COMPLETE_MANUALLY: 'COMPLETE_MANUALLY',
+} as const;
+
+export const ORDER_TRANSACTION = {
+  MAX_WAIT_MS: 10_000,
+  TIMEOUT_MS: 30_000,
+} as const;
