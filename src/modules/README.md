@@ -1,10 +1,10 @@
 # Backend bounded contexts
 
-> **Document version:** 1.2.0
+> **Document version:** 1.3.0
 >
 > **Last updated:** 2026-09-13
 >
-> **Change summary:** Kích hoạt Order, Payment và Fulfillment thành các vertical slice Sprint 4.
+> **Change summary:** CMS Content và Product Reviews chuyển sang PostgreSQL; kết thúc toàn bộ slice in-memory.
 
 The reviewed V1 model contains 75 tables (45 P0, 30 P1). `system/model-registry.data.ts` is the executable coverage manifest and its unit test prevents a table from silently disappearing during refactoring.
 
@@ -13,7 +13,7 @@ Status meanings:
 - `ACTIVE`: the module has at least one real HTTP/application vertical slice in this base.
 - `SCAFFOLDED`: the Nest boundary exists and its models are registered, but no generic CRUD API is exposed yet.
 
-Active slices are Organization, IAM, Catalog, Inventory, Cart, Checkout, Shipping quote, Order, Payment, Fulfillment, CMS Content and Product Reviews. Checkout sở hữu quote/reservation; Order sở hữu snapshot; Payment sở hữu trạng thái thu tiền/ledger/evidence; Fulfillment sở hữu pick-pack-ship/delivery và stock commit. Remaining modules are intentionally opened by use case and delivery wave from `document/07-delivery-plan.md`; an empty generic CRUD controller would bypass state-machine, audit, idempotency and transaction rules.
+Active slices are Organization, IAM, Catalog, Inventory, Cart, Checkout, Shipping quote, Order, Payment, Fulfillment, CMS Content and Product Reviews. Checkout sở hữu quote/reservation; Order sở hữu snapshot; Payment sở hữu trạng thái thu tiền/ledger/evidence; Fulfillment sở hữu pick-pack-ship/delivery và stock commit. CMS Content và Product Reviews đã persist PostgreSQL từ 2026-09-13 (`20260913140000_persist_cms_and_reviews`); **không còn vertical slice nào chạy bằng dữ liệu trong bộ nhớ tiến trình**. Remaining modules are intentionally opened by use case and delivery wave from `document/07-delivery-plan.md`; an empty generic CRUD controller would bypass state-machine, audit, idempotency and transaction rules.
 
 Use two reference shapes for new V1 work:
 
@@ -22,7 +22,7 @@ Use two reference shapes for new V1 work:
 
 Add `repositories` and `enums` only when real files exist. Prisma repositories remain inside the owning module; `src/database` only owns Prisma lifecycle. Payment/shipping/media now have provider/integration boundaries but are not active order/payment/shipment endpoints or production integrations.
 
-Persistence is still represented by the reviewed DBML in `document/09-v1-model.dbml`. Before replacing the in-memory adapters, generate and review PostgreSQL migrations wave-by-wave rather than creating all P0/P1 tables in one migration.
+Persistence is still represented by the reviewed DBML in `document/09-v1-model.dbml`. Generate and review PostgreSQL migrations wave-by-wave rather than creating all P0/P1 tables in one migration. Khi vật lý hóa một slice, giữ nguyên DTO/contract để consumer không phải regenerate SDK, và ghi rõ mọi cột được nới lỏng so với DBML vào `document/03-database-v1.md` mục 4 cùng `document/11-model-change-log.json`.
 
 ## Maintenance notes
 
@@ -36,6 +36,7 @@ Persistence is still represented by the reviewed DBML in `document/09-v1-model.d
 
 | Version | Date | Change summary | Source |
 | --- | --- | --- | --- |
+| 1.3.0 | 2026-09-13 | Persist CMS Content và Product Reviews; không còn slice in-memory. | DBAPI-20260913-PERSIST-CMS-REVIEWS |
 | 1.2.0 | 2026-09-13 | Kích hoạt Order, Payment, Fulfillment và maintenance workers Sprint 4. | DBAPI-20260913-FULFILLMENT-S43 |
 | 1.0.0 | 2026-08-29 | Thiết lập bounded-context registry và trạng thái ACTIVE/SCAFFOLDED. | Sprint 0/1 foundation |
 | 1.1.0 | 2026-09-09 | Thêm maintenance-note convention và cập nhật trạng thái Checkout Sprint 3. | DOC-20260909-FEATURE-MAINTENANCE-NOTES |

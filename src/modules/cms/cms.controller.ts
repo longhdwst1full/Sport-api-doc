@@ -29,7 +29,7 @@ export class PublicContentController {
   @Get()
   @ApiOperation({ operationId: 'listPublishedPosts', summary: 'List published content posts' })
   @ApiOkResponse({ type: ContentPostListDto })
-  listPublishedPosts(): ContentPostListDto {
+  listPublishedPosts(): Promise<ContentPostListDto> {
     return this.cms.listPublished();
   }
 
@@ -37,7 +37,7 @@ export class PublicContentController {
   @ApiOperation({ operationId: 'getPublishedPost', summary: 'Get a published post by slug' })
   @ApiOkResponse({ type: ContentPostDto })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
-  getPublishedPost(@Param('slug') slug: string): ContentPostDto {
+  getPublishedPost(@Param('slug') slug: string): Promise<ContentPostDto> {
     return this.cms.getBySlug(slug);
   }
 }
@@ -54,7 +54,7 @@ export class AdminContentController {
   @RequirePermissions('content.post.view')
   @ApiOperation({ operationId: 'listAdminPosts', summary: 'List posts for administration' })
   @ApiOkResponse({ type: ContentPostListDto })
-  listAdminPosts(): ContentPostListDto {
+  listAdminPosts(): Promise<ContentPostListDto> {
     return this.cms.listAdmin();
   }
 
@@ -62,7 +62,7 @@ export class AdminContentController {
   @RequirePermissions('content.post.manage')
   @ApiOperation({ operationId: 'createAdminPost', summary: 'Create and publish a content post' })
   @ApiCreatedResponse({ type: ContentPostDto })
-  createAdminPost(@Body() input: CreateContentPostDto): ContentPostDto {
+  createAdminPost(@Body() input: CreateContentPostDto): Promise<ContentPostDto> {
     return this.cms.create(input);
   }
 
@@ -80,7 +80,7 @@ export class AdminContentController {
   deleteAdminPost(
     @Param('id') id: string,
     @Body() input: ArchiveContentPostDto,
-  ): ContentPostDto {
+  ): Promise<ContentPostDto> {
     return this.cms.archive(id, input);
   }
 }

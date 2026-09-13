@@ -446,7 +446,7 @@ Table product_reviews {
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
-  Note: '[P1] CHECK rating 1..5; verified purchase qua order_item.'
+  Note: '[P1] CHECK rating 1..5; verified purchase qua order_item. V1 (migration 20260913140000) đã persist: product_id/customer_id/order_item_id NULLABLE và dùng thêm product_slug + customer_display_name, vì luồng tạo review theo đơn đã mua chưa tồn tại; verified_purchase = true bắt buộc có order_item_id.'
 }
 
 Table product_review_media {
@@ -475,7 +475,7 @@ Table product_review_comments {
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
   deleted_at timestamptz
-  Note: '[P1] Shop reply hoặc customer follow-up; V1 chỉ tối đa một cấp reply.'
+  Note: '[P1] Shop reply hoặc customer follow-up; V1 chỉ tối đa một cấp reply. V1 (migration 20260913140000) đã persist: author_user_id NULLABLE và dùng thêm author_name; comment STAFF bắt buộc có author_user_id; chưa hiện thực parent_comment_id.'
 }
 
 // PRICING + FLASH SALE
@@ -1183,7 +1183,7 @@ Table posts {
   updated_at timestamptz [not null]
   updated_by bigint [not null]
   deleted_at timestamptz
-  Note: '[P1] Blog/news.'
+  Note: '[P1] Blog/news. V1 (migration 20260913140000) đã persist: cover_asset_id NULLABLE và dùng thêm cover_url; post_products thay bằng related_product_slugs jsonb cho tới khi có luồng gắn product thật; post_type V1 dùng NEWS|TRAINING_GUIDE|PRODUCT_GUIDE|ABOUT; status V1 chỉ PUBLISHED|ARCHIVED.'
 }
 
 Table post_categories {

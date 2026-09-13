@@ -1,0 +1,131 @@
+# Generated from NestJS decorators. Do not edit by hand.
+openapi: 3.0.0
+info:
+  title: DCTD-UTC Commerce API
+  description: Contract for storefront and admin applications
+  version: 1.0.0
+  contact: {}
+servers:
+  - url: http://localhost:4000
+    description: Local
+paths:
+  /api/v1/promotions/flash-sales:
+    get:
+      operationId: listPublicFlashSales
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicFlashSaleListDto"
+      summary: Danh sách chiến dịch flash sale đang chạy theo giờ server
+      tags:
+        - Storefront Promotions
+components:
+  schemas:
+    PublicFlashSaleListDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicFlashSaleCampaignDto"
+        serverTime:
+          type: string
+          format: date-time
+          description: Thời điểm server trả dữ liệu; client dùng để hiệu chỉnh đồng hồ đếm ngược
+      required:
+        - items
+        - serverTime
+    PublicFlashSaleCampaignDto:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+          description: Mốc kết thúc để client đếm ngược; server vẫn là nguồn quyết định
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/FlashSaleItemDto"
+      required:
+        - code
+        - name
+        - startsAt
+        - endsAt
+        - items
+    FlashSaleItemDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        productVariantId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        sku:
+          type: string
+        productName:
+          type: string
+        productSlug:
+          type: string
+        imageUrl:
+          type: string
+          format: uri
+          nullable: true
+        salePrice:
+          type: string
+          example: "1990000.00"
+        regularPrice:
+          type: string
+          example: "2490000.00"
+          nullable: true
+          description: Giá thường tại thời điểm đọc; null khi chưa có bảng giá hiệu lực
+        quota:
+          type: number
+        soldQuantity:
+          type: number
+        availableQuantity:
+          type: number
+          description: Số suất còn bán được = quota - sold - reserved
+        perCustomerLimit:
+          type: number
+          nullable: true
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+        version:
+          type: string
+      required:
+        - id
+        - productVariantId
+        - sku
+        - productName
+        - productSlug
+        - salePrice
+        - quota
+        - soldQuantity
+        - availableQuantity
+        - status
+        - version
+  securitySchemes:
+    bearer:
+      scheme: bearer
+      bearerFormat: JWT
+      type: http

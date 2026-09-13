@@ -33,6 +33,8 @@ const CONTRACT_SLICES: ContractSlice[] = [
   { relativePath: 'admin/fulfillments.yaml', tags: ['Admin Fulfillments'] },
   { relativePath: 'storefront/payments.yaml', tags: ['Storefront Guest Payments', 'Storefront Account Payments'] },
   { relativePath: 'admin/payments.yaml', tags: ['Admin Payments'] },
+  { relativePath: 'storefront/promotions.yaml', tags: ['Storefront Promotions'] },
+  { relativePath: 'admin/promotions.yaml', tags: ['Admin Promotions'] },
 ];
 
 function collectReferences(value: unknown, references: Set<string>): void {

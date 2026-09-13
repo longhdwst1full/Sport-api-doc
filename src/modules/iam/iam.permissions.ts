@@ -21,6 +21,8 @@ export const PERMISSION_CATALOG: readonly Permission[] = [
   { code: 'catalog.product.view', module: 'Catalog', action: 'view', sensitive: false },
   { code: 'catalog.product.manage', module: 'Catalog', action: 'manage', sensitive: false },
   { code: 'catalog.product.publish', module: 'Catalog', action: 'publish', sensitive: true },
+  { code: 'catalog.flash_sale.view', module: 'Pricing', action: 'view', sensitive: false },
+  { code: 'catalog.flash_sale.manage', module: 'Pricing', action: 'manage', sensitive: true },
   { code: 'catalog.price.view', module: 'Pricing', action: 'view', sensitive: false },
   { code: 'catalog.price.manage', module: 'Pricing', action: 'manage', sensitive: true },
   { code: 'review.moderate', module: 'Review', action: 'moderate', sensitive: true },

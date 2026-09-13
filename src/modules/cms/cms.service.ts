@@ -1,5 +1,8 @@
-import { randomUUID } from 'node:crypto';
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma, type ContentPost } from '@prisma/client';
+
+import { PrismaService } from '../../database/prisma.service';
+import { toDatabaseId, toEntityId } from '../../common/identifiers/entity-id';
 import {
   ArchiveContentPostDto,
   CONTENT_POST_STATUS,
@@ -10,78 +13,103 @@ import {
 
 @Injectable()
 export class CmsService {
-  private readonly posts: ContentPostDto[] = [
-    {
-      id: 'post-home-gym',
-      slug: 'setup-goc-tap-tai-nha',
-      postType: 'TRAINING_GUIDE',
-      title: 'Thiết lập góc tập tại nhà từ 6 m²',
-      excerpt: 'Cách chọn thảm, tạ và khoảng trống an toàn cho một góc tập nhỏ.',
-      body: 'Bắt đầu bằng mặt sàn ổn định, khoảng chuyển động và nhóm bài tập bạn duy trì được.',
-      coverUrl: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48',
-      relatedProductSlugs: ['combo-tap-gym-tai-nha'],
-      publishedAt: '2026-08-20T02:00:00.000Z',
-      status: CONTENT_POST_STATUS.PUBLISHED,
-      version: 0,
-    },
-    {
-      id: 'post-treadmill-guide',
-      slug: 'chon-may-chay-bo-gia-dinh',
-      postType: 'PRODUCT_GUIDE',
-      title: '5 tiêu chí chọn máy chạy bộ gia đình',
-      excerpt: 'Động cơ, vùng chạy, tải trọng, độ ồn và dịch vụ sau bán hàng.',
-      body: 'Đừng chỉ nhìn tốc độ tối đa; vùng chạy và khả năng vận hành liên tục quan trọng hơn.',
-      coverUrl: 'https://images.unsplash.com/photo-1576678927484-cc907957088c',
-      relatedProductSlugs: ['may-chay-bo-dctd-pro-x1'],
-      publishedAt: '2026-08-18T02:00:00.000Z',
-      status: CONTENT_POST_STATUS.PUBLISHED,
-      version: 0,
-    },
-  ];
+  constructor(private readonly prisma: PrismaService) {}
 
-  listPublished(): ContentPostListDto {
-    const items = this.posts.filter(({ status }) => status === CONTENT_POST_STATUS.PUBLISHED);
-    return { items, total: items.length };
+  async listPublished(): Promise<ContentPostListDto> {
+    const rows = await this.prisma.contentPost.findMany({
+      where: { status: CONTENT_POST_STATUS.PUBLISHED },
+      orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }],
+    });
+    return { items: rows.map((row) => this.toPost(row)), total: rows.length };
   }
 
-  listAdmin(): ContentPostListDto {
-    return { items: [...this.posts], total: this.posts.length };
+  async listAdmin(): Promise<ContentPostListDto> {
+    const rows = await this.prisma.contentPost.findMany({
+      orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }],
+    });
+    return { items: rows.map((row) => this.toPost(row)), total: rows.length };
   }
 
-  getBySlug(slug: string): ContentPostDto {
-    const post = this.posts.find(
-      (item) => item.slug === slug && item.status === CONTENT_POST_STATUS.PUBLISHED,
-    );
-    if (!post) throw new NotFoundException('Post not found');
-    return post;
+  async getBySlug(slug: string): Promise<ContentPostDto> {
+    const row = await this.prisma.contentPost.findFirst({
+      where: { slug: slug.trim(), status: CONTENT_POST_STATUS.PUBLISHED },
+    });
+    if (!row) throw new NotFoundException('Post not found');
+    return this.toPost(row);
   }
 
-  create(input: CreateContentPostDto): ContentPostDto {
-    const post: ContentPostDto = {
-      ...input,
-      id: randomUUID(),
-      relatedProductSlugs: input.relatedProductSlugs ?? [],
-      publishedAt: new Date().toISOString(),
-      status: CONTENT_POST_STATUS.PUBLISHED,
-      version: 0,
+  async create(input: CreateContentPostDto): Promise<ContentPostDto> {
+    try {
+      const row = await this.prisma.contentPost.create({
+        data: {
+          postType: input.postType,
+          slug: input.slug.trim(),
+          title: input.title.trim(),
+          excerpt: input.excerpt.trim(),
+          body: input.body,
+          coverUrl: input.coverUrl.trim(),
+          relatedProductSlugs: input.relatedProductSlugs ?? [],
+          status: CONTENT_POST_STATUS.PUBLISHED,
+          publishedAt: new Date(),
+        },
+      });
+      return this.toPost(row);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('Slug bài viết đã tồn tại');
+      }
+      throw error;
+    }
+  }
+
+  async archive(id: string, input: ArchiveContentPostDto): Promise<ContentPostDto> {
+    const postId = toDatabaseId(id);
+    return this.prisma.$transaction(async (transaction) => {
+      // Conditional update theo version: hai request archive đồng thời thì đúng một
+      // request thắng, request còn lại nhận 409 thay vì ghi đè lý do của nhau.
+      const updated = await transaction.contentPost.updateMany({
+        where: {
+          id: postId,
+          version: BigInt(input.expectedVersion),
+          status: CONTENT_POST_STATUS.PUBLISHED,
+        },
+        data: {
+          status: CONTENT_POST_STATUS.ARCHIVED,
+          archiveReason: input.reason.trim(),
+          archivedAt: new Date(),
+          version: { increment: 1 },
+        },
+      });
+
+      const row = await transaction.contentPost.findUnique({ where: { id: postId } });
+      if (!row) throw new NotFoundException('Post not found');
+      if (updated.count === 0) {
+        if (row.status === CONTENT_POST_STATUS.ARCHIVED) {
+          throw new ConflictException('Post is already archived');
+        }
+        throw new ConflictException('Post was changed by another request');
+      }
+      return this.toPost(row);
+    });
+  }
+
+  private toPost(row: ContentPost): ContentPostDto {
+    return {
+      id: toEntityId(row.id),
+      slug: row.slug,
+      postType: row.postType as ContentPostDto['postType'],
+      title: row.title,
+      excerpt: row.excerpt,
+      body: row.body,
+      coverUrl: row.coverUrl,
+      relatedProductSlugs: Array.isArray(row.relatedProductSlugs)
+        ? row.relatedProductSlugs.filter((slug): slug is string => typeof slug === 'string')
+        : [],
+      publishedAt: row.publishedAt.toISOString(),
+      status: row.status as ContentPostDto['status'],
+      version: Number(row.version),
+      ...(row.archivedAt ? { archivedAt: row.archivedAt.toISOString() } : {}),
+      ...(row.archiveReason ? { archiveReason: row.archiveReason } : {}),
     };
-    this.posts.unshift(post);
-    return post;
-  }
-
-  archive(id: string, input: ArchiveContentPostDto): ContentPostDto {
-    const post = this.posts.find((item) => item.id === id);
-    if (!post) throw new NotFoundException('Post not found');
-    if (post.version !== input.expectedVersion) {
-      throw new ConflictException('Post was changed by another request');
-    }
-    if (post.status === CONTENT_POST_STATUS.ARCHIVED) {
-      throw new ConflictException('Post is already archived');
-    }
-    post.status = CONTENT_POST_STATUS.ARCHIVED;
-    post.archiveReason = input.reason.trim();
-    post.archivedAt = new Date().toISOString();
-    post.version += 1;
-    return post;
   }
 }

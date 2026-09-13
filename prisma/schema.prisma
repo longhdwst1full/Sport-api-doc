@@ -113,6 +113,11 @@ model User {
   reviewedPaymentEvidences  PaymentEvidence[] @relation("PaymentEvidenceReviewer")
   fulfillmentActions        FulfillmentStatusHistory[] @relation("FulfillmentHistoryActor")
 
+  flashSaleCampaignsCreated FlashSaleCampaign[] @relation("FlashSaleCampaignCreator")
+  flashSaleCampaignsUpdated FlashSaleCampaign[] @relation("FlashSaleCampaignUpdater")
+  moderatedReviews          ProductReview[]            @relation("ProductReviewModerator")
+  reviewComments            ProductReviewComment[]     @relation("ProductReviewCommentAuthor")
+
   @@map("users")
 }
 
@@ -280,6 +285,7 @@ model MediaAsset {
   categoryImages Category[]     @relation("CategoryImage")
   productMedia   ProductMedia[]
   paymentEvidence PaymentEvidence?
+  contentPostCovers       ContentPost[]          @relation("ContentPostCover")
 
   @@unique([provider, providerAssetId])
   @@index([uploadedBy])
@@ -363,6 +369,7 @@ model Product {
   categories ProductCategory[]
   variants   ProductVariant[]
   media      ProductMedia[]
+  reviews                 ProductReview[]
 
   @@index([brandId])
   @@index([status, publishedAt])
@@ -416,6 +423,8 @@ model ProductVariant {
   stockTransferItems        StockTransferItem[]
 
   @@index([productId, status])
+  flashSaleItems FlashSaleItem[]
+
   @@map("product_variants")
 }
 
@@ -668,6 +677,7 @@ model Customer {
   carts            Cart[]
   checkoutSessions CheckoutSession[]
   orders           Order[]
+  reviews          ProductReview[]
 
   @@index([normalizedEmail])
   @@index([normalizedPhone])
@@ -786,6 +796,7 @@ model CheckoutSession {
   shippingRate ShippingRate?         @relation(fields: [shippingRateId], references: [id], onDelete: Restrict)
   items        CheckoutSessionItem[]
   reservation  InventoryReservation?
+  flashSaleQuotaReservations FlashSaleQuotaReservation[]
   order        Order?
 
   @@index([cartId, status])
@@ -939,6 +950,7 @@ model OrderItem {
   productVariant ProductVariant       @relation(fields: [productVariantId], references: [id], onDelete: Restrict)
   productBundle  ProductBundle?       @relation(fields: [productBundleId], references: [id], onDelete: Restrict)
   components     OrderItemComponent[]
+  reviews             ProductReview[]
 
   @@unique([orderId, lineNo])
   @@index([productVariantId])
@@ -1190,4 +1202,158 @@ model ShippingRate {
   @@index([zoneId, status])
   @@index([branchId, status])
   @@map("shipping_rates")
+}
+
+model FlashSaleCampaign {
+  id          BigInt   @id @default(autoincrement())
+  code        String   @unique @db.VarChar(32)
+  name        String   @db.VarChar(255)
+  description String?
+  startsAt    DateTime @map("starts_at") @db.Timestamptz(6)
+  endsAt      DateTime @map("ends_at") @db.Timestamptz(6)
+  status      String   @default("DRAFT") @db.VarChar(24)
+  version     BigInt   @default(0)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy   BigInt?  @map("created_by")
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy   BigInt?  @map("updated_by")
+
+  creator User?              @relation("FlashSaleCampaignCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  updater User?              @relation("FlashSaleCampaignUpdater", fields: [updatedBy], references: [id], onDelete: Restrict)
+  items   FlashSaleItem[]
+
+  @@index([status, startsAt, endsAt])
+  @@map("flash_sale_campaigns")
+}
+
+model FlashSaleItem {
+  id               BigInt   @id @default(autoincrement())
+  campaignId       BigInt   @map("campaign_id")
+  productVariantId BigInt   @map("product_variant_id")
+  salePrice        Decimal  @map("sale_price") @db.Decimal(19, 2)
+  currencyCode     String   @default("VND") @map("currency_code") @db.Char(3)
+  quota            Int
+  soldQuantity     Int      @default(0) @map("sold_quantity")
+  reservedQuantity Int      @default(0) @map("reserved_quantity")
+  perCustomerLimit Int?     @map("per_customer_limit")
+  status           String   @default("ACTIVE") @db.VarChar(24)
+  version          BigInt   @default(0)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  campaign       FlashSaleCampaign            @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+  productVariant ProductVariant               @relation(fields: [productVariantId], references: [id], onDelete: Restrict)
+  reservations   FlashSaleQuotaReservation[]
+
+  @@unique([campaignId, productVariantId])
+  @@index([productVariantId, status])
+  @@map("flash_sale_items")
+}
+
+model FlashSaleQuotaReservation {
+  id                BigInt    @id @default(autoincrement())
+  flashSaleItemId   BigInt    @map("flash_sale_item_id")
+  checkoutSessionId BigInt    @map("checkout_session_id")
+  customerKey       String    @map("customer_key") @db.VarChar(150)
+  idempotencyKey    String    @unique @map("idempotency_key") @db.VarChar(150)
+  quantity          Int
+  status            String    @default("ACTIVE") @db.VarChar(24)
+  expiresAt         DateTime  @map("expires_at") @db.Timestamptz(6)
+  committedAt       DateTime? @map("committed_at") @db.Timestamptz(6)
+  releasedAt        DateTime? @map("released_at") @db.Timestamptz(6)
+  releaseReason     String?   @map("release_reason") @db.VarChar(500)
+  version           BigInt    @default(0)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  flashSaleItem   FlashSaleItem   @relation(fields: [flashSaleItemId], references: [id], onDelete: Restrict)
+  checkoutSession CheckoutSession @relation(fields: [checkoutSessionId], references: [id], onDelete: Restrict)
+
+  @@unique([flashSaleItemId, checkoutSessionId])
+  @@index([status, expiresAt, id])
+  @@index([checkoutSessionId, status])
+  @@map("flash_sale_quota_reservations")
+}
+
+// CMS và Review V1 — xem `document/09-v1-model.dbml` cho mô hình đích.
+// Các cột đánh dấu "đích" giữ đúng tên trong DBML nhưng nullable ở V1 vì luồng
+// tạo review theo đơn hàng đã mua và luồng upload ảnh bìa qua media asset chưa
+// tồn tại. Khi hai luồng đó ra đời thì backfill rồi siết NOT NULL, không đổi tên cột.
+model ContentPost {
+  id                  BigInt    @id @default(autoincrement())
+  postType            String    @map("post_type") @db.VarChar(32)
+  slug                String    @unique @db.VarChar(255)
+  title               String    @db.VarChar(255)
+  excerpt             String
+  body                String
+  coverUrl            String    @map("cover_url")
+  coverAssetId        BigInt?   @map("cover_asset_id")
+  relatedProductSlugs Json      @default("[]") @map("related_product_slugs") @db.JsonB
+  status              String    @default("PUBLISHED") @db.VarChar(24)
+  publishedAt         DateTime  @map("published_at") @db.Timestamptz(6)
+  archivedAt          DateTime? @map("archived_at") @db.Timestamptz(6)
+  archiveReason       String?   @map("archive_reason") @db.VarChar(255)
+  version             BigInt    @default(0)
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  coverAsset MediaAsset? @relation("ContentPostCover", fields: [coverAssetId], references: [id], onDelete: Restrict)
+
+  @@index([status, publishedAt(sort: Desc), id(sort: Desc)])
+  @@index([postType, status])
+  @@map("posts")
+}
+
+model ProductReview {
+  id                  BigInt    @id @default(autoincrement())
+  productSlug         String    @map("product_slug") @db.VarChar(255)
+  productId           BigInt?   @map("product_id")
+  customerDisplayName String    @map("customer_display_name") @db.VarChar(255)
+  customerId          BigInt?   @map("customer_id")
+  orderItemId         BigInt?   @map("order_item_id")
+  rating              Int       @db.SmallInt
+  title               String    @db.VarChar(255)
+  content             String
+  verifiedPurchase    Boolean   @default(false) @map("verified_purchase")
+  status              String    @default("PENDING") @db.VarChar(24)
+  moderationReason    String?   @map("moderation_reason")
+  moderatedAt         DateTime? @map("moderated_at") @db.Timestamptz(6)
+  moderatedBy         BigInt?   @map("moderated_by")
+  version             BigInt    @default(0)
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  product   Product?               @relation(fields: [productId], references: [id], onDelete: Restrict)
+  customer  Customer?              @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  orderItem OrderItem?             @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
+  moderator User?                  @relation("ProductReviewModerator", fields: [moderatedBy], references: [id], onDelete: Restrict)
+  comments  ProductReviewComment[]
+
+  @@index([productSlug, status, createdAt(sort: Desc)])
+  @@index([status, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([productId])
+  @@index([customerId])
+  @@index([orderItemId])
+  @@index([moderatedBy])
+  @@map("product_reviews")
+}
+
+model ProductReviewComment {
+  id              BigInt   @id @default(autoincrement())
+  productReviewId BigInt   @map("product_review_id")
+  authorType      String   @map("author_type") @db.VarChar(24)
+  authorName      String   @map("author_name") @db.VarChar(255)
+  authorUserId    BigInt?  @map("author_user_id")
+  content         String
+  status          String   @default("PUBLISHED") @db.VarChar(24)
+  version         BigInt   @default(0)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  review ProductReview @relation(fields: [productReviewId], references: [id], onDelete: Restrict)
+  author User?         @relation("ProductReviewCommentAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
+
+  @@index([productReviewId, createdAt])
+  @@index([authorUserId])
+  @@map("product_review_comments")
 }

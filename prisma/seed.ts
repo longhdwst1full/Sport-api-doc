@@ -194,8 +194,74 @@ async function seed(transaction: Prisma.TransactionClient): Promise<void> {
   }
 }
 
+// Nội dung mẫu chuyển từ vertical slice in-memory của CMS/Review sang persistence.
+// Create-only: đã có slug thì bỏ qua, không ghi đè nội dung biên tập viên đã sửa.
+async function seedEditorialContent(transaction: Prisma.TransactionClient): Promise<void> {
+  const posts = [
+    {
+      postType: 'TRAINING_GUIDE',
+      slug: 'setup-goc-tap-tai-nha',
+      title: 'Thiết lập góc tập tại nhà từ 6 m²',
+      excerpt: 'Cách chọn thảm, tạ và khoảng trống an toàn cho một góc tập nhỏ.',
+      body: 'Bắt đầu bằng mặt sàn ổn định, khoảng chuyển động và nhóm bài tập bạn duy trì được.',
+      coverUrl: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48',
+      relatedProductSlugs: ['combo-tap-gym-tai-nha'],
+      publishedAt: new Date('2026-08-20T02:00:00.000Z'),
+    },
+    {
+      postType: 'PRODUCT_GUIDE',
+      slug: 'chon-may-chay-bo-gia-dinh',
+      title: '5 tiêu chí chọn máy chạy bộ gia đình',
+      excerpt: 'Động cơ, vùng chạy, tải trọng, độ ồn và dịch vụ sau bán hàng.',
+      body: 'Đừng chỉ nhìn tốc độ tối đa; vùng chạy và khả năng vận hành liên tục quan trọng hơn.',
+      coverUrl: 'https://images.unsplash.com/photo-1576678927484-cc907957088c',
+      relatedProductSlugs: ['may-chay-bo-dctd-pro-x1'],
+      publishedAt: new Date('2026-08-18T02:00:00.000Z'),
+    },
+  ];
+
+  for (const post of posts) {
+    const existing = await transaction.contentPost.findUnique({ where: { slug: post.slug } });
+    if (existing) continue;
+    await transaction.contentPost.create({ data: { ...post, status: 'PUBLISHED' } });
+  }
+
+  const reviewSlug = 'may-chay-bo-dctd-pro-x1';
+  const existingReview = await transaction.productReview.findFirst({
+    where: { productSlug: reviewSlug, title: 'Máy chạy êm, giao lắp đúng hẹn' },
+  });
+  if (!existingReview) {
+    await transaction.productReview.create({
+      data: {
+        productSlug: reviewSlug,
+        customerDisplayName: 'Anh M.',
+        rating: 5,
+        title: 'Máy chạy êm, giao lắp đúng hẹn',
+        content: 'Vùng chạy rộng và tư vấn vị trí đặt máy rất kỹ.',
+        // verifiedPurchase cần order_item thật; dữ liệu mẫu chưa gắn đơn nên để false
+        // theo đúng CHECK product_reviews_verified_requires_order_item_check.
+        verifiedPurchase: false,
+        status: 'APPROVED',
+        moderatedAt: new Date('2026-08-22T06:00:00.000Z'),
+        createdAt: new Date('2026-08-22T04:00:00.000Z'),
+        comments: {
+          create: [
+            {
+              authorType: 'CUSTOMER',
+              authorName: 'DCTD Sport',
+              content: 'Cảm ơn anh đã tin tưởng. Đội kỹ thuật luôn sẵn sàng hỗ trợ.',
+              createdAt: new Date('2026-08-23T04:00:00.000Z'),
+            },
+          ],
+        },
+      },
+    });
+  }
+}
+
 async function main(): Promise<void> {
   await prisma.$transaction(seed, { maxWait: 10_000, timeout: 120_000 });
+  await prisma.$transaction(seedEditorialContent, { maxWait: 10_000, timeout: 120_000 });
 }
 
 void main().finally(async () => prisma.$disconnect());

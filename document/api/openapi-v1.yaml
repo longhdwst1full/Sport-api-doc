@@ -3962,6 +3962,343 @@ paths:
       summary: Receive a full shipment and record damaged quantities
       tags:
         - Admin Inventory Transfers
+  /api/v1/promotions/flash-sales:
+    get:
+      operationId: listPublicFlashSales
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicFlashSaleListDto"
+      summary: Danh sách chiến dịch flash sale đang chạy theo giờ server
+      tags:
+        - Storefront Promotions
+  /api/v1/admin/promotions/flash-sales:
+    get:
+      operationId: listAdminFlashSales
+      parameters:
+        - name: page
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            default: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 20
+            type: number
+        - name: status
+          required: false
+          in: query
+          schema:
+            type: string
+            enum:
+              - DRAFT
+              - SCHEDULED
+              - ACTIVE
+              - ENDED
+              - CANCELLED
+        - name: search
+          required: false
+          in: query
+          description: Mã hoặc tên chiến dịch
+          schema:
+            maxLength: 100
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlashSaleCampaignListDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Danh sách chiến dịch flash sale
+      tags:
+        - Admin Promotions
+    post:
+      operationId: createAdminFlashSale
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFlashSaleCampaignDto"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlashSaleCampaignDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Tạo chiến dịch flash sale ở trạng thái nháp
+      tags:
+        - Admin Promotions
+  /api/v1/admin/promotions/flash-sales/{id}:
+    get:
+      operationId: getAdminFlashSale
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlashSaleCampaignDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Chi tiết chiến dịch và danh sách suất bán
+      tags:
+        - Admin Promotions
+    patch:
+      operationId: updateAdminFlashSale
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFlashSaleCampaignDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlashSaleCampaignDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Cập nhật thông tin và cửa sổ chạy của chiến dịch
+      tags:
+        - Admin Promotions
+  /api/v1/admin/promotions/flash-sales/{id}/status:
+    post:
+      operationId: changeAdminFlashSaleStatus
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeFlashSaleCampaignStatusDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlashSaleCampaignDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Chuyển vòng đời chiến dịch theo state machine
+      tags:
+        - Admin Promotions
+  /api/v1/admin/promotions/flash-sales/{id}/items:
+    post:
+      operationId: upsertAdminFlashSaleItem
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertFlashSaleItemDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlashSaleCampaignDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Thêm hoặc cập nhật suất bán của một biến thể trong chiến dịch
+      tags:
+        - Admin Promotions
+  /api/v1/admin/promotions/flash-sales/{id}/items/{itemId}:
+    delete:
+      operationId: removeAdminFlashSaleItem
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: itemId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RemoveFlashSaleItemDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlashSaleCampaignDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Gỡ suất bán; đã phát sinh giao dịch thì chuyển INACTIVE thay vì xóa
+      tags:
+        - Admin Promotions
   /api/v1/carts/guest:
     post:
       operationId: createGuestCart
@@ -8963,6 +9300,299 @@ components:
       required:
         - version
         - items
+    FlashSaleItemDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        productVariantId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        sku:
+          type: string
+        productName:
+          type: string
+        productSlug:
+          type: string
+        imageUrl:
+          type: string
+          format: uri
+          nullable: true
+        salePrice:
+          type: string
+          example: "1990000.00"
+        regularPrice:
+          type: string
+          example: "2490000.00"
+          nullable: true
+          description: Giá thường tại thời điểm đọc; null khi chưa có bảng giá hiệu lực
+        quota:
+          type: number
+        soldQuantity:
+          type: number
+        availableQuantity:
+          type: number
+          description: Số suất còn bán được = quota - sold - reserved
+        perCustomerLimit:
+          type: number
+          nullable: true
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+        version:
+          type: string
+      required:
+        - id
+        - productVariantId
+        - sku
+        - productName
+        - productSlug
+        - salePrice
+        - quota
+        - soldQuantity
+        - availableQuantity
+        - status
+        - version
+    PublicFlashSaleCampaignDto:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+          description: Mốc kết thúc để client đếm ngược; server vẫn là nguồn quyết định
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/FlashSaleItemDto"
+      required:
+        - code
+        - name
+        - startsAt
+        - endsAt
+        - items
+    PublicFlashSaleListDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicFlashSaleCampaignDto"
+        serverTime:
+          type: string
+          format: date-time
+          description: Thời điểm server trả dữ liệu; client dùng để hiệu chỉnh đồng hồ đếm ngược
+      required:
+        - items
+        - serverTime
+    FlashSaleCampaignSummaryDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        code:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum:
+            - DRAFT
+            - SCHEDULED
+            - ACTIVE
+            - ENDED
+            - CANCELLED
+        itemCount:
+          type: number
+        version:
+          type: string
+      required:
+        - id
+        - code
+        - name
+        - startsAt
+        - endsAt
+        - status
+        - itemCount
+        - version
+    FlashSaleCampaignListDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/FlashSaleCampaignSummaryDto"
+        page:
+          type: number
+        limit:
+          type: number
+        total:
+          type: number
+      required:
+        - items
+        - page
+        - limit
+        - total
+    FlashSaleCampaignDetailDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        code:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum:
+            - DRAFT
+            - SCHEDULED
+            - ACTIVE
+            - ENDED
+            - CANCELLED
+        itemCount:
+          type: number
+        version:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/FlashSaleItemDto"
+      required:
+        - id
+        - code
+        - name
+        - startsAt
+        - endsAt
+        - status
+        - itemCount
+        - version
+        - items
+    CreateFlashSaleCampaignDto:
+      type: object
+      properties:
+        code:
+          type: string
+          pattern: ^[A-Z0-9-]+$
+          maxLength: 32
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+      required:
+        - code
+        - name
+        - startsAt
+        - endsAt
+    UpdateFlashSaleCampaignDto:
+      type: object
+      properties:
+        expectedVersion:
+          type: string
+          pattern: ^\d+$
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+      required:
+        - expectedVersion
+    ChangeFlashSaleCampaignStatusDto:
+      type: object
+      properties:
+        expectedVersion:
+          type: string
+          pattern: ^\d+$
+        status:
+          type: string
+          enum:
+            - DRAFT
+            - SCHEDULED
+            - ACTIVE
+            - ENDED
+            - CANCELLED
+      required:
+        - expectedVersion
+        - status
+    UpsertFlashSaleItemDto:
+      type: object
+      properties:
+        productVariantId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        salePrice:
+          type: string
+          example: "1990000.00"
+          description: Decimal dạng chuỗi; không gửi number để tránh sai số
+        quota:
+          type: number
+          minimum: 1
+        perCustomerLimit:
+          type: number
+          minimum: 1
+          nullable: true
+      required:
+        - productVariantId
+        - salePrice
+        - quota
+    RemoveFlashSaleItemDto:
+      type: object
+      properties:
+        expectedVersion:
+          type: string
+          pattern: ^\d+$
+      required:
+        - expectedVersion
     CartItemDto:
       type: object
       properties:

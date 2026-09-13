@@ -13,14 +13,27 @@
       "targets": [
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "auth_sessions" },
-          "columns": ["Unique / CHECK", "Các cột chính"],
-          "set": { "Unique / CHECK": "refresh_token_hash UQ; rotated_from_id UQ" }
+          "match": {
+            "Tên bảng": "auth_sessions"
+          },
+          "columns": [
+            "Unique / CHECK",
+            "Các cột chính"
+          ],
+          "set": {
+            "Unique / CHECK": "refresh_token_hash UQ; rotated_from_id UQ"
+          }
         },
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "auth_sessions", "Tên cột": "rotated_from_id" },
-          "columns": ["Unique", "Ý nghĩa / trạng thái cho phép"],
+          "match": {
+            "Tên bảng": "auth_sessions",
+            "Tên cột": "rotated_from_id"
+          },
+          "columns": [
+            "Unique",
+            "Ý nghĩa / trạng thái cho phép"
+          ],
           "set": {
             "Unique": "YES",
             "Ý nghĩa / trạng thái cho phép": "Một session nguồn chỉ được rotate thành công một lần"
@@ -40,8 +53,14 @@
       "targets": [
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "audit_logs" },
-          "columns": ["Khóa ngoại quan trọng", "Unique / CHECK", "Retention"],
+          "match": {
+            "Tên bảng": "audit_logs"
+          },
+          "columns": [
+            "Khóa ngoại quan trọng",
+            "Unique / CHECK",
+            "Retention"
+          ],
           "set": {
             "Khóa ngoại quan trọng": "actor_user_id->users RESTRICT",
             "Unique / CHECK": "request+sequence UQ; actor consistency CHECK; reject UPDATE/DELETE/TRUNCATE",
@@ -50,8 +69,14 @@
         },
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "audit_logs", "Tên cột": "actor_type" },
-          "columns": ["Cho phép NULL", "Ý nghĩa / trạng thái cho phép"],
+          "match": {
+            "Tên bảng": "audit_logs",
+            "Tên cột": "actor_type"
+          },
+          "columns": [
+            "Cho phép NULL",
+            "Ý nghĩa / trạng thái cho phép"
+          ],
           "set": {
             "Cho phép NULL": "NO",
             "Ý nghĩa / trạng thái cho phép": "USER|SYSTEM|GUEST; USER bắt buộc actor_user_id"
@@ -59,8 +84,14 @@
         },
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "audit_logs", "Tên cột": "actor_user_id" },
-          "columns": ["Cho phép NULL", "Ý nghĩa / trạng thái cho phép"],
+          "match": {
+            "Tên bảng": "audit_logs",
+            "Tên cột": "actor_user_id"
+          },
+          "columns": [
+            "Cho phép NULL",
+            "Ý nghĩa / trạng thái cho phép"
+          ],
           "set": {
             "Cho phép NULL": "YES",
             "Ý nghĩa / trạng thái cho phép": "FK RESTRICT; SYSTEM/GUEST phải null"
@@ -81,18 +112,57 @@
       "targets": [
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": ["media_assets", "brands", "categories", "products", "product_categories", "product_variants", "product_media", "product_prices", "product_bundles", "bundle_items"] },
-          "columns": ["Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính"]
+          "match": {
+            "Tên bảng": [
+              "media_assets",
+              "brands",
+              "categories",
+              "products",
+              "product_categories",
+              "product_variants",
+              "product_media",
+              "product_prices",
+              "product_bundles",
+              "bundle_items"
+            ]
+          },
+          "columns": [
+            "Khóa ngoại quan trọng",
+            "Unique / CHECK",
+            "Các cột chính"
+          ]
         },
         {
           "sheet": "Relationships",
-          "match": { "Bảng con": ["brands", "categories", "products", "product_categories", "product_variants", "product_media", "product_prices", "product_bundles", "bundle_items"] },
-          "columns": ["Bảng con", "Cột FK", "Bảng cha", "Cột PK", "ON DELETE"]
+          "match": {
+            "Bảng con": [
+              "brands",
+              "categories",
+              "products",
+              "product_categories",
+              "product_variants",
+              "product_media",
+              "product_prices",
+              "product_bundles",
+              "bundle_items"
+            ]
+          },
+          "columns": [
+            "Bảng con",
+            "Cột FK",
+            "Bảng cha",
+            "Cột PK",
+            "ON DELETE"
+          ]
         },
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "product_variants" },
-          "columns": ["Các cột chính"],
+          "match": {
+            "Tên bảng": "product_variants"
+          },
+          "columns": [
+            "Các cột chính"
+          ],
           "set": {
             "Các cột chính": "sku,barcode,name,weight_grams,length_mm,width_mm,height_mm,status,version"
           }
@@ -112,8 +182,14 @@
       "targets": [
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "user_role_assignments" },
-          "columns": ["Ý nghĩa", "Khóa ngoại quan trọng", "Unique / CHECK"],
+          "match": {
+            "Tên bảng": "user_role_assignments"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Khóa ngoại quan trọng",
+            "Unique / CHECK"
+          ],
           "set": {
             "Ý nghĩa": "API V1 GLOBAL/BRANCH; DB giữ WAREHOUSE/OWN dormant",
             "Unique / CHECK": "active assignment partial UQ theo scope; scope shape CHECK"
@@ -121,8 +197,14 @@
         },
         {
           "sheet": "RBAC Permissions",
-          "match": { "Permission code": "iam.user.view" },
-          "columns": ["Allowed scopes", "Default roles", "Ghi chú"],
+          "match": {
+            "Permission code": "iam.user.view"
+          },
+          "columns": [
+            "Allowed scopes",
+            "Default roles",
+            "Ghi chú"
+          ],
           "set": {
             "Allowed scopes": "GLOBAL;BRANCH",
             "Default roles": "OWNER; BRANCH_MANAGER",
@@ -131,8 +213,14 @@
         },
         {
           "sheet": "RBAC Permissions",
-          "match": { "Permission code": "iam.user.manage" },
-          "columns": ["Allowed scopes", "Default roles", "Ghi chú"],
+          "match": {
+            "Permission code": "iam.user.manage"
+          },
+          "columns": [
+            "Allowed scopes",
+            "Default roles",
+            "Ghi chú"
+          ],
           "set": {
             "Allowed scopes": "GLOBAL;BRANCH",
             "Default roles": "OWNER; BRANCH_MANAGER",
@@ -141,8 +229,14 @@
         },
         {
           "sheet": "RBAC Permissions",
-          "match": { "Permission code": "iam.role.view" },
-          "columns": ["Allowed scopes", "Default roles", "Ghi chú"],
+          "match": {
+            "Permission code": "iam.role.view"
+          },
+          "columns": [
+            "Allowed scopes",
+            "Default roles",
+            "Ghi chú"
+          ],
           "set": {
             "Allowed scopes": "GLOBAL;BRANCH",
             "Default roles": "OWNER; BRANCH_MANAGER",
@@ -151,8 +245,14 @@
         },
         {
           "sheet": "RBAC Permissions",
-          "match": { "Permission code": "iam.assignment.manage" },
-          "columns": ["Allowed scopes", "Default roles", "Ghi chú"],
+          "match": {
+            "Permission code": "iam.assignment.manage"
+          },
+          "columns": [
+            "Allowed scopes",
+            "Default roles",
+            "Ghi chú"
+          ],
           "set": {
             "Allowed scopes": "GLOBAL;BRANCH",
             "Default roles": "OWNER; BRANCH_MANAGER",
@@ -198,7 +298,18 @@
         {
           "sheet": "Columns",
           "match": {
-            "Tên bảng": ["branches", "warehouses", "users", "roles", "media_assets", "brands", "categories", "products", "product_variants", "product_media"],
+            "Tên bảng": [
+              "branches",
+              "warehouses",
+              "users",
+              "roles",
+              "media_assets",
+              "brands",
+              "categories",
+              "products",
+              "product_variants",
+              "product_media"
+            ],
             "Tên cột": "deleted_at"
           },
           "columns": "*",
@@ -206,8 +317,24 @@
         },
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": ["branches", "warehouses", "users", "roles", "media_assets", "brands", "categories", "products", "product_variants", "product_media"] },
-          "columns": ["Unique / CHECK", "Retention"]
+          "match": {
+            "Tên bảng": [
+              "branches",
+              "warehouses",
+              "users",
+              "roles",
+              "media_assets",
+              "brands",
+              "categories",
+              "products",
+              "product_variants",
+              "product_media"
+            ]
+          },
+          "columns": [
+            "Unique / CHECK",
+            "Retention"
+          ]
         }
       ]
     },
@@ -251,13 +378,28 @@
       "targets": [
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": ["users", "auth_sessions", "audit_logs"] },
-          "columns": ["Ý nghĩa", "Các cột chính"]
+          "match": {
+            "Tên bảng": [
+              "users",
+              "auth_sessions",
+              "audit_logs"
+            ]
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Các cột chính"
+          ]
         },
         {
           "sheet": "RBAC Permissions",
-          "match": { "Permission code": "iam.user.manage" },
-          "columns": ["Allowed scopes", "Default roles", "Ghi chú"],
+          "match": {
+            "Permission code": "iam.user.manage"
+          },
+          "columns": [
+            "Allowed scopes",
+            "Default roles",
+            "Ghi chú"
+          ],
           "set": {
             "Allowed scopes": "GLOBAL;BRANCH",
             "Default roles": "OWNER; BRANCH_MANAGER",
@@ -280,25 +422,58 @@
       "targets": [
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": ["users", "auth_sessions", "audit_logs"] },
-          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính"]
+          "match": {
+            "Tên bảng": [
+              "users",
+              "auth_sessions",
+              "audit_logs"
+            ]
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Unique / CHECK",
+            "Các cột chính"
+          ]
         },
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "users", "Tên cột": "normalized_email" },
-          "columns": ["Ý nghĩa / trạng thái cho phép"],
-          "set": { "Ý nghĩa / trạng thái cho phép": "Email trim + lowercase; login identifier; unique khi khác null" }
+          "match": {
+            "Tên bảng": "users",
+            "Tên cột": "normalized_email"
+          },
+          "columns": [
+            "Ý nghĩa / trạng thái cho phép"
+          ],
+          "set": {
+            "Ý nghĩa / trạng thái cho phép": "Email trim + lowercase; login identifier; unique khi khác null"
+          }
         },
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "users", "Tên cột": "normalized_phone" },
-          "columns": ["Ý nghĩa / trạng thái cho phép"],
-          "set": { "Ý nghĩa / trạng thái cho phép": "SĐT Việt Nam được validate bằng metadata đầy đủ và lưu E.164; login identifier; unique khi khác null" }
+          "match": {
+            "Tên bảng": "users",
+            "Tên cột": "normalized_phone"
+          },
+          "columns": [
+            "Ý nghĩa / trạng thái cho phép"
+          ],
+          "set": {
+            "Ý nghĩa / trạng thái cho phép": "SĐT Việt Nam được validate bằng metadata đầy đủ và lưu E.164; login identifier; unique khi khác null"
+          }
         },
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "users", "Tên cột": ["status", "email_verified_at", "phone_verified_at"] },
-          "columns": ["Ý nghĩa / trạng thái cho phép"]
+          "match": {
+            "Tên bảng": "users",
+            "Tên cột": [
+              "status",
+              "email_verified_at",
+              "phone_verified_at"
+            ]
+          },
+          "columns": [
+            "Ý nghĩa / trạng thái cho phép"
+          ]
         }
       ]
     },
@@ -316,8 +491,14 @@
       "targets": [
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "products" },
-          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính"],
+          "match": {
+            "Tên bảng": "products"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Unique / CHECK",
+            "Các cột chính"
+          ],
           "set": {
             "Ý nghĩa": "SPU chuẩn hoặc combo; không bán trực tiếp",
             "Unique / CHECK": "slug UQ; product_no UQ; product_type CHECK STANDARD/BUNDLE",
@@ -326,13 +507,30 @@
         },
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": ["product_variants", "product_bundles"] },
-          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính", "Retention"]
+          "match": {
+            "Tên bảng": [
+              "product_variants",
+              "product_bundles"
+            ]
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Unique / CHECK",
+            "Các cột chính",
+            "Retention"
+          ]
         },
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "product_prices" },
-          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính", "Retention"],
+          "match": {
+            "Tên bảng": "product_prices"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Unique / CHECK",
+            "Các cột chính",
+            "Retention"
+          ],
           "set": {
             "Ý nghĩa": "Lịch sử giá VAT-included; replace atomic",
             "Unique / CHECK": "no overlap active regular range; amount > 0",
@@ -342,15 +540,25 @@
         },
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "product_prices", "Tên cột": "amount" },
-          "columns": ["Ý nghĩa / trạng thái cho phép"],
-          "set": { "Ý nghĩa / trạng thái cho phép": "VAT-included REGULAR VND amount; bắt buộc > 0" }
+          "match": {
+            "Tên bảng": "product_prices",
+            "Tên cột": "amount"
+          },
+          "columns": [
+            "Ý nghĩa / trạng thái cho phép"
+          ],
+          "set": {
+            "Ý nghĩa / trạng thái cho phép": "VAT-included REGULAR VND amount; bắt buộc > 0"
+          }
         }
       ],
       "upsertRows": [
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "products", "Tên cột": "product_type" },
+          "match": {
+            "Tên bảng": "products",
+            "Tên cột": "product_type"
+          },
           "values": {
             "Tên bảng": "products",
             "STT": "16",
@@ -376,23 +584,52 @@
       "targets": [
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "product_variants" },
-          "columns": ["Ý nghĩa", "Các cột chính", "Retention"]
+          "match": {
+            "Tên bảng": "product_variants"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Các cột chính",
+            "Retention"
+          ]
         },
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": ["media_assets", "product_media"] },
-          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính", "Retention"]
+          "match": {
+            "Tên bảng": [
+              "media_assets",
+              "product_media"
+            ]
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Unique / CHECK",
+            "Các cột chính",
+            "Retention"
+          ]
         },
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "user_role_assignments" },
-          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính", "Retention"]
+          "match": {
+            "Tên bảng": "user_role_assignments"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Unique / CHECK",
+            "Các cột chính",
+            "Retention"
+          ]
         },
         {
           "sheet": "RBAC Permissions",
-          "match": { "Permission code": "iam.assignment.manage" },
-          "columns": ["Allowed scopes", "Default roles", "Ghi chú"],
+          "match": {
+            "Permission code": "iam.assignment.manage"
+          },
+          "columns": [
+            "Allowed scopes",
+            "Default roles",
+            "Ghi chú"
+          ],
           "set": {
             "Allowed scopes": "GLOBAL;BRANCH",
             "Default roles": "OWNER; BRANCH_MANAGER",
@@ -415,8 +652,15 @@
       "targets": [
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "users" },
-          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính", "Retention"],
+          "match": {
+            "Tên bảng": "users"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Unique / CHECK",
+            "Các cột chính",
+            "Retention"
+          ],
           "set": {
             "Ý nghĩa": "Customer/staff account; lockout 5 lần sai; staff forced password change",
             "Unique / CHECK": "normalized email/phone partial UQ; failed_login_attempts >= 0",
@@ -426,8 +670,15 @@
         },
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "audit_logs" },
-          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính", "Retention"],
+          "match": {
+            "Tên bảng": "audit_logs"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Unique / CHECK",
+            "Các cột chính",
+            "Retention"
+          ],
           "set": {
             "Ý nghĩa": "Append-only audit; cursor query GLOBAL owner-only; redacted output",
             "Unique / CHECK": "request+sequence UQ; actor consistency CHECK; reject UPDATE/DELETE/TRUNCATE; created_at+id IDX",
@@ -437,8 +688,15 @@
         },
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "product_prices" },
-          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính", "Retention"],
+          "match": {
+            "Tên bảng": "product_prices"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Unique / CHECK",
+            "Các cột chính",
+            "Retention"
+          ],
           "set": {
             "Ý nghĩa": "VAT-included SKU price windows; current/upcoming/history",
             "Unique / CHECK": "no overlap active regular range; amount > 0; no retroactive",
@@ -448,8 +706,14 @@
         },
         {
           "sheet": "RBAC Permissions",
-          "match": { "Permission code": "iam.audit.view" },
-          "columns": ["Allowed scopes", "Default roles", "Ghi chú"],
+          "match": {
+            "Permission code": "iam.audit.view"
+          },
+          "columns": [
+            "Allowed scopes",
+            "Default roles",
+            "Ghi chú"
+          ],
           "set": {
             "Allowed scopes": "GLOBAL",
             "Default roles": "OWNER",
@@ -460,30 +724,66 @@
       "upsertRows": [
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "users", "Tên cột": "failed_login_attempts" },
+          "match": {
+            "Tên bảng": "users",
+            "Tên cột": "failed_login_attempts"
+          },
           "values": {
-            "Tên bảng": "users", "STT": "10A", "Tên cột": "failed_login_attempts", "Kiểu dữ liệu": "int", "Cho phép NULL": "NO", "Default": "0", "Ý nghĩa / trạng thái cho phép": "Số lần sai liên tiếp; lần 5 chuyển LOCKED; reset khi login thành công/unlock"
+            "Tên bảng": "users",
+            "STT": "10A",
+            "Tên cột": "failed_login_attempts",
+            "Kiểu dữ liệu": "int",
+            "Cho phép NULL": "NO",
+            "Default": "0",
+            "Ý nghĩa / trạng thái cho phép": "Số lần sai liên tiếp; lần 5 chuyển LOCKED; reset khi login thành công/unlock"
           }
         },
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "users", "Tên cột": "must_change_password" },
+          "match": {
+            "Tên bảng": "users",
+            "Tên cột": "must_change_password"
+          },
           "values": {
-            "Tên bảng": "users", "STT": "10B", "Tên cột": "must_change_password", "Kiểu dữ liệu": "boolean", "Cho phép NULL": "NO", "Default": "false", "Ý nghĩa / trạng thái cho phép": "true cho staff mới và sau Admin unlock/reset; chỉ me/change-password/logout được phép"
+            "Tên bảng": "users",
+            "STT": "10B",
+            "Tên cột": "must_change_password",
+            "Kiểu dữ liệu": "boolean",
+            "Cho phép NULL": "NO",
+            "Default": "false",
+            "Ý nghĩa / trạng thái cho phép": "true cho staff mới và sau Admin unlock/reset; chỉ me/change-password/logout được phép"
           }
         },
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "users", "Tên cột": "locked_at" },
+          "match": {
+            "Tên bảng": "users",
+            "Tên cột": "locked_at"
+          },
           "values": {
-            "Tên bảng": "users", "STT": "10C", "Tên cột": "locked_at", "Kiểu dữ liệu": "timestamptz", "Cho phép NULL": "YES", "Default": "", "Ý nghĩa / trạng thái cho phép": "Thời điểm khóa manual hoặc auto lock"
+            "Tên bảng": "users",
+            "STT": "10C",
+            "Tên cột": "locked_at",
+            "Kiểu dữ liệu": "timestamptz",
+            "Cho phép NULL": "YES",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "Thời điểm khóa manual hoặc auto lock"
           }
         },
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "users", "Tên cột": "lock_reason" },
+          "match": {
+            "Tên bảng": "users",
+            "Tên cột": "lock_reason"
+          },
           "values": {
-            "Tên bảng": "users", "STT": "10D", "Tên cột": "lock_reason", "Kiểu dữ liệu": "varchar(255)", "Cho phép NULL": "YES", "Default": "", "Ý nghĩa / trạng thái cho phép": "MAX_FAILED_LOGIN_ATTEMPTS hoặc lý do Admin nhập"
+            "Tên bảng": "users",
+            "STT": "10D",
+            "Tên cột": "lock_reason",
+            "Kiểu dữ liệu": "varchar(255)",
+            "Cho phép NULL": "YES",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "MAX_FAILED_LOGIN_ATTEMPTS hoặc lý do Admin nhập"
           }
         }
       ]
@@ -502,18 +802,50 @@
       "targets": [
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": ["inventory_balances", "inventory_movements", "stock_adjustments", "stock_adjustment_items"] },
-          "columns": ["Ý nghĩa", "Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính", "Retention"]
+          "match": {
+            "Tên bảng": [
+              "inventory_balances",
+              "inventory_movements",
+              "stock_adjustments",
+              "stock_adjustment_items"
+            ]
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Khóa ngoại quan trọng",
+            "Unique / CHECK",
+            "Các cột chính",
+            "Retention"
+          ]
         },
         {
           "sheet": "Relationships",
-          "match": { "Bảng con": ["inventory_balances", "inventory_movements", "stock_adjustments", "stock_adjustment_items"] },
-          "columns": ["Bảng con", "Cột FK", "Bảng cha", "Cột PK", "ON DELETE"]
+          "match": {
+            "Bảng con": [
+              "inventory_balances",
+              "inventory_movements",
+              "stock_adjustments",
+              "stock_adjustment_items"
+            ]
+          },
+          "columns": [
+            "Bảng con",
+            "Cột FK",
+            "Bảng cha",
+            "Cột PK",
+            "ON DELETE"
+          ]
         },
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "inventory_movements" },
-          "columns": ["Ý nghĩa", "Unique / CHECK", "Retention"],
+          "match": {
+            "Tên bảng": "inventory_movements"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Unique / CHECK",
+            "Retention"
+          ],
           "set": {
             "Ý nghĩa": "Sổ kho append-only cho mọi thay đổi balance",
             "Unique / CHECK": "idempotency_key UQ; quantity_delta != 0; reject UPDATE/DELETE/TRUNCATE",
@@ -522,8 +854,16 @@
         },
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "stock_adjustments" },
-          "columns": ["Ý nghĩa", "Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính", "Retention"],
+          "match": {
+            "Tên bảng": "stock_adjustments"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Khóa ngoại quan trọng",
+            "Unique / CHECK",
+            "Các cột chính",
+            "Retention"
+          ],
           "set": {
             "Ý nghĩa": "Phiếu điều chỉnh tồn cơ bản post trực tiếp Sprint 1",
             "Khóa ngoại quan trọng": "warehouse_id->warehouses; created_by->users",
@@ -536,23 +876,50 @@
       "upsertRows": [
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "stock_adjustments", "Tên cột": "idempotency_key" },
+          "match": {
+            "Tên bảng": "stock_adjustments",
+            "Tên cột": "idempotency_key"
+          },
           "values": {
-            "Tên bảng": "stock_adjustments", "STT": "31A", "Tên cột": "idempotency_key", "Kiểu dữ liệu": "varchar(150)", "Cho phép NULL": "NO", "Default": "", "Ý nghĩa / trạng thái cho phép": "Unique command key; replay exact result for same payload"
+            "Tên bảng": "stock_adjustments",
+            "STT": "31A",
+            "Tên cột": "idempotency_key",
+            "Kiểu dữ liệu": "varchar(150)",
+            "Cho phép NULL": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "Unique command key; replay exact result for same payload"
           }
         },
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "stock_adjustments", "Tên cột": "request_hash" },
+          "match": {
+            "Tên bảng": "stock_adjustments",
+            "Tên cột": "request_hash"
+          },
           "values": {
-            "Tên bảng": "stock_adjustments", "STT": "31B", "Tên cột": "request_hash", "Kiểu dữ liệu": "char(64)", "Cho phép NULL": "NO", "Default": "", "Ý nghĩa / trạng thái cho phép": "SHA-256 canonical payload; same key/different payload => 409"
+            "Tên bảng": "stock_adjustments",
+            "STT": "31B",
+            "Tên cột": "request_hash",
+            "Kiểu dữ liệu": "char(64)",
+            "Cho phép NULL": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "SHA-256 canonical payload; same key/different payload => 409"
           }
         },
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "stock_adjustments", "Tên cột": "result_json" },
+          "match": {
+            "Tên bảng": "stock_adjustments",
+            "Tên cột": "result_json"
+          },
           "values": {
-            "Tên bảng": "stock_adjustments", "STT": "31C", "Tên cột": "result_json", "Kiểu dữ liệu": "jsonb", "Cho phép NULL": "NO", "Default": "", "Ý nghĩa / trạng thái cho phép": "Immutable response snapshot for idempotent replay"
+            "Tên bảng": "stock_adjustments",
+            "STT": "31C",
+            "Tên cột": "result_json",
+            "Kiểu dữ liệu": "jsonb",
+            "Cho phép NULL": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "Immutable response snapshot for idempotent replay"
           }
         }
       ]
@@ -570,8 +937,13 @@
       "targets": [
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "users" },
-          "columns": ["Ý nghĩa", "Retention"],
+          "match": {
+            "Tên bảng": "users"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Retention"
+          ],
           "set": {
             "Ý nghĩa": "Customer/staff account; local seed có đúng một bootstrap OWNER ACTIVE",
             "Retention": "Bootstrap phải đổi password lần đầu; seed không reset password đã đổi; never hard-delete"
@@ -592,8 +964,12 @@
       "targets": [
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "stock_adjustments" },
-          "columns": ["Unique / CHECK"],
+          "match": {
+            "Tên bảng": "stock_adjustments"
+          },
+          "columns": [
+            "Unique / CHECK"
+          ],
           "set": {
             "Unique / CHECK": "adjustment_no UQ mã hóa đủ UUID bằng base36; idempotency_key UQ; status POSTED"
           }
@@ -602,7 +978,10 @@
       "upsertRows": [
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "stock_adjustments", "Tên cột": "adjustment_no" },
+          "match": {
+            "Tên bảng": "stock_adjustments",
+            "Tên cột": "adjustment_no"
+          },
           "values": {
             "Tên bảng": "stock_adjustments",
             "STT": "31D",
@@ -629,8 +1008,13 @@
       "targets": [
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "users" },
-          "columns": ["Ý nghĩa", "Retention"],
+          "match": {
+            "Tên bảng": "users"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Retention"
+          ],
           "set": {
             "Ý nghĩa": "Customer/staff account; development seed có đúng một bootstrap OWNER; break-glass chỉ phục hồi fixed identity",
             "Retention": "Seed không reset password đã đổi; recovery reset password tạm, bắt đổi password, revoke session và audit; never hard-delete"
@@ -638,13 +1022,23 @@
         },
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "auth_sessions" },
-          "columns": ["Ý nghĩa", "Retention"]
+          "match": {
+            "Tên bảng": "auth_sessions"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Retention"
+          ]
         },
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "audit_logs" },
-          "columns": ["Ý nghĩa", "Retention"]
+          "match": {
+            "Tên bảng": "audit_logs"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Retention"
+          ]
         }
       ]
     },
@@ -665,8 +1059,13 @@
       "targets": [
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "users" },
-          "columns": ["Ý nghĩa", "Retention"],
+          "match": {
+            "Tên bảng": "users"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Retention"
+          ],
           "set": {
             "Ý nghĩa": "Customer/staff account; development có đúng một fixed bootstrap Admin OWNER",
             "Retention": "OWNER bất biến; Auth trim hai đầu identifier/password; lần sai thứ 5 trả ACCOUNT_LOCKED; login thành công reset attempts; never hard-delete"
@@ -674,8 +1073,13 @@
         },
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "user_role_assignments" },
-          "columns": ["Ý nghĩa", "Retention"],
+          "match": {
+            "Tên bảng": "user_role_assignments"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Retention"
+          ],
           "set": {
             "Ý nghĩa": "Một fixed OWNER GLOBAL; BRANCH_MANAGER/STAFF theo BRANCH; WAREHOUSE/OWN dormant",
             "Retention": "API cấm gán/thu hồi OWNER; chỉ Admin gốc quản lý assignment cấp dưới; audit + expire not delete"
@@ -683,8 +1087,14 @@
         },
         {
           "sheet": "RBAC Permissions",
-          "match": { "Permission code": "iam.user.manage" },
-          "columns": ["Allowed scopes", "Default roles", "Ghi chú"],
+          "match": {
+            "Permission code": "iam.user.manage"
+          },
+          "columns": [
+            "Allowed scopes",
+            "Default roles",
+            "Ghi chú"
+          ],
           "set": {
             "Allowed scopes": "GLOBAL",
             "Default roles": "OWNER",
@@ -693,8 +1103,14 @@
         },
         {
           "sheet": "RBAC Permissions",
-          "match": { "Permission code": "iam.role.view" },
-          "columns": ["Allowed scopes", "Default roles", "Ghi chú"],
+          "match": {
+            "Permission code": "iam.role.view"
+          },
+          "columns": [
+            "Allowed scopes",
+            "Default roles",
+            "Ghi chú"
+          ],
           "set": {
             "Allowed scopes": "GLOBAL",
             "Default roles": "OWNER",
@@ -703,8 +1119,14 @@
         },
         {
           "sheet": "RBAC Permissions",
-          "match": { "Permission code": "iam.assignment.manage" },
-          "columns": ["Allowed scopes", "Default roles", "Ghi chú"],
+          "match": {
+            "Permission code": "iam.assignment.manage"
+          },
+          "columns": [
+            "Allowed scopes",
+            "Default roles",
+            "Ghi chú"
+          ],
           "set": {
             "Allowed scopes": "GLOBAL",
             "Default roles": "OWNER",
@@ -777,8 +1199,35 @@
       "targets": [
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": ["branches", "warehouses", "users", "auth_sessions", "roles", "permissions", "user_role_assignments", "audit_logs", "media_assets", "brands", "categories", "products", "product_variants", "product_bundles", "bundle_items", "product_media", "product_prices", "inventory_balances", "inventory_movements", "stock_adjustments", "stock_adjustment_items"] },
-          "columns": ["Khóa chính", "Khóa ngoại quan trọng"],
+          "match": {
+            "Tên bảng": [
+              "branches",
+              "warehouses",
+              "users",
+              "auth_sessions",
+              "roles",
+              "permissions",
+              "user_role_assignments",
+              "audit_logs",
+              "media_assets",
+              "brands",
+              "categories",
+              "products",
+              "product_variants",
+              "product_bundles",
+              "bundle_items",
+              "product_media",
+              "product_prices",
+              "inventory_balances",
+              "inventory_movements",
+              "stock_adjustments",
+              "stock_adjustment_items"
+            ]
+          },
+          "columns": [
+            "Khóa chính",
+            "Khóa ngoại quan trọng"
+          ],
           "set": {
             "Khóa chính": "id BIGINT IDENTITY; legacy_id UUID UNIQUE nullable cho dữ liệu migrate"
           }
@@ -786,10 +1235,36 @@
         {
           "sheet": "Columns",
           "match": {
-            "Tên bảng": ["branches", "warehouses", "users", "auth_sessions", "roles", "permissions", "user_role_assignments", "audit_logs", "media_assets", "brands", "categories", "products", "product_variants", "product_bundles", "bundle_items", "product_media", "product_prices", "inventory_balances", "inventory_movements", "stock_adjustments", "stock_adjustment_items"],
+            "Tên bảng": [
+              "branches",
+              "warehouses",
+              "users",
+              "auth_sessions",
+              "roles",
+              "permissions",
+              "user_role_assignments",
+              "audit_logs",
+              "media_assets",
+              "brands",
+              "categories",
+              "products",
+              "product_variants",
+              "product_bundles",
+              "bundle_items",
+              "product_media",
+              "product_prices",
+              "inventory_balances",
+              "inventory_movements",
+              "stock_adjustments",
+              "stock_adjustment_items"
+            ],
             "Tên cột": "id"
           },
-          "columns": ["Kiểu dữ liệu", "Default", "Ý nghĩa / trạng thái cho phép"],
+          "columns": [
+            "Kiểu dữ liệu",
+            "Default",
+            "Ý nghĩa / trạng thái cho phép"
+          ],
           "set": {
             "Kiểu dữ liệu": "bigint",
             "Default": "GENERATED BY DEFAULT AS IDENTITY",
@@ -798,8 +1273,20 @@
         },
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": ["audit_logs", "inventory_movements"], "Tên cột": ["entity_id", "reference_id"] },
-          "columns": ["Kiểu dữ liệu", "Ý nghĩa / trạng thái cho phép"],
+          "match": {
+            "Tên bảng": [
+              "audit_logs",
+              "inventory_movements"
+            ],
+            "Tên cột": [
+              "entity_id",
+              "reference_id"
+            ]
+          },
+          "columns": [
+            "Kiểu dữ liệu",
+            "Ý nghĩa / trạng thái cho phép"
+          ],
           "set": {
             "Kiểu dữ liệu": "text",
             "Ý nghĩa / trạng thái cho phép": "Reference đa hình: UUID lịch sử hoặc chuỗi ID số mới; không tạo FK"
@@ -866,10 +1353,20 @@
         {
           "sheet": "Columns",
           "match": {
-            "Tên bảng": ["branches", "warehouses", "roles"],
-            "Tên cột": ["created_by", "updated_by"]
+            "Tên bảng": [
+              "branches",
+              "warehouses",
+              "roles"
+            ],
+            "Tên cột": [
+              "created_by",
+              "updated_by"
+            ]
           },
-          "columns": ["Kiểu dữ liệu", "Ý nghĩa / trạng thái cho phép"],
+          "columns": [
+            "Kiểu dữ liệu",
+            "Ý nghĩa / trạng thái cho phép"
+          ],
           "set": {
             "Kiểu dữ liệu": "bigint",
             "Ý nghĩa / trạng thái cho phép": "User actor ID dạng BIGINT; UUID lịch sử được ánh xạ qua users.legacy_id"
@@ -910,8 +1407,14 @@
       "targets": [
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "stock_adjustments" },
-          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính"],
+          "match": {
+            "Tên bảng": "stock_adjustments"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Unique / CHECK",
+            "Các cột chính"
+          ],
           "set": {
             "Ý nghĩa": "Phiếu điều chỉnh và nhập tồn cơ bản",
             "Unique / CHECK": "adjustment_no UQ; idempotency_key UQ; MANUAL_RECEIPT warehouse+external_reference partial UQ",
@@ -922,16 +1425,34 @@
       "upsertRows": [
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "stock_adjustments", "Tên cột": "external_reference" },
+          "match": {
+            "Tên bảng": "stock_adjustments",
+            "Tên cột": "external_reference"
+          },
           "values": {
-            "Tên bảng": "stock_adjustments", "STT": "31D", "Tên cột": "external_reference", "Kiểu dữ liệu": "varchar(100)", "Cho phép NULL": "YES", "Default": "", "Ý nghĩa / trạng thái cho phép": "Bắt buộc và unique theo warehouse với MANUAL_RECEIPT"
+            "Tên bảng": "stock_adjustments",
+            "STT": "31D",
+            "Tên cột": "external_reference",
+            "Kiểu dữ liệu": "varchar(100)",
+            "Cho phép NULL": "YES",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "Bắt buộc và unique theo warehouse với MANUAL_RECEIPT"
           }
         },
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "stock_adjustments", "Tên cột": "source_name" },
+          "match": {
+            "Tên bảng": "stock_adjustments",
+            "Tên cột": "source_name"
+          },
           "values": {
-            "Tên bảng": "stock_adjustments", "STT": "31E", "Tên cột": "source_name", "Kiểu dữ liệu": "varchar(255)", "Cho phép NULL": "YES", "Default": "", "Ý nghĩa / trạng thái cho phép": "Tên nhà cung cấp hoặc nguồn nhập ngoài hệ thống"
+            "Tên bảng": "stock_adjustments",
+            "STT": "31E",
+            "Tên cột": "source_name",
+            "Kiểu dữ liệu": "varchar(255)",
+            "Cho phép NULL": "YES",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "Tên nhà cung cấp hoặc nguồn nhập ngoài hệ thống"
           }
         }
       ]
@@ -950,10 +1471,55 @@
         {
           "sheet": "Columns",
           "match": {
-            "Tên bảng": ["role_permissions", "user_role_assignments", "media_assets", "products", "product_bundles", "product_reviews", "product_review_comments", "product_prices", "flash_sale_campaigns", "inventory_movements", "stocktakes", "stocktake_items", "stock_transfers", "payments", "payment_evidences", "refunds", "fulfillments", "return_policies", "return_requests", "pages", "posts", "banners", "notification_templates", "system_settings"],
-            "Tên cột": ["created_by", "updated_by", "granted_by", "assigned_by", "uploaded_by", "moderated_by", "approved_by", "counted_by", "shipped_by", "received_by", "confirmed_by", "reviewed_by", "requested_by", "picked_by", "packed_by", "returned_to_warehouse_by"]
+            "Tên bảng": [
+              "role_permissions",
+              "user_role_assignments",
+              "media_assets",
+              "products",
+              "product_bundles",
+              "product_reviews",
+              "product_review_comments",
+              "product_prices",
+              "flash_sale_campaigns",
+              "inventory_movements",
+              "stocktakes",
+              "stocktake_items",
+              "stock_transfers",
+              "payments",
+              "payment_evidences",
+              "refunds",
+              "fulfillments",
+              "return_policies",
+              "return_requests",
+              "pages",
+              "posts",
+              "banners",
+              "notification_templates",
+              "system_settings"
+            ],
+            "Tên cột": [
+              "created_by",
+              "updated_by",
+              "granted_by",
+              "assigned_by",
+              "uploaded_by",
+              "moderated_by",
+              "approved_by",
+              "counted_by",
+              "shipped_by",
+              "received_by",
+              "confirmed_by",
+              "reviewed_by",
+              "requested_by",
+              "picked_by",
+              "packed_by",
+              "returned_to_warehouse_by"
+            ]
           },
-          "columns": ["Kiểu dữ liệu", "Ý nghĩa / trạng thái cho phép"],
+          "columns": [
+            "Kiểu dữ liệu",
+            "Ý nghĩa / trạng thái cho phép"
+          ],
           "set": {
             "Kiểu dữ liệu": "bigint",
             "Ý nghĩa / trạng thái cho phép": "Tham chiếu users.id BIGINT; UUID lịch sử chỉ lưu ở legacy_id"
@@ -977,8 +1543,16 @@
       "targets": [
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": ["role_permissions", "product_categories"] },
-          "columns": ["Khóa chính", "Unique / CHECK"],
+          "match": {
+            "Tên bảng": [
+              "role_permissions",
+              "product_categories"
+            ]
+          },
+          "columns": [
+            "Khóa chính",
+            "Unique / CHECK"
+          ],
           "set": {
             "Khóa chính": "Composite PK theo 2 FK",
             "Unique / CHECK": "Cặp FK là duy nhất qua composite primary key; forward migration 20260906003000 phục hồi PK sau D43 và fail-fast khi duplicate có dữ liệu xung đột"
@@ -1001,8 +1575,13 @@
       "targets": [
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "inventory_balances" },
-          "columns": ["Ý nghĩa", "Unique / CHECK"],
+          "match": {
+            "Tên bảng": "inventory_balances"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Unique / CHECK"
+          ],
           "set": {
             "Ý nghĩa": "Tồn đọc nhanh theo warehouse+variant; luôn đối soát bằng tổng immutable ledger",
             "Unique / CHECK": "warehouse+variant UQ; nonnegative; on_hand = SUM(movement.quantity_delta)"
@@ -1010,8 +1589,13 @@
         },
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "inventory_movements" },
-          "columns": ["Ý nghĩa", "Unique / CHECK"],
+          "match": {
+            "Tên bảng": "inventory_movements"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Unique / CHECK"
+          ],
           "set": {
             "Ý nghĩa": "Sổ kho append-only; seed/import có RECEIVE movement mở sổ",
             "Unique / CHECK": "idempotency_key UQ; quantity_delta != 0; reject UPDATE/DELETE/TRUNCATE"
@@ -1040,8 +1624,15 @@
       "targets": [
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "stock_transfers" },
-          "columns": ["Ý nghĩa", "Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính"],
+          "match": {
+            "Tên bảng": "stock_transfers"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Khóa ngoại quan trọng",
+            "Unique / CHECK",
+            "Các cột chính"
+          ],
           "set": {
             "Ý nghĩa": "Phiếu chuyển kho V1 có state machine, idempotency, actor và audit",
             "Khóa ngoại quan trọng": "from/to_warehouse_id→warehouses; created/shipped/received_by→users",
@@ -1051,8 +1642,14 @@
         },
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "stock_transfer_items" },
-          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính"],
+          "match": {
+            "Tên bảng": "stock_transfer_items"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Unique / CHECK",
+            "Các cột chính"
+          ],
           "set": {
             "Ý nghĩa": "Dòng chuyển kho và kết quả kiểm nhận hàng tốt/hỏng",
             "Unique / CHECK": "transfer+variant UQ; requested>0; received+damaged<=shipped; damaged bắt buộc reason",
@@ -1063,38 +1660,111 @@
       "upsertRows": [
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "stock_transfers", "Tên cột": "idempotency_key" },
-          "values": { "Tên bảng": "stock_transfers", "STT": "35A", "Tên cột": "idempotency_key", "Kiểu dữ liệu": "varchar(150)", "Cho phép NULL": "NO", "Unique": "YES", "Ý nghĩa / trạng thái cho phép": "Khóa replay create; cùng key khác request_hash trả 409" }
+          "match": {
+            "Tên bảng": "stock_transfers",
+            "Tên cột": "idempotency_key"
+          },
+          "values": {
+            "Tên bảng": "stock_transfers",
+            "STT": "35A",
+            "Tên cột": "idempotency_key",
+            "Kiểu dữ liệu": "varchar(150)",
+            "Cho phép NULL": "NO",
+            "Unique": "YES",
+            "Ý nghĩa / trạng thái cho phép": "Khóa replay create; cùng key khác request_hash trả 409"
+          }
         },
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "stock_transfers", "Tên cột": "request_hash" },
-          "values": { "Tên bảng": "stock_transfers", "STT": "35B", "Tên cột": "request_hash", "Kiểu dữ liệu": "char(64)", "Cho phép NULL": "NO", "Unique": "NO", "Ý nghĩa / trạng thái cho phép": "SHA-256 payload canonical để kiểm tra idempotency" }
+          "match": {
+            "Tên bảng": "stock_transfers",
+            "Tên cột": "request_hash"
+          },
+          "values": {
+            "Tên bảng": "stock_transfers",
+            "STT": "35B",
+            "Tên cột": "request_hash",
+            "Kiểu dữ liệu": "char(64)",
+            "Cho phép NULL": "NO",
+            "Unique": "NO",
+            "Ý nghĩa / trạng thái cho phép": "SHA-256 payload canonical để kiểm tra idempotency"
+          }
         },
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "stock_transfer_items", "Tên cột": "damage_reason" },
-          "values": { "Tên bảng": "stock_transfer_items", "STT": "36A", "Tên cột": "damage_reason", "Kiểu dữ liệu": "varchar(500)", "Cho phép NULL": "YES", "Unique": "NO", "Ý nghĩa / trạng thái cho phép": "Bắt buộc khi damaged_qty>0; hàng hỏng không cộng tồn sellable" }
+          "match": {
+            "Tên bảng": "stock_transfer_items",
+            "Tên cột": "damage_reason"
+          },
+          "values": {
+            "Tên bảng": "stock_transfer_items",
+            "STT": "36A",
+            "Tên cột": "damage_reason",
+            "Kiểu dữ liệu": "varchar(500)",
+            "Cho phép NULL": "YES",
+            "Unique": "NO",
+            "Ý nghĩa / trạng thái cho phép": "Bắt buộc khi damaged_qty>0; hàng hỏng không cộng tồn sellable"
+          }
         },
         {
           "sheet": "RBAC Permissions",
-          "match": { "Permission code": "inventory.transfer.view" },
-          "values": { "Permission code": "inventory.transfer.view", "Module": "inventory", "Action": "view transfer", "Allowed scopes": "GLOBAL/BRANCH", "Sensitive": "NO", "Default roles": "OWNER, BRANCH_MANAGER", "Ghi chú": "Branch thấy phiếu có kho nguồn hoặc đích thuộc scope" }
+          "match": {
+            "Permission code": "inventory.transfer.view"
+          },
+          "values": {
+            "Permission code": "inventory.transfer.view",
+            "Module": "inventory",
+            "Action": "view transfer",
+            "Allowed scopes": "GLOBAL/BRANCH",
+            "Sensitive": "NO",
+            "Default roles": "OWNER, BRANCH_MANAGER",
+            "Ghi chú": "Branch thấy phiếu có kho nguồn hoặc đích thuộc scope"
+          }
         },
         {
           "sheet": "RBAC Permissions",
-          "match": { "Permission code": "inventory.transfer.create" },
-          "values": { "Permission code": "inventory.transfer.create", "Module": "inventory", "Action": "create/submit transfer", "Allowed scopes": "GLOBAL/source BRANCH", "Sensitive": "YES", "Default roles": "OWNER, BRANCH_MANAGER", "Ghi chú": "V1 tạo DRAFT và submit tại kho nguồn" }
+          "match": {
+            "Permission code": "inventory.transfer.create"
+          },
+          "values": {
+            "Permission code": "inventory.transfer.create",
+            "Module": "inventory",
+            "Action": "create/submit transfer",
+            "Allowed scopes": "GLOBAL/source BRANCH",
+            "Sensitive": "YES",
+            "Default roles": "OWNER, BRANCH_MANAGER",
+            "Ghi chú": "V1 tạo DRAFT và submit tại kho nguồn"
+          }
         },
         {
           "sheet": "RBAC Permissions",
-          "match": { "Permission code": "inventory.transfer.ship" },
-          "values": { "Permission code": "inventory.transfer.ship", "Module": "inventory", "Action": "ship transfer", "Allowed scopes": "GLOBAL/source BRANCH", "Sensitive": "YES", "Default roles": "OWNER, BRANCH_MANAGER", "Ghi chú": "Trừ kho nguồn và ghi TRANSFER_OUT nguyên tử" }
+          "match": {
+            "Permission code": "inventory.transfer.ship"
+          },
+          "values": {
+            "Permission code": "inventory.transfer.ship",
+            "Module": "inventory",
+            "Action": "ship transfer",
+            "Allowed scopes": "GLOBAL/source BRANCH",
+            "Sensitive": "YES",
+            "Default roles": "OWNER, BRANCH_MANAGER",
+            "Ghi chú": "Trừ kho nguồn và ghi TRANSFER_OUT nguyên tử"
+          }
         },
         {
           "sheet": "RBAC Permissions",
-          "match": { "Permission code": "inventory.transfer.receive" },
-          "values": { "Permission code": "inventory.transfer.receive", "Module": "inventory", "Action": "receive transfer", "Allowed scopes": "GLOBAL/destination BRANCH", "Sensitive": "YES", "Default roles": "OWNER, BRANCH_MANAGER", "Ghi chú": "Chỉ received_qty hàng tốt được ghi TRANSFER_IN" }
+          "match": {
+            "Permission code": "inventory.transfer.receive"
+          },
+          "values": {
+            "Permission code": "inventory.transfer.receive",
+            "Module": "inventory",
+            "Action": "receive transfer",
+            "Allowed scopes": "GLOBAL/destination BRANCH",
+            "Sensitive": "YES",
+            "Default roles": "OWNER, BRANCH_MANAGER",
+            "Ghi chú": "Chỉ received_qty hàng tốt được ghi TRANSFER_IN"
+          }
         }
       ]
     },
@@ -1154,8 +1824,15 @@
       "targets": [
         {
           "sheet": "Open Decisions",
-          "match": { "ID": "D11" },
-          "columns": ["Quyết định đề xuất", "Tại sao quan trọng", "Status", "Kết luận review / ghi chú"],
+          "match": {
+            "ID": "D11"
+          },
+          "columns": [
+            "Quyết định đề xuất",
+            "Tại sao quan trọng",
+            "Status",
+            "Kết luận review / ghi chú"
+          ],
           "set": {
             "Quyết định đề xuất": "V1 không maker-checker; BRANCH_MANAGER giảm tối đa 10 đơn vị mỗi SKU/lệnh; GLOBAL/OWNER được vượt; mọi lần giảm bắt buộc reason và audit",
             "Tại sao quan trọng": "Giữ kiểm soát giảm tồn trong V1 mà không kéo approval engine vào sớm",
@@ -1183,14 +1860,24 @@
       "targets": [
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "warehouses", "Tên cột": "is_primary" },
+          "match": {
+            "Tên bảng": "warehouses",
+            "Tên cột": "is_primary"
+          },
           "columns": "*",
           "archiveRemovedRowsTo": "Removed Columns"
         },
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "warehouses" },
-          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính", "Retention"],
+          "match": {
+            "Tên bảng": "warehouses"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Unique / CHECK",
+            "Các cột chính",
+            "Retention"
+          ],
           "set": {
             "Ý nghĩa": "Kho vật lý; đúng một kho cho mỗi chi nhánh trong V1",
             "Unique / CHECK": "code UQ; branch_id UQ; RLS ON; anon/authenticated denied",
@@ -1200,8 +1887,15 @@
         },
         {
           "sheet": "Open Decisions",
-          "match": { "ID": "D13" },
-          "columns": ["Quyết định đề xuất", "Tại sao quan trọng", "Status", "Kết luận review / ghi chú"],
+          "match": {
+            "ID": "D13"
+          },
+          "columns": [
+            "Quyết định đề xuất",
+            "Tại sao quan trọng",
+            "Status",
+            "Kết luận review / ghi chú"
+          ],
           "set": {
             "Quyết định đề xuất": "V1 đúng một warehouse mỗi branch; branch_id UNIQUE và bỏ is_primary",
             "Tại sao quan trọng": "Quan hệ 1-1 có một nguồn sự thật và routing kho đơn giản",
@@ -1227,8 +1921,15 @@
       "targets": [
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "products" },
-          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính", "Retention"],
+          "match": {
+            "Tên bảng": "products"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Unique / CHECK",
+            "Các cột chính",
+            "Retention"
+          ],
           "set": {
             "Ý nghĩa": "SPU chuẩn hoặc combo; product_no và slug do backend sinh khi tạo",
             "Unique / CHECK": "slug UQ; product_no UQ; product_type CHECK STANDARD/BUNDLE",
@@ -1238,8 +1939,14 @@
         },
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "product_variants" },
-          "columns": ["Ý nghĩa", "Unique / CHECK", "Retention"],
+          "match": {
+            "Tên bảng": "product_variants"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Unique / CHECK",
+            "Retention"
+          ],
           "set": {
             "Ý nghĩa": "Sellable SKU; sku do backend sinh khi tạo",
             "Unique / CHECK": "sku UQ; barcode non-null partial UQ",
@@ -1248,8 +1955,14 @@
         },
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "products", "Tên cột": "product_no" },
-          "columns": ["Unique", "Ý nghĩa / trạng thái cho phép"],
+          "match": {
+            "Tên bảng": "products",
+            "Tên cột": "product_no"
+          },
+          "columns": [
+            "Unique",
+            "Ý nghĩa / trạng thái cho phép"
+          ],
           "set": {
             "Unique": "YES",
             "Ý nghĩa / trạng thái cho phép": "Backend-generated on create; immutable business identifier"
@@ -1257,8 +1970,14 @@
         },
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "products", "Tên cột": "slug" },
-          "columns": ["Unique", "Ý nghĩa / trạng thái cho phép"],
+          "match": {
+            "Tên bảng": "products",
+            "Tên cột": "slug"
+          },
+          "columns": [
+            "Unique",
+            "Ý nghĩa / trạng thái cho phép"
+          ],
           "set": {
             "Unique": "YES",
             "Ý nghĩa / trạng thái cho phép": "Backend-generated from name+product_no on create; mutable only in DRAFT; never auto-changed with name"
@@ -1266,8 +1985,14 @@
         },
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "product_variants", "Tên cột": "sku" },
-          "columns": ["Unique", "Ý nghĩa / trạng thái cho phép"],
+          "match": {
+            "Tên bảng": "product_variants",
+            "Tên cột": "sku"
+          },
+          "columns": [
+            "Unique",
+            "Ý nghĩa / trạng thái cho phép"
+          ],
           "set": {
             "Unique": "YES",
             "Ý nghĩa / trạng thái cho phép": "Backend-generated unique immutable Sellable SKU"
@@ -1277,7 +2002,9 @@
       "upsertRows": [
         {
           "sheet": "Open Decisions",
-          "match": { "ID": "D44" },
+          "match": {
+            "ID": "D44"
+          },
           "values": {
             "ID": "D44",
             "Chủ đề": "Catalog identifier ownership",
@@ -1309,13 +2036,38 @@
       "targets": [
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": ["customers", "customer_addresses", "carts", "cart_items", "inventory_reservations", "shipping_zones", "shipping_rates"] },
-          "columns": ["Priority", "Ý nghĩa", "Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính", "Retention"]
+          "match": {
+            "Tên bảng": [
+              "customers",
+              "customer_addresses",
+              "carts",
+              "cart_items",
+              "inventory_reservations",
+              "shipping_zones",
+              "shipping_rates"
+            ]
+          },
+          "columns": [
+            "Priority",
+            "Ý nghĩa",
+            "Khóa ngoại quan trọng",
+            "Unique / CHECK",
+            "Các cột chính",
+            "Retention"
+          ]
         },
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "inventory_reservations" },
-          "columns": ["Ý nghĩa", "Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính", "Retention"],
+          "match": {
+            "Tên bảng": "inventory_reservations"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Khóa ngoại quan trọng",
+            "Unique / CHECK",
+            "Các cột chính",
+            "Retention"
+          ],
           "set": {
             "Ý nghĩa": "Header giữ tồn checkout",
             "Khóa ngoại quan trọng": "checkout_session_id->checkout_sessions; warehouse_id->warehouses",
@@ -1326,8 +2078,16 @@
         },
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "carts" },
-          "columns": ["Ý nghĩa", "Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính", "Retention"],
+          "match": {
+            "Tên bảng": "carts"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Khóa ngoại quan trọng",
+            "Unique / CHECK",
+            "Các cột chính",
+            "Retention"
+          ],
           "set": {
             "Ý nghĩa": "Giỏ user/customer/guest",
             "Khóa ngoại quan trọng": "user_id->users; customer_id->customers; branch_id->branches",
@@ -1338,8 +2098,15 @@
         },
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "shipping_zones" },
-          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính", "Retention"],
+          "match": {
+            "Tên bảng": "shipping_zones"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Unique / CHECK",
+            "Các cột chính",
+            "Retention"
+          ],
           "set": {
             "Ý nghĩa": "Vùng giao hàng V1",
             "Unique / CHECK": "code UQ; province_codes non-empty; GIN index",
@@ -1349,7 +2116,9 @@
         },
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "shipping_zone_provinces" },
+          "match": {
+            "Tên bảng": "shipping_zone_provinces"
+          },
           "columns": "*",
           "archiveRemovedRowsTo": "Removed Tables"
         }
@@ -1357,7 +2126,9 @@
       "upsertRows": [
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "checkout_sessions" },
+          "match": {
+            "Tên bảng": "checkout_sessions"
+          },
           "values": {
             "ID": "T75",
             "Module": "Checkout",
@@ -1373,7 +2144,9 @@
         },
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "checkout_session_items" },
+          "match": {
+            "Tên bảng": "checkout_session_items"
+          },
           "values": {
             "ID": "T76",
             "Module": "Checkout",
@@ -1389,7 +2162,9 @@
         },
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "inventory_reservation_items" },
+          "match": {
+            "Tên bảng": "inventory_reservation_items"
+          },
           "values": {
             "ID": "T77",
             "Module": "Inventory",
@@ -1405,7 +2180,9 @@
         },
         {
           "sheet": "Open Decisions",
-          "match": { "ID": "D01" },
+          "match": {
+            "ID": "D01"
+          },
           "values": {
             "ID": "D01",
             "Chủ đề": "Điểm trừ tồn",
@@ -1419,7 +2196,9 @@
         },
         {
           "sheet": "Open Decisions",
-          "match": { "ID": "D02" },
+          "match": {
+            "ID": "D02"
+          },
           "values": {
             "ID": "D02",
             "Chủ đề": "Reservation checkout",
@@ -1433,7 +2212,9 @@
         },
         {
           "sheet": "Open Decisions",
-          "match": { "ID": "D45" },
+          "match": {
+            "ID": "D45"
+          },
           "values": {
             "ID": "D45",
             "Chủ đề": "System setting governance",
@@ -1464,7 +2245,9 @@
       "targets": [
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "system_settings" },
+          "match": {
+            "Tên bảng": "system_settings"
+          },
           "columns": "*",
           "archiveRemovedRowsTo": "Removed Tables"
         }
@@ -1472,7 +2255,9 @@
       "upsertRows": [
         {
           "sheet": "Open Decisions",
-          "match": { "ID": "D02" },
+          "match": {
+            "ID": "D02"
+          },
           "values": {
             "ID": "D02",
             "Chủ đề": "Reservation checkout",
@@ -1486,7 +2271,9 @@
         },
         {
           "sheet": "Open Decisions",
-          "match": { "ID": "D45" },
+          "match": {
+            "ID": "D45"
+          },
           "values": {
             "ID": "D45",
             "Chủ đề": "Environment parameter governance",
@@ -1516,7 +2303,9 @@
       "upsertRows": [
         {
           "sheet": "Open Decisions",
-          "match": { "ID": "D01" },
+          "match": {
+            "ID": "D01"
+          },
           "values": {
             "ID": "D01",
             "Chủ đề": "Thời điểm trừ tồn checkout",
@@ -1568,14 +2357,23 @@
       "targets": [
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "checkout_sessions" },
-          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính", "Retention"]
+          "match": {
+            "Tên bảng": "checkout_sessions"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Unique / CHECK",
+            "Các cột chính",
+            "Retention"
+          ]
         }
       ],
       "upsertRows": [
         {
           "sheet": "Open Decisions",
-          "match": { "ID": "D34" },
+          "match": {
+            "ID": "D34"
+          },
           "values": {
             "ID": "D34",
             "Chủ đề": "COD và orchestration giao hàng V1",
@@ -1604,8 +2402,14 @@
       "targets": [
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "checkout_sessions" },
-          "columns": ["Ý nghĩa", "Unique / CHECK", "Các cột chính"]
+          "match": {
+            "Tên bảng": "checkout_sessions"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Unique / CHECK",
+            "Các cột chính"
+          ]
         }
       ]
     },
@@ -1671,7 +2475,9 @@
       "upsertRows": [
         {
           "sheet": "Open Decisions",
-          "match": { "ID": "D46" },
+          "match": {
+            "ID": "D46"
+          },
           "values": {
             "ID": "D46",
             "Chủ đề": "Supabase Data API boundary",
@@ -1726,13 +2532,32 @@
       "targets": [
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": ["orders", "order_items", "order_item_components", "order_addresses", "order_status_history"] },
-          "columns": ["Khóa chính", "Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính"]
+          "match": {
+            "Tên bảng": [
+              "orders",
+              "order_items",
+              "order_item_components",
+              "order_addresses",
+              "order_status_history"
+            ]
+          },
+          "columns": [
+            "Khóa chính",
+            "Khóa ngoại quan trọng",
+            "Unique / CHECK",
+            "Các cột chính"
+          ]
         },
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "orders" },
-          "columns": ["Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính"],
+          "match": {
+            "Tên bảng": "orders"
+          },
+          "columns": [
+            "Khóa ngoại quan trọng",
+            "Unique / CHECK",
+            "Các cột chính"
+          ],
           "set": {
             "Khóa ngoại quan trọng": "checkout_session_id->checkout_sessions; reservation_id->inventory_reservations; customer_id->customers; branch_id->branches; warehouse_id->warehouses",
             "Unique / CHECK": "order_no UQ; idempotency_key UQ; checkout_session_id UQ; reservation_id UQ; state/money CHECK",
@@ -1741,20 +2566,47 @@
         },
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "order_addresses" },
-          "columns": ["Các cột chính"],
-          "set": { "Các cột chính": "address_type,recipient_name,recipient_phone,recipient_email,address_line,ward,district,province_code,postal_code,country_code" }
+          "match": {
+            "Tên bảng": "order_addresses"
+          },
+          "columns": [
+            "Các cột chính"
+          ],
+          "set": {
+            "Các cột chính": "address_type,recipient_name,recipient_phone,recipient_email,address_line,ward,district,province_code,postal_code,country_code"
+          }
         },
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": ["orders", "order_items", "order_item_components", "order_addresses", "order_status_history"], "Tên cột": "id" },
-          "columns": ["Kiểu dữ liệu", "Primary key"],
-          "set": { "Kiểu dữ liệu": "bigint", "Primary key": "YES" }
+          "match": {
+            "Tên bảng": [
+              "orders",
+              "order_items",
+              "order_item_components",
+              "order_addresses",
+              "order_status_history"
+            ],
+            "Tên cột": "id"
+          },
+          "columns": [
+            "Kiểu dữ liệu",
+            "Primary key"
+          ],
+          "set": {
+            "Kiểu dữ liệu": "bigint",
+            "Primary key": "YES"
+          }
         },
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "orders", "Tên cột": "status" },
-          "columns": ["Default", "Ý nghĩa / trạng thái cho phép"],
+          "match": {
+            "Tên bảng": "orders",
+            "Tên cột": "status"
+          },
+          "columns": [
+            "Default",
+            "Ý nghĩa / trạng thái cho phép"
+          ],
           "set": {
             "Default": "PENDING_CONFIRMATION",
             "Ý nghĩa / trạng thái cho phép": "PENDING_CONFIRMATION|CONFIRMED|PICKING|PACKED|SHIPPED|DELIVERED|COMPLETED|CANCELLED"
@@ -1762,7 +2614,10 @@
         },
         {
           "sheet": "Relationships",
-          "match": { "Bảng con": "inventory_reservations", "Cột FK": "order_id" },
+          "match": {
+            "Bảng con": "inventory_reservations",
+            "Cột FK": "order_id"
+          },
           "columns": "*",
           "archiveRemovedRowsTo": "Removed Relationships"
         }
@@ -1770,33 +2625,97 @@
       "upsertRows": [
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "orders", "Tên cột": "request_hash" },
-          "values": { "Tên bảng": "orders", "STT": "28", "Tên cột": "request_hash", "Kiểu dữ liệu": "char(64)", "Cho phép NULL": "NO", "Ý nghĩa / trạng thái cho phép": "Hash payload để phát hiện reuse idempotency key sai intent" }
+          "match": {
+            "Tên bảng": "orders",
+            "Tên cột": "request_hash"
+          },
+          "values": {
+            "Tên bảng": "orders",
+            "STT": "28",
+            "Tên cột": "request_hash",
+            "Kiểu dữ liệu": "char(64)",
+            "Cho phép NULL": "NO",
+            "Ý nghĩa / trạng thái cho phép": "Hash payload để phát hiện reuse idempotency key sai intent"
+          }
         },
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "orders", "Tên cột": "checkout_session_id" },
-          "values": { "Tên bảng": "orders", "STT": "29", "Tên cột": "checkout_session_id", "Kiểu dữ liệu": "bigint", "Cho phép NULL": "NO", "Unique": "YES", "Ý nghĩa / trạng thái cho phép": "Một checkout chỉ tạo tối đa một Order" }
+          "match": {
+            "Tên bảng": "orders",
+            "Tên cột": "checkout_session_id"
+          },
+          "values": {
+            "Tên bảng": "orders",
+            "STT": "29",
+            "Tên cột": "checkout_session_id",
+            "Kiểu dữ liệu": "bigint",
+            "Cho phép NULL": "NO",
+            "Unique": "YES",
+            "Ý nghĩa / trạng thái cho phép": "Một checkout chỉ tạo tối đa một Order"
+          }
         },
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "orders", "Tên cột": "reservation_id" },
-          "values": { "Tên bảng": "orders", "STT": "30", "Tên cột": "reservation_id", "Kiểu dữ liệu": "bigint", "Cho phép NULL": "NO", "Unique": "YES", "Ý nghĩa / trạng thái cho phép": "Reservation ACTIVE được Order sở hữu đến cancel hoặc fulfillment commit" }
+          "match": {
+            "Tên bảng": "orders",
+            "Tên cột": "reservation_id"
+          },
+          "values": {
+            "Tên bảng": "orders",
+            "STT": "30",
+            "Tên cột": "reservation_id",
+            "Kiểu dữ liệu": "bigint",
+            "Cho phép NULL": "NO",
+            "Unique": "YES",
+            "Ý nghĩa / trạng thái cho phép": "Reservation ACTIVE được Order sở hữu đến cancel hoặc fulfillment commit"
+          }
         },
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "order_addresses", "Tên cột": "recipient_email" },
-          "values": { "Tên bảng": "order_addresses", "STT": "15", "Tên cột": "recipient_email", "Kiểu dữ liệu": "varchar(255)", "Cho phép NULL": "YES", "Ý nghĩa / trạng thái cho phép": "Snapshot email người nhận; hỗ trợ Admin search" }
+          "match": {
+            "Tên bảng": "order_addresses",
+            "Tên cột": "recipient_email"
+          },
+          "values": {
+            "Tên bảng": "order_addresses",
+            "STT": "15",
+            "Tên cột": "recipient_email",
+            "Kiểu dữ liệu": "varchar(255)",
+            "Cho phép NULL": "YES",
+            "Ý nghĩa / trạng thái cho phép": "Snapshot email người nhận; hỗ trợ Admin search"
+          }
         },
         {
           "sheet": "Relationships",
-          "match": { "Bảng con": "orders", "Cột FK": "checkout_session_id" },
-          "values": { "Bảng con": "orders", "Cột FK": "checkout_session_id", "Bảng cha": "checkout_sessions", "Cột PK": "id", "Cardinality": "1 → 0..1", "ON DELETE": "RESTRICT", "Điểm cần kiểm tra": "Unique; checkout CONFIRMED mới tạo Order" }
+          "match": {
+            "Bảng con": "orders",
+            "Cột FK": "checkout_session_id"
+          },
+          "values": {
+            "Bảng con": "orders",
+            "Cột FK": "checkout_session_id",
+            "Bảng cha": "checkout_sessions",
+            "Cột PK": "id",
+            "Cardinality": "1 → 0..1",
+            "ON DELETE": "RESTRICT",
+            "Điểm cần kiểm tra": "Unique; checkout CONFIRMED mới tạo Order"
+          }
         },
         {
           "sheet": "Relationships",
-          "match": { "Bảng con": "orders", "Cột FK": "reservation_id" },
-          "values": { "Bảng con": "orders", "Cột FK": "reservation_id", "Bảng cha": "inventory_reservations", "Cột PK": "id", "Cardinality": "1 → 0..1", "ON DELETE": "RESTRICT", "Điểm cần kiểm tra": "Unique; TTL cron không release reservation đã có Order" }
+          "match": {
+            "Bảng con": "orders",
+            "Cột FK": "reservation_id"
+          },
+          "values": {
+            "Bảng con": "orders",
+            "Cột FK": "reservation_id",
+            "Bảng cha": "inventory_reservations",
+            "Cột PK": "id",
+            "Cardinality": "1 → 0..1",
+            "ON DELETE": "RESTRICT",
+            "Điểm cần kiểm tra": "Unique; TTL cron không release reservation đã có Order"
+          }
         }
       ]
     },
@@ -1816,8 +2735,13 @@
       "targets": [
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "order_status_history" },
-          "columns": ["Unique / CHECK", "Các cột chính"],
+          "match": {
+            "Tên bảng": "order_status_history"
+          },
+          "columns": [
+            "Unique / CHECK",
+            "Các cột chính"
+          ],
           "set": {
             "Unique / CHECK": "order+sequence UQ; order+idempotency_key UQ; idempotency_key/request_hash both null or both set",
             "Các cột chính": "from_status,to_status,reason,actor_type,actor_id,request_id,idempotency_key,request_hash,created_at"
@@ -1827,13 +2751,34 @@
       "upsertRows": [
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "order_status_history", "Tên cột": "idempotency_key" },
-          "values": { "Tên bảng": "order_status_history", "STT": "11", "Tên cột": "idempotency_key", "Kiểu dữ liệu": "varchar(150)", "Cho phép NULL": "YES", "Unique": "YES (theo order_id)", "Ý nghĩa / trạng thái cho phép": "Khóa retry-safe cho named transition; luôn đi cùng request_hash" }
+          "match": {
+            "Tên bảng": "order_status_history",
+            "Tên cột": "idempotency_key"
+          },
+          "values": {
+            "Tên bảng": "order_status_history",
+            "STT": "11",
+            "Tên cột": "idempotency_key",
+            "Kiểu dữ liệu": "varchar(150)",
+            "Cho phép NULL": "YES",
+            "Unique": "YES (theo order_id)",
+            "Ý nghĩa / trạng thái cho phép": "Khóa retry-safe cho named transition; luôn đi cùng request_hash"
+          }
         },
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "order_status_history", "Tên cột": "request_hash" },
-          "values": { "Tên bảng": "order_status_history", "STT": "12", "Tên cột": "request_hash", "Kiểu dữ liệu": "char(64)", "Cho phép NULL": "YES", "Ý nghĩa / trạng thái cho phép": "Phát hiện cùng idempotency key nhưng khác expectedVersion/reason/action" }
+          "match": {
+            "Tên bảng": "order_status_history",
+            "Tên cột": "request_hash"
+          },
+          "values": {
+            "Tên bảng": "order_status_history",
+            "STT": "12",
+            "Tên cột": "request_hash",
+            "Kiểu dữ liệu": "char(64)",
+            "Cho phép NULL": "YES",
+            "Ý nghĩa / trạng thái cho phép": "Phát hiện cùng idempotency key nhưng khác expectedVersion/reason/action"
+          }
         }
       ]
     },
@@ -1870,13 +2815,30 @@
       "targets": [
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": ["payments", "payment_transactions", "payment_evidences"] },
-          "columns": ["Khóa chính", "Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính"]
+          "match": {
+            "Tên bảng": [
+              "payments",
+              "payment_transactions",
+              "payment_evidences"
+            ]
+          },
+          "columns": [
+            "Khóa chính",
+            "Khóa ngoại quan trọng",
+            "Unique / CHECK",
+            "Các cột chính"
+          ]
         },
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "payments" },
-          "columns": ["Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính"],
+          "match": {
+            "Tên bảng": "payments"
+          },
+          "columns": [
+            "Khóa ngoại quan trọng",
+            "Unique / CHECK",
+            "Các cột chính"
+          ],
           "set": {
             "Khóa ngoại quan trọng": "order_id->orders; confirmed_by->users",
             "Unique / CHECK": "order_id UQ; payment_ref UQ; method/status/money CHECK",
@@ -1885,8 +2847,13 @@
         },
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "payment_transactions" },
-          "columns": ["Unique / CHECK", "Các cột chính"],
+          "match": {
+            "Tên bảng": "payment_transactions"
+          },
+          "columns": [
+            "Unique / CHECK",
+            "Các cột chính"
+          ],
           "set": {
             "Unique / CHECK": "idempotency_key UQ; amount/status/type CHECK; UPDATE/DELETE/TRUNCATE blocked",
             "Các cột chính": "transaction_type,provider,external_id,external_event_id,idempotency_key,request_hash,amount,currency_code,status,raw_payload_redacted,occurred_at,created_at"
@@ -1894,8 +2861,14 @@
         },
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "payment_evidences" },
-          "columns": ["Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính"],
+          "match": {
+            "Tên bảng": "payment_evidences"
+          },
+          "columns": [
+            "Khóa ngoại quan trọng",
+            "Unique / CHECK",
+            "Các cột chính"
+          ],
           "set": {
             "Khóa ngoại quan trọng": "payment_id->payments; media_asset_id->media_assets; uploaded_by/reviewed_by->users",
             "Unique / CHECK": "media_asset_id UQ; payment_id+file_hash UQ; uploader/status CHECK",
@@ -1904,7 +2877,14 @@
         },
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "payment_evidences", "Tên cột": ["file_url", "file_type", "file_size_bytes"] },
+          "match": {
+            "Tên bảng": "payment_evidences",
+            "Tên cột": [
+              "file_url",
+              "file_type",
+              "file_size_bytes"
+            ]
+          },
           "columns": "*",
           "archiveRemovedRowsTo": "Removed Columns"
         }
@@ -1912,23 +2892,65 @@
       "upsertRows": [
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "payment_transactions", "Tên cột": "request_hash" },
-          "values": { "Tên bảng": "payment_transactions", "STT": "13", "Tên cột": "request_hash", "Kiểu dữ liệu": "char(64)", "Cho phép NULL": "NO", "Ý nghĩa / trạng thái cho phép": "Hash intent để phát hiện reuse Idempotency-Key khác payload" }
+          "match": {
+            "Tên bảng": "payment_transactions",
+            "Tên cột": "request_hash"
+          },
+          "values": {
+            "Tên bảng": "payment_transactions",
+            "STT": "13",
+            "Tên cột": "request_hash",
+            "Kiểu dữ liệu": "char(64)",
+            "Cho phép NULL": "NO",
+            "Ý nghĩa / trạng thái cho phép": "Hash intent để phát hiện reuse Idempotency-Key khác payload"
+          }
         },
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "payment_evidences", "Tên cột": "media_asset_id" },
-          "values": { "Tên bảng": "payment_evidences", "STT": "14", "Tên cột": "media_asset_id", "Kiểu dữ liệu": "bigint", "Cho phép NULL": "NO", "Unique": "YES", "Ý nghĩa / trạng thái cho phép": "FK media_assets đã được provider adapter verify" }
+          "match": {
+            "Tên bảng": "payment_evidences",
+            "Tên cột": "media_asset_id"
+          },
+          "values": {
+            "Tên bảng": "payment_evidences",
+            "STT": "14",
+            "Tên cột": "media_asset_id",
+            "Kiểu dữ liệu": "bigint",
+            "Cho phép NULL": "NO",
+            "Unique": "YES",
+            "Ý nghĩa / trạng thái cho phép": "FK media_assets đã được provider adapter verify"
+          }
         },
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "payment_evidences", "Tên cột": "uploader_type" },
-          "values": { "Tên bảng": "payment_evidences", "STT": "15", "Tên cột": "uploader_type", "Kiểu dữ liệu": "varchar(24)", "Cho phép NULL": "NO", "Ý nghĩa / trạng thái cho phép": "GUEST|CUSTOMER" }
+          "match": {
+            "Tên bảng": "payment_evidences",
+            "Tên cột": "uploader_type"
+          },
+          "values": {
+            "Tên bảng": "payment_evidences",
+            "STT": "15",
+            "Tên cột": "uploader_type",
+            "Kiểu dữ liệu": "varchar(24)",
+            "Cho phép NULL": "NO",
+            "Ý nghĩa / trạng thái cho phép": "GUEST|CUSTOMER"
+          }
         },
         {
           "sheet": "Relationships",
-          "match": { "Bảng con": "payment_evidences", "Cột FK": "media_asset_id" },
-          "values": { "Bảng con": "payment_evidences", "Cột FK": "media_asset_id", "Bảng cha": "media_assets", "Cột PK": "id", "Cardinality": "1 → 0..1", "ON DELETE": "RESTRICT", "Điểm cần kiểm tra": "Asset đã verify; media_asset_id unique" }
+          "match": {
+            "Bảng con": "payment_evidences",
+            "Cột FK": "media_asset_id"
+          },
+          "values": {
+            "Bảng con": "payment_evidences",
+            "Cột FK": "media_asset_id",
+            "Bảng cha": "media_assets",
+            "Cột PK": "id",
+            "Cardinality": "1 → 0..1",
+            "ON DELETE": "RESTRICT",
+            "Điểm cần kiểm tra": "Asset đã verify; media_asset_id unique"
+          }
         }
       ]
     },
@@ -1967,8 +2989,15 @@
       "targets": [
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "fulfillments" },
-          "columns": ["Khóa chính", "Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính"],
+          "match": {
+            "Tên bảng": "fulfillments"
+          },
+          "columns": [
+            "Khóa chính",
+            "Khóa ngoại quan trọng",
+            "Unique / CHECK",
+            "Các cột chính"
+          ],
           "set": {
             "Khóa chính": "id BIGINT IDENTITY",
             "Khóa ngoại quan trọng": "order_id->orders; warehouse_id->warehouses",
@@ -1978,8 +3007,15 @@
         },
         {
           "sheet": "Tables",
-          "match": { "Tên bảng": "fulfillment_status_history" },
-          "columns": ["Khóa chính", "Khóa ngoại quan trọng", "Unique / CHECK", "Các cột chính"],
+          "match": {
+            "Tên bảng": "fulfillment_status_history"
+          },
+          "columns": [
+            "Khóa chính",
+            "Khóa ngoại quan trọng",
+            "Unique / CHECK",
+            "Các cột chính"
+          ],
           "set": {
             "Khóa chính": "id BIGINT IDENTITY",
             "Khóa ngoại quan trọng": "fulfillment_id->fulfillments; actor_id->users",
@@ -1991,28 +3027,125 @@
       "upsertRows": [
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "fulfillment_status_history", "Tên cột": "idempotency_key" },
-          "values": { "Tên bảng": "fulfillment_status_history", "STT": "11", "Tên cột": "idempotency_key", "Kiểu dữ liệu": "varchar(150)", "Cho phép NULL": "YES", "Unique": "YES (theo fulfillment_id)", "Ý nghĩa / trạng thái cho phép": "Khóa retry-safe cho transition; luôn đi cùng request_hash" }
+          "match": {
+            "Tên bảng": "fulfillment_status_history",
+            "Tên cột": "idempotency_key"
+          },
+          "values": {
+            "Tên bảng": "fulfillment_status_history",
+            "STT": "11",
+            "Tên cột": "idempotency_key",
+            "Kiểu dữ liệu": "varchar(150)",
+            "Cho phép NULL": "YES",
+            "Unique": "YES (theo fulfillment_id)",
+            "Ý nghĩa / trạng thái cho phép": "Khóa retry-safe cho transition; luôn đi cùng request_hash"
+          }
         },
         {
           "sheet": "Columns",
-          "match": { "Tên bảng": "fulfillment_status_history", "Tên cột": "request_hash" },
-          "values": { "Tên bảng": "fulfillment_status_history", "STT": "12", "Tên cột": "request_hash", "Kiểu dữ liệu": "char(64)", "Cho phép NULL": "YES", "Ý nghĩa / trạng thái cho phép": "Hash intent action/ID/version/payload" }
+          "match": {
+            "Tên bảng": "fulfillment_status_history",
+            "Tên cột": "request_hash"
+          },
+          "values": {
+            "Tên bảng": "fulfillment_status_history",
+            "STT": "12",
+            "Tên cột": "request_hash",
+            "Kiểu dữ liệu": "char(64)",
+            "Cho phép NULL": "YES",
+            "Ý nghĩa / trạng thái cho phép": "Hash intent action/ID/version/payload"
+          }
         },
         {
           "sheet": "Relationships",
-          "match": { "Bảng con": "fulfillments", "Cột FK": "order_id" },
-          "values": { "Bảng con": "fulfillments", "Cột FK": "order_id", "Bảng cha": "orders", "Cột PK": "id", "Cardinality": "1 → 1", "ON DELETE": "RESTRICT", "Điểm cần kiểm tra": "Unique; đúng một Fulfillment cho mỗi Order V1" }
+          "match": {
+            "Bảng con": "fulfillments",
+            "Cột FK": "order_id"
+          },
+          "values": {
+            "Bảng con": "fulfillments",
+            "Cột FK": "order_id",
+            "Bảng cha": "orders",
+            "Cột PK": "id",
+            "Cardinality": "1 → 1",
+            "ON DELETE": "RESTRICT",
+            "Điểm cần kiểm tra": "Unique; đúng một Fulfillment cho mỗi Order V1"
+          }
         },
         {
           "sheet": "Relationships",
-          "match": { "Bảng con": "fulfillments", "Cột FK": "warehouse_id" },
-          "values": { "Bảng con": "fulfillments", "Cột FK": "warehouse_id", "Bảng cha": "warehouses", "Cột PK": "id", "Cardinality": "1 → n", "ON DELETE": "RESTRICT", "Điểm cần kiểm tra": "Phải bằng orders.warehouse_id và reservation.warehouse_id" }
+          "match": {
+            "Bảng con": "fulfillments",
+            "Cột FK": "warehouse_id"
+          },
+          "values": {
+            "Bảng con": "fulfillments",
+            "Cột FK": "warehouse_id",
+            "Bảng cha": "warehouses",
+            "Cột PK": "id",
+            "Cardinality": "1 → n",
+            "ON DELETE": "RESTRICT",
+            "Điểm cần kiểm tra": "Phải bằng orders.warehouse_id và reservation.warehouse_id"
+          }
         },
         {
           "sheet": "Relationships",
-          "match": { "Bảng con": "fulfillment_status_history", "Cột FK": "fulfillment_id" },
-          "values": { "Bảng con": "fulfillment_status_history", "Cột FK": "fulfillment_id", "Bảng cha": "fulfillments", "Cột PK": "id", "Cardinality": "1 → n", "ON DELETE": "RESTRICT", "Điểm cần kiểm tra": "Append-only; sequence/idempotency unique" }
+          "match": {
+            "Bảng con": "fulfillment_status_history",
+            "Cột FK": "fulfillment_id"
+          },
+          "values": {
+            "Bảng con": "fulfillment_status_history",
+            "Cột FK": "fulfillment_id",
+            "Bảng cha": "fulfillments",
+            "Cột PK": "id",
+            "Cardinality": "1 → n",
+            "ON DELETE": "RESTRICT",
+            "Điểm cần kiểm tra": "Append-only; sequence/idempotency unique"
+          }
+        }
+      ]
+    },
+    {
+      "id": "DBAPI-20260913-PERSIST-CMS-REVIEWS",
+      "date": "2026-09-13",
+      "scope": "DATABASE",
+      "summary": "CMS Content và Product Reviews chuyển từ vertical slice in-memory sang PostgreSQL. Contract OpenAPI giữ nguyên nên Admin/Storefront không phải regenerate SDK. Các cột đích cover_asset_id, product_id, customer_id, order_item_id, moderated_by giữ đúng tên DBML nhưng NULLABLE ở V1 vì luồng tạo review theo order_item và luồng ảnh bìa qua media asset chưa tồn tại; bổ sung cột V1 cover_url, related_product_slugs, product_slug, customer_display_name, author_name, verified_purchase.",
+      "sources": [
+        "migration:20260913140000_persist_cms_and_reviews",
+        "OpenAPI:listPublishedContentPosts/getContentPostBySlug/listAdminContentPosts/createContentPost/archiveContentPost",
+        "OpenAPI:listProductReviews/listAdminReviews/moderateReview/deleteReview"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": {
+            "Tên bảng": "posts"
+          },
+          "columns": [
+            "Unique / CHECK",
+            "Các cột chính"
+          ]
+        },
+        {
+          "sheet": "Tables",
+          "match": {
+            "Tên bảng": "product_reviews"
+          },
+          "columns": [
+            "Unique / CHECK",
+            "Các cột chính"
+          ]
+        },
+        {
+          "sheet": "Tables",
+          "match": {
+            "Tên bảng": "product_review_comments"
+          },
+          "columns": [
+            "Unique / CHECK",
+            "Các cột chính"
+          ]
         }
       ]
     }

@@ -1,10 +1,10 @@
 # Thiết kế dữ liệu V1
 
-> **Document version:** 2.9.0
+> **Document version:** 2.10.0
 >
 > **Last updated:** 2026-09-13
 >
-> **Change summary:** Ghi đúng hiện trạng outbox/RLS/idempotency, chốt căn cứ kinh doanh cho ràng buộc một-cửa-hàng-một-kho và siết delete policy của dòng phiếu chuyển.
+> **Change summary:** Vật lý hóa CMS Content và Product Reviews; ghi rõ các cột đích được nới lỏng có chủ ý ở V1.
 
 ## 1. Chuẩn chung
 
@@ -70,6 +70,10 @@ Permission nghiệp vụ mới phải có data migration cùng release, không c
 - `stock_transfers`: source khác destination; trạng thái chỉ `DRAFT/SUBMITTED/SHIPPED/RECEIVED`; actor/timestamp phải khớp trạng thái; `transfer_no` và `idempotency_key` unique.
 - `stock_transfer_items`: một SKU mỗi phiếu; `requested > 0`, `0 <= shipped <= requested`, `received + damaged <= shipped`; khi nhận service bắt buộc `received + damaged = shipped`, hàng hỏng bắt buộc lý do.
 - `payments(order_id)` unique ở V1; payment có nhiều attempt/event qua `payment_transactions`.
+- `posts(slug)` unique; `posts_archive_shape_check` bảo đảm ARCHIVED luôn đi kèm `archived_at` và `archive_reason`; `related_product_slugs` bắt buộc là JSON array.
+- `product_reviews`: CHECK `rating` 1..5; partial unique `order_item_id` khi khác null; `verified_purchase = true` bắt buộc có `order_item_id`; `moderated_at` null khi và chỉ khi status còn `PENDING`.
+- `product_review_comments`: comment `STAFF` bắt buộc có `author_user_id` để truy ra người thật.
+- **V1 nới lỏng có chủ ý.** `posts.cover_asset_id`, `product_reviews.product_id/customer_id/order_item_id/moderated_by` giữ đúng tên trong DBML nhưng NULLABLE, vì luồng tạo review theo đơn đã mua và luồng upload ảnh bìa qua media asset chưa tồn tại. Các cột V1 thay thế tạm là `posts.cover_url`, `posts.related_product_slugs`, `product_reviews.product_slug`, `product_reviews.customer_display_name`, `product_review_comments.author_name`. Khi hai luồng đích ra đời thì backfill rồi siết NOT NULL, không đổi tên cột và không đổi contract.
 - `fulfillments(order_id)` unique ở V1; `fulfillment_no` được suy ra từ `order_no` bất biến, không có sequence riêng.
 - Fulfillment phải dùng đúng `orders.warehouse_id`; service khóa aggregate trước balance và kiểm tra lại trong transaction.
 - `fulfillment_status_history` unique theo `(fulfillment_id, sequence_no)` và `(fulfillment_id, idempotency_key)`; key/hash cùng null hoặc cùng có giá trị; DB chặn UPDATE/DELETE/TRUNCATE.
@@ -151,6 +155,7 @@ Fulfillment ghi reason bắt buộc rồi chuyển `DELIVERY_FAILED -> RETURNING
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 2.10.0 | 2026-09-13 | Persist posts, product_reviews và product_review_comments; contract giữ nguyên; cột đích nullable chờ luồng review theo đơn và media asset. | DBAPI-20260913-PERSIST-CMS-REVIEWS |
 | 2.9.0 | 2026-09-13 | Sửa mô tả outbox/RLS/idempotency cho khớp code; ghi căn cứ kinh doanh của ràng buộc 1 branch–1 warehouse; stock_transfer_items chuyển sang RESTRICT; bổ sung 4 chỉ mục FK. | REVIEW-20260913-V1-GAP |
 | 2.8.0 | 2026-09-13 | Thêm Fulfillment persisted, history append-only/idempotent, stock commit tại SHIPPED và restock SELLABLE sau hàng hoàn thực nhận. | DBAPI-20260913-FULFILLMENT-S43 |
 | 2.7.0 | 2026-09-12 | Thêm payments, payment_transactions và payment_evidences theo migration forward-only; không lưu binary trong DB. | DBAPI-20260912-PAYMENT-S42 |

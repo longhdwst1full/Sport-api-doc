@@ -28,7 +28,7 @@ export class PublicReviewController {
   @Get()
   @ApiOperation({ operationId: 'listProductReviews', summary: 'List approved product reviews' })
   @ApiOkResponse({ type: ProductReviewListDto })
-  listProductReviews(@Param('slug') slug: string): ProductReviewListDto {
+  listProductReviews(@Param('slug') slug: string): Promise<ProductReviewListDto> {
     return this.reviews.listApproved(slug);
   }
 }
@@ -45,7 +45,7 @@ export class AdminReviewController {
   @RequirePermissions('review.moderate')
   @ApiOperation({ operationId: 'listAdminReviews', summary: 'List reviews for moderation' })
   @ApiOkResponse({ type: ProductReviewListDto })
-  listAdminReviews(): ProductReviewListDto {
+  listAdminReviews(): Promise<ProductReviewListDto> {
     return this.reviews.listAdmin();
   }
 
@@ -53,7 +53,7 @@ export class AdminReviewController {
   @RequirePermissions('review.moderate')
   @ApiOperation({ operationId: 'moderateAdminReview', summary: 'Approve or reject a review' })
   @ApiOkResponse({ type: ProductReviewDto })
-  moderateAdminReview(@Param('id') id: string, @Body() input: ModerateReviewDto): ProductReviewDto {
+  moderateAdminReview(@Param('id') id: string, @Body() input: ModerateReviewDto): Promise<ProductReviewDto> {
     return this.reviews.moderate(id, input);
   }
 
@@ -71,7 +71,7 @@ export class AdminReviewController {
   deleteAdminReview(
     @Param('id') id: string,
     @Body() input: DeleteReviewDto,
-  ): ProductReviewDto {
+  ): Promise<ProductReviewDto> {
     return this.reviews.archive(id, input);
   }
 }
