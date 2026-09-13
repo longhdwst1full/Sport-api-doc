@@ -542,6 +542,7 @@ export class FulfillmentService {
       { order: { orderNo: { contains: query.search, mode: 'insensitive' } } },
       { order: { addresses: { some: { recipientName: { contains: query.search, mode: 'insensitive' } } } } },
       { order: { addresses: { some: { recipientPhone: { contains: query.search, mode: 'insensitive' } } } } },
+      { order: { addresses: { some: { recipientEmail: { contains: query.search, mode: 'insensitive' } } } } },
     ] });
     return { AND: filters };
   }
@@ -569,6 +570,7 @@ export class FulfillmentService {
       trackingNo: fulfillment.trackingNo,
       recipientName: recipient?.recipientName ?? '',
       recipientPhone: recipient?.recipientPhone ?? '',
+      recipientEmail: recipient?.recipientEmail ?? null,
       createdAt: fulfillment.createdAt.toISOString(),
       version: fulfillment.version.toString(),
     };

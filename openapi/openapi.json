@@ -9701,7 +9701,7 @@
             "name": "search",
             "required": false,
             "in": "query",
-            "description": "Mã fulfillment, mã đơn, tracking, tên hoặc SĐT người nhận",
+            "description": "Mã fulfillment, mã đơn, tracking, tên, SĐT hoặc email người nhận",
             "schema": {
               "maxLength": 100,
               "type": "string"
@@ -16207,6 +16207,10 @@
           "recipientPhone": {
             "type": "string"
           },
+          "recipientEmail": {
+            "type": "string",
+            "nullable": true
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -16348,6 +16352,10 @@
           },
           "recipientPhone": {
             "type": "string"
+          },
+          "recipientEmail": {
+            "type": "string",
+            "nullable": true
           },
           "createdAt": {
             "type": "string",

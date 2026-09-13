@@ -16,7 +16,7 @@ export class AdminFulfillmentQueryDto {
   @ApiPropertyOptional({ enum: Object.values(FULFILLMENT_STATUS) })
   @IsIn(Object.values(FULFILLMENT_STATUS)) @IsOptional() status?: string;
 
-  @ApiPropertyOptional({ maxLength: 100, description: 'Mã fulfillment, mã đơn, tracking, tên hoặc SĐT người nhận' })
+  @ApiPropertyOptional({ maxLength: 100, description: 'Mã fulfillment, mã đơn, tracking, tên, SĐT hoặc email người nhận' })
   @Transform(trimOptional) @IsString() @MaxLength(100) @IsOptional() search?: string;
 }
 
@@ -75,6 +75,7 @@ export class FulfillmentSummaryDto {
   @ApiPropertyOptional({ type: String, nullable: true }) trackingNo: string | null;
   @ApiProperty() recipientName: string;
   @ApiProperty() recipientPhone: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) recipientEmail: string | null;
   @ApiProperty({ format: 'date-time' }) createdAt: string;
   @ApiProperty() version: string;
 }
