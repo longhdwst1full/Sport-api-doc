@@ -1,10 +1,10 @@
 # Sprint 4 — Order, Payment & Fulfillment Safe Flow
 
-> **Document version:** 1.4.0
+> **Document version:** 1.5.0
 >
 > **Last updated:** 2026-09-13
 >
-> **Change summary:** Hoàn thiện Fulfillment, stock commit/return, worker Payment expiry/Order completion, OpenAPI và Admin workflow.
+> **Change summary:** Đóng Sprint 4 bằng browser E2E Client/Admin trên Supabase chung và sửa contract quick-add SKU phát hiện từ journey thật.
 
 ## 1. Mục tiêu Sprint
 
@@ -134,7 +134,7 @@ Retry cùng key/payload trả kết quả cũ; cùng key khác payload trả `40
 - [x] API unit/integration, FE generated-contract drift, build và Storybook.
 - [x] RLS audit, permission/scope/IDOR, idempotency/concurrency evidence ở service/integration level.
 - [x] Cập nhật DBML/catalog/relationship/decision/change-log/workbook/OpenAPI/status.
-- [ ] Browser E2E trên deployment chung và quan sát Supabase Cron là release evidence ngoài codebase.
+- [x] Browser E2E trên production build FE + API local kết nối Supabase chung; Supabase Cron hai worker đã quan sát HTTP 200.
 
 ## 7. Decision gate cho các wave còn lại
 
@@ -162,13 +162,23 @@ Ba decision được chốt ngày 2026-09-11. S4.1 đã triển khai guest/accou
 - [x] API error envelope/code ổn định, message tiếng Việt.
 - [x] OpenAPI sinh từ NestJS; Admin/Client SDK regenerate, không sửa tay.
 - [x] Admin/Storefront có loading/empty/error/success và stale/idempotency protection cho flow Sprint 4.
-- [x] Unit + PostgreSQL integration + concurrency/API integration pass; browser deployment smoke còn là release evidence.
+- [x] Unit + PostgreSQL integration + concurrency/API integration và browser smoke pass.
 - [x] DBML/catalog/relationship/decision/change-log/workbook/status đồng bộ.
+
+## 9. Release evidence ngày 2026-09-13
+
+- Client browser journey: `/catalog → /checkout → quote → reserve → create Order → guest detail → cancel` chạy trên API local kết nối Supabase chung.
+- Order evidence `ORD-20260913-00000016` kết thúc `CANCELLED`; Payment `CANCELLED`; reservation `RELEASED`, có cùng lý do E2E. Không xóa lịch sử nghiệp vụ.
+- Admin production build: login BRANCH_MANAGER tạm → `/auth/me` → module list → Order list → Payment list đều HTTP 200; account/session fixture đã dọn sau test.
+- Browser E2E phát hiện và đã sửa ba lỗi trước khi đóng: `/catalog` thiếu route; checkout hydrate/redirect sớm và address callback loop; quick-add tự chế variant ID thay vì Sellable SKU thật.
+- Catalog contract bổ sung nullable `defaultVariantId/defaultVariantSku`; `minPrice` và quick-add luôn lấy từ cùng effective offer. OpenAPI/YAML và hai SDK được regenerate.
+- Supabase Cron `dctd-reservation-expiry` và `dctd-order-maintenance` active; lần quan sát gần nhất trả HTTP 200.
 
 ## Revision history
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.5.0 | 2026-09-13 | Browser E2E Client/Admin, kiểm chứng release/cron và harden persisted cart/address/quick-add contract. Sprint 4 DONE. | E2E-20260913-SPRINT4-CLOSE |
 | 1.4.0 | 2026-09-13 | Hoàn thiện Fulfillment/stock commit, Admin workflow và hai maintenance worker có Supabase Cron configurator. | DBAPI-20260913-FULFILLMENT-S43 |
 | 1.3.1 | 2026-09-12 | Chốt manual complete sau DELIVERED không giới hạn ngày; Guest token TTL env và terminal cleanup. | API-20260912-ORDER-GUEST-HARDENING |
 | 1.3.0 | 2026-09-12 | Hoàn thiện Payment V1 BE/OpenAPI/Admin/Storefront và PostgreSQL integration; còn worker expiry trước khi đóng S4.2 tuyệt đối. | DBAPI-20260912-PAYMENT-S42 |

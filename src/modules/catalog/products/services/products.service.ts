@@ -1099,15 +1099,22 @@ export class ProductsService {
           this.isLoadedVariantSellable(row.productType as ProductType, variant),
         )
       : row.variants;
-    const prices = variants.flatMap(({ prices: variantPrices }) =>
-      variantPrices.map(({ amount }) => amount),
-    );
-    const minPrice = prices.sort((left, right) => left.comparedTo(right))[0];
+    // Quick-add phải dùng Sellable SKU thật. Offer rẻ nhất đồng thời sở hữu
+    // minPrice và defaultVariantId để FE không tự chế ID từ product.id.
+    const defaultOffer = variants
+      .flatMap((variant) =>
+        variant.prices.map(({ amount }) => ({ variant, amount })),
+      )
+      .sort((left, right) =>
+        left.amount.comparedTo(right.amount) || left.variant.id.toString().localeCompare(right.variant.id.toString()),
+      )[0];
     const primaryCategory = row.categories.find(({ isPrimary }) => isPrimary)?.category.name;
     const imageUrl = (row.media.find(({ isPrimary }) => isPrimary) ?? row.media[0])
       ?.mediaAsset.secureUrl;
     return {
       id: toEntityId(row.id),
+      defaultVariantId: defaultOffer ? toEntityId(defaultOffer.variant.id) : null,
+      defaultVariantSku: defaultOffer?.variant.sku ?? null,
       productNo: row.productNo,
       name: row.name,
       slug: row.slug,
@@ -1116,7 +1123,7 @@ export class ProductsService {
       ...(primaryCategory ? { primaryCategory } : {}),
       status: row.status as ProductSummaryDto['status'],
       version: Number(row.version),
-      minPrice: minPrice?.toFixed(2) ?? null,
+      minPrice: defaultOffer?.amount.toFixed(2) ?? null,
       currency: PRODUCT_CURRENCY.VND,
       imageUrl: imageUrl ?? null,
     };

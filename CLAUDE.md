@@ -1,6 +1,46 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # API context
 
 Read `AGENTS.md` and the task-relevant files under `.agent/rules` and `.agent/skills` before changing this repository. Do not import Admin or Storefront rules.
+
+## Commands
+
+```bash
+yarn dev                 # nest start --watch (prestart runs prisma generate + migrate-on-start)
+yarn lint                # eslint {src,scripts,test}/**/*.ts
+yarn test                # jest unit specs (*.spec.ts under src/)
+yarn test:integration    # test/jest-integration.json, --runInBand (needs .env.local DB)
+yarn test:e2e            # test/jest-e2e.json
+yarn build               # prisma validate + generate + migrate-on-deploy + nest build
+yarn verify              # lint + test + build
+
+yarn openapi:generate    # build, then emit openapi/openapi.json + document/api slices
+yarn contracts:check     # regenerate and fail if the committed contract drifted
+
+yarn db:status | db:migrate | db:seed | db:admin:reset
+yarn db:seed:demo --confirm-manual-seed   # manual-only demo data, never in deploy
+```
+
+Single test: `yarn jest src/modules/catalog/products/services/x.spec.ts -t "case name"`.
+Full gate before handoff: `yarn lint && yarn test && yarn prisma:validate && yarn openapi:generate && yarn build`.
+
+Dev uses the configured Supabase PostgreSQL (`DATABASE_URL` pooled, `DIRECT_URL` for migrations) — do not start a local DB container.
+
+## Architecture
+
+NestJS 11 modular monolith, Prisma/PostgreSQL, Swagger-generated OpenAPI. This repo is the **contract producer**: DTO/controller code → `openapi/openapi.json` + `document/api/openapi-v1.yaml` + per-domain Admin/Storefront slices, which Admin and Client sync and run through Orval. Never hand-write a contract downstream.
+
+- **Bounded contexts** live in `src/modules/<context>` (catalog, inventory, cart, checkout, order, payment, fulfillment, cms, review, iam, organization, …). `src/modules/README.md` is the authoritative ACTIVE vs SCAFFOLDED registry — a SCAFFOLDED module has a Nest boundary and registered models but deliberately no generic CRUD controller, because that would bypass state-machine, audit, idempotency and transaction rules. Two shapes: compact feature module (Organization/IAM) or nested `controllers/dto/services` (Catalog/Products). Prisma repositories stay inside the owning module.
+- **Composition.** `src/platform/app.factory.ts` owns the whole HTTP surface: global prefix `api/v1`, helmet + compression + credentialed CORS, the global `ValidationPipe`/exception filter, and `buildOpenApiDocument` (operationId = method name, which is what gives the generated SDKs their function names). `src/app.module.ts` wires config validation (`src/config/env.validation.ts`), pino logging with `x-request-id` propagation, Throttler and the global `PermissionGuard`.
+- **Layers.** `src/common` cross-cutting guards/decorators/filters/exceptions/pagination (`@RequireAuthentication`, `@RequirePermissions`), `src/config` typed config namespaces, `src/database` Prisma lifecycle only, `src/integrations` third-party ports/adapters (Cloudinary object storage, shipping partner, Telegram), `src/platform` app/OpenAPI/runtime plumbing.
+- **OpenAPI generation** runs against the compiled `dist/` with `AUTH_BYPASS=true` and `DATABASE_ENABLED=false` (`scripts/generate-openapi.cjs`), so it must not need a live DB — keep module construction side-effect free.
+- **Model traceability.** `system/model-registry.data.ts` is the executable coverage manifest for the reviewed 74-table V1 model (`document/09-v1-model.dbml`); its unit test fails if a table silently disappears. Any DB/contract/permission/error change also updates the annotated workbook (`.agent/skills/db-api-document-traceability/SKILL.md`).
+- Modules with transactions, concurrency, providers or a state machine carry their own `README.md`; `src/modules/checkout/README.md` is the reference.
+
+Generated output (`openapi/`, `document/api/`, Prisma Client, `dist/`) is never hand-edited — change the producer and regenerate.
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence

@@ -131,15 +131,15 @@ components:
         addressLine:
           type: string
         ward:
-          type: object
+          type: string
           nullable: true
         district:
-          type: object
+          type: string
           nullable: true
         provinceCode:
           type: string
         postalCode:
-          type: object
+          type: string
           nullable: true
         countryCode:
           type: string

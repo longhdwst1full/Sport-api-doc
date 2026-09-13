@@ -1245,7 +1245,7 @@ components:
         actualOnHand:
           type: number
         note:
-          type: object
+          type: string
           nullable: true
       required:
         - id

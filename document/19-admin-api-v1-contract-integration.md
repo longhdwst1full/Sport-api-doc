@@ -1,10 +1,10 @@
 # Admin và Storefront API v1 contract integration
 
-> **Document version:** 1.3.0
+> **Document version:** 1.4.0
 >
-> **Last updated:** 2026-09-09
+> **Last updated:** 2026-09-13
 >
-> **Change summary:** Chuẩn hóa toàn bộ thông báo lỗi HTTP gửi tới Admin/Storefront sang tiếng Việt tại global exception boundary; giữ nguyên machine code và error envelope.
+> **Change summary:** Bổ sung Sellable SKU mặc định cho catalog quick-add và regenerate contract cho Admin/Storefront.
 
 ## Nguyên tắc đã áp dụng
 
@@ -19,6 +19,7 @@
 
 | Mục đích | Method/path v1 | Operation ID | Permission | Consumer Admin |
 | --- | --- | --- | --- | --- |
+| Catalog public + quick-add | `GET /api/v1/catalog/products` | `listCatalogProducts` | Public | `defaultVariantId/defaultVariantSku` cùng effective offer với `minPrice`; FE không tự tạo variant ID |
 | Danh sách branch quản trị | `GET /api/v1/admin/organization/branches` | `listAdminBranches` | `org.branch.view` | Trang Organization |
 | Tạo branch + kho 1:1 | `POST /api/v1/admin/organization/branches` | `createAdminBranchWithWarehouse` | `org.branch.manage` + `org.warehouse.manage` | Organization drawer |
 | Cập nhật branch + kho 1:1 | `PATCH /api/v1/admin/organization/branches/{id}` | `updateAdminBranchWithWarehouse` | `org.branch.manage` + `org.warehouse.manage` | Organization drawer |
@@ -138,6 +139,7 @@ Admin dùng `getApiErrorMessage` cho lỗi form/query và `getApiFieldErrors` đ
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.4.0 | 2026-09-13 | Product summary trả Sellable SKU tương ứng `minPrice`; browser E2E chứng minh cart/checkout chấp nhận ID số thật. | API-20260913-CATALOG-QUICK-ADD |
 | 1.0.0 | 2026-09-04 | Chuẩn hóa metadata; chốt một Admin gốc, lockout, trim input Auth và cách hiển thị lỗi Admin. | DBAPI-20260904-SINGLE-ROOT-ADMIN |
 | 1.1.0 | 2026-09-05 | Bổ sung sáu HTTP DELETE logic, giữ route lifecycle cũ và regenerate OpenAPI/Admin SDK. | API-20260905-LOGICAL-DELETE-V1 |
 | 1.2.0 | 2026-09-05 | Mở rộng DELETE logic cho content post, review và staff; generated SDK được ghép vào ba màn Admin. | API-20260905-ADMIN-DELETE-EXTENSION |

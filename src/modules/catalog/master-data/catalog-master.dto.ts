@@ -46,6 +46,25 @@ export class CategoryListDto {
   @ApiProperty() total: number;
 }
 
+/**
+ * Category công khai cho Storefront. Không lộ `id`/`version`/`path` nội bộ —
+ * điều hướng ngoài cửa hàng đi bằng `slug`.
+ */
+export class CatalogCategoryDto {
+  @ApiProperty() code: string;
+  @ApiProperty() name: string;
+  @ApiProperty() slug: string;
+  @ApiPropertyOptional() description?: string;
+  @ApiPropertyOptional({ type: String, format: 'uri', nullable: true }) imageUrl?: string | null;
+  @ApiProperty() sortOrder: number;
+  @ApiProperty({ description: 'Số sản phẩm PUBLISHED thuộc danh mục' }) productCount: number;
+}
+
+export class CatalogCategoryListDto {
+  @ApiProperty({ type: [CatalogCategoryDto] }) items: CatalogCategoryDto[];
+  @ApiProperty() total: number;
+}
+
 export class CreateBrandDto {
   @ApiProperty() @IsString() @Matches(/^[A-Z0-9-]+$/) @MaxLength(32) code: string;
   @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(255) name: string;

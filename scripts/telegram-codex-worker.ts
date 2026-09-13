@@ -27,8 +27,8 @@ const HELP_TEXT = [
   '/task [api|admin|client] <yêu cầu> — tạo task chờ xác nhận',
   '/confirm <task-id> — cho Codex thực thi task',
   '/cancel <task-id> — hủy task',
-  '/status [task-id] — xem trạng thái',
-  '/tasks — xem 10 task gần nhất',
+  '/status [task-id|api|admin|client] — xem task gần nhất hoặc task được chọn',
+  '/tasks [api|admin|client] — xem 10 task gần nhất, có thể lọc theo repo',
   '',
   'Mọi task chạy trong workspace-write sandbox và không truyền secret vào Codex child process.',
 ].join('\n');
@@ -150,18 +150,29 @@ class TelegramCodexWorker {
     if (command.type === 'HELP') return this.telegram.sendMessage(chatId, HELP_TEXT);
     if (command.type === 'INVALID') return this.telegram.sendMessage(chatId, command.message);
     if (command.type === 'TASKS') {
-      const tasks = (await this.store.load()).tasks.slice(-10).reverse();
+      const allTasks = (await this.store.load()).tasks;
+      const tasks = allTasks
+        .filter((task) => !command.repository || task.repository === command.repository)
+        .slice(-10)
+        .reverse();
       return this.telegram.sendMessage(
         chatId,
-        tasks.length ? tasks.map((task) => `${task.id} · ${task.repository} · ${task.status}`).join('\n') : 'Chưa có task.',
+        tasks.length
+          ? tasks.map((task) => `${task.id} · ${task.repository} · ${task.status}`).join('\n')
+          : `Chưa có task${command.repository ? ` trong repo ${command.repository}` : ''}.\nTạo mới bằng: /task ${command.repository ?? '[api|admin|client]'} <yêu cầu>`,
       );
     }
     if (command.type === 'STATUS') {
       const tasks = (await this.store.load()).tasks;
       const task = command.taskId
         ? tasks.find((candidate) => candidate.id === command.taskId)
-        : tasks.at(-1);
-      return this.telegram.sendMessage(chatId, task ? formatTask(task) : 'Không tìm thấy task.');
+        : tasks.filter((candidate) => !command.repository || candidate.repository === command.repository).at(-1);
+      return this.telegram.sendMessage(
+        chatId,
+        task
+          ? formatTask(task)
+          : `Không tìm thấy task${command.repository ? ` trong repo ${command.repository}` : ''}.\nTạo mới bằng: /task ${command.repository ?? '[api|admin|client]'} <yêu cầu>`,
+      );
     }
     if (command.type === 'TASK') {
       const task: CodexTask = {

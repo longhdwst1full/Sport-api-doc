@@ -3251,6 +3251,28 @@
         ]
       }
     },
+    "/api/v1/catalog/categories": {
+      "get": {
+        "operationId": "listCatalogCategories",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogCategoryListDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "List active storefront categories",
+        "tags": [
+          "Storefront Catalog"
+        ]
+      }
+    },
     "/api/v1/catalog/products": {
       "get": {
         "operationId": "listCatalogProducts",
@@ -11863,18 +11885,18 @@
             "type": "string"
           },
           "ward": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           },
           "district": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           },
           "provinceCode": {
             "type": "string"
           },
           "postalCode": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           },
           "countryCode": {
@@ -12279,6 +12301,60 @@
           "expectedVersion"
         ]
       },
+      "CatalogCategoryDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "imageUrl": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true
+          },
+          "sortOrder": {
+            "type": "number"
+          },
+          "productCount": {
+            "type": "number",
+            "description": "Số sản phẩm PUBLISHED thuộc danh mục"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "slug",
+          "sortOrder",
+          "productCount"
+        ]
+      },
+      "CatalogCategoryListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CatalogCategoryDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ]
+      },
       "ProductSummaryDto": {
         "type": "object",
         "properties": {
@@ -12286,6 +12362,18 @@
             "type": "string",
             "pattern": "^[1-9][0-9]*$",
             "example": "1"
+          },
+          "defaultVariantId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1",
+            "nullable": true,
+            "description": "Sellable variant represented by minPrice; use this ID for quick-add cart actions"
+          },
+          "defaultVariantSku": {
+            "type": "string",
+            "nullable": true,
+            "description": "Immutable SKU of defaultVariantId"
           },
           "productNo": {
             "type": "string"
@@ -12616,6 +12704,18 @@
             "type": "string",
             "pattern": "^[1-9][0-9]*$",
             "example": "1"
+          },
+          "defaultVariantId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1",
+            "nullable": true,
+            "description": "Sellable variant represented by minPrice; use this ID for quick-add cart actions"
+          },
+          "defaultVariantSku": {
+            "type": "string",
+            "nullable": true,
+            "description": "Immutable SKU of defaultVariantId"
           },
           "productNo": {
             "type": "string"
@@ -13461,7 +13561,7 @@
             "type": "number"
           },
           "note": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           }
         },

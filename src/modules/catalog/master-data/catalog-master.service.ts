@@ -22,6 +22,8 @@ import { AuditWriter } from '../../audit/audit.writer';
 import {
   BrandDto,
   BrandListDto,
+  CatalogCategoryDto,
+  CatalogCategoryListDto,
   CategoryDto,
   CategoryListDto,
   ChangeMasterStatusDto,
@@ -49,6 +51,31 @@ export class CatalogMasterService {
       orderBy: [{ path: 'asc' }, { sortOrder: 'asc' }],
     });
     const items = rows.map((row) => this.toCategory(row));
+    return { items, total: items.length };
+  }
+
+  /**
+   * Danh mục công khai cho Storefront: chỉ ACTIVE, kèm ảnh và số sản phẩm
+   * PUBLISHED để trang danh mục không phải hiển thị số liệu bịa.
+   */
+  async listStorefrontCategories(): Promise<CatalogCategoryListDto> {
+    const rows = await this.prisma.category.findMany({
+      where: { status: 'ACTIVE' },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+      include: {
+        imageAsset: { select: { secureUrl: true, thumbnailUrl: true } },
+        _count: { select: { products: { where: { product: { status: 'PUBLISHED' } } } } },
+      },
+    });
+    const items: CatalogCategoryDto[] = rows.map((row) => ({
+      code: row.code,
+      name: row.name,
+      slug: row.slug,
+      description: row.description ?? undefined,
+      imageUrl: row.imageAsset?.thumbnailUrl ?? row.imageAsset?.secureUrl ?? null,
+      sortOrder: row.sortOrder,
+      productCount: row._count.products,
+    }));
     return { items, total: items.length };
   }
 

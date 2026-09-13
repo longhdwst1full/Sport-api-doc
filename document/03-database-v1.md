@@ -1,10 +1,10 @@
 # Thiết kế dữ liệu V1
 
-> **Document version:** 2.8.0
+> **Document version:** 2.9.0
 >
 > **Last updated:** 2026-09-13
 >
-> **Change summary:** Vật lý hóa Fulfillment V1, history idempotent append-only và stock commit/return theo đúng warehouse.
+> **Change summary:** Ghi đúng hiện trạng outbox/RLS/idempotency, chốt căn cứ kinh doanh cho ràng buộc một-cửa-hàng-một-kho và siết delete policy của dòng phiếu chuyển.
 
 ## 1. Chuẩn chung
 
@@ -21,7 +21,7 @@
 - Aggregate hay tranh chấp có `version bigint not null default 0` để optimistic locking.
 - Master data dùng lifecycle `status`; không dùng `deleted_at` trong model V1 đã triển khai. Ledger, transaction và history không physical-delete, không sửa nội dung nghiệp vụ đã chốt.
 - Mã nghiệp vụ (`order_no`, `sku`, `payment_ref`) tách khỏi PK, có unique index và không tái sử dụng.
-- NestJS/Prisma là data-access boundary duy nhất. Mọi base table đã persist trong Supabase `public`, kể cả `_prisma_migrations`, đều bật RLS deny-by-default; role `anon` và `authenticated` không có table/sequence privilege hoặc quyền gọi trực tiếp application-owned function. Migration owner `postgres` không cấp mặc định table/sequence/function privilege cho hai role này.
+- NestJS/Prisma là data-access boundary duy nhất. Mọi base table đã persist trong Supabase `public`, kể cả `_prisma_migrations`, đều bật RLS deny-by-default; role `anon` và `authenticated` không có table/sequence privilege hoặc quyền gọi trực tiếp application-owned function. Migration owner `postgres` không cấp mặc định table/sequence/function privilege cho hai role này. Lưu ý cơ chế: migration `20260909010000` chỉ duyệt các bảng **tồn tại tại thời điểm đó**, nên bảng tạo sau (Order/Payment/Fulfillment và bảng con) từng bị hụt RLS — lớp `REVOKE`/`ALTER DEFAULT PRIVILEGES` vẫn phủ nên không thành lỗ hổng đang khai thác được, nhưng mất chiều sâu phòng thủ. Migration `20260913121000_rls_coverage_guard` bật bù và **fail-fast nếu còn bất kỳ bảng public nào chưa bật RLS**, để wave sau không tái diễn.
 - Không dùng `FORCE ROW LEVEL SECURITY` trong V1 vì Prisma kết nối trực tiếp bằng owner `postgres`; browser không có database credential và chỉ gọi NestJS API. Nếu sau này mở Supabase Data API cho FE, phải tạo contract/policy/grant/test theo từng operation, không mở policy `USING (true)` hàng loạt.
 
 ## 2. Aggregate và quan hệ chính
@@ -66,13 +66,14 @@ Permission nghiệp vụ mới phải có data migration cùng release, không c
 - `warehouses(code)`, `branches(code)`, `product_variants(sku)`, barcode khác null và `orders(order_no)` là unique.
 - `role_permissions(role_id, permission_id)` và `product_categories(product_id, category_id)` là composite primary key; migration phải kiểm chứng lại constraint sau mọi lần thay kiểu PK/FK.
 - `inventory_balances(warehouse_id, product_variant_id)` unique; `on_hand >= 0`; `reserved >= 0`; `reserved <= on_hand`.
+- `stock_transfer_items` dùng `ON DELETE RESTRICT` theo đúng quy tắc transaction/history không cascade; xóa phiếu chuyển không được phép làm mất dòng hàng trong khi bút toán `TRANSFER_OUT`/`TRANSFER_IN` vẫn còn.
 - `stock_transfers`: source khác destination; trạng thái chỉ `DRAFT/SUBMITTED/SHIPPED/RECEIVED`; actor/timestamp phải khớp trạng thái; `transfer_no` và `idempotency_key` unique.
 - `stock_transfer_items`: một SKU mỗi phiếu; `requested > 0`, `0 <= shipped <= requested`, `received + damaged <= shipped`; khi nhận service bắt buộc `received + damaged = shipped`, hàng hỏng bắt buộc lý do.
 - `payments(order_id)` unique ở V1; payment có nhiều attempt/event qua `payment_transactions`.
 - `fulfillments(order_id)` unique ở V1; `fulfillment_no` được suy ra từ `order_no` bất biến, không có sequence riêng.
 - Fulfillment phải dùng đúng `orders.warehouse_id`; service khóa aggregate trước balance và kiểm tra lại trong transaction.
 - `fulfillment_status_history` unique theo `(fulfillment_id, sequence_no)` và `(fulfillment_id, idempotency_key)`; key/hash cùng null hoặc cùng có giá trị; DB chặn UPDATE/DELETE/TRUNCATE.
-- `warehouses(branch_id)` unique: một branch đúng một warehouse; không có `is_primary`; branch phải có warehouse trước khi ACTIVE.
+- `warehouses(branch_id)` unique: một branch đúng một warehouse; không có `is_primary`; branch phải có warehouse trước khi ACTIVE. Ràng buộc này bám mô hình kinh doanh mục tiêu — cửa hàng nhỏ lẻ và doanh nghiệp cá nhân, mỗi cửa hàng tự quản lý nhập/xuất và địa chỉ kho của mình — nên **là thiết kế đúng, không phải giới hạn tạm thời**. Chỉ xem xét lại khi có khách hàng thật cần hai kho cho một cửa hàng.
 - Guest checkout luôn tạo/upsert `customers` với `user_id` null; bắt buộc normalized phone. Đăng ký sau sẽ link user vào customer cũ sau xác minh.
 - `order_items`: quantity > 0; unit/list/discount/final price và tên/SKU/thuế được snapshot.
 - Giá storefront/order đã gồm VAT. `tax_total` là thành phần VAT để báo cáo; `grand_total = subtotal - discount_total + shipping_total`.
@@ -88,6 +89,8 @@ Permission nghiệp vụ mới phải có data migration cùng release, không c
 ### Create order
 
 Trong một DB transaction: validate quote → khóa/conditional update balance theo thứ tự warehouse+variant → tạo reservations → tạo order/items/address/payment → consume flash quota reservation → ghi outbox. Nếu một item thiếu tồn, rollback toàn bộ.
+
+> **Hiện trạng outbox (2026-09-13).** `outbox_events` **chưa được vật lý hóa**; chưa có writer và chưa có publisher. Mọi câu "ghi outbox" trong mục 5 là thiết kế đích, chưa phải hành vi đang chạy. Phương án đã chốt: tạo bảng và ghi event trong V1, publisher hoãn tới khi có provider thật — xem `_plans/2026-09-13-v1-remediation.md` hạng mục H1.
 
 ### Payment success
 
@@ -129,6 +132,7 @@ Fulfillment ghi reason bắt buộc rồi chuyển `DELIVERY_FAILED -> RETURNING
 
 - Audit/financial/order/inventory ledger giữ theo yêu cầu kế toán và chính sách pháp lý; mặc định đề xuất 10 năm cho giao dịch tài chính.
 - Idempotency body/response 24–72 giờ tùy API; outbox thành công 30–90 ngày rồi archive.
+- **Deviation đã ghi nhận (2026-09-13).** V1 không dùng bảng `idempotency_keys` tập trung; chống trùng được thực hiện bằng unique column theo từng aggregate (11 vị trí trong schema, ví dụ `stock_transfers.idempotency_key`, `order_status_history(order_id, idempotency_key)`). Hệ quả: request lặp được nhận diện nhưng response được **dựng lại từ state hiện thời**, không phải bản chụp lần đầu. Consumer không được giả định replay trả về body y hệt.
 - Session và OTP hết hạn được purge định kỳ.
 - PII mã hóa ở storage/backup; log không chứa token, password, full bank data hoặc nội dung file.
 - Yêu cầu xóa tài khoản phải anonymize dữ liệu nhận diện nhưng giữ snapshot giao dịch tối thiểu bắt buộc.
@@ -147,6 +151,7 @@ Fulfillment ghi reason bắt buộc rồi chuyển `DELIVERY_FAILED -> RETURNING
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 2.9.0 | 2026-09-13 | Sửa mô tả outbox/RLS/idempotency cho khớp code; ghi căn cứ kinh doanh của ràng buộc 1 branch–1 warehouse; stock_transfer_items chuyển sang RESTRICT; bổ sung 4 chỉ mục FK. | REVIEW-20260913-V1-GAP |
 | 2.8.0 | 2026-09-13 | Thêm Fulfillment persisted, history append-only/idempotent, stock commit tại SHIPPED và restock SELLABLE sau hàng hoàn thực nhận. | DBAPI-20260913-FULFILLMENT-S43 |
 | 2.7.0 | 2026-09-12 | Thêm payments, payment_transactions và payment_evidences theo migration forward-only; không lưu binary trong DB. | DBAPI-20260912-PAYMENT-S42 |
 | 2.6.0 | 2026-09-09 | Bật RLS cho toàn bộ public base table gồm Prisma history; revoke direct/default table, sequence và application-function access khỏi Data API roles. | DBSEC-20260909-PUBLIC-RLS-COMPLETE |

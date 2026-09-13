@@ -28,9 +28,23 @@ describe('parseCodexBotCommand', () => {
     });
   });
 
+  it('supports repository filters for /tasks and /status', () => {
+    expect(parseCodexBotCommand('/tasks api', 'client')).toEqual({
+      type: 'TASKS',
+      repository: 'api',
+    });
+    expect(parseCodexBotCommand('/status ADMIN', 'client')).toEqual({
+      type: 'STATUS',
+      repository: 'admin',
+    });
+    expect(parseCodexBotCommand('/tasks', 'api')).toEqual({ type: 'TASKS' });
+  });
+
   it('rejects malformed IDs, short prompts, and unsupported commands', () => {
     expect(parseCodexBotCommand('/confirm ../../api', 'api').type).toBe('INVALID');
     expect(parseCodexBotCommand('/task api fix', 'api').type).toBe('INVALID');
+    expect(parseCodexBotCommand('/tasks unknown', 'api').type).toBe('INVALID');
+    expect(parseCodexBotCommand('/status unknown', 'api').type).toBe('INVALID');
     expect(parseCodexBotCommand('/shell rm -rf x', 'api').type).toBe('INVALID');
   });
 });

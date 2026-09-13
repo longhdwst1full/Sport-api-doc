@@ -2156,6 +2156,16 @@ components:
           type: string
           pattern: ^[1-9][0-9]*$
           example: "1"
+        defaultVariantId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+          nullable: true
+          description: Sellable variant represented by minPrice; use this ID for quick-add cart actions
+        defaultVariantSku:
+          type: string
+          nullable: true
+          description: Immutable SKU of defaultVariantId
         productNo:
           type: string
         name:
@@ -2581,6 +2591,16 @@ components:
           type: string
           pattern: ^[1-9][0-9]*$
           example: "1"
+        defaultVariantId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+          nullable: true
+          description: Sellable variant represented by minPrice; use this ID for quick-add cart actions
+        defaultVariantSku:
+          type: string
+          nullable: true
+          description: Immutable SKU of defaultVariantId
         productNo:
           type: string
         name:

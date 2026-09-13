@@ -1,10 +1,10 @@
 # Telegram command bot runbook
 
-> **Document version:** 1.1.0
+> **Document version:** 1.2.0
 >
-> **Last updated:** 2026-09-05
+> **Last updated:** 2026-09-13
 >
-> **Change summary:** Bổ sung local Codex Worker nhận task qua Telegram, bước xác nhận, sandbox, lưu trạng thái và gửi thông báo chủ động.
+> **Change summary:** Làm rõ cú pháp tạo task; bổ sung lọc task/trạng thái theo repo và hướng dẫn khi chưa có task.
 
 ## Phạm vi
 
@@ -33,8 +33,19 @@ Worker chạy trên máy có ba repository local và Codex CLI. Chế độ này
 - `/task [api|admin|client] <yêu cầu>`: tạo task `PENDING_CONFIRMATION`, chưa thực thi.
 - `/confirm <task-id>`: chuyển task sang `RUNNING` và khởi chạy Codex.
 - `/cancel <task-id>`: hủy task chờ hoặc gửi `SIGTERM` cho task đang chạy.
-- `/status [task-id]`: xem trạng thái và kết quả.
-- `/tasks`: xem 10 task gần nhất.
+- `/status`: xem task mới nhất trên toàn bộ repo.
+- `/status <task-id>`: xem trạng thái và kết quả của một task.
+- `/status [api|admin|client]`: xem task mới nhất của repo.
+- `/tasks [api|admin|client]`: xem 10 task gần nhất, tùy chọn lọc theo repo.
+
+`/task` đứng một mình không tạo task vì worker chưa có nội dung để giao cho Codex. Ví dụ đầy đủ:
+
+```text
+/task api Kiểm tra và sửa lỗi đăng nhập tài khoản admin
+/confirm a1b2c3d4
+/status a1b2c3d4
+/tasks api
+```
 
 Luồng thực thi:
 
@@ -115,5 +126,6 @@ State của worker nằm trong `.telegram-codex/state.json`, bị Git ignore và
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.2.0 | 2026-09-13 | Thêm filter repo cho `/tasks`/`/status`, phản hồi có hướng dẫn khi danh sách rỗng và làm rõ `/task` bắt buộc có mô tả. | OPS-20260913-TELEGRAM-TASK-USABILITY |
 | 1.1.0 | 2026-09-05 | Thêm Codex Worker hai bước, fixed repo allowlist, sandbox, state store và notification CLI. | OPS-20260905-TELEGRAM-CODEX-WORKER |
 | 1.0.0 | 2026-09-05 | Tạo Telegram bot webhook và runbook vận hành an toàn. | API-20260905-TELEGRAM-COMMAND-BOT |

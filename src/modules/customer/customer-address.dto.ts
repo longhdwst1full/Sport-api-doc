@@ -61,10 +61,10 @@ export class CustomerAddressDto {
   @ApiProperty() recipient: string;
   @ApiProperty() phone: string;
   @ApiProperty() addressLine: string;
-  @ApiPropertyOptional({ nullable: true }) ward: string | null;
-  @ApiPropertyOptional({ nullable: true }) district: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) ward: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) district: string | null;
   @ApiProperty() provinceCode: string;
-  @ApiPropertyOptional({ nullable: true }) postalCode: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) postalCode: string | null;
   @ApiProperty({ enum: ['VN'] }) countryCode: string;
   @ApiProperty() isDefault: boolean;
   @ApiProperty({ minimum: 0 }) version: number;

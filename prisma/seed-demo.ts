@@ -4,6 +4,8 @@ import {
   BAO_AN_BRANDS,
   BAO_AN_CATEGORIES,
   BAO_AN_PRODUCTS,
+  CORE_CATEGORIES,
+  type BaoAnDemoCategory,
 } from './demo-data/bao-an-sport';
 import {
   assertUniqueValues,
@@ -47,12 +49,7 @@ const brands = [
   ...BAO_AN_BRANDS,
 ] as const;
 
-const categories = [
-  { code: 'GYM', name: 'Tập gym', slug: 'tap-gym', sortOrder: 10 },
-  { code: 'RUNNING', name: 'Chạy bộ', slug: 'chay-bo', sortOrder: 20 },
-  { code: 'ACCESSORY', name: 'Phụ kiện thể thao', slug: 'phu-kien-the-thao', sortOrder: 30 },
-  ...BAO_AN_CATEGORIES,
-] as const;
+const categories: readonly BaoAnDemoCategory[] = [...CORE_CATEGORIES, ...BAO_AN_CATEGORIES];
 
 const products = [
   {
@@ -202,6 +199,36 @@ async function prepareBaoAnMedia(options: DemoSeedOptions): Promise<Map<string, 
   const folder = (process.env.CLOUDINARY_FOLDER ?? 'sport-sys/sport').replace(/^\/+|\/+$/g, '');
   const prepared = new Map<string, PreparedMedia>();
 
+  // Ảnh danh mục đi cùng đường dẫn Cloudinary với ảnh sản phẩm để một lần dọn
+  // folder là sạch toàn bộ media demo.
+  for (const category of categories) {
+    if (!category.imageUrl || !category.sourceUrl) continue;
+    const publicId = `${folder}/demo/bao-an-sport/categories/${category.slug}`;
+    const result = await getOrUploadBaoAnImage(
+      publicId,
+      category.imageUrl,
+      category.sourceUrl,
+      options.refreshMedia,
+    );
+    if (!result.asset_id) {
+      throw new Error(`Cloudinary did not return an asset ID for category ${category.code}.`);
+    }
+    const mimeFormat = result.format === 'jpg' ? 'jpeg' : result.format;
+    prepared.set(`CATEGORY:${category.code}`, {
+      providerAssetId: result.asset_id,
+      publicId,
+      secureUrl: result.secure_url,
+      thumbnailUrl: cloudinary.url(publicId, {
+        secure: true, width: 800, height: 500, crop: 'limit', quality: 'auto', fetch_format: 'auto',
+      }),
+      format: result.format,
+      mimeType: `image/${mimeFormat}`,
+      width: result.width,
+      height: result.height,
+      sizeBytes: BigInt(result.bytes),
+    });
+  }
+
   for (let offset = 0; offset < BAO_AN_PRODUCTS.length; offset += 4) {
     const batch = BAO_AN_PRODUCTS.slice(offset, offset + 4);
     const uploads = await Promise.all(batch.map(async (item) => {
@@ -241,6 +268,46 @@ async function prepareBaoAnMedia(options: DemoSeedOptions): Promise<Map<string, 
     }
   }
   return prepared;
+}
+
+async function upsertCategoryImageAsset(
+  transaction: Prisma.TransactionClient,
+  category: BaoAnDemoCategory,
+  media: PreparedMedia | undefined,
+  uploadedBy: bigint,
+  options: DemoSeedOptions,
+): Promise<bigint | undefined> {
+  if (!media || !category.sourceUrl) return undefined;
+  const current = await transaction.mediaAsset.findFirst({
+    where: { provider: 'CLOUDINARY', publicId: media.publicId },
+  });
+  const assetData = {
+    providerAssetId: media.providerAssetId,
+    publicId: media.publicId,
+    secureUrl: media.secureUrl,
+    thumbnailUrl: media.thumbnailUrl,
+    format: media.format,
+    mimeType: media.mimeType,
+    width: media.width,
+    height: media.height,
+    sizeBytes: media.sizeBytes,
+    folder: media.publicId.slice(0, media.publicId.lastIndexOf('/')),
+    altText: category.name,
+    metadataJson: { demoSource: category.sourceUrl, importedAt: '2026-09-13' },
+    status: 'ACTIVE',
+    uploadedBy,
+  };
+  if (!current) {
+    const created = await transaction.mediaAsset.create({
+      data: { provider: 'CLOUDINARY', resourceType: 'IMAGE', ...assetData },
+    });
+    return created.id;
+  }
+  if (options.refreshData || options.refreshMedia) {
+    const updated = await transaction.mediaAsset.update({ where: { id: current.id }, data: assetData });
+    return updated.id;
+  }
+  return current.id;
 }
 
 async function importDemoData(
@@ -315,13 +382,22 @@ async function importDemoData(
   }
 
   for (const item of categories) {
+    const imageAssetId = await upsertCategoryImageAsset(
+      transaction,
+      item,
+      preparedMedia.get(`CATEGORY:${item.code}`),
+      bootstrapUser.id,
+      options,
+    );
     const category = await transaction.category.upsert({
       where: { code: item.code },
       update: existingRecordUpdate(options.refreshData, {
         name: item.name,
         slug: item.slug,
         sortOrder: item.sortOrder,
+        description: item.description,
         status: 'ACTIVE',
+        ...(imageAssetId ? { imageAssetId } : {}),
       }),
       create: {
         code: item.code,
@@ -331,7 +407,8 @@ async function importDemoData(
         path: 'PENDING',
         depth: 0,
         status: 'ACTIVE',
-        description: `Danh mục demo ${item.name}`,
+        description: item.description,
+        imageAssetId,
       },
     });
     if ((category.path === 'PENDING' || options.refreshData) && category.path !== category.id.toString()) {

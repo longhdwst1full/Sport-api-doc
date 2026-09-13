@@ -82,6 +82,18 @@ export class ProductBundleDto {
 
 export class ProductSummaryDto {
   @ApiProperty({ ...ENTITY_ID_OPENAPI }) id: string;
+  @ApiPropertyOptional({
+    ...ENTITY_ID_OPENAPI,
+    nullable: true,
+    description: 'Sellable variant represented by minPrice; use this ID for quick-add cart actions',
+  })
+  defaultVariantId?: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Immutable SKU of defaultVariantId',
+  })
+  defaultVariantSku?: string | null;
   @ApiProperty() productNo: string;
   @ApiProperty() name: string;
   @ApiProperty() slug: string;

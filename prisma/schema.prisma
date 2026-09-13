@@ -437,6 +437,7 @@ model ProductBundle {
   items         BundleItem[]
   orderItems    OrderItem[]
 
+  @@index([bundleVariantId])
   @@map("product_bundles")
 }
 
@@ -548,6 +549,7 @@ model InventoryMovement {
   @@index([occurredAt(sort: Desc), id(sort: Desc)])
   @@index([warehouseId, occurredAt(sort: Desc), id(sort: Desc)])
   @@index([referenceType, referenceId])
+  @@index([productVariantId, occurredAt(sort: Desc), id(sort: Desc)])
   @@map("inventory_movements")
 }
 
@@ -638,7 +640,7 @@ model StockTransferItem {
   damagedQty       Int     @default(0) @map("damaged_qty")
   damageReason     String? @map("damage_reason") @db.VarChar(500)
 
-  stockTransfer  StockTransfer  @relation(fields: [stockTransferId], references: [id], onDelete: Cascade)
+  stockTransfer  StockTransfer  @relation(fields: [stockTransferId], references: [id], onDelete: Restrict)
   productVariant ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Restrict)
 
   @@unique([stockTransferId, productVariantId])
@@ -792,6 +794,8 @@ model CheckoutSession {
   @@index([expiresAt, status])
   @@index([paymentMethod, status])
   @@index([shippingMethod, status])
+  @@index([warehouseId])
+  @@index([shippingRateId])
   @@map("checkout_sessions")
 }
 

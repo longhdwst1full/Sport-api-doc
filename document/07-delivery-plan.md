@@ -108,7 +108,7 @@ List API dùng cursor pagination cho order/movement/audit lớn; filter/sort ph�
 ## 7. Việc làm ngay sau khi chốt tài liệu
 
 1. Xác nhận file open decisions.
-2. Review ERD vật lý 74 bảng; migration Wave 1–5 chỉ tạo P0 theo dependency, không tạo toàn bộ cùng lúc.
+2. Review ERD vật lý 75 bảng; migration Wave 1–5 chỉ tạo P0 theo dependency, không tạo toàn bộ cùng lúc.
 3. Viết permission seed và role matrix; test scope trước CRUD admin.
 4. Dựng prototype transaction reservation → order → payment success → ship.
 5. Chạy load/concurrency test prototype; chỉ sau đó phát triển UI checkout đầy đủ.

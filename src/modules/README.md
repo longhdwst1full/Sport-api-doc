@@ -6,7 +6,7 @@
 >
 > **Change summary:** Kích hoạt Order, Payment và Fulfillment thành các vertical slice Sprint 4.
 
-The reviewed V1 model contains 74 tables (43 P0, 31 P1). `system/model-registry.data.ts` is the executable coverage manifest and its unit test prevents a table from silently disappearing during refactoring.
+The reviewed V1 model contains 75 tables (45 P0, 30 P1). `system/model-registry.data.ts` is the executable coverage manifest and its unit test prevents a table from silently disappearing during refactoring.
 
 Status meanings:
 

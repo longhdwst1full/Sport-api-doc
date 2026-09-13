@@ -7,6 +7,39 @@ import { ProductsService } from './products.service';
 describe('ProductsService', () => {
   const service = new ProductsService({} as PrismaService, {} as AuditWriter);
 
+  it('maps minPrice and quick-add identifiers from the same sellable offer', () => {
+    const row = {
+      id: 10n,
+      productNo: 'PRD-10',
+      name: 'Tạ tay',
+      slug: 'ta-tay-prd-10',
+      productType: 'STANDARD',
+      status: 'PUBLISHED',
+      version: 1,
+      brand: null,
+      categories: [],
+      media: [],
+      variants: [
+        { id: 21n, sku: 'SKU-HIGH', status: 'ACTIVE', prices: [{ amount: new Prisma.Decimal('200000') }], bundleDefinition: null },
+        { id: 22n, sku: 'SKU-LOW', status: 'ACTIVE', prices: [{ amount: new Prisma.Decimal('150000') }], bundleDefinition: null },
+      ],
+    };
+
+    const summary = (service as unknown as {
+      toSummary: (value: unknown, storefront: boolean) => {
+        defaultVariantId?: string | null;
+        defaultVariantSku?: string | null;
+        minPrice?: string | null;
+      };
+    }).toSummary(row, false);
+
+    expect(summary).toMatchObject({
+      defaultVariantId: '22',
+      defaultVariantSku: 'SKU-LOW',
+      minPrice: '150000.00',
+    });
+  });
+
   it('rejects a primary category outside the selected categories before persistence', async () => {
     await expect(
       service.create(

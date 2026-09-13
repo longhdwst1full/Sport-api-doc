@@ -147,7 +147,7 @@ export class StockAdjustmentItemDto {
   @ApiProperty() quantityDelta: number;
   @ApiProperty() expectedOnHand: number;
   @ApiProperty() actualOnHand: number;
-  @ApiPropertyOptional({ nullable: true }) note?: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) note?: string | null;
 }
 
 export class StockAdjustmentDetailDto extends StockAdjustmentSummaryDto {
