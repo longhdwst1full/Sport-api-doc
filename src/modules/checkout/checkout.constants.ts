@@ -34,4 +34,5 @@ export const RESERVATION_EXPIRY_REASON = {
 export const CHECKOUT_PAYMENT_METHOD = {
   BANK_TRANSFER: 'BANK_TRANSFER',
   COD: 'COD',
+  VNPAY: 'VNPAY',
 } as const;

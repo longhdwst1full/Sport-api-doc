@@ -10674,7 +10674,8 @@
               "type": "string",
               "enum": [
                 "BANK_TRANSFER",
-                "COD"
+                "COD",
+                "VNPAY"
               ]
             }
           },
@@ -11002,6 +11003,28 @@
         "summary": "Từ chối bằng chứng thanh toán và lưu lý do/audit",
         "tags": [
           "Admin Payments"
+        ]
+      }
+    },
+    "/api/v1/payments/vnpay/return": {
+      "get": {
+        "operationId": "verifyVnpayReturn",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VnpayReturnDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Kiểm tra chữ ký khi khách quay về từ VNPay (chỉ để hiển thị)",
+        "tags": [
+          "Storefront Payments"
         ]
       }
     },
@@ -12759,6 +12782,11 @@
           "label": {
             "type": "string",
             "example": "Chi nhánh Hồ Chí Minh"
+          },
+          "priceAmount": {
+            "type": "string",
+            "example": "1990000.00",
+            "nullable": true
           }
         },
         "required": [
@@ -16470,7 +16498,8 @@
             "type": "string",
             "enum": [
               "BANK_TRANSFER",
-              "COD"
+              "COD",
+              "VNPAY"
             ],
             "example": "BANK_TRANSFER"
           },
@@ -17788,7 +17817,8 @@
             "type": "string",
             "enum": [
               "BANK_TRANSFER",
-              "COD"
+              "COD",
+              "VNPAY"
             ]
           },
           "provider": {
@@ -17799,6 +17829,10 @@
           },
           "customerMessage": {
             "type": "string"
+          },
+          "redirectUrl": {
+            "type": "string",
+            "description": "Link chuyển sang cổng thanh toán, chỉ có với VNPay"
           }
         },
         "required": [
@@ -17897,7 +17931,8 @@
             "type": "string",
             "enum": [
               "BANK_TRANSFER",
-              "COD"
+              "COD",
+              "VNPAY"
             ]
           },
           "status": {
@@ -18122,7 +18157,8 @@
             "type": "string",
             "enum": [
               "BANK_TRANSFER",
-              "COD"
+              "COD",
+              "VNPAY"
             ]
           },
           "status": {
@@ -18235,6 +18271,32 @@
         "required": [
           "expectedVersion",
           "reason"
+        ]
+      },
+      "VnpayReturnDto": {
+        "type": "object",
+        "properties": {
+          "paymentRef": {
+            "type": "string"
+          },
+          "orderNo": {
+            "type": "string"
+          },
+          "displayStatus": {
+            "type": "string",
+            "enum": [
+              "SUCCESS",
+              "FAILED",
+              "INVALID"
+            ]
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "displayStatus",
+          "message"
         ]
       },
       "FulfillmentSummaryDto": {

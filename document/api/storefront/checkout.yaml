@@ -277,6 +277,7 @@ components:
           enum:
             - BANK_TRANSFER
             - COD
+            - VNPAY
           example: BANK_TRANSFER
         requestShippingConsultation:
           type: boolean

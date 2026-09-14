@@ -16,6 +16,7 @@ import { ObjectStorageClient, StoredImageAsset } from '../../../integrations/obj
 import { AuditWriter } from '../../audit/audit.writer';
 import type { AuthPrincipal } from '../../auth/auth.types';
 import { CartService } from '../../cart/cart.service';
+import type { PaymentMethod } from '../providers/payment-provider';
 import { CreateMediaUploadDto, SignedMediaUploadDto } from '../../media/media.dto';
 import { ScopeType } from '../../iam/iam.types';
 import {
@@ -525,7 +526,7 @@ export class PaymentService {
   }
 
   private toDetail(payment: LoadedPayment): PaymentDetailDto {
-    const instruction = this.providers.get(payment.method as 'COD' | 'BANK_TRANSFER').createInstruction({
+    const instruction = this.providers.get(payment.method as PaymentMethod).createInstruction({
       paymentId: payment.paymentRef,
       orderId: payment.order.orderNo,
       amountMinor: Number(payment.expectedAmount),

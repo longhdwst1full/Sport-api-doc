@@ -6475,6 +6475,7 @@ paths:
             enum:
               - BANK_TRANSFER
               - COD
+              - VNPAY
         - name: search
           required: false
           in: query
@@ -6668,6 +6669,20 @@ paths:
       summary: Từ chối bằng chứng thanh toán và lưu lý do/audit
       tags:
         - Admin Payments
+  /api/v1/payments/vnpay/return:
+    get:
+      operationId: verifyVnpayReturn
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VnpayReturnDto"
+      summary: Kiểm tra chữ ký khi khách quay về từ VNPay (chỉ để hiển thị)
+      tags:
+        - Storefront Payments
   /api/v1/admin/fulfillments:
     get:
       operationId: listAdminFulfillments
@@ -7829,6 +7844,10 @@ components:
         label:
           type: string
           example: Chi nhánh Hồ Chí Minh
+        priceAmount:
+          type: string
+          example: "1990000.00"
+          nullable: true
       required:
         - id
         - code
@@ -10554,6 +10573,7 @@ components:
           enum:
             - BANK_TRANSFER
             - COD
+            - VNPAY
           example: BANK_TRANSFER
         requestShippingConsultation:
           type: boolean
@@ -11547,12 +11567,16 @@ components:
           enum:
             - BANK_TRANSFER
             - COD
+            - VNPAY
         provider:
           type: string
         reference:
           type: string
         customerMessage:
           type: string
+        redirectUrl:
+          type: string
+          description: Link chuyển sang cổng thanh toán, chỉ có với VNPay
       required:
         - method
         - provider
@@ -11628,6 +11652,7 @@ components:
           enum:
             - BANK_TRANSFER
             - COD
+            - VNPAY
         status:
           type: string
           enum:
@@ -11795,6 +11820,7 @@ components:
           enum:
             - BANK_TRANSFER
             - COD
+            - VNPAY
         status:
           type: string
           enum:
@@ -11878,6 +11904,24 @@ components:
       required:
         - expectedVersion
         - reason
+    VnpayReturnDto:
+      type: object
+      properties:
+        paymentRef:
+          type: string
+        orderNo:
+          type: string
+        displayStatus:
+          type: string
+          enum:
+            - SUCCESS
+            - FAILED
+            - INVALID
+        message:
+          type: string
+      required:
+        - displayStatus
+        - message
     FulfillmentSummaryDto:
       type: object
       properties:

@@ -731,6 +731,10 @@ components:
         label:
           type: string
           example: Chi nhánh Hồ Chí Minh
+        priceAmount:
+          type: string
+          example: "1990000.00"
+          nullable: true
       required:
         - id
         - code

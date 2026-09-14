@@ -25,6 +25,8 @@ export class PaymentInstructionDto {
   @ApiProperty() provider: string;
   @ApiProperty() reference: string;
   @ApiProperty() customerMessage: string;
+  @ApiPropertyOptional({ description: 'Link chuyển sang cổng thanh toán, chỉ có với VNPay' })
+  redirectUrl?: string;
 }
 
 export class PaymentDetailDto {
@@ -161,4 +163,12 @@ export class AdminPaymentListDto {
   @ApiProperty() page: number;
   @ApiProperty() limit: number;
   @ApiProperty() total: number;
+}
+
+export class VnpayReturnDto {
+  @ApiPropertyOptional() paymentRef?: string;
+  @ApiPropertyOptional() orderNo?: string;
+  @ApiProperty({ enum: ['SUCCESS', 'FAILED', 'INVALID'] })
+  displayStatus: 'SUCCESS' | 'FAILED' | 'INVALID';
+  @ApiProperty() message: string;
 }

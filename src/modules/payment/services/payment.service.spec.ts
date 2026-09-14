@@ -8,8 +8,17 @@ import { CartService } from '../../cart/cart.service';
 import { ScopeType } from '../../iam/iam.types';
 import { BankTransferPaymentProvider } from '../providers/bank-transfer.provider';
 import { CodPaymentProvider } from '../providers/cod.provider';
+import { VnpayPaymentProvider } from '../providers/vnpay.provider';
+import { VnpayGateway } from './vnpay.gateway';
 import { PaymentProviderRegistry } from './payment-provider.registry';
 import { PaymentService } from './payment.service';
+
+
+/** Gateway giả: không cấu hình VNPay thì không sinh link, đủ cho test registry. */
+const vnpayGatewayStub = {
+  enabled: false,
+  buildPaymentUrl: () => undefined,
+} as unknown as VnpayGateway;
 
 describe('PaymentService', () => {
   const findMany = jest.fn().mockResolvedValue([]);
@@ -24,6 +33,7 @@ describe('PaymentService', () => {
   const providers = new PaymentProviderRegistry(
     new CodPaymentProvider(),
     new BankTransferPaymentProvider(),
+    new VnpayPaymentProvider(vnpayGatewayStub),
   );
   const service = new PaymentService(
     prisma,

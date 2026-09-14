@@ -37,6 +37,13 @@ export class ActiveLookupOptionDto {
   @ApiProperty({ ...ENTITY_ID_OPENAPI }) id: string;
   @ApiProperty({ example: 'CN-HCM-01' }) code: string;
   @ApiProperty({ example: 'Chi nhánh Hồ Chí Minh' }) label: string;
+
+  /**
+   * Giá bán hiện hành, chỉ lookup biến thể sản phẩm mới trả về. Dùng để form
+   * khuyến mãi điền sẵn giá gốc thay vì bắt người dùng tự tra.
+   */
+  @ApiPropertyOptional({ type: String, example: '1990000.00', nullable: true })
+  priceAmount?: string | null;
 }
 
 export class ActiveLookupMetaDto {

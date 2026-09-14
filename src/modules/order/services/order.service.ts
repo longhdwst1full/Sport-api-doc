@@ -823,7 +823,12 @@ export class OrderService {
                   transactions: {
                     create: {
                       transactionType: 'CREATED',
-                      provider: checkout.paymentMethod === 'COD' ? 'INTERNAL_COD' : 'MANUAL_BANK_TRANSFER',
+                      provider:
+                        checkout.paymentMethod === 'COD'
+                          ? 'INTERNAL_COD'
+                          : checkout.paymentMethod === 'VNPAY'
+                            ? 'VNPAY'
+                            : 'MANUAL_BANK_TRANSFER',
                       idempotencyKey,
                       requestHash,
                       amount: checkout.grandTotal,

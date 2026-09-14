@@ -11,6 +11,7 @@ import cloudinaryConfig from './config/cloudinary.config';
 import databaseConfig from './config/database.config';
 import { validateEnvironment } from './config/env.validation';
 import telegramConfig from './config/telegram.config';
+import vnpayConfig from './config/vnpay.config';
 import { PrismaModule } from './database/prisma.module';
 import { TelegramModule } from './integrations/telegram/telegram.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
@@ -44,7 +45,7 @@ import { SystemModule } from './modules/system/system.module';
       isGlobal: true,
       cache: true,
       envFilePath: ['.env.local', '.env'],
-      load: [appConfig, databaseConfig, cloudinaryConfig, telegramConfig],
+      load: [appConfig, databaseConfig, cloudinaryConfig, telegramConfig, vnpayConfig],
       validate: validateEnvironment,
     }),
     LoggerModule.forRootAsync({

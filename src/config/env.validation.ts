@@ -267,6 +267,35 @@ class EnvironmentVariables {
   @MinLength(32)
   @Matches(/^[A-Za-z0-9_-]+$/, { message: 'TELEGRAM_WEBHOOK_SECRET is invalid' })
   TELEGRAM_WEBHOOK_SECRET?: string;
+  // VNPay: để trống thì tính năng tắt. Chỉ khi có TMN_CODE mới bắt buộc HASH_SECRET,
+  // tránh trường hợp cấu hình một nửa rồi tạo lệnh thanh toán không ký được.
+  @IsOptional()
+  @IsString()
+  VNPAY_TMN_CODE?: string;
+
+  @ValidateIf((env: EnvironmentVariables) => Boolean(env.VNPAY_TMN_CODE))
+  @IsString()
+  @MinLength(8)
+  VNPAY_HASH_SECRET?: string;
+
+  @IsOptional()
+  @IsString()
+  VNPAY_PAYMENT_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  VNPAY_RETURN_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  VNPAY_LOCALE?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(1440)
+  VNPAY_EXPIRE_MINUTES?: number;
 }
 
 export function validateEnvironment(config: Record<string, unknown>): Record<string, unknown> {

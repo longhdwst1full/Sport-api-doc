@@ -49,6 +49,7 @@ paths:
             enum:
               - BANK_TRANSFER
               - COD
+              - VNPAY
         - name: search
           required: false
           in: query
@@ -319,6 +320,7 @@ components:
           enum:
             - BANK_TRANSFER
             - COD
+            - VNPAY
         status:
           type: string
           enum:
@@ -421,6 +423,7 @@ components:
           enum:
             - BANK_TRANSFER
             - COD
+            - VNPAY
         status:
           type: string
           enum:
@@ -475,12 +478,16 @@ components:
           enum:
             - BANK_TRANSFER
             - COD
+            - VNPAY
         provider:
           type: string
         reference:
           type: string
         customerMessage:
           type: string
+        redirectUrl:
+          type: string
+          description: Link chuyển sang cổng thanh toán, chỉ có với VNPay
       required:
         - method
         - provider

@@ -94,12 +94,28 @@ export class ProductsService {
         orderBy: [{ sku: 'asc' }, { id: 'asc' }],
         skip,
         take: query.limit,
-        select: { id: true, sku: true, name: true },
+        select: {
+          id: true,
+          sku: true,
+          name: true,
+          // Giá đang áp dụng để form khuyến mãi điền sẵn giá gốc.
+          prices: {
+            where: { status: 'ACTIVE', channel: 'ONLINE', priceType: 'REGULAR' },
+            orderBy: { startsAt: 'desc' },
+            take: 1,
+            select: { amount: true },
+          },
+        },
       }),
       this.prisma.productVariant.count({ where }),
     ]);
     return {
-      items: rows.map(({ id, sku, name }) => ({ id: toEntityId(id), code: sku, label: name })),
+      items: rows.map(({ id, sku, name, prices }) => ({
+        id: toEntityId(id),
+        code: sku,
+        label: name,
+        priceAmount: prices[0]?.amount.toFixed(2) ?? null,
+      })),
       meta: {
         page: query.page,
         limit: query.limit,
@@ -109,9 +125,34 @@ export class ProductsService {
     };
   }
 
+  /**
+   * Lọc theo danh mục phải bao gồm cả nhánh con. Sản phẩm chỉ gắn vào danh mục lá,
+   * nên nếu so khớp slug chính xác thì chọn danh mục cha luôn trả về rỗng.
+   * `path` lưu chuỗi slug từ gốc nên tiền tố `<path>/` bắt đúng toàn bộ hậu duệ.
+   */
+  private async resolveCategoryFilter(
+    slug: string | undefined,
+    storefront: boolean,
+  ): Promise<Prisma.CategoryWhereInput | undefined> {
+    const value = slug?.trim();
+    if (!value) return undefined;
+    const activeOnly = storefront ? { status: CATALOG_REFERENCE_STATUS.ACTIVE } : {};
+    const selected = await this.prisma.category.findUnique({
+      where: { slug: value },
+      select: { path: true },
+    });
+    // Slug không tồn tại thì giữ nguyên hành vi cũ: không khớp sản phẩm nào.
+    if (!selected) return { slug: value, ...activeOnly };
+    return {
+      OR: [{ slug: value }, { path: { startsWith: `${selected.path}/` } }],
+      ...activeOnly,
+    };
+  }
+
   async list(query: ListProductsQueryDto, storefront: boolean): Promise<ProductListResponseDto> {
     const now = new Date();
     const search = query.search?.trim();
+    const categoryWhere = await this.resolveCategoryFilter(query.category, storefront);
     const where: Prisma.ProductWhereInput = {
       ...(storefront
         ? { status: PRODUCT_STATUS.PUBLISHED, ...this.sellableProductWhere(now) }
@@ -127,18 +168,7 @@ export class ProductsService {
             ],
           }
         : {}),
-      ...(query.category
-        ? {
-            categories: {
-              some: {
-                category: {
-                  slug: query.category,
-                  ...(storefront ? { status: PRODUCT_VARIANT_STATUS.ACTIVE } : {}),
-                },
-              },
-            },
-          }
-        : {}),
+      ...(categoryWhere ? { categories: { some: { category: categoryWhere } } } : {}),
     };
     const skip = (query.page - 1) * query.limit;
     const [rows, total] = await this.prisma.$transaction([

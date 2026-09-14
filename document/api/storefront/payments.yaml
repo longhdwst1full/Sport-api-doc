@@ -280,6 +280,20 @@ paths:
       summary: Xác minh upload và gửi bằng chứng chuyển khoản để Admin duyệt
       tags:
         - Storefront Account Payments
+  /api/v1/payments/vnpay/return:
+    get:
+      operationId: verifyVnpayReturn
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VnpayReturnDto"
+      summary: Kiểm tra chữ ký khi khách quay về từ VNPay (chỉ để hiển thị)
+      tags:
+        - Storefront Payments
 components:
   schemas:
     PaymentDetailDto:
@@ -305,6 +319,7 @@ components:
           enum:
             - BANK_TRANSFER
             - COD
+            - VNPAY
         status:
           type: string
           enum:
@@ -486,6 +501,24 @@ components:
         - providerVersion
         - providerSignature
         - expectedVersion
+    VnpayReturnDto:
+      type: object
+      properties:
+        paymentRef:
+          type: string
+        orderNo:
+          type: string
+        displayStatus:
+          type: string
+          enum:
+            - SUCCESS
+            - FAILED
+            - INVALID
+        message:
+          type: string
+      required:
+        - displayStatus
+        - message
     PaymentInstructionDto:
       type: object
       properties:
@@ -494,12 +527,16 @@ components:
           enum:
             - BANK_TRANSFER
             - COD
+            - VNPAY
         provider:
           type: string
         reference:
           type: string
         customerMessage:
           type: string
+        redirectUrl:
+          type: string
+          description: Link chuyển sang cổng thanh toán, chỉ có với VNPay
       required:
         - method
         - provider

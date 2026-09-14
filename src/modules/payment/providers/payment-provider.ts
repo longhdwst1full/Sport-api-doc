@@ -1,4 +1,4 @@
-export type PaymentMethod = 'COD' | 'BANK_TRANSFER';
+export type PaymentMethod = 'COD' | 'BANK_TRANSFER' | 'VNPAY';
 
 export interface PaymentInstructionInput {
   paymentId: string;
@@ -12,6 +12,11 @@ export interface PaymentInstruction {
   provider: string;
   reference: string;
   customerMessage: string;
+  /**
+   * Cổng thanh toán online trả về link để khách bấm sang. Chuyển khoản tay và COD
+   * không có link nên trường này để trống.
+   */
+  redirectUrl?: string;
 }
 
 export abstract class PaymentProvider {
