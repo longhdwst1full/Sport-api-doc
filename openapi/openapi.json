@@ -8873,7 +8873,24 @@
     "/api/v1/content/posts": {
       "get": {
         "operationId": "listPublishedPosts",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "postType",
+            "required": false,
+            "in": "query",
+            "description": "Lọc theo loại bài viết. Bỏ trống để lấy tất cả.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "NEWS",
+                "TRAINING_GUIDE",
+                "PRODUCT_GUIDE",
+                "ABOUT",
+                "POLICY"
+              ]
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -8936,7 +8953,24 @@
     "/api/v1/admin/content/posts": {
       "get": {
         "operationId": "listAdminPosts",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "postType",
+            "required": false,
+            "in": "query",
+            "description": "Lọc theo loại bài viết. Bỏ trống để lấy tất cả.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "NEWS",
+                "TRAINING_GUIDE",
+                "PRODUCT_GUIDE",
+                "ABOUT",
+                "POLICY"
+              ]
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -16932,7 +16966,8 @@
               "NEWS",
               "TRAINING_GUIDE",
               "PRODUCT_GUIDE",
-              "ABOUT"
+              "ABOUT",
+              "POLICY"
             ]
           },
           "title": {
@@ -17018,7 +17053,8 @@
               "NEWS",
               "TRAINING_GUIDE",
               "PRODUCT_GUIDE",
-              "ABOUT"
+              "ABOUT",
+              "POLICY"
             ]
           },
           "title": {

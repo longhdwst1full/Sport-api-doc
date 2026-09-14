@@ -12,7 +12,19 @@ paths:
   /api/v1/content/posts:
     get:
       operationId: listPublishedPosts
-      parameters: []
+      parameters:
+        - name: postType
+          required: false
+          in: query
+          description: Lọc theo loại bài viết. Bỏ trống để lấy tất cả.
+          schema:
+            type: string
+            enum:
+              - NEWS
+              - TRAINING_GUIDE
+              - PRODUCT_GUIDE
+              - ABOUT
+              - POLICY
       responses:
         "200":
           description: ""
@@ -76,6 +88,7 @@ components:
             - TRAINING_GUIDE
             - PRODUCT_GUIDE
             - ABOUT
+            - POLICY
         title:
           type: string
         excerpt:

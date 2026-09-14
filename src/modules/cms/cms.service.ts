@@ -8,6 +8,7 @@ import {
   CONTENT_POST_STATUS,
   ContentPostDto,
   ContentPostListDto,
+  ContentPostType,
   CreateContentPostDto,
 } from './cms.dto';
 
@@ -15,16 +16,20 @@ import {
 export class CmsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listPublished(): Promise<ContentPostListDto> {
+  async listPublished(postType?: ContentPostType): Promise<ContentPostListDto> {
     const rows = await this.prisma.contentPost.findMany({
-      where: { status: CONTENT_POST_STATUS.PUBLISHED },
+      where: {
+        status: CONTENT_POST_STATUS.PUBLISHED,
+        ...(postType ? { postType } : {}),
+      },
       orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }],
     });
     return { items: rows.map((row) => this.toPost(row)), total: rows.length };
   }
 
-  async listAdmin(): Promise<ContentPostListDto> {
+  async listAdmin(postType?: ContentPostType): Promise<ContentPostListDto> {
     const rows = await this.prisma.contentPost.findMany({
+      ...(postType ? { where: { postType } } : {}),
       orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }],
     });
     return { items: rows.map((row) => this.toPost(row)), total: rows.length };

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -19,6 +19,7 @@ import {
   ContentPostDto,
   ContentPostListDto,
   CreateContentPostDto,
+  ListContentPostsQueryDto,
 } from './cms.dto';
 
 @ApiTags('Storefront Content')
@@ -29,8 +30,10 @@ export class PublicContentController {
   @Get()
   @ApiOperation({ operationId: 'listPublishedPosts', summary: 'List published content posts' })
   @ApiOkResponse({ type: ContentPostListDto })
-  listPublishedPosts(): Promise<ContentPostListDto> {
-    return this.cms.listPublished();
+  listPublishedPosts(
+    @Query() query: ListContentPostsQueryDto,
+  ): Promise<ContentPostListDto> {
+    return this.cms.listPublished(query.postType);
   }
 
   @Get(':slug')
@@ -54,8 +57,10 @@ export class AdminContentController {
   @RequirePermissions('content.post.view')
   @ApiOperation({ operationId: 'listAdminPosts', summary: 'List posts for administration' })
   @ApiOkResponse({ type: ContentPostListDto })
-  listAdminPosts(): Promise<ContentPostListDto> {
-    return this.cms.listAdmin();
+  listAdminPosts(
+    @Query() query: ListContentPostsQueryDto,
+  ): Promise<ContentPostListDto> {
+    return this.cms.listAdmin(query.postType);
   }
 
   @Post()

@@ -19,11 +19,22 @@ export const CONTENT_POST_STATUS = {
 
 export type ContentPostStatus = (typeof CONTENT_POST_STATUS)[keyof typeof CONTENT_POST_STATUS];
 
+/** Loại bài viết. Phải khớp ràng buộc `posts_post_type_check` ở database. */
+export const CONTENT_POST_TYPES = [
+  'NEWS',
+  'TRAINING_GUIDE',
+  'PRODUCT_GUIDE',
+  'ABOUT',
+  'POLICY',
+] as const;
+
+export type ContentPostType = (typeof CONTENT_POST_TYPES)[number];
+
 export class ContentPostDto {
   @ApiProperty() id: string;
   @ApiProperty() slug: string;
-  @ApiProperty({ enum: ['NEWS', 'TRAINING_GUIDE', 'PRODUCT_GUIDE', 'ABOUT'] })
-  postType: 'NEWS' | 'TRAINING_GUIDE' | 'PRODUCT_GUIDE' | 'ABOUT';
+  @ApiProperty({ enum: CONTENT_POST_TYPES })
+  postType: ContentPostType;
   @ApiProperty() title: string;
   @ApiProperty() excerpt: string;
   @ApiProperty() body: string;
@@ -42,9 +53,9 @@ export class ContentPostListDto {
 }
 
 export class CreateContentPostDto {
-  @ApiProperty({ enum: ['NEWS', 'TRAINING_GUIDE', 'PRODUCT_GUIDE', 'ABOUT'] })
-  @IsIn(['NEWS', 'TRAINING_GUIDE', 'PRODUCT_GUIDE', 'ABOUT'])
-  postType: ContentPostDto['postType'];
+  @ApiProperty({ enum: CONTENT_POST_TYPES })
+  @IsIn(CONTENT_POST_TYPES)
+  postType: ContentPostType;
   @ApiProperty() @IsString() @IsNotEmpty() title: string;
   @ApiProperty() @IsString() @IsNotEmpty() slug: string;
   @ApiProperty() @IsString() @IsNotEmpty() excerpt: string;
@@ -69,4 +80,14 @@ export class ArchiveContentPostDto {
   @MinLength(3)
   @MaxLength(255)
   reason: string;
+}
+
+export class ListContentPostsQueryDto {
+  @ApiPropertyOptional({
+    enum: CONTENT_POST_TYPES,
+    description: 'Lọc theo loại bài viết. Bỏ trống để lấy tất cả.',
+  })
+  @IsOptional()
+  @IsIn(CONTENT_POST_TYPES)
+  postType?: ContentPostType;
 }
