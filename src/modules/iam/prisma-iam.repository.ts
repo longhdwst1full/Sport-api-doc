@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import {
+  toActorDatabaseId,
   toDatabaseId,
   toEntityId,
   toOptionalDatabaseId,
@@ -17,11 +18,13 @@ import {
 } from './iam.constants';
 import { IamRepository } from './iam.repository';
 import {
+  CreateRoleInput,
   CreateStaffUserInput,
   LockStaffUserResult,
   NewUserRoleAssignment,
   Role,
   ScopeType,
+  UpdateRoleInput,
   UserRoleAssignment,
   UserWithAssignments,
 } from './iam.types';
@@ -99,6 +102,232 @@ export class PrismaIamRepository extends IamRepository {
       include: { permissions: { include: { permission: true } } },
       orderBy: { code: 'asc' },
     });
+    return rows.map((row) => ({
+      id: toEntityId(row.id),
+      code: row.code,
+      name: row.name,
+      ...(row.description ? { description: row.description } : {}),
+      status: row.status as Role['status'],
+      system: row.isSystem,
+      permissionCodes: row.permissions.map(({ permission }) => permission.code).sort(),
+      version: Number(row.version),
+    }));
+  }
+
+  async listAllRoles(): Promise<Role[]> {
+    return this.mapRoles(
+      await this.prisma.role.findMany({
+        include: { permissions: { include: { permission: true } } },
+        orderBy: [{ isSystem: 'desc' }, { code: 'asc' }],
+      }),
+    );
+  }
+
+  async findRole(roleId: string): Promise<Role | undefined> {
+    const row = await this.prisma.role.findUnique({
+      where: { id: toDatabaseId(roleId) },
+      include: { permissions: { include: { permission: true } } },
+    });
+    return row ? this.mapRoles([row])[0] : undefined;
+  }
+
+  async hasRoleCode(code: string): Promise<boolean> {
+    return (await this.prisma.role.count({ where: { code } })) > 0;
+  }
+
+  async countRoleAssignments(roleId: string): Promise<number> {
+    return this.prisma.userRoleAssignment.count({
+      where: { roleId: toDatabaseId(roleId) },
+    });
+  }
+
+  async listMissingPermissionCodes(codes: string[]): Promise<string[]> {
+    if (codes.length === 0) return [];
+    const found = await this.prisma.permission.findMany({
+      where: { code: { in: codes } },
+      select: { code: true },
+    });
+    const known = new Set(found.map(({ code }) => code));
+    return codes.filter((code) => !known.has(code));
+  }
+
+  async createRole(input: CreateRoleInput, context: MutationContext): Promise<Role> {
+    const roleId = await this.prisma.$transaction(async (transaction) => {
+      const permissions = await transaction.permission.findMany({
+        where: { code: { in: input.permissionCodes } },
+        select: { id: true },
+      });
+      const created = await transaction.role.create({
+        data: {
+          code: input.code,
+          name: input.name,
+          description: input.description ?? null,
+          status: ROLE_STATUS.ACTIVE,
+          isSystem: false,
+          createdBy: toActorDatabaseId(context.actorUserId),
+          updatedBy: toActorDatabaseId(context.actorUserId),
+          permissions: {
+            create: permissions.map(({ id }) => ({
+              permissionId: id,
+              grantedBy: toActorDatabaseId(context.actorUserId),
+            })),
+          },
+        },
+      });
+      await this.audit.write(
+        {
+          requestId: context.requestId,
+          sequenceNo: 1,
+          actorType: 'USER',
+          actorUserId: context.actorUserId,
+          action: IAM_AUDIT_ACTION.ROLE_CREATE,
+          entityType: 'ROLE',
+          entityId: toEntityId(created.id),
+          after: {
+            code: input.code,
+            name: input.name,
+            permissionCodes: [...input.permissionCodes].sort(),
+          } as unknown as Prisma.InputJsonValue,
+        },
+        transaction,
+      );
+      return toEntityId(created.id);
+    });
+    const role = await this.findRole(roleId);
+    if (!role) throw new Error('Created role disappeared after transaction commit');
+    return role;
+  }
+
+  async updateRole(
+    roleId: string,
+    input: UpdateRoleInput,
+    context: MutationContext,
+  ): Promise<Role | undefined> {
+    const before = await this.findRole(roleId);
+    if (!before) return undefined;
+    const applied = await this.prisma.$transaction(async (transaction) => {
+      const updated = await transaction.role.updateMany({
+        where: { id: toDatabaseId(roleId), version: BigInt(input.expectedVersion) },
+        data: {
+          ...(input.name === undefined ? {} : { name: input.name }),
+          ...(input.description === undefined ? {} : { description: input.description }),
+          ...(input.status === undefined ? {} : { status: input.status }),
+          updatedBy: toActorDatabaseId(context.actorUserId),
+          version: { increment: 1 },
+        },
+      });
+      if (updated.count !== 1) return false;
+
+      if (input.permissionCodes) {
+        const permissions = await transaction.permission.findMany({
+          where: { code: { in: input.permissionCodes } },
+          select: { id: true },
+        });
+        await transaction.rolePermission.deleteMany({
+          where: { roleId: toDatabaseId(roleId) },
+        });
+        if (permissions.length > 0) {
+          await transaction.rolePermission.createMany({
+            data: permissions.map(({ id }) => ({
+              roleId: toDatabaseId(roleId),
+              permissionId: id,
+              grantedBy: toActorDatabaseId(context.actorUserId),
+            })),
+          });
+        }
+        // Người đang đăng nhập phải được cấp lại token khi quyền của vai trò đổi.
+        await transaction.user.updateMany({
+          where: {
+            roleAssignments: {
+              some: { roleId: toDatabaseId(roleId), status: ROLE_ASSIGNMENT_STATUS.ACTIVE },
+            },
+          },
+          data: { permissionVersion: { increment: 1 } },
+        });
+      }
+
+      await this.audit.write(
+        {
+          requestId: context.requestId,
+          sequenceNo: 1,
+          actorType: 'USER',
+          actorUserId: context.actorUserId,
+          action: IAM_AUDIT_ACTION.ROLE_UPDATE,
+          entityType: 'ROLE',
+          entityId: roleId,
+          before: {
+            name: before.name,
+            status: before.status,
+            permissionCodes: before.permissionCodes,
+          } as unknown as Prisma.InputJsonValue,
+          after: {
+            ...(input.name === undefined ? {} : { name: input.name }),
+            ...(input.status === undefined ? {} : { status: input.status }),
+            ...(input.permissionCodes
+              ? { permissionCodes: [...input.permissionCodes].sort() }
+              : {}),
+          } as unknown as Prisma.InputJsonValue,
+        },
+        transaction,
+      );
+      return true;
+    });
+    if (!applied) return undefined;
+    return this.findRole(roleId);
+  }
+
+  async deleteRole(
+    roleId: string,
+    reason: string,
+    expectedVersion: number,
+    context: MutationContext,
+  ): Promise<boolean> {
+    const before = await this.findRole(roleId);
+    if (!before) return false;
+    return this.prisma.$transaction(async (transaction) => {
+      const deleted = await transaction.role.deleteMany({
+        where: {
+          id: toDatabaseId(roleId),
+          version: BigInt(expectedVersion),
+          isSystem: false,
+          assignments: { none: {} },
+        },
+      });
+      if (deleted.count !== 1) return false;
+      await this.audit.write(
+        {
+          requestId: context.requestId,
+          sequenceNo: 1,
+          actorType: 'USER',
+          actorUserId: context.actorUserId,
+          action: IAM_AUDIT_ACTION.ROLE_DELETE,
+          entityType: 'ROLE',
+          entityId: roleId,
+          before: {
+            code: before.code,
+            name: before.name,
+            permissionCodes: before.permissionCodes,
+          } as unknown as Prisma.InputJsonValue,
+          reason,
+        },
+        transaction,
+      );
+      return true;
+    });
+  }
+
+  private mapRoles(
+    rows: {
+      id: bigint;
+      code: string;
+      name: string;
+      description: string | null;
+      status: string;
+      isSystem: boolean;
+      version: bigint;
+      permissions: { permission: { code: string } }[];
+    }[],
+  ): Role[] {
     return rows.map((row) => ({
       id: toEntityId(row.id),
       code: row.code,

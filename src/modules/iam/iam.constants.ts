@@ -32,4 +32,7 @@ export const IAM_AUDIT_ACTION = {
   USER_CREATE: 'iam.user.create',
   USER_LOCK: 'iam.user.lock',
   USER_UNLOCK: 'iam.user.unlock',
+  ROLE_CREATE: 'iam.role.create',
+  ROLE_UPDATE: 'iam.role.update',
+  ROLE_DELETE: 'iam.role.delete',
 } as const;

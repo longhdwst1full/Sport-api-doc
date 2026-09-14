@@ -98,3 +98,18 @@ export interface LockStaffUserResult {
   user: UserWithAssignments;
   revokedSessionCount: number;
 }
+
+export interface CreateRoleInput {
+  code: string;
+  name: string;
+  description?: string;
+  permissionCodes: string[];
+}
+
+export interface UpdateRoleInput {
+  name?: string;
+  description?: string;
+  status?: RoleStatus;
+  permissionCodes?: string[];
+  expectedVersion: number;
+}

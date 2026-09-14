@@ -425,7 +425,8 @@ model ProductVariant {
   stockTransferItems        StockTransferItem[]
 
   @@index([productId, status])
-  flashSaleItems FlashSaleItem[]
+  flashSaleItems             FlashSaleItem[]
+  flashSaleQuotaReservations FlashSaleQuotaReservation[]
 
   @@map("product_variants")
 }
@@ -824,15 +825,18 @@ model CheckoutSessionItem {
   unitPrice         Decimal  @map("unit_price") @db.Decimal(19, 2)
   lineTotal         Decimal  @map("line_total") @db.Decimal(19, 2)
   componentSnapshot Json?    @map("component_snapshot") @db.JsonB
+  flashSaleItemId   BigInt?  @map("flash_sale_item_id")
   createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   checkoutSession CheckoutSession @relation(fields: [checkoutSessionId], references: [id], onDelete: Cascade)
   cartItem        CartItem?       @relation(fields: [cartItemId], references: [id], onDelete: Restrict)
   productVariant  ProductVariant  @relation(fields: [productVariantId], references: [id], onDelete: Restrict)
+  flashSaleItem   FlashSaleItem?  @relation(fields: [flashSaleItemId], references: [id], onDelete: Restrict)
 
   @@unique([checkoutSessionId, productVariantId])
   @@index([cartItemId])
   @@index([productVariantId])
+  @@index([flashSaleItemId])
   @@map("checkout_session_items")
 }
 
@@ -1243,9 +1247,10 @@ model FlashSaleItem {
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  campaign       FlashSaleCampaign            @relation(fields: [campaignId], references: [id], onDelete: Restrict)
-  productVariant ProductVariant               @relation(fields: [productVariantId], references: [id], onDelete: Restrict)
-  reservations   FlashSaleQuotaReservation[]
+  campaign             FlashSaleCampaign           @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+  productVariant       ProductVariant              @relation(fields: [productVariantId], references: [id], onDelete: Restrict)
+  reservations         FlashSaleQuotaReservation[]
+  checkoutSessionItems CheckoutSessionItem[]
 
   @@unique([campaignId, productVariantId])
   @@index([productVariantId, status])
@@ -1256,6 +1261,7 @@ model FlashSaleQuotaReservation {
   id                BigInt    @id @default(autoincrement())
   flashSaleItemId   BigInt    @map("flash_sale_item_id")
   checkoutSessionId BigInt    @map("checkout_session_id")
+  productVariantId  BigInt    @map("product_variant_id")
   customerKey       String    @map("customer_key") @db.VarChar(150)
   idempotencyKey    String    @unique @map("idempotency_key") @db.VarChar(150)
   quantity          Int
@@ -1270,10 +1276,13 @@ model FlashSaleQuotaReservation {
 
   flashSaleItem   FlashSaleItem   @relation(fields: [flashSaleItemId], references: [id], onDelete: Restrict)
   checkoutSession CheckoutSession @relation(fields: [checkoutSessionId], references: [id], onDelete: Restrict)
+  productVariant  ProductVariant  @relation(fields: [productVariantId], references: [id], onDelete: Restrict)
 
   @@unique([flashSaleItemId, checkoutSessionId])
+  @@unique([checkoutSessionId, productVariantId])
   @@index([status, expiresAt, id])
   @@index([checkoutSessionId, status])
+  @@index([customerKey, flashSaleItemId, status])
   @@map("flash_sale_quota_reservations")
 }
 

@@ -1,10 +1,18 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  ArrayMaxSize,
+  ArrayNotEmpty,
+  ArrayUnique,
+  IsArray,
   IsEmail,
   IsIn,
+  IsInt,
   IsNotEmpty,
+  IsOptional,
   IsString,
+  Matches,
   MaxLength,
+  Min,
   MinLength,
 } from 'class-validator';
 import { ENTITY_ID_OPENAPI, IsEntityId } from '../../common/identifiers/entity-id';
@@ -136,6 +144,90 @@ export class LockStaffUserDto {
 
 export class RevokeRoleAssignmentDto {
   @ApiProperty({ example: 'Nhân viên chuyển sang vai trò khác', minLength: 3, maxLength: 255 })
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(3)
+  @MaxLength(255)
+  reason: string;
+}
+
+const ROLE_CODE_PATTERN = /^[A-Z][A-Z0-9_]{2,49}$/;
+
+export class CreateRoleDto {
+  @ApiProperty({
+    example: 'WAREHOUSE_LEAD',
+    description: 'Mã vai trò, chữ in hoa và gạch dưới, duy nhất toàn hệ thống',
+  })
+  @IsString()
+  @Matches(ROLE_CODE_PATTERN, {
+    message: 'code phải viết hoa, bắt đầu bằng chữ cái, dài 3-50 ký tự',
+  })
+  code: string;
+
+  @ApiProperty({ example: 'Trưởng kho', maxLength: 255 })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(255)
+  name: string;
+
+  @ApiPropertyOptional({ example: 'Phụ trách nhập xuất kho chi nhánh', maxLength: 1000 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  description?: string;
+
+  @ApiProperty({ type: [String], example: ['inventory.stock.view', 'inventory.stock.adjust'] })
+  @IsArray()
+  @ArrayNotEmpty()
+  @ArrayUnique()
+  @ArrayMaxSize(500)
+  @IsString({ each: true })
+  permissionCodes: string[];
+}
+
+export class UpdateRoleDto {
+  @ApiPropertyOptional({ example: 'Trưởng kho', maxLength: 255 })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(255)
+  name?: string;
+
+  @ApiPropertyOptional({ maxLength: 1000 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  description?: string;
+
+  @ApiPropertyOptional({ enum: Object.values(ROLE_STATUS) })
+  @IsOptional()
+  @IsIn(Object.values(ROLE_STATUS))
+  status?: RoleStatus;
+
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'Danh sách quyền thay thế toàn bộ. Bỏ trống để giữ nguyên quyền hiện tại.',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @ArrayMaxSize(500)
+  @IsString({ each: true })
+  permissionCodes?: string[];
+
+  @ApiProperty({ example: 0, minimum: 0, description: 'Version đọc được lần gần nhất' })
+  @IsInt()
+  @Min(0)
+  expectedVersion: number;
+}
+
+export class DeleteRoleDto {
+  @ApiProperty({ example: 0, minimum: 0, description: 'Version đọc được lần gần nhất' })
+  @IsInt()
+  @Min(0)
+  expectedVersion: number;
+
+  @ApiProperty({ example: 'Vai trò không còn dùng', minLength: 3, maxLength: 255 })
   @IsString()
   @IsNotEmpty()
   @MinLength(3)

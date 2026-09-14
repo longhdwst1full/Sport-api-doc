@@ -5,15 +5,17 @@ import {
   USER_STATUS,
   USER_TYPE,
 } from './iam.constants';
-import { V1_ROLE_PERMISSIONS } from './iam.permissions';
+import { PERMISSION_CATALOG, V1_ROLE_PERMISSIONS } from './iam.permissions';
 import { IamRepository } from './iam.repository';
 import {
+  CreateRoleInput,
   CreateStaffUserInput,
   LockStaffUserResult,
   NewUserRoleAssignment,
   Role,
   ScopeType,
   SystemRoleCode,
+  UpdateRoleInput,
   User,
   UserRoleAssignment,
   UserWithAssignments,
@@ -115,6 +117,72 @@ export class InMemoryIamRepository extends IamRepository {
 
   async findUser(id: string): Promise<UserWithAssignments | undefined> {
     return (await this.listUsers()).find((user) => user.id === id);
+  }
+
+  listAllRoles(): Promise<Role[]> {
+    return Promise.resolve(this.roles.map((role) => ({ ...role })));
+  }
+
+  findRole(roleId: string): Promise<Role | undefined> {
+    const role = this.roles.find(({ id }) => id === roleId);
+    return Promise.resolve(role ? { ...role } : undefined);
+  }
+
+  hasRoleCode(code: string): Promise<boolean> {
+    return Promise.resolve(this.roles.some((role) => role.code === code));
+  }
+
+  countRoleAssignments(roleId: string): Promise<number> {
+    return Promise.resolve(this.assignments.filter((a) => a.roleId === roleId).length);
+  }
+
+  listMissingPermissionCodes(codes: string[]): Promise<string[]> {
+    const known = new Set(PERMISSION_CATALOG.map(({ code }) => code));
+    return Promise.resolve(codes.filter((code) => !known.has(code)));
+  }
+
+  createRole(input: CreateRoleInput): Promise<Role> {
+    const role: Role = {
+      id: String((this.sequence += 1)),
+      code: input.code,
+      name: input.name,
+      ...(input.description ? { description: input.description } : {}),
+      status: ROLE_STATUS.ACTIVE,
+      system: false,
+      permissionCodes: [...input.permissionCodes].sort(),
+      version: 0,
+    };
+    this.roles.push(role);
+    return Promise.resolve({ ...role });
+  }
+
+  updateRole(roleId: string, input: UpdateRoleInput): Promise<Role | undefined> {
+    const index = this.roles.findIndex(({ id }) => id === roleId);
+    if (index < 0) return Promise.resolve(undefined);
+    const current = this.roles[index];
+    if (current.version !== input.expectedVersion) return Promise.resolve(undefined);
+    const next: Role = {
+      ...current,
+      ...(input.name === undefined ? {} : { name: input.name }),
+      ...(input.description === undefined ? {} : { description: input.description }),
+      ...(input.status === undefined ? {} : { status: input.status }),
+      ...(input.permissionCodes
+        ? { permissionCodes: [...input.permissionCodes].sort() }
+        : {}),
+      version: current.version + 1,
+    };
+    this.roles[index] = next;
+    return Promise.resolve({ ...next });
+  }
+
+  deleteRole(roleId: string, _reason: string, expectedVersion: number): Promise<boolean> {
+    const index = this.roles.findIndex(({ id }) => id === roleId);
+    if (index < 0) return Promise.resolve(false);
+    const role = this.roles[index];
+    if (role.system || role.version !== expectedVersion) return Promise.resolve(false);
+    if (this.assignments.some((a) => a.roleId === roleId)) return Promise.resolve(false);
+    this.roles.splice(index, 1);
+    return Promise.resolve(true);
   }
 
   listRoles(): Promise<Role[]> {

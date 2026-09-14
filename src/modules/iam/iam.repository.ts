@@ -1,9 +1,11 @@
 import {
+  CreateRoleInput,
   CreateStaffUserInput,
   LockStaffUserResult,
   NewUserRoleAssignment,
   Role,
   ScopeType,
+  UpdateRoleInput,
   UserRoleAssignment,
   UserWithAssignments,
 } from './iam.types';
@@ -13,6 +15,23 @@ export abstract class IamRepository {
   abstract listUsers(branchIds?: string[]): Promise<UserWithAssignments[]>;
   abstract findUser(id: string): Promise<UserWithAssignments | undefined>;
   abstract listRoles(): Promise<Role[]>;
+  abstract listAllRoles(): Promise<Role[]>;
+  abstract findRole(roleId: string): Promise<Role | undefined>;
+  abstract hasRoleCode(code: string): Promise<boolean>;
+  abstract countRoleAssignments(roleId: string): Promise<number>;
+  abstract listMissingPermissionCodes(codes: string[]): Promise<string[]>;
+  abstract createRole(input: CreateRoleInput, context: MutationContext): Promise<Role>;
+  abstract updateRole(
+    roleId: string,
+    input: UpdateRoleInput,
+    context: MutationContext,
+  ): Promise<Role | undefined>;
+  abstract deleteRole(
+    roleId: string,
+    reason: string,
+    expectedVersion: number,
+    context: MutationContext,
+  ): Promise<boolean>;
   abstract findActiveRoleByCode(code: string): Promise<Role | undefined>;
   abstract hasUser(id: string): Promise<boolean>;
   abstract hasActiveEmail(normalizedEmail: string): Promise<boolean>;

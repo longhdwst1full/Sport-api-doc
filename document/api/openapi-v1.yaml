@@ -1038,6 +1038,51 @@ paths:
       summary: List IAM roles
       tags:
         - Admin IAM
+    post:
+      operationId: createAdminRole
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRoleDto"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoleDto"
+        "400":
+          description: Unknown permission code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: Granting a permission the actor does not hold
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: Role code already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Create a custom role with an explicit permission set
+      tags:
+        - Admin IAM
   /api/v1/admin/iam/permissions:
     get:
       operationId: listAdminPermissions
@@ -1052,6 +1097,22 @@ paths:
       security:
         - bearer: []
       summary: List stable permission codes
+      tags:
+        - Admin IAM
+  /api/v1/admin/iam/roles/all:
+    get:
+      operationId: listAdminAllRoles
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoleListDto"
+      security:
+        - bearer: []
+      summary: List every role including INACTIVE ones for role administration
       tags:
         - Admin IAM
   /api/v1/admin/iam/roles/active:
@@ -1108,6 +1169,141 @@ paths:
       security:
         - bearer: []
       summary: Search assignable BRANCH_MANAGER or STAFF roles
+      tags:
+        - Admin IAM
+  /api/v1/admin/iam/roles/{roleId}:
+    get:
+      operationId: getAdminRole
+      parameters:
+        - name: roleId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoleDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Read one role with its permission set
+      tags:
+        - Admin IAM
+    patch:
+      operationId: updateAdminRole
+      parameters:
+        - name: roleId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRoleDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoleDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: Version conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Rename a role or replace its permission set
+      tags:
+        - Admin IAM
+    delete:
+      operationId: deleteAdminRole
+      parameters:
+        - name: roleId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeleteRoleDto"
+      responses:
+        "204":
+          description: ""
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: System role cannot be deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: Role is still assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Delete a custom role that is not assigned to any user
       tags:
         - Admin IAM
   /api/v1/admin/iam/users/{userId}/role-assignments:
@@ -7961,6 +8157,75 @@ components:
       required:
         - items
         - total
+    CreateRoleDto:
+      type: object
+      properties:
+        code:
+          type: string
+          example: WAREHOUSE_LEAD
+          description: Mã vai trò, chữ in hoa và gạch dưới, duy nhất toàn hệ thống
+        name:
+          type: string
+          example: Trưởng kho
+          maxLength: 255
+        description:
+          type: string
+          example: Phụ trách nhập xuất kho chi nhánh
+          maxLength: 1000
+        permissionCodes:
+          example:
+            - inventory.stock.view
+            - inventory.stock.adjust
+          type: array
+          items:
+            type: string
+      required:
+        - code
+        - name
+        - permissionCodes
+    UpdateRoleDto:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Trưởng kho
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 1000
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+        permissionCodes:
+          description: Danh sách quyền thay thế toàn bộ. Bỏ trống để giữ nguyên quyền hiện tại.
+          type: array
+          items:
+            type: string
+        expectedVersion:
+          type: number
+          example: 0
+          minimum: 0
+          description: Version đọc được lần gần nhất
+      required:
+        - expectedVersion
+    DeleteRoleDto:
+      type: object
+      properties:
+        expectedVersion:
+          type: number
+          example: 0
+          minimum: 0
+          description: Version đọc được lần gần nhất
+        reason:
+          type: string
+          example: Vai trò không còn dùng
+          minLength: 3
+          maxLength: 255
+      required:
+        - expectedVersion
+        - reason
     AssignUserRoleDto:
       type: object
       properties:

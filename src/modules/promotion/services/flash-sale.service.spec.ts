@@ -18,6 +18,8 @@ const FIXTURE = {
   RESERVATION_ID: 3n,
   ITEM_VERSION: 5n,
   CUSTOMER_KEY: 'guest:abc',
+  CAMPAIGN_WINDOW_START: new Date('2026-09-13T00:00:00.000Z'),
+  CAMPAIGN_WINDOW_END: new Date('2026-09-20T00:00:00.000Z'),
   QUOTA: 10,
   SOLD: 2,
   RESERVED: 3,
@@ -49,6 +51,7 @@ interface ItemRow {
   perCustomerLimit: number | null;
   status: string;
   version: bigint;
+  campaign?: { status: string; startsAt: Date; endsAt: Date };
 }
 
 function buildItem(overrides: Partial<ItemRow> = {}): ItemRow {
@@ -63,6 +66,11 @@ function buildItem(overrides: Partial<ItemRow> = {}): ItemRow {
     perCustomerLimit: null,
     status: FLASH_SALE_ITEM_STATUS.ACTIVE,
     version: FIXTURE.ITEM_VERSION,
+    campaign: {
+      status: 'ACTIVE',
+      startsAt: FIXTURE.CAMPAIGN_WINDOW_START,
+      endsAt: FIXTURE.CAMPAIGN_WINDOW_END,
+    },
     ...overrides,
   };
 }
@@ -82,7 +90,10 @@ const COMMITTED_RESERVATION: ReservationRow = {
 function buildHarness(items: ItemRow[], updateManyCount = 1, reservations: ReservationRow[] = []) {
   const itemFindMany = jest.fn<Promise<ItemRow[]>, [unknown]>().mockResolvedValue(items);
   const itemUpdateMany = jest
-    .fn<Promise<{ count: number }>, [{ where: { version: bigint; quota: { gte: number } } }]>()
+    .fn<
+      Promise<{ count: number }>,
+      [{ where: { id: bigint; version: bigint; quota: { gte: number } } }]
+    >()
     .mockResolvedValue({ count: updateManyCount });
   const itemUpdate = jest
     .fn<
@@ -98,6 +109,9 @@ function buildHarness(items: ItemRow[], updateManyCount = 1, reservations: Reser
     >()
     .mockResolvedValue({});
   const reservationCreate = jest.fn<Promise<unknown>, [unknown]>().mockResolvedValue({});
+  const reservationAggregate = jest
+    .fn<Promise<{ _sum: { quantity: number | null } }>, [unknown]>()
+    .mockResolvedValue({ _sum: { quantity: null } });
   const reservationFindMany = jest
     .fn<Promise<ReservationRow[]>, [unknown]>()
     .mockResolvedValue(reservations);
@@ -111,10 +125,19 @@ function buildHarness(items: ItemRow[], updateManyCount = 1, reservations: Reser
       create: reservationCreate,
       findMany: reservationFindMany,
       update: reservationUpdate,
+      aggregate: reservationAggregate,
     },
   } as unknown as Prisma.TransactionClient;
 
-  return { transaction, itemUpdateMany, itemUpdate, reservationCreate, reservationUpdate };
+  return {
+    transaction,
+    itemUpdateMany,
+    itemUpdate,
+    itemFindMany,
+    reservationCreate,
+    reservationUpdate,
+    reservationAggregate,
+  };
 }
 
 describe('FlashSaleService quota', () => {
@@ -132,7 +155,7 @@ describe('FlashSaleService quota', () => {
       harness.transaction,
       FIXTURE.CHECKOUT_SESSION_ID,
       FIXTURE.CUSTOMER_KEY,
-      [{ productVariantId: FIXTURE.VARIANT_ID, quantity: FIXTURE.REQUESTED_QUANTITY }],
+      [{ productVariantId: FIXTURE.VARIANT_ID, quantity: FIXTURE.REQUESTED_QUANTITY, flashSaleItemId: FIXTURE.ITEM_ID }],
       now,
     );
 
@@ -152,7 +175,7 @@ describe('FlashSaleService quota', () => {
         harness.transaction,
         FIXTURE.CHECKOUT_SESSION_ID,
         FIXTURE.CUSTOMER_KEY,
-        [{ productVariantId: FIXTURE.VARIANT_ID, quantity: FIXTURE.REQUESTED_QUANTITY }],
+        [{ productVariantId: FIXTURE.VARIANT_ID, quantity: FIXTURE.REQUESTED_QUANTITY, flashSaleItemId: FIXTURE.ITEM_ID }],
         now,
       ),
     ).rejects.toBeInstanceOf(ConflictException);
@@ -168,7 +191,7 @@ describe('FlashSaleService quota', () => {
         harness.transaction,
         FIXTURE.CHECKOUT_SESSION_ID,
         FIXTURE.CUSTOMER_KEY,
-        [{ productVariantId: FIXTURE.VARIANT_ID, quantity: FIXTURE.OVER_LIMIT_QUANTITY }],
+        [{ productVariantId: FIXTURE.VARIANT_ID, quantity: FIXTURE.OVER_LIMIT_QUANTITY, flashSaleItemId: FIXTURE.ITEM_ID }],
         now,
       ),
     ).rejects.toBeInstanceOf(ConflictException);
@@ -176,19 +199,118 @@ describe('FlashSaleService quota', () => {
     expect(harness.itemUpdateMany).not.toHaveBeenCalled();
   });
 
-  it('bỏ qua biến thể không thuộc campaign đang chạy', async () => {
+  it('bỏ qua dòng mua theo giá thường (không có suất snapshot)', async () => {
     const harness = buildHarness([]);
 
     const grants = await service.reserveQuota(
       harness.transaction,
       FIXTURE.CHECKOUT_SESSION_ID,
       FIXTURE.CUSTOMER_KEY,
-      [{ productVariantId: FIXTURE.VARIANT_ID, quantity: 1 }],
+      [{ productVariantId: FIXTURE.VARIANT_ID, quantity: 1, flashSaleItemId: null }],
       now,
     );
 
     expect(grants).toEqual([]);
     expect(harness.itemUpdateMany).not.toHaveBeenCalled();
+  });
+
+  it('một SKU ở hai campaign chỉ trừ quota của suất đã snapshot', async () => {
+    // L2 cũ: vòng lặp duyệt mọi suất khớp biến thể nên trừ quota CẢ HAI campaign
+    // cho cùng một lần mua. Nay duyệt theo dòng checkout nên chỉ trừ đúng một.
+    const harness = buildHarness([
+      buildItem({ id: FIXTURE.ITEM_ID }),
+      buildItem({ id: FIXTURE.SECOND_ITEM_ID }),
+    ]);
+
+    await service.reserveQuota(
+      harness.transaction,
+      FIXTURE.CHECKOUT_SESSION_ID,
+      FIXTURE.CUSTOMER_KEY,
+      [
+        {
+          productVariantId: FIXTURE.VARIANT_ID,
+          quantity: FIXTURE.REQUESTED_QUANTITY,
+          flashSaleItemId: FIXTURE.ITEM_ID,
+        },
+      ],
+      now,
+    );
+
+    expect(harness.itemUpdateMany).toHaveBeenCalledTimes(1);
+    expect(harness.itemUpdateMany.mock.calls[0][0].where.id).toBe(FIXTURE.ITEM_ID);
+  });
+
+  it('từ chối khi campaign đã kết thúc giữa lúc báo giá và lúc xác nhận', async () => {
+    const harness = buildHarness([
+      buildItem({
+        campaign: {
+          status: 'ENDED',
+          startsAt: FIXTURE.CAMPAIGN_WINDOW_START,
+          endsAt: FIXTURE.CAMPAIGN_WINDOW_END,
+        },
+      }),
+    ]);
+
+    await expect(
+      service.reserveQuota(
+        harness.transaction,
+        FIXTURE.CHECKOUT_SESSION_ID,
+        FIXTURE.CUSTOMER_KEY,
+        [
+          {
+            productVariantId: FIXTURE.VARIANT_ID,
+            quantity: 1,
+            flashSaleItemId: FIXTURE.ITEM_ID,
+          },
+        ],
+        now,
+      ),
+    ).rejects.toBeInstanceOf(ConflictException);
+    // Không được âm thầm bán theo giá đã giảm khi chương trình hết hiệu lực.
+    expect(harness.itemUpdateMany).not.toHaveBeenCalled();
+  });
+
+  it('giới hạn mỗi khách cộng dồn qua nhiều lần đặt', async () => {
+    // L5 cũ: chỉ xét số lượng của một lần đặt, nên khách đặt nhiều đơn nhỏ thì lọt.
+    const harness = buildHarness([buildItem({ perCustomerLimit: FIXTURE.PER_CUSTOMER_LIMIT })]);
+    // Khách đã giữ đủ hạn mức ở các checkout trước.
+    harness.reservationAggregate.mockResolvedValue({
+      _sum: { quantity: FIXTURE.PER_CUSTOMER_LIMIT },
+    });
+
+    await expect(
+      service.reserveQuota(
+        harness.transaction,
+        FIXTURE.CHECKOUT_SESSION_ID,
+        FIXTURE.CUSTOMER_KEY,
+        [
+          {
+            productVariantId: FIXTURE.VARIANT_ID,
+            quantity: 1,
+            flashSaleItemId: FIXTURE.ITEM_ID,
+          },
+        ],
+        now,
+      ),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(harness.itemUpdateMany).not.toHaveBeenCalled();
+  });
+
+  it('bỏ qua chính checkout hiện tại khi cộng dồn giới hạn, để retry không bị tính hai lần', async () => {
+    const harness = buildHarness([buildItem({ perCustomerLimit: FIXTURE.PER_CUSTOMER_LIMIT })]);
+
+    await service.reserveQuota(
+      harness.transaction,
+      FIXTURE.CHECKOUT_SESSION_ID,
+      FIXTURE.CUSTOMER_KEY,
+      [{ productVariantId: FIXTURE.VARIANT_ID, quantity: 1, flashSaleItemId: FIXTURE.ITEM_ID }],
+      now,
+    );
+
+    const where = harness.reservationAggregate.mock.calls[0][0] as {
+      where: { checkoutSessionId: { not: bigint } };
+    };
+    expect(where.where.checkoutSessionId.not).toBe(FIXTURE.CHECKOUT_SESSION_ID);
   });
 
   it('commit chuyển reserved sang sold, tổng sold+reserved không đổi', async () => {

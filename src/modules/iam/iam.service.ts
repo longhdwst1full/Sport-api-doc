@@ -11,11 +11,15 @@ import {
 } from '../../common/pagination/active-search.dto';
 import {
   AssignUserRoleDto,
+  CreateRoleDto,
   CreateStaffUserDto,
+  DeleteRoleDto,
   LockStaffUserDto,
   RevokeRoleAssignmentDto,
   PermissionListDto,
+  RoleDto,
   RoleListDto,
+  UpdateRoleDto,
   UserDto,
   UserListDto,
   UserRoleAssignmentDto,
@@ -51,6 +55,140 @@ export class IamService {
   async listRoles(): Promise<RoleListDto> {
     const items = await this.iam.listRoles();
     return { items, total: items.length };
+  }
+
+  async listAllRoles(): Promise<RoleListDto> {
+    const items = await this.iam.listAllRoles();
+    return { items, total: items.length };
+  }
+
+  async getRole(roleId: string): Promise<RoleDto> {
+    const role = await this.iam.findRole(roleId);
+    if (!role) throw new NotFoundException('Role not found');
+    return role;
+  }
+
+  async createRole(
+    input: CreateRoleDto,
+    context: MutationContext,
+    actor: AuthPrincipal,
+  ): Promise<RoleDto> {
+    this.authorizeRoleAdministration(actor);
+    const code = input.code.trim().toUpperCase();
+    if ((Object.values(SystemRoleCode) as string[]).includes(code)) {
+      throw new ConflictException('Mã vai trò này thuộc hệ thống, hãy chọn mã khác');
+    }
+    const permissionCodes = await this.resolvePermissionCodes(input.permissionCodes, actor);
+    if (await this.iam.hasRoleCode(code)) {
+      throw new ConflictException('Mã vai trò đã tồn tại');
+    }
+    try {
+      return await this.iam.createRole(
+        {
+          code,
+          name: input.name.trim(),
+          ...(input.description?.trim() ? { description: input.description.trim() } : {}),
+          permissionCodes,
+        },
+        context,
+      );
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('Mã vai trò đã tồn tại');
+      }
+      throw error;
+    }
+  }
+
+  async updateRole(
+    roleId: string,
+    input: UpdateRoleDto,
+    context: MutationContext,
+    actor: AuthPrincipal,
+  ): Promise<RoleDto> {
+    this.authorizeRoleAdministration(actor);
+    const role = await this.iam.findRole(roleId);
+    if (!role) throw new NotFoundException('Role not found');
+    if (role.system && input.status !== undefined && input.status !== role.status) {
+      throw new ForbiddenException('Không được đổi trạng thái vai trò hệ thống');
+    }
+    const permissionCodes = input.permissionCodes
+      ? await this.resolvePermissionCodes(input.permissionCodes, actor, role.permissionCodes)
+      : undefined;
+    const updated = await this.iam.updateRole(
+      roleId,
+      {
+        ...(input.name === undefined ? {} : { name: input.name.trim() }),
+        ...(input.description === undefined ? {} : { description: input.description.trim() }),
+        ...(input.status === undefined ? {} : { status: input.status }),
+        ...(permissionCodes ? { permissionCodes } : {}),
+        expectedVersion: input.expectedVersion,
+      },
+      context,
+    );
+    if (!updated) {
+      throw new ConflictException('Vai trò vừa được người khác sửa; hãy tải lại và thử lại');
+    }
+    return updated;
+  }
+
+  async deleteRole(
+    roleId: string,
+    expectedVersion: number,
+    input: DeleteRoleDto,
+    context: MutationContext,
+    actor: AuthPrincipal,
+  ): Promise<void> {
+    this.authorizeRoleAdministration(actor);
+    const role = await this.iam.findRole(roleId);
+    if (!role) throw new NotFoundException('Role not found');
+    if (role.system) {
+      throw new ForbiddenException('Vai trò hệ thống không được xoá');
+    }
+    if ((await this.iam.countRoleAssignments(roleId)) > 0) {
+      throw new ConflictException(
+        'Vai trò đang được gán cho người dùng; hãy gỡ hết phân quyền trước khi xoá',
+      );
+    }
+    const deleted = await this.iam.deleteRole(
+      roleId,
+      input.reason.trim(),
+      expectedVersion,
+      context,
+    );
+    if (!deleted) {
+      throw new ConflictException('Vai trò vừa thay đổi; hãy tải lại danh sách và thử lại');
+    }
+  }
+
+  /**
+   * Không cho leo thang đặc quyền: người sửa chỉ cấp được quyền chính họ đang có.
+   * Quyền đã tồn tại sẵn trên vai trò được giữ lại để không buộc phải có toàn quyền mới sửa được tên.
+   */
+  private async resolvePermissionCodes(
+    requested: string[],
+    actor: AuthPrincipal,
+    currentCodes: readonly string[] = [],
+  ): Promise<string[]> {
+    const codes = [...new Set(requested.map((code) => code.trim()))].sort();
+    const missing = await this.iam.listMissingPermissionCodes(codes);
+    if (missing.length > 0) {
+      throw new BadRequestException(`Quyền không tồn tại: ${missing.join(', ')}`);
+    }
+    const held = new Set([...actor.permissions, ...currentCodes]);
+    const escalated = codes.filter((code) => !held.has(code));
+    if (escalated.length > 0) {
+      throw new ForbiddenException(
+        `Bạn không thể cấp quyền mà chính mình không có: ${escalated.join(', ')}`,
+      );
+    }
+    return codes;
+  }
+
+  private authorizeRoleAdministration(actor: AuthPrincipal): void {
+    if (!this.hasGlobalScope(actor)) {
+      throw new ForbiddenException('Chỉ quản trị viên phạm vi toàn hệ thống mới quản lý vai trò');
+    }
   }
 
   listPermissions(): PermissionListDto {

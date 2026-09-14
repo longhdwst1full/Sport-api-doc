@@ -59,9 +59,14 @@ const campaignInclude = {
 type LoadedCampaign = Prisma.FlashSaleCampaignGetPayload<{ include: typeof campaignInclude }>;
 type LoadedItem = LoadedCampaign['items'][number];
 
-export interface FlashSaleQuotaRequest {
+/**
+ * Một dòng hàng của checkout kèm suất flash đã snapshot lúc báo giá.
+ * `flashSaleItemId = null` nghĩa là dòng đó mua theo giá thường.
+ */
+export interface FlashSaleQuotaLine {
   productVariantId: bigint;
   quantity: number;
+  flashSaleItemId: bigint | null;
 }
 
 export interface ActiveFlashDeal {
@@ -481,58 +486,67 @@ export class FlashSaleService {
   /**
    * Giữ quota flash cho một checkout session.
    *
-   * QUAN TRỌNG: hàm này nhận sẵn `transaction` từ checkout để quota và tồn kho
-   * vật lý cùng thắng hoặc cùng rollback. Quota flash KHÔNG thay thế inventory
+   * QUAN TRỌNG: hàm nhận sẵn `transaction` từ checkout để quota và tồn kho vật
+   * lý cùng thắng hoặc cùng rollback. Quota flash KHÔNG thay thế inventory
    * reservation — hai thứ độc lập và phải giành được cả hai.
    *
+   * Đọc `flashSaleItemId` đã snapshot lúc báo giá, **không tra lại** danh sách
+   * suất đang chạy. Tra lại là nguyên nhân của ba lỗi cũ:
+   * - báo giá lấy campaign rẻ nhất còn giữ quota lấy campaign tạo trước;
+   * - một SKU nằm ở hai campaign thì trừ quota cả hai cho cùng một lần mua;
+   * - combo bị tách thành linh kiện nên suất của combo không bao giờ khớp.
+   *
    * Chống oversell bằng `updateMany` có điều kiện trên chính hàng dữ liệu
-   * (compare-and-set) chứ không đọc rồi ghi: hai request song song thì chỉ một
-   * cái khớp điều kiện, cái còn lại nhận `count === 0` và bị từ chối.
+   * (compare-and-set): hai request song song thì chỉ một cái khớp, cái còn lại
+   * nhận `count === 0` và bị từ chối.
    */
   async reserveQuota(
     transaction: Prisma.TransactionClient,
     checkoutSessionId: bigint,
     customerKey: string,
-    requests: readonly FlashSaleQuotaRequest[],
+    lines: readonly FlashSaleQuotaLine[],
     now: Date,
   ): Promise<FlashSaleQuotaGrant[]> {
-    if (requests.length === 0) return [];
-    const variantIds = requests.map((request) => request.productVariantId);
+    const claimable = lines.filter((line) => line.flashSaleItemId !== null);
+    if (claimable.length === 0) return [];
 
     const items = await transaction.flashSaleItem.findMany({
-      where: {
-        productVariantId: { in: variantIds },
-        status: FLASH_SALE_ITEM_STATUS.ACTIVE,
-        campaign: {
-          status: FLASH_SALE_CAMPAIGN_STATUS.ACTIVE,
-          startsAt: { lte: now },
-          endsAt: { gt: now },
-        },
-      },
+      where: { id: { in: claimable.map((line) => line.flashSaleItemId!) } },
+      include: { campaign: { select: { status: true, startsAt: true, endsAt: true } } },
       orderBy: { id: 'asc' },
     });
-    if (items.length === 0) return [];
+    const itemById = new Map(items.map((item) => [item.id, item]));
 
     const expiresAt = new Date(now.getTime() + FLASH_SALE_QUOTA_TTL_MINUTES * 60_000);
     const grants: FlashSaleQuotaGrant[] = [];
 
-    for (const item of items) {
-      const request = requests.find((entry) => entry.productVariantId === item.productVariantId);
-      if (!request) continue;
-
-      if (item.perCustomerLimit !== null && request.quantity > item.perCustomerLimit) {
+    // Duyệt theo DÒNG CHECKOUT, không duyệt theo danh sách suất: mỗi dòng đúng
+    // một suất, kể cả khi biến thể đó nằm trong nhiều campaign.
+    for (const line of claimable) {
+      const item = itemById.get(line.flashSaleItemId!);
+      // Suất bị gỡ, campaign kết thúc hoặc chưa tới giờ giữa lúc báo giá và lúc
+      // xác nhận: từ chối rõ ràng thay vì âm thầm bán theo giá đã giảm.
+      if (
+        !item ||
+        item.status !== FLASH_SALE_ITEM_STATUS.ACTIVE ||
+        item.campaign.status !== FLASH_SALE_CAMPAIGN_STATUS.ACTIVE ||
+        item.campaign.startsAt > now ||
+        item.campaign.endsAt <= now
+      ) {
         throw new ConflictException(
-          `Mỗi khách chỉ mua tối đa ${item.perCustomerLimit} sản phẩm trong chương trình flash sale`,
+          'Chương trình khuyến mãi đã kết thúc; vui lòng tải lại giỏ hàng để xem giá mới',
         );
       }
+
+      await this.assertPerCustomerLimit(transaction, item, customerKey, line.quantity, checkoutSessionId);
 
       const claimed = await transaction.flashSaleItem.updateMany({
         where: {
           id: item.id,
           version: item.version,
-          quota: { gte: item.soldQuantity + item.reservedQuantity + request.quantity },
+          quota: { gte: item.soldQuantity + item.reservedQuantity + line.quantity },
         },
-        data: { reservedQuantity: { increment: request.quantity }, version: { increment: 1 } },
+        data: { reservedQuantity: { increment: line.quantity }, version: { increment: 1 } },
       });
       if (claimed.count === 0) {
         throw new ConflictException('Suất flash sale vừa hết; vui lòng tải lại giỏ hàng');
@@ -542,9 +556,10 @@ export class FlashSaleService {
         data: {
           flashSaleItemId: item.id,
           checkoutSessionId,
+          productVariantId: item.productVariantId,
           customerKey,
           idempotencyKey: `flash-quota:${item.id}:${checkoutSessionId}`,
-          quantity: request.quantity,
+          quantity: line.quantity,
           status: FLASH_SALE_QUOTA_STATUS.ACTIVE,
           expiresAt,
         },
@@ -553,12 +568,56 @@ export class FlashSaleService {
       grants.push({
         flashSaleItemId: item.id,
         productVariantId: item.productVariantId,
-        quantity: request.quantity,
+        quantity: line.quantity,
         salePrice: item.salePrice,
       });
     }
 
     return grants;
+  }
+
+  /**
+   * Giới hạn mỗi khách phải cộng dồn qua nhiều lần đặt.
+   *
+   * Chỉ xét số lượng của một lần đặt là vô tác dụng: giới hạn 2 sản phẩm mà
+   * khách đặt 10 đơn, mỗi đơn 2 cái thì lọt hết.
+   *
+   * HẠN CHẾ ĐÃ BIẾT: khách vãng lai định danh bằng khoá giỏ hàng, xoá cookie và
+   * tạo giỏ mới thì lách được. Chống triệt để cần định danh khách vãng lai,
+   * ngoài phạm vi V1 — đây là hàng rào chống mua gom vô ý, không phải chống gian lận.
+   */
+  private async assertPerCustomerLimit(
+    transaction: Prisma.TransactionClient,
+    item: { id: bigint; perCustomerLimit: number | null },
+    customerKey: string,
+    requestedQuantity: number,
+    checkoutSessionId: bigint,
+  ): Promise<void> {
+    if (item.perCustomerLimit === null) return;
+    if (requestedQuantity > item.perCustomerLimit) {
+      throw new ConflictException(
+        `Mỗi khách chỉ mua tối đa ${item.perCustomerLimit} sản phẩm trong chương trình flash sale`,
+      );
+    }
+
+    const held = await transaction.flashSaleQuotaReservation.aggregate({
+      where: {
+        flashSaleItemId: item.id,
+        customerKey,
+        status: {
+          in: [FLASH_SALE_QUOTA_STATUS.ACTIVE, FLASH_SALE_QUOTA_STATUS.COMMITTED],
+        },
+        // Bỏ qua chính checkout này để retry cùng một session không bị tính hai lần.
+        checkoutSessionId: { not: checkoutSessionId },
+      },
+      _sum: { quantity: true },
+    });
+    const alreadyHeld = held._sum.quantity ?? 0;
+    if (alreadyHeld + requestedQuantity > item.perCustomerLimit) {
+      throw new ConflictException(
+        `Bạn đã mua ${alreadyHeld} sản phẩm trong chương trình này; giới hạn là ${item.perCustomerLimit}`,
+      );
+    }
   }
 
   /** Trả quota về khi checkout hủy/hết hạn. Đã COMMITTED thì không đụng tới. */

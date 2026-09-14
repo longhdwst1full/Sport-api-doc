@@ -165,13 +165,20 @@ export class InventoryReservationService {
           // Quota flash giữ trong CÙNG transaction với tồn kho vật lý: hết suất
           // thì `reserveQuota` ném 409 và toàn bộ reservation rollback, không có
           // chuyện giữ được hàng mà mất suất hoặc ngược lại (S6.4).
+          //
+          // Truyền DÒNG CHECKOUT GỐC, không truyền `demand` đã tách combo thành
+          // linh kiện. Trước đây truyền `demand` nên flash sale đặt trên combo
+          // không bao giờ khớp: khách vẫn được giá giảm mà quota không hề trừ.
+          // Combo là một đơn vị bán riêng — mua combo chỉ trừ suất của combo,
+          // không trừ suất của linh kiện bên trong.
           await this.flashSales.reserveQuota(
             transaction,
             checkout.id,
             actor.userId ? `user:${actor.userId}` : `cart:${toEntityId(checkout.cartId)}`,
-            demand.map((item) => ({
+            checkout.items.map((item) => ({
               productVariantId: item.productVariantId,
               quantity: item.quantity,
+              flashSaleItemId: item.flashSaleItemId,
             })),
             now,
           );

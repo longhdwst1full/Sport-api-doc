@@ -5,12 +5,14 @@ import {
   Get,
   HttpCode,
   Param,
+  Patch,
   Post,
   Query,
   Req,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiNoContentResponse,
   ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
@@ -35,11 +37,15 @@ import {
 } from '../../common/pagination/active-search.dto';
 import {
   AssignUserRoleDto,
+  CreateRoleDto,
   CreateStaffUserDto,
+  DeleteRoleDto,
   LockStaffUserDto,
   RevokeRoleAssignmentDto,
   PermissionListDto,
+  RoleDto,
   RoleListDto,
+  UpdateRoleDto,
   UserDto,
   UserListDto,
   UserRoleAssignmentDto,
@@ -175,6 +181,38 @@ export class IamController {
     return this.iam.listPermissions();
   }
 
+  @Get('roles/all')
+  @RequirePermissions('iam.role.view')
+  @ApiOperation({
+    operationId: 'listAdminAllRoles',
+    summary: 'List every role including INACTIVE ones for role administration',
+  })
+  @ApiOkResponse({ type: RoleListDto })
+  listAllRoles(): Promise<RoleListDto> {
+    return this.iam.listAllRoles();
+  }
+
+  @Post('roles')
+  @RequirePermissions('iam.role.manage')
+  @ApiOperation({
+    operationId: 'createAdminRole',
+    summary: 'Create a custom role with an explicit permission set',
+  })
+  @ApiCreatedResponse({ type: RoleDto })
+  @ApiBadRequestResponse({ type: ErrorResponseDto, description: 'Unknown permission code' })
+  @ApiUnauthorizedResponse({ type: ErrorResponseDto })
+  @ApiForbiddenResponse({
+    type: ErrorResponseDto,
+    description: 'Granting a permission the actor does not hold',
+  })
+  @ApiConflictResponse({ type: ErrorResponseDto, description: 'Role code already exists' })
+  createRole(
+    @Body() input: CreateRoleDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<RoleDto> {
+    return this.iam.createRole(input, getMutationContext(request), getAuthPrincipal(request));
+  }
+
   @Get('roles/active')
   @RequirePermissions('iam.role.view')
   @ApiOperation({
@@ -190,6 +228,67 @@ export class IamController {
     @Req() request: AuthenticatedRequest,
   ): Promise<ActiveLookupResponseDto> {
     return this.iam.searchActiveRoles(query, getAuthPrincipal(request));
+  }
+
+  @Get('roles/:roleId')
+  @RequirePermissions('iam.role.view')
+  @ApiOperation({ operationId: 'getAdminRole', summary: 'Read one role with its permission set' })
+  @ApiOkResponse({ type: RoleDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  getRole(@Param('roleId', new ParseEntityIdPipe()) roleId: string): Promise<RoleDto> {
+    return this.iam.getRole(roleId);
+  }
+
+  @Patch('roles/:roleId')
+  @RequirePermissions('iam.role.manage')
+  @ApiOperation({
+    operationId: 'updateAdminRole',
+    summary: 'Rename a role or replace its permission set',
+  })
+  @ApiOkResponse({ type: RoleDto })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiUnauthorizedResponse({ type: ErrorResponseDto })
+  @ApiForbiddenResponse({ type: ErrorResponseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto, description: 'Version conflict' })
+  updateRole(
+    @Param('roleId', new ParseEntityIdPipe()) roleId: string,
+    @Body() input: UpdateRoleDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<RoleDto> {
+    return this.iam.updateRole(
+      roleId,
+      input,
+      getMutationContext(request),
+      getAuthPrincipal(request),
+    );
+  }
+
+  @Delete('roles/:roleId')
+  @HttpCode(204)
+  @RequirePermissions('iam.role.manage')
+  @ApiOperation({
+    operationId: 'deleteAdminRole',
+    summary: 'Delete a custom role that is not assigned to any user',
+  })
+  @ApiNoContentResponse()
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiUnauthorizedResponse({ type: ErrorResponseDto })
+  @ApiForbiddenResponse({ type: ErrorResponseDto, description: 'System role cannot be deleted' })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto, description: 'Role is still assigned' })
+  deleteRole(
+    @Param('roleId', new ParseEntityIdPipe()) roleId: string,
+    @Body() input: DeleteRoleDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<void> {
+    return this.iam.deleteRole(
+      roleId,
+      input.expectedVersion,
+      input,
+      getMutationContext(request),
+      getAuthPrincipal(request),
+    );
   }
 
   @Post('users/:userId/role-assignments')

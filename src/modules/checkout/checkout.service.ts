@@ -344,6 +344,9 @@ export class CheckoutService {
         deal.availableQuantity >= item.quantity &&
         (deal.perCustomerLimit === null || item.quantity <= deal.perCustomerLimit);
       const unitPrice = dealApplies ? deal.salePrice : variant.prices[0].amount;
+      // Ghi lại ĐÚNG suất đã dùng để tính giá này. Bước xác nhận đọc thẳng từ
+      // đây thay vì tra lại, nên giá và quota luôn thuộc cùng một campaign.
+      const flashSaleItemId = dealApplies ? deal.flashSaleItemId : null;
       const componentSnapshot = variant.bundleDefinition
         ? variant.bundleDefinition.items.map((component) => ({
             productVariantId: toEntityId(component.componentVariantId),
@@ -361,6 +364,7 @@ export class CheckoutService {
         unitPrice,
         lineTotal: unitPrice.mul(item.quantity),
         componentSnapshot,
+        flashSaleItemId,
       };
     });
   }

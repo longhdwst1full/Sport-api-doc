@@ -24,14 +24,20 @@ export class PrismaAuditWriter extends AuditWriter {
       throw new ServiceUnavailableException('Durable audit storage is not enabled');
     }
     // Ràng buộc `audit_logs_actor_consistency_check`: actorType USER bắt buộc có
-    // actor_user_id; SYSTEM/GUEST bắt buộc để trống. Actor không phải user trong
-    // database (system principal, hoặc principal giả lập khi bật AUTH_BYPASS) thì
-    // ghi là SYSTEM — đúng sự thật hơn là gán bừa một user, và không làm hỏng
-    // nghiệp vụ hợp lệ vì vi phạm ràng buộc.
+    // actor_user_id; SYSTEM/GUEST bắt buộc để trống.
+    //
+    // Phân biệt hai tình huống khác hẳn nhau:
+    // - Caller KHÔNG truyền actor nào (`undefined`): đó là lỗi lập trình. Để
+    //   database từ chối và rollback, không được âm thầm nuốt mất attribution.
+    // - Caller truyền một danh tính KHÔNG PHẢI user trong database (system
+    //   principal của worker, hoặc principal giả lập khi bật AUTH_BYPASS — cả hai
+    //   đều mang ID dạng không phải số): ghi là SYSTEM. Đúng sự thật hơn gán bừa
+    //   một user, và không chặn nghiệp vụ hợp lệ.
     const actorUserId = toActorDatabaseId(input.actorUserId);
-    const actorType = input.actorType === 'USER' && actorUserId === undefined
-      ? 'SYSTEM'
-      : input.actorType;
+    const hasNonDatabaseActor =
+      input.actorUserId !== undefined && input.actorUserId !== null && actorUserId === undefined;
+    const actorType =
+      input.actorType === 'USER' && hasNonDatabaseActor ? 'SYSTEM' : input.actorType;
 
     const result = await (transaction ?? this.prisma).auditLog.create({
       data: {

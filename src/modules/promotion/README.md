@@ -1,6 +1,6 @@
 # Promotion (Flash Sale) — maintenance note
 
-> **Document version:** 1.0.0
+> **Document version:** 1.1.0
 >
 > **Last updated:** 2026-09-13
 >
@@ -46,6 +46,26 @@ Kích hoạt `ACTIVE` bị chặn nếu campaign chưa có suất bán nào.
 | FLS-01 | `createAdminFlashSale`, `updateAdminFlashSale`, `changeAdminFlashSaleStatus`, `upsertAdminFlashSaleItem`, `removeAdminFlashSaleItem` | `catalog.flash_sale.manage` |
 | FLS-03 | `reserveQuota` / `releaseQuota` / `commitQuota` | Nội bộ, gọi từ checkout workflow |
 
+## Nguyên tắc: một nguồn quyết định duy nhất
+
+Báo giá ghi lại **đúng suất flash đã dùng** vào `checkout_session_items.flash_sale_item_id`. Bước xác nhận **đọc thẳng từ đó**, không tra lại danh sách suất đang chạy.
+
+Tra lại là nguyên nhân của ba lỗi đã sửa ngày 2026-09-14:
+
+| Lỗi | Cơ chế cũ |
+| --- | --- |
+| Combo được giảm giá nhưng không trừ quota | Báo giá nhìn variant combo, giữ quota nhận variant linh kiện đã tách |
+| Một SKU ở hai campaign thì trừ quota cả hai | Vòng lặp duyệt mọi suất khớp variant |
+| Báo giá campaign A, trừ quota campaign B | Hai nhánh sắp xếp theo hai tiêu chí khác nhau |
+
+**Combo là một đơn vị bán riêng.** Mua combo chỉ trừ suất của combo, không trừ suất của linh kiện bên trong.
+
+## Giới hạn mỗi khách
+
+Cộng dồn qua **mọi lần đặt** (`ACTIVE` + `COMMITTED` cùng `customer_key`), không chỉ một lần. Bỏ qua chính checkout hiện tại để retry không bị tính hai lần.
+
+**Hạn chế đã biết:** khách vãng lai định danh bằng khoá giỏ hàng, xoá cookie và tạo giỏ mới thì lách được. Đây là hàng rào chống mua gom vô ý, **không phải chống gian lận**. Chống triệt để cần định danh khách vãng lai, ngoài phạm vi V1.
+
 ## Vòng đời quota trong luồng mua
 
 | Bước | Gọi ở đâu | Tác dụng lên item |
@@ -60,7 +80,8 @@ Giá flash áp ở bước báo giá là **preview**. Giữa báo giá và xác 
 
 ## Chưa làm
 
-- `expireStaleQuota` đã viết và có test nhưng **chưa gắn worker/cron** như `reservation-expiry`. Hiện quota quá hạn chỉ được trả lại khi checkout bị release tường minh.
+- **Integration test trên PostgreSQL thật** cho tranh chấp suất cuối, combo, đa campaign và giới hạn khách. 15 unit test hiện tại chạy trên mock.
+- **Browser E2E** cho toàn luồng `/flash-sale` → giỏ → checkout → đơn → hủy.
 
 ## Checklist khi sửa
 
