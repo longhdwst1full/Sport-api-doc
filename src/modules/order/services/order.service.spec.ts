@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import type { AuthPrincipal } from '../../auth/auth.types';
 import { AuditWriter } from '../../audit/audit.writer';
+import { FlashSaleService } from '../../promotion/services/flash-sale.service';
 import { CartService } from '../../cart/cart.service';
 import { ScopeType } from '../../iam/iam.types';
 import { OrderService } from './order.service';
@@ -19,6 +20,7 @@ describe('OrderService admin query', () => {
     {} as CartService,
     {} as AuditWriter,
     { get: jest.fn().mockReturnValue(30) } as unknown as ConfigService,
+    {} as FlashSaleService,
   );
   const principal = (scopes: AuthPrincipal['scopes']): AuthPrincipal => ({
     userId: '1',

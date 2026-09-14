@@ -1,3 +1,4 @@
+import { FlashSaleService, type ActiveFlashDeal } from '../promotion/services/flash-sale.service';
 import { createHash, randomUUID } from 'node:crypto';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -27,6 +28,7 @@ export class CheckoutService {
     private readonly shipping: ShippingQuoteService,
     private readonly config: ConfigService,
     private readonly audit: AuditWriter,
+    private readonly flashSales: FlashSaleService,
   ) {}
 
   async quoteGuest(rawCartToken: string, input: CreateCheckoutQuoteDto, idempotencyKey: string, requestId: string): Promise<CheckoutQuoteDto> {
@@ -139,7 +141,15 @@ export class CheckoutService {
     }
 
     const customerId = await this.resolveCustomer(actor.userId, input);
-    const items = this.snapshotItems(cart.items);
+    // Giá flash được áp ngay ở báo giá để khách thấy đúng số tiền sẽ trả.
+    // Đây vẫn là preview: quota chỉ thực sự bị giữ khi xác nhận (reserveQuota),
+    // nên giữa hai bước có thể hết suất và bước xác nhận sẽ báo 409.
+    const flashDeals = await this.flashSales.resolveActiveDeals(
+      this.prisma,
+      cart.items.map((item) => item.productVariantId),
+      new Date(),
+    );
+    const items = this.snapshotItems(cart.items, flashDeals);
     const demand = this.physicalDemand(cart.items);
     const itemSubtotal = items.reduce((total, item) => total.add(item.lineTotal), new Prisma.Decimal(0));
     const packageInput = this.packageInput(cart.items, itemSubtotal, input.paymentMethod === 'COD');
@@ -320,10 +330,20 @@ export class CheckoutService {
     return { branchId: { in: branchIds } };
   }
 
-  private snapshotItems(items: Awaited<ReturnType<CheckoutService['loadSellableCart']>>['items']) {
+  private snapshotItems(
+    items: Awaited<ReturnType<CheckoutService['loadSellableCart']>>['items'],
+    flashDeals: Map<bigint, ActiveFlashDeal> = new Map(),
+  ) {
     return items.map((item) => {
       const variant = item.productVariant;
-      const unitPrice = variant.prices[0].amount;
+      const deal = flashDeals.get(variant.id);
+      // Chỉ áp giá flash khi còn đủ suất cho toàn bộ số lượng của dòng này và
+      // không vượt giới hạn mỗi khách; nếu không thì giữ giá thường.
+      const dealApplies =
+        deal !== undefined &&
+        deal.availableQuantity >= item.quantity &&
+        (deal.perCustomerLimit === null || item.quantity <= deal.perCustomerLimit);
+      const unitPrice = dealApplies ? deal.salePrice : variant.prices[0].amount;
       const componentSnapshot = variant.bundleDefinition
         ? variant.bundleDefinition.items.map((component) => ({
             productVariantId: toEntityId(component.componentVariantId),

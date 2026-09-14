@@ -5,6 +5,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { AuditWriter } from '../audit/audit.writer';
 import { CartService } from '../cart/cart.service';
 import { ShippingQuoteService } from '../shipping/shipping-quote.service';
+import { FlashSaleService } from '../promotion/services/flash-sale.service';
 import { ScopeType } from '../iam/iam.types';
 import { CreateCheckoutQuoteDto } from './checkout.dto';
 import { CheckoutService } from './checkout.service';
@@ -38,6 +39,8 @@ describe('CheckoutService', () => {
     { quoteCandidate: shippingQuote } as unknown as ShippingQuoteService,
     { getOrThrow: jest.fn().mockReturnValue(30) } as unknown as ConfigService,
     { write: jest.fn() } as unknown as AuditWriter,
+    // Không có campaign flash nào đang chạy trong các case này.
+    { resolveActiveDeals: jest.fn().mockResolvedValue(new Map()) } as unknown as FlashSaleService,
   );
   const input: CreateCheckoutQuoteDto = {
     recipient: {

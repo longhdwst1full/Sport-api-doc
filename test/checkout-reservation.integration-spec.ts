@@ -4,6 +4,7 @@ import { PrismaClient } from '@prisma/client';
 
 import { PrismaService } from '../src/database/prisma.service';
 import { AuditWriter } from '../src/modules/audit/audit.writer';
+import { FlashSaleService } from '../src/modules/promotion/services/flash-sale.service';
 import { InventoryReservationService } from '../src/modules/checkout/inventory-reservation.service';
 
 describe('Checkout reservation concurrency and idempotency', () => {
@@ -29,6 +30,7 @@ describe('Checkout reservation concurrency and idempotency', () => {
     prisma,
     config,
     { write: auditWrite } as unknown as AuditWriter,
+    new FlashSaleService(prisma, { write: auditWrite } as unknown as AuditWriter),
   );
 
   let branchId = 0n;

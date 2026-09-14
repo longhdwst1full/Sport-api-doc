@@ -46,10 +46,21 @@ Kích hoạt `ACTIVE` bị chặn nếu campaign chưa có suất bán nào.
 | FLS-01 | `createAdminFlashSale`, `updateAdminFlashSale`, `changeAdminFlashSaleStatus`, `upsertAdminFlashSaleItem`, `removeAdminFlashSaleItem` | `catalog.flash_sale.manage` |
 | FLS-03 | `reserveQuota` / `releaseQuota` / `commitQuota` | Nội bộ, gọi từ checkout workflow |
 
+## Vòng đời quota trong luồng mua
+
+| Bước | Gọi ở đâu | Tác dụng lên item |
+| --- | --- | --- |
+| Báo giá checkout | `checkout.service.quote` → `resolveActiveDeals` | Chỉ đọc; áp giá flash vào snapshot nếu còn đủ suất |
+| Xác nhận checkout | `inventory-reservation.service.confirm` → `reserveQuota` | `reserved += qty`, **cùng transaction với tồn kho vật lý** |
+| Hủy/hết hạn checkout | `inventory-reservation.service.release` → `releaseQuota` | `reserved -= qty` |
+| Đặt Order | `order.service.place` → `commitQuota` | `reserved -= qty`, `sold += qty` |
+| Hủy Order trước khi giao | `order.service.cancel` → `revertCommittedQuota` | `sold -= qty`, suất về pool |
+
+Giá flash áp ở bước báo giá là **preview**. Giữa báo giá và xác nhận vẫn có thể hết suất; khi đó `reserveQuota` ném 409 và toàn bộ reservation rollback — không có chuyện giữ được hàng mà mất suất hoặc ngược lại.
+
 ## Chưa làm
 
-- **Chưa nối vào checkout.** `reserveQuota`/`releaseQuota`/`commitQuota` đã có và có unit test, nhưng `checkout.service` chưa gọi. Tới khi nối xong, giá flash mới thực sự áp vào đơn và quota mới thực sự bị trừ.
-- `expireStaleQuota` đã viết nhưng chưa gắn worker/cron như `reservation-expiry`.
+- `expireStaleQuota` đã viết và có test nhưng **chưa gắn worker/cron** như `reservation-expiry`. Hiện quota quá hạn chỉ được trả lại khi checkout bị release tường minh.
 
 ## Checklist khi sửa
 

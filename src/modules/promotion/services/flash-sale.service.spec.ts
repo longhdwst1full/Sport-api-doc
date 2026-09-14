@@ -47,7 +47,14 @@ function buildHarness(items: ItemRow[], updateManyCount = 1, reservations: Reser
   const itemUpdate = jest
     .fn<
       Promise<unknown>,
-      [{ data: { reservedQuantity?: { decrement?: number }; soldQuantity?: { increment?: number } } }]
+      [
+        {
+          data: {
+            reservedQuantity?: { decrement?: number };
+            soldQuantity?: { increment?: number; decrement?: number };
+          };
+        },
+      ]
     >()
     .mockResolvedValue({});
   const reservationCreate = jest.fn<Promise<unknown>, [unknown]>().mockResolvedValue({});
@@ -143,6 +150,23 @@ describe('FlashSaleService quota', () => {
     expect(data.soldQuantity?.increment).toBe(4);
   });
 
+  it('revert trả suất đã chốt về pool khi đơn bị hủy', async () => {
+    const harness = buildHarness([], 1, [{ id: 3n, flashSaleItemId: 7n, quantity: 4 }]);
+
+    const reverted = await service.revertCommittedQuota(
+      harness.transaction,
+      99n,
+      'Khách hủy đơn',
+      now,
+    );
+
+    expect(reverted).toBe(1);
+    // Trả về pool nghĩa là giảm sold, không phải tăng reserved.
+    const data = harness.itemUpdate.mock.calls[0][0].data;
+    expect(data.soldQuantity?.decrement).toBe(4);
+    expect(data.reservedQuantity).toBeUndefined();
+  });
+
   it('release trả lại quota và ghi lý do', async () => {
     const harness = buildHarness([], 1, [{ id: 3n, flashSaleItemId: 7n, quantity: 4 }]);
 
@@ -151,5 +175,45 @@ describe('FlashSaleService quota', () => {
     expect(released).toBe(1);
     expect(harness.itemUpdate.mock.calls[0][0].data.reservedQuantity?.decrement).toBe(4);
     expect(harness.reservationUpdate.mock.calls[0][0].data.releaseReason).toBe('Khách hủy checkout');
+  });
+});
+
+describe('FlashSaleService resolveActiveDeals', () => {
+  const prisma = { isEnabled: () => true } as unknown as PrismaService;
+  const audit = { write: jest.fn() } as unknown as AuditWriter;
+  const service = new FlashSaleService(prisma, audit);
+  const now = new Date('2026-09-13T10:00:00.000Z');
+
+  function clientWith(items: ItemRow[]) {
+    return {
+      flashSaleItem: { findMany: jest.fn<Promise<ItemRow[]>, [unknown]>().mockResolvedValue(items) },
+    } as unknown as Prisma.TransactionClient;
+  }
+
+  it('bỏ qua suất đã hết chỗ', async () => {
+    const client = clientWith([buildItem({ quota: 5, soldQuantity: 3, reservedQuantity: 2 })]);
+
+    const deals = await service.resolveActiveDeals(client, [42n], now);
+
+    expect(deals.size).toBe(0);
+  });
+
+  it('chọn giá thấp nhất khi một SKU nằm trong nhiều campaign', async () => {
+    const client = clientWith([
+      buildItem({ id: 7n, salePrice: new Prisma.Decimal('1500000.00') }),
+      buildItem({ id: 8n, salePrice: new Prisma.Decimal('1990000.00') }),
+    ]);
+
+    const deals = await service.resolveActiveDeals(client, [42n], now);
+
+    expect(deals.get(42n)?.salePrice.toFixed(2)).toBe('1500000.00');
+  });
+
+  it('trả availableQuantity = quota - sold - reserved', async () => {
+    const client = clientWith([buildItem({ quota: 10, soldQuantity: 2, reservedQuantity: 3 })]);
+
+    const deals = await service.resolveActiveDeals(client, [42n], now);
+
+    expect(deals.get(42n)?.availableQuantity).toBe(5);
   });
 });

@@ -11,6 +11,7 @@ import { Prisma } from '@prisma/client';
 
 import { toEntityId } from '../../common/identifiers/entity-id';
 import { PrismaService } from '../../database/prisma.service';
+import { FlashSaleService } from '../promotion/services/flash-sale.service';
 import { AuditWriter } from '../audit/audit.writer';
 import {
   CHECKOUT_AUDIT_ACTION,
@@ -68,6 +69,7 @@ export class InventoryReservationService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly audit: AuditWriter,
+    private readonly flashSales: FlashSaleService,
   ) {}
 
   async confirm(
@@ -159,6 +161,20 @@ export class InventoryReservationService {
               throw new ConflictException('Inventory changed concurrently; retry with the same key');
             }
           }
+
+          // Quota flash giữ trong CÙNG transaction với tồn kho vật lý: hết suất
+          // thì `reserveQuota` ném 409 và toàn bộ reservation rollback, không có
+          // chuyện giữ được hàng mà mất suất hoặc ngược lại (S6.4).
+          await this.flashSales.reserveQuota(
+            transaction,
+            checkout.id,
+            actor.userId ? `user:${actor.userId}` : `cart:${toEntityId(checkout.cartId)}`,
+            demand.map((item) => ({
+              productVariantId: item.productVariantId,
+              quantity: item.quantity,
+            })),
+            now,
+          );
 
           const expiresAt = new Date(now.getTime() + ttlMinutes * 60_000);
           const reservation = await transaction.inventoryReservation.create({
@@ -303,6 +319,13 @@ export class InventoryReservationService {
               throw new ConflictException('Inventory changed concurrently; retry release');
             }
           }
+          // Trả quota flash cùng lúc với tồn kho; suất đã COMMITTED không bị đụng.
+          await this.flashSales.releaseQuota(
+            transaction,
+            reservation.checkoutSessionId,
+            normalizedReason,
+            now,
+          );
           const updatedReservation = await transaction.inventoryReservation.update({
             where: { id: reservation.id },
             data: {

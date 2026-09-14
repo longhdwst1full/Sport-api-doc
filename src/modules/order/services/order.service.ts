@@ -13,6 +13,7 @@ import { toDatabaseId, toEntityId } from '../../../common/identifiers/entity-id'
 import { PrismaService } from '../../../database/prisma.service';
 import type { AuthPrincipal } from '../../auth/auth.types';
 import { AuditWriter } from '../../audit/audit.writer';
+import { FlashSaleService } from '../../promotion/services/flash-sale.service';
 import { CartService } from '../../cart/cart.service';
 import { CHECKOUT_ITEM_TYPE, CHECKOUT_STATUS, INVENTORY_RESERVATION_STATUS } from '../../checkout/checkout.constants';
 import { ScopeType } from '../../iam/iam.types';
@@ -81,6 +82,7 @@ export class OrderService {
     private readonly carts: CartService,
     private readonly audit: AuditWriter,
     private readonly config: ConfigService,
+    private readonly flashSales: FlashSaleService,
   ) {}
 
   async placeGuest(
@@ -464,6 +466,13 @@ export class OrderService {
           }
         }
         const now = new Date();
+        // Hủy trước khi giao thì trả suất flash về pool cùng lúc với tồn kho.
+        await this.flashSales.revertCommittedQuota(
+          transaction,
+          reservation.checkoutSessionId,
+          command.reason,
+          now,
+        );
         await transaction.inventoryReservation.update({
           where: { id: reservation.id },
           data: {
@@ -842,6 +851,9 @@ export class OrderService {
             },
             include: orderInclude,
           });
+          // Đơn đã đặt = suất flash đã bán. Chốt trong cùng transaction tạo Order
+          // nên không có cửa sổ nào đơn tồn tại mà suất chưa được tính (S6.4).
+          await this.flashSales.commitQuota(transaction, checkout.id, new Date());
           await transaction.checkoutSession.update({
             where: { id: checkout.id },
             data: { status: CHECKOUT_STATUS.COMPLETED, version: { increment: 1 } },

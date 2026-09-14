@@ -7,7 +7,7 @@ import {
 } from './inventory-reservation.service';
 
 describe('InventoryReservationService demand expansion', () => {
-  const service = new InventoryReservationService({} as never, {} as never, {} as never);
+  const service = new InventoryReservationService({} as never, {} as never, {} as never, {} as never);
 
   it('merges standard and bundle component demand by physical SKU', () => {
     const result = service.buildPhysicalDemand([

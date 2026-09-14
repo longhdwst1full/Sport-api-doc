@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@prisma/client';
 import { PrismaService } from '../src/database/prisma.service';
 import { AuditWriter } from '../src/modules/audit/audit.writer';
+import { FlashSaleService } from '../src/modules/promotion/services/flash-sale.service';
 import { CartService } from '../src/modules/cart/cart.service';
 import { OrderService } from '../src/modules/order/services/order.service';
 import { ScopeType } from '../src/modules/iam/iam.types';
@@ -38,6 +39,11 @@ describe('Order placement persistence and idempotency', () => {
     cartService,
     { write: jest.fn().mockResolvedValue({ id: 'test', createdAt: new Date().toISOString() }) } as unknown as AuditWriter,
     { get: jest.fn().mockReturnValue(30) } as unknown as ConfigService,
+    // Không có campaign flash trong kịch bản này: quota là no-op.
+    {
+      commitQuota: jest.fn().mockResolvedValue(0),
+      revertCommittedQuota: jest.fn().mockResolvedValue(0),
+    } as unknown as FlashSaleService,
   );
 
   beforeAll(async () => {

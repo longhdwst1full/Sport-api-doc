@@ -64,6 +64,13 @@ export interface FlashSaleQuotaRequest {
   quantity: number;
 }
 
+export interface ActiveFlashDeal {
+  flashSaleItemId: bigint;
+  salePrice: Prisma.Decimal;
+  availableQuantity: number;
+  perCustomerLimit: number | null;
+}
+
 export interface FlashSaleQuotaGrant {
   flashSaleItemId: bigint;
   productVariantId: bigint;
@@ -430,6 +437,48 @@ export class FlashSaleService {
   // ─── Quota (FLS-03) ────────────────────────────────────────────────────────
 
   /**
+   * Tra suất flash đang hiệu lực cho một nhóm biến thể.
+   *
+   * Dùng ở bước báo giá checkout: giá flash chỉ được áp khi campaign đang chạy
+   * theo giờ server VÀ còn đủ suất. Đây mới là preview — quota thật sự bị giữ ở
+   * `reserveQuota` khi khách xác nhận, nên giữa hai bước vẫn có thể hết suất và
+   * checkout sẽ báo 409 thay vì âm thầm bán quá.
+   */
+  async resolveActiveDeals(
+    client: Prisma.TransactionClient | PrismaService,
+    productVariantIds: readonly bigint[],
+    now: Date,
+  ): Promise<Map<bigint, ActiveFlashDeal>> {
+    const deals = new Map<bigint, ActiveFlashDeal>();
+    if (productVariantIds.length === 0) return deals;
+    const items = await client.flashSaleItem.findMany({
+      where: {
+        productVariantId: { in: [...productVariantIds] },
+        status: FLASH_SALE_ITEM_STATUS.ACTIVE,
+        campaign: {
+          status: FLASH_SALE_CAMPAIGN_STATUS.ACTIVE,
+          startsAt: { lte: now },
+          endsAt: { gt: now },
+        },
+      },
+      orderBy: { salePrice: 'asc' },
+    });
+    for (const item of items) {
+      const available = item.quota - item.soldQuantity - item.reservedQuantity;
+      if (available <= 0) continue;
+      // Nhiều campaign cùng chạy cho một SKU: lấy giá thấp nhất (đã sắp asc).
+      if (deals.has(item.productVariantId)) continue;
+      deals.set(item.productVariantId, {
+        flashSaleItemId: item.id,
+        salePrice: item.salePrice,
+        availableQuantity: available,
+        perCustomerLimit: item.perCustomerLimit,
+      });
+    }
+    return deals;
+  }
+
+  /**
    * Giữ quota flash cho một checkout session.
    *
    * QUAN TRỌNG: hàm này nhận sẵn `transaction` từ checkout để quota và tồn kho
@@ -568,6 +617,40 @@ export class FlashSaleService {
         data: {
           status: FLASH_SALE_QUOTA_STATUS.COMMITTED,
           committedAt: now,
+          version: { increment: 1 },
+        },
+      });
+    }
+    return reservations.length;
+  }
+
+  /**
+   * Hoàn quota đã chốt khi đơn bị hủy trước lúc giao.
+   *
+   * Suất flash tính theo "đã bán", nên đơn hủy phải trả suất về pool; nếu không,
+   * mỗi lần khách đặt rồi hủy là mất vĩnh viễn một suất của chương trình.
+   */
+  async revertCommittedQuota(
+    transaction: Prisma.TransactionClient,
+    checkoutSessionId: bigint,
+    reason: string,
+    now: Date,
+  ): Promise<number> {
+    const reservations = await transaction.flashSaleQuotaReservation.findMany({
+      where: { checkoutSessionId, status: FLASH_SALE_QUOTA_STATUS.COMMITTED },
+      orderBy: { id: 'asc' },
+    });
+    for (const reservation of reservations) {
+      await transaction.flashSaleItem.update({
+        where: { id: reservation.flashSaleItemId },
+        data: { soldQuantity: { decrement: reservation.quantity }, version: { increment: 1 } },
+      });
+      await transaction.flashSaleQuotaReservation.update({
+        where: { id: reservation.id },
+        data: {
+          status: FLASH_SALE_QUOTA_STATUS.RELEASED,
+          releasedAt: now,
+          releaseReason: reason,
           version: { increment: 1 },
         },
       });
