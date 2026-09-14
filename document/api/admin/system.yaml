@@ -25,6 +25,240 @@ paths:
       summary: List V1 business modules and models
       tags:
         - Admin System
+  /api/v1/admin/system/parameters:
+    get:
+      operationId: listAdminSystemParameters
+      parameters:
+        - name: page
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            default: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 20
+            type: number
+        - name: groupCode
+          required: false
+          in: query
+          schema:
+            type: string
+            enum:
+              - SHIPPING
+              - CHECKOUT
+              - ORDER
+              - PAYMENT
+              - CART
+              - PROMOTION
+        - name: search
+          required: false
+          in: query
+          description: Tìm theo mã hoặc nhãn tham số
+          schema:
+            maxLength: 100
+            type: string
+        - name: status
+          required: false
+          in: query
+          schema:
+            type: string
+            enum:
+              - ACTIVE
+              - INACTIVE
+        - name: isSystem
+          required: false
+          in: query
+          description: Chỉ lấy tham số hệ thống hoặc tham số tuỳ biến
+          schema:
+            type: boolean
+        - name: sortBy
+          required: false
+          in: query
+          description: Trường sắp xếp; kèm `sortDirection` để đổi chiều
+          schema:
+            default: sortOrder
+            type: string
+            enum:
+              - id
+              - code
+              - groupCode
+              - sortOrder
+              - updatedAt
+        - name: sortDirection
+          required: false
+          in: query
+          schema:
+            default: asc
+            type: string
+            enum:
+              - asc
+              - desc
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemParameterListDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Danh sách tham số nghiệp vụ cấu hình được từ Admin
+      tags:
+        - Admin System
+    post:
+      operationId: createAdminSystemParameter
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSystemParameterDto"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemParameterDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Tạo tham số tuỳ biến; code không tham chiếu nên chỉ dùng để lưu giá trị vận hành
+      tags:
+        - Admin System
+  /api/v1/admin/system/parameters/{code}:
+    patch:
+      operationId: updateAdminSystemParameter
+      parameters:
+        - name: code
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSystemParameterDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemParameterDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Cập nhật giá trị tham số; có hiệu lực ngay, không cần deploy
+      tags:
+        - Admin System
+    delete:
+      operationId: deleteAdminSystemParameter
+      parameters:
+        - name: code
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeleteSystemParameterDto"
+      responses:
+        "204":
+          description: ""
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Ngừng dùng tham số tuỳ biến (xoá mềm); tham số hệ thống không xoá được
+      tags:
+        - Admin System
 components:
   schemas:
     SystemModuleListDto:
@@ -48,6 +282,224 @@ components:
         - totalModels
         - p0Models
         - p1Models
+    SystemParameterListDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SystemParameterDto"
+        page:
+          type: number
+        limit:
+          type: number
+        total:
+          type: number
+      required:
+        - items
+        - page
+        - limit
+        - total
+    ErrorResponseDto:
+      type: object
+      properties:
+        statusCode:
+          type: number
+          example: 400
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: Dữ liệu gửi lên không hợp lệ.
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorDetailDto"
+        path:
+          type: string
+          example: /api/v1/catalog/products
+        method:
+          type: string
+          example: POST
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+      required:
+        - statusCode
+        - code
+        - message
+        - path
+        - method
+        - timestamp
+    CreateSystemParameterDto:
+      type: object
+      properties:
+        code:
+          type: string
+          pattern: ^[A-Z][A-Z0-9_]*$
+          maxLength: 64
+          description: Mã viết hoa, dùng gạch dưới
+        groupCode:
+          type: string
+          enum:
+            - SHIPPING
+            - CHECKOUT
+            - ORDER
+            - PAYMENT
+            - CART
+            - PROMOTION
+        label:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        valueType:
+          type: string
+          enum:
+            - INTEGER
+            - DECIMAL
+            - BOOLEAN
+            - STRING
+        value:
+          type: string
+          maxLength: 500
+        minValue:
+          type: number
+          nullable: true
+        maxValue:
+          type: number
+          nullable: true
+        unit:
+          type: string
+          maxLength: 32
+        isPublic:
+          type: boolean
+          default: false
+          description: Cho phép Storefront đọc qua API công khai
+        remarks:
+          type: string
+          maxLength: 500
+      required:
+        - code
+        - groupCode
+        - label
+        - valueType
+        - value
+    SystemParameterDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        code:
+          type: string
+          description: Mã ổn định dùng trong code; không đổi được từ giao diện
+        groupCode:
+          type: string
+          enum:
+            - SHIPPING
+            - CHECKOUT
+            - ORDER
+            - PAYMENT
+            - CART
+            - PROMOTION
+        label:
+          type: string
+        description:
+          type: string
+          nullable: true
+        valueType:
+          type: string
+          enum:
+            - INTEGER
+            - DECIMAL
+            - BOOLEAN
+            - STRING
+        value:
+          type: string
+          description: Giá trị đang áp dụng, luôn ở dạng chuỗi
+        defaultValue:
+          type: string
+          description: Giá trị mặc định khi chưa cấu hình hoặc giá trị hỏng
+        minValue:
+          type: number
+          nullable: true
+        maxValue:
+          type: number
+          nullable: true
+        unit:
+          type: string
+          nullable: true
+        status:
+          type: string
+        isPublic:
+          type: boolean
+          description: Storefront được phép đọc tham số này qua API công khai
+        isSystem:
+          type: boolean
+          description: "Tham số hệ thống: code đang đọc theo mã, chỉ sửa được giá trị"
+        remarks:
+          type: string
+          nullable: true
+          description: Ghi chú của lần sửa gần nhất
+        version:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+        updatedBy:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+          nullable: true
+      required:
+        - id
+        - code
+        - groupCode
+        - label
+        - valueType
+        - value
+        - defaultValue
+        - status
+        - isPublic
+        - isSystem
+        - version
+        - updatedAt
+    UpdateSystemParameterDto:
+      type: object
+      properties:
+        expectedVersion:
+          type: string
+          pattern: ^\d+$
+        value:
+          type: string
+          description: Giá trị mới ở dạng chuỗi; server kiểm tra kiểu và khoảng hợp lệ
+        reason:
+          type: string
+          minLength: 5
+          maxLength: 500
+          description: Lý do thay đổi, bắt buộc để truy vết
+      required:
+        - expectedVersion
+        - value
+        - reason
+    DeleteSystemParameterDto:
+      type: object
+      properties:
+        expectedVersion:
+          type: string
+          pattern: ^\d+$
+        reason:
+          type: string
+          minLength: 5
+          maxLength: 500
+      required:
+        - expectedVersion
+        - reason
     SystemModuleDto:
       type: object
       properties:
@@ -75,6 +527,21 @@ components:
         - tables
         - p0Count
         - p1Count
+    ErrorDetailDto:
+      type: object
+      properties:
+        field:
+          type: string
+          example: name
+        code:
+          type: string
+          example: INVALID_VALUE
+        message:
+          type: string
+          example: 'Trường "name": Trường này không được để trống.'
+      required:
+        - code
+        - message
   securitySchemes:
     bearer:
       scheme: bearer

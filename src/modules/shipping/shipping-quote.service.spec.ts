@@ -4,6 +4,8 @@ import { ConfigService } from '@nestjs/config';
 import { GhnRateProvider } from './providers/ghn-rate.provider';
 import { GhtkRateProvider } from './providers/ghtk-rate.provider';
 import { ShippingQuoteService } from './shipping-quote.service';
+import { SYSTEM_PARAMETER_CODE } from '../system/parameters/system-parameter.catalog';
+import { SystemParameterService } from '../system/parameters/system-parameter.service';
 
 describe('ShippingQuoteService', () => {
   const findBranch = jest.fn();
@@ -13,12 +15,31 @@ describe('ShippingQuoteService', () => {
     shippingRate: { findMany: findRates },
   } as unknown as PrismaService;
   const config = { getOrThrow: jest.fn().mockReturnValue(10) } as unknown as ConfigService;
+
+/** Biểu phí mặc định — khớp `SYSTEM_PARAMETER_CATALOG`, không rải literal trong từng case. */
+const PARAMETER_DEFAULTS: Record<string, number> = {
+  [SYSTEM_PARAMETER_CODE.SHIPPING_FREE_RADIUS_KM]: 10,
+  [SYSTEM_PARAMETER_CODE.SHIPPING_SMALL_MAX_WEIGHT_GRAMS]: 5_000,
+  [SYSTEM_PARAMETER_CODE.SHIPPING_MEDIUM_MAX_WEIGHT_GRAMS]: 20_000,
+  [SYSTEM_PARAMETER_CODE.SHIPPING_SMALL_FEE_VND]: 50_000,
+  [SYSTEM_PARAMETER_CODE.SHIPPING_MEDIUM_FEE_VND]: 100_000,
+  [SYSTEM_PARAMETER_CODE.SHIPPING_LARGE_FEE_VND]: 200_000,
+};
+
+function parameterServiceDouble(overrides: Record<string, number> = {}) {
+  return {
+    getInteger: jest.fn(
+      (code: string) => Promise.resolve(overrides[code] ?? PARAMETER_DEFAULTS[code]),
+    ),
+  } as unknown as SystemParameterService;
+}
   const disabledProvider = { isEnabled: () => false, canQuote: () => false };
   const service = new ShippingQuoteService(
     prisma,
     config,
     disabledProvider as unknown as GhnRateProvider,
     disabledProvider as unknown as GhtkRateProvider,
+    parameterServiceDouble(),
   );
 
   beforeEach(() => jest.clearAllMocks());
@@ -92,22 +113,12 @@ describe('ShippingQuoteService', () => {
   ])('uses the configured internal default fee for %i grams', async (weightGrams, fee) => {
     findBranch.mockResolvedValue({ id: 2n });
     findRates.mockResolvedValue([]);
-    const tierConfig = {
-      getOrThrow: jest.fn().mockImplementation((key: string) => key === 'app.shipping.freeRadiusKm'
-        ? 10
-        : {
-            smallMaxWeightGrams: 5_000,
-            mediumMaxWeightGrams: 20_000,
-            smallFeeVnd: 50_000,
-            mediumFeeVnd: 100_000,
-            largeFeeVnd: 200_000,
-          }),
-    } as unknown as ConfigService;
     const tierService = new ShippingQuoteService(
       prisma,
-      tierConfig,
+      config,
       disabledProvider as unknown as GhnRateProvider,
       disabledProvider as unknown as GhtkRateProvider,
+      parameterServiceDouble(),
     );
 
     await expect(tierService.quoteCandidate({

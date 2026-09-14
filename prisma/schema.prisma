@@ -115,6 +115,8 @@ model User {
 
   flashSaleCampaignsCreated FlashSaleCampaign[] @relation("FlashSaleCampaignCreator")
   flashSaleCampaignsUpdated FlashSaleCampaign[] @relation("FlashSaleCampaignUpdater")
+  systemParametersCreated   SystemParameter[]   @relation("SystemParameterCreator")
+  systemParametersUpdated   SystemParameter[]   @relation("SystemParameterUpdater")
   moderatedReviews          ProductReview[]            @relation("ProductReviewModerator")
   reviewComments            ProductReviewComment[]     @relation("ProductReviewCommentAuthor")
 
@@ -1356,4 +1358,37 @@ model ProductReviewComment {
   @@index([productReviewId, createdAt])
   @@index([authorUserId])
   @@map("product_review_comments")
+}
+
+model SystemParameter {
+  id           BigInt   @id @default(autoincrement())
+  code         String   @unique @db.VarChar(64)
+  groupCode    String   @map("group_code") @db.VarChar(32)
+  label        String   @db.VarChar(255)
+  description  String?
+  valueType    String   @map("value_type") @db.VarChar(16)
+  value        String
+  defaultValue String   @map("default_value")
+  minValue     Decimal? @map("min_value") @db.Decimal(19, 2)
+  maxValue     Decimal? @map("max_value") @db.Decimal(19, 2)
+  unit         String?  @db.VarChar(32)
+  sortOrder    Int      @default(0) @map("sort_order")
+  status       String   @default("ACTIVE") @db.VarChar(24)
+  isPublic     Boolean  @default(false) @map("is_public")
+  isSystem     Boolean  @default(false) @map("is_system")
+  remarks      String?  @db.VarChar(500)
+  version      BigInt   @default(0)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy    BigInt?  @map("created_by")
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy    BigInt?  @map("updated_by")
+
+  creator User? @relation("SystemParameterCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  updater User? @relation("SystemParameterUpdater", fields: [updatedBy], references: [id], onDelete: Restrict)
+
+  @@index([groupCode, sortOrder])
+  @@index([status])
+  @@index([isPublic])
+  @@index([isSystem])
+  @@map("system_parameters")
 }

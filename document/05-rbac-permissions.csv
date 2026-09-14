@@ -22,6 +22,8 @@ catalog.review.moderate,Catalog,moderate,GLOBAL;BRANCH,true,Content Moderator,
 catalog.review.reply,Catalog,reply,GLOBAL;BRANCH;OWN,true,Content Moderator; Customer Service; Customer,OWN chỉ review của customer
 catalog.price.view,Pricing,view,GLOBAL;BRANCH,false,Pricing Manager; Catalog Manager; Order Operator,
 catalog.price.manage,Pricing,manage,GLOBAL,true,Pricing Manager,Giá nhạy cảm có threshold approval
+system.parameter.view,System,view,GLOBAL,false,Owner; System Admin,
+system.parameter.manage,System,manage,GLOBAL,true,Owner; System Admin,Ngưỡng nghiệp vụ; bí mật và cấu hình hạ tầng vẫn ở env
 catalog.flash_sale.view,Pricing,view,GLOBAL;BRANCH,false,Marketing Manager; Pricing Manager,
 catalog.flash_sale.manage,Pricing,manage,GLOBAL,true,Marketing Manager; Pricing Manager,Schedule/quota change phải audit
 inventory.stock.view,Inventory,view,GLOBAL;BRANCH;WAREHOUSE,false,Inventory Manager; Warehouse Operator; Order Operator,

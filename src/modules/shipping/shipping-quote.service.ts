@@ -3,6 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { toDatabaseId, toEntityId } from '../../common/identifiers/entity-id';
 import { PrismaService } from '../../database/prisma.service';
+import { SYSTEM_PARAMETER_CODE } from '../system/parameters/system-parameter.catalog';
+import { SystemParameterService } from '../system/parameters/system-parameter.service';
 import { SHIPPING_CURRENCY, SHIPPING_METHOD, SHIPPING_RULE_STATUS } from './shipping.constants';
 import { ShippingQuoteDto, ShippingQuoteRequestDto } from './shipping-quote.dto';
 import { GhnRateProvider } from './providers/ghn-rate.provider';
@@ -34,10 +36,13 @@ export class ShippingQuoteService {
     private readonly config: ConfigService,
     private readonly ghn: GhnRateProvider,
     private readonly ghtk: GhtkRateProvider,
+    private readonly parameters: SystemParameterService,
   ) {}
 
   async quoteCandidate(input: DeliveryQuoteCandidateInput): Promise<DeliveryQuoteOption> {
-    const freeRadiusKm = this.config.getOrThrow<number>('app.shipping.freeRadiusKm');
+    const freeRadiusKm = await this.parameters.getInteger(
+      SYSTEM_PARAMETER_CODE.SHIPPING_FREE_RADIUS_KM,
+    );
     if (input.distanceKm !== null && input.distanceKm <= freeRadiusKm) {
       return {
         method: SHIPPING_METHOD.BRANCH_FREE,
@@ -87,18 +92,21 @@ export class ShippingQuoteService {
         requiresConsultation: false,
       };
     } catch {
-      const rates = this.config.getOrThrow<{
-        smallMaxWeightGrams: number;
-        mediumMaxWeightGrams: number;
-        smallFeeVnd: number;
-        mediumFeeVnd: number;
-        largeFeeVnd: number;
-      }>('app.shipping.defaultRates');
-      const fee = input.package.weightGrams <= rates.smallMaxWeightGrams
-        ? rates.smallFeeVnd
-        : input.package.weightGrams <= rates.mediumMaxWeightGrams
-          ? rates.mediumFeeVnd
-          : rates.largeFeeVnd;
+      // Biểu phí đọc từ bảng tham số để vận hành đổi được mà không cần deploy;
+      // thiếu bản ghi thì service tự rơi về mặc định trong catalog.
+      const [smallMaxWeightGrams, mediumMaxWeightGrams, smallFeeVnd, mediumFeeVnd, largeFeeVnd] =
+        await Promise.all([
+          this.parameters.getInteger(SYSTEM_PARAMETER_CODE.SHIPPING_SMALL_MAX_WEIGHT_GRAMS),
+          this.parameters.getInteger(SYSTEM_PARAMETER_CODE.SHIPPING_MEDIUM_MAX_WEIGHT_GRAMS),
+          this.parameters.getInteger(SYSTEM_PARAMETER_CODE.SHIPPING_SMALL_FEE_VND),
+          this.parameters.getInteger(SYSTEM_PARAMETER_CODE.SHIPPING_MEDIUM_FEE_VND),
+          this.parameters.getInteger(SYSTEM_PARAMETER_CODE.SHIPPING_LARGE_FEE_VND),
+        ]);
+      const fee = input.package.weightGrams <= smallMaxWeightGrams
+        ? smallFeeVnd
+        : input.package.weightGrams <= mediumMaxWeightGrams
+          ? mediumFeeVnd
+          : largeFeeVnd;
       return {
         method: SHIPPING_METHOD.STANDARD_DELIVERY,
         provider: 'INTERNAL',

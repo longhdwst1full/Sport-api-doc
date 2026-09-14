@@ -6,7 +6,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { toDatabaseId, toEntityId, toOptionalDatabaseId } from '../../../common/identifiers/entity-id';
+import { toActorDatabaseId, toDatabaseId, toEntityId } from '../../../common/identifiers/entity-id';
 import { MutationContext } from '../../../common/request/request-context';
 import { PrismaService } from '../../../database/prisma.service';
 import { AuditWriter } from '../../audit/audit.writer';
@@ -184,7 +184,7 @@ export class FlashSaleService {
     if (endsAt <= startsAt) {
       throw new BadRequestException('Thời điểm kết thúc phải sau thời điểm bắt đầu');
     }
-    const actorId = toOptionalDatabaseId(context.actorUserId);
+    const actorId = toActorDatabaseId(context.actorUserId);
 
     const created = await this.prisma.$transaction(async (transaction) => {
       const campaign = await transaction.flashSaleCampaign.create({
@@ -247,7 +247,7 @@ export class FlashSaleService {
           description: input.description ?? campaign.description,
           startsAt,
           endsAt,
-          updatedBy: toOptionalDatabaseId(context.actorUserId),
+          updatedBy: toActorDatabaseId(context.actorUserId),
           version: { increment: 1 },
         },
       });
@@ -297,7 +297,7 @@ export class FlashSaleService {
         where: { id: campaignId },
         data: {
           status: input.status,
-          updatedBy: toOptionalDatabaseId(context.actorUserId),
+          updatedBy: toActorDatabaseId(context.actorUserId),
           version: { increment: 1 },
         },
       });

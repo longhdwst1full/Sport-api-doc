@@ -1,0 +1,131 @@
+# Generated from NestJS decorators. Do not edit by hand.
+openapi: 3.0.0
+info:
+  title: DCTD-UTC Commerce API
+  description: Contract for storefront and admin applications
+  version: 1.0.0
+  contact: {}
+servers:
+  - url: http://localhost:4000
+    description: Local
+paths:
+  /api/v1/system/parameters/public:
+    get:
+      operationId: listPublicSystemParameters
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemParameterListDto"
+      summary: Tham số được phép công khai, ví dụ biểu phí giao hàng hiển thị ở trang chính sách
+      tags:
+        - Storefront System
+components:
+  schemas:
+    SystemParameterListDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SystemParameterDto"
+        page:
+          type: number
+        limit:
+          type: number
+        total:
+          type: number
+      required:
+        - items
+        - page
+        - limit
+        - total
+    SystemParameterDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        code:
+          type: string
+          description: Mã ổn định dùng trong code; không đổi được từ giao diện
+        groupCode:
+          type: string
+          enum:
+            - SHIPPING
+            - CHECKOUT
+            - ORDER
+            - PAYMENT
+            - CART
+            - PROMOTION
+        label:
+          type: string
+        description:
+          type: string
+          nullable: true
+        valueType:
+          type: string
+          enum:
+            - INTEGER
+            - DECIMAL
+            - BOOLEAN
+            - STRING
+        value:
+          type: string
+          description: Giá trị đang áp dụng, luôn ở dạng chuỗi
+        defaultValue:
+          type: string
+          description: Giá trị mặc định khi chưa cấu hình hoặc giá trị hỏng
+        minValue:
+          type: number
+          nullable: true
+        maxValue:
+          type: number
+          nullable: true
+        unit:
+          type: string
+          nullable: true
+        status:
+          type: string
+        isPublic:
+          type: boolean
+          description: Storefront được phép đọc tham số này qua API công khai
+        isSystem:
+          type: boolean
+          description: "Tham số hệ thống: code đang đọc theo mã, chỉ sửa được giá trị"
+        remarks:
+          type: string
+          nullable: true
+          description: Ghi chú của lần sửa gần nhất
+        version:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+        updatedBy:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+          nullable: true
+      required:
+        - id
+        - code
+        - groupCode
+        - label
+        - valueType
+        - value
+        - defaultValue
+        - status
+        - isPublic
+        - isSystem
+        - version
+        - updatedAt
+  securitySchemes:
+    bearer:
+      scheme: bearer
+      bearerFormat: JWT
+      type: http

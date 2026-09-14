@@ -50,7 +50,9 @@ Biến checkout đã `CONFIRMED` và reservation `ACTIVE` thành đơn hàng có
 | `fulfillments` | Fulfillment | Một fulfillment/order/warehouse | warehouse phải bằng warehouse snapshot của order |
 | `fulfillment_status_history` | Fulfillment | Append-only operation timeline | transition tuần tự và có actor/reason |
 
-Không thêm bảng `system_settings`; TTL/hold/timeout kỹ thuật dùng env đã validate theo D45. Không có `deleted_at`; transaction/history dùng cancel/reverse/terminal status.
+~~Không thêm bảng `system_settings`; TTL/hold/timeout kỹ thuật dùng env đã validate theo D45.~~
+
+**D45 đã bị đảo ngày 2026-09-14.** Env chỉ đổi được bằng redeploy nên vận hành không tự cập nhật được biểu phí và các ngưỡng nghiệp vụ. Bảng `system_parameters` thay thế cho nhóm ngưỡng nghiệp vụ; bí mật và cấu hình hạ tầng vẫn ở env. Xem `src/modules/system/parameters/README.md`. Không có `deleted_at`; transaction/history dùng cancel/reverse/terminal status.
 
 ## 4. Transaction và lock order
 

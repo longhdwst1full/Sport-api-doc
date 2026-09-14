@@ -37,6 +37,23 @@ export function toOptionalDatabaseId(value: string | null | undefined): bigint |
   return value === undefined ? undefined : toDatabaseId(value);
 }
 
+/**
+ * ID người thực hiện để ghi vào cột `created_by`/`updated_by`.
+ *
+ * Khác `toOptionalDatabaseId`: actor không phải lúc nào cũng là một user trong
+ * database — system principal của worker và principal giả lập khi bật
+ * `AUTH_BYPASS` đều không có ID dạng số. Trong các trường hợp đó trả `undefined`
+ * để cột FK bỏ trống, thay vì ném 400 và chặn cả nghiệp vụ hợp lệ.
+ *
+ * Chỉ dùng cho cột actor. ID nghiệp vụ vẫn phải qua `toDatabaseId` để sai định
+ * dạng là bị chặn ngay.
+ */
+export function toActorDatabaseId(value: string | null | undefined): bigint | undefined {
+  if (value === null || value === undefined) return undefined;
+  const normalized = value.trim();
+  return ENTITY_ID_PATTERN.test(normalized) ? BigInt(normalized) : undefined;
+}
+
 export function toEntityId(value: bigint | number | string): string {
   return String(value);
 }

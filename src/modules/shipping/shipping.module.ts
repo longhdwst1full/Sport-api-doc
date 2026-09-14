@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { SystemModule } from '../system/system.module';
 import { ShippingPartnerModule } from '../../integrations/shipping-partner/shipping-partner.module';
 import { ManualShippingProvider } from './providers/manual-shipping.provider';
 import { PartnerShippingProvider } from './providers/partner-shipping.provider';
@@ -8,7 +9,7 @@ import { GhnRateProvider } from './providers/ghn-rate.provider';
 import { GhtkRateProvider } from './providers/ghtk-rate.provider';
 
 @Module({
-  imports: [ShippingPartnerModule],
+  imports: [ShippingPartnerModule, SystemModule],
   controllers: [ShippingQuoteController],
   providers: [
     ManualShippingProvider,
