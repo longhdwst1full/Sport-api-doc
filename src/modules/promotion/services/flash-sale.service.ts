@@ -658,36 +658,8 @@ export class FlashSaleService {
     return reservations.length;
   }
 
-  /** Worker dọn quota quá hạn mà checkout bỏ dở. */
-  async expireStaleQuota(now: Date, limit = 100): Promise<number> {
-    this.ensurePersistence();
-    const stale = await this.prisma.flashSaleQuotaReservation.findMany({
-      where: { status: FLASH_SALE_QUOTA_STATUS.ACTIVE, expiresAt: { lte: now } },
-      orderBy: { id: 'asc' },
-      take: limit,
-    });
-    let expired = 0;
-    for (const reservation of stale) {
-      await this.prisma.$transaction(async (transaction) => {
-        const claimed = await transaction.flashSaleQuotaReservation.updateMany({
-          where: { id: reservation.id, status: FLASH_SALE_QUOTA_STATUS.ACTIVE },
-          data: {
-            status: FLASH_SALE_QUOTA_STATUS.EXPIRED,
-            releasedAt: now,
-            releaseReason: 'Hết hạn giữ suất flash sale',
-            version: { increment: 1 },
-          },
-        });
-        if (claimed.count === 0) return;
-        await transaction.flashSaleItem.update({
-          where: { id: reservation.flashSaleItemId },
-          data: { reservedQuantity: { decrement: reservation.quantity }, version: { increment: 1 } },
-        });
-        expired += 1;
-      });
-    }
-    return expired;
-  }
+  // Dọn quota quá hạn nằm ở `FlashSaleQuotaExpiryService`: worker cần SKIP LOCKED
+  // và batch có giới hạn để nhiều instance chạy song song không claim trùng.
 
   // ─── Helpers ───────────────────────────────────────────────────────────────
 

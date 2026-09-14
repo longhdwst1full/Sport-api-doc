@@ -161,6 +161,97 @@ export class CartService {
     return (await this.getOrCreateAccountRow(userId)).id;
   }
 
+  /**
+   * Gộp giỏ khách vãng lai vào giỏ tài khoản, gọi ngay sau khi đăng nhập/đăng ký
+   * thành công trên cùng trình duyệt.
+   *
+   * Vì sao cần: khách duyệt web, bỏ hàng vào giỏ, rồi mới tạo tài khoản để thanh
+   * toán. Không gộp thì toàn bộ giỏ vừa chọn biến mất ngay lúc đăng nhập.
+   *
+   * Quy tắc gộp — cùng một biến thể xuất hiện ở cả hai giỏ thì **cộng số lượng**,
+   * không ghi đè. Khách đã chủ động chọn ở cả hai phiên; lấy số lớn hơn hay ghi
+   * đè đều làm mất ý định của khách. Tồn kho được kiểm tra lại ở bước checkout,
+   * không chặn ở đây.
+   *
+   * Idempotent: giỏ khách vãng lai chuyển `CONVERTED` sau khi gộp nên gọi lại
+   * bằng cùng token sẽ không cộng thêm lần nữa.
+   */
+  async mergeGuestCartIntoAccount(rawToken: string, userId: string): Promise<CartDto> {
+    this.ensurePersistence();
+    const trimmed = rawToken.trim();
+    const accountCartId = await this.resolveAccountCartId(userId);
+    // Không có token thì coi như không có gì để gộp — trả giỏ tài khoản hiện tại.
+    if (!trimmed) return this.toDto(await this.getOrCreateAccountRow(userId));
+
+    return this.prisma.$transaction(async (transaction) => {
+      const guest = await transaction.cart.findFirst({
+        where: {
+          anonymousTokenHash: this.hashToken(trimmed),
+          status: CART_STATUS.ACTIVE,
+          userId: null,
+        },
+        include: { items: true },
+      });
+      // Token sai, hết hạn, hoặc giỏ đã gộp rồi: không phải lỗi, chỉ là không có gì để làm.
+      if (!guest || guest.items.length === 0) {
+        if (guest) await this.markGuestConverted(transaction, guest.id);
+        return this.toDto(await this.findById(transaction, accountCartId));
+      }
+
+      const accountItems = await transaction.cartItem.findMany({ where: { cartId: accountCartId } });
+      const existingByVariant = new Map(
+        accountItems.map((item) => [item.productVariantId, item]),
+      );
+
+      for (const item of guest.items) {
+        const existing = existingByVariant.get(item.productVariantId);
+        if (existing) {
+          await transaction.cartItem.update({
+            where: { id: existing.id },
+            data: {
+              quantity: existing.quantity + item.quantity,
+              priceSeenAt: new Date(),
+              version: { increment: 1 },
+            },
+          });
+          continue;
+        }
+        await transaction.cartItem.create({
+          data: {
+            cartId: accountCartId,
+            productVariantId: item.productVariantId,
+            quantity: item.quantity,
+            priceSeenAt: new Date(),
+            unitPricePreview: item.unitPricePreview,
+          },
+        });
+      }
+
+      await this.markGuestConverted(transaction, guest.id);
+      await transaction.cart.update({
+        where: { id: accountCartId },
+        data: { version: { increment: 1 } },
+      });
+      return this.toDto(await this.findById(transaction, accountCartId));
+    });
+  }
+
+  /**
+   * Đóng giỏ khách vãng lai sau khi gộp.
+   *
+   * Dùng `CONVERTED` chứ không xoá: giỏ là dữ liệu có lịch sử, và trạng thái này
+   * làm cho việc gọi gộp lần hai trở thành no-op thay vì cộng dồn lần nữa.
+   */
+  private async markGuestConverted(
+    transaction: Prisma.TransactionClient,
+    guestCartId: bigint,
+  ): Promise<void> {
+    await transaction.cart.update({
+      where: { id: guestCartId },
+      data: { status: CART_STATUS.CONVERTED, version: { increment: 1 } },
+    });
+  }
+
   private async setItem(
     cartId: bigint,
     variantId: string,

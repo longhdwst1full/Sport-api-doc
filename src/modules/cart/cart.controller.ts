@@ -102,6 +102,23 @@ export class AccountCartController {
     return this.carts.getOrCreateAccount(getAuthPrincipal(request).userId);
   }
 
+  @Post('merge-guest')
+  @ApiOperation({
+    operationId: 'mergeGuestCartIntoAccount',
+    summary: 'Gộp giỏ khách vãng lai của cùng trình duyệt vào giỏ tài khoản sau khi đăng nhập',
+  })
+  @ApiHeader({ name: CART_HEADER.GUEST_TOKEN, required: false })
+  @ApiOkResponse({ type: CartDto })
+  mergeGuest(
+    @Req() request: AuthenticatedRequest,
+    @Headers(CART_HEADER.GUEST_TOKEN) guestToken: string | undefined,
+  ): Promise<CartDto> {
+    return this.carts.mergeGuestCartIntoAccount(
+      guestToken ?? '',
+      getAuthPrincipal(request).userId,
+    );
+  }
+
   @Post('items')
   @ApiOperation({ operationId: 'setAccountCartItem', summary: 'Set quantity for a variant in the account cart' })
   @ApiOkResponse({ type: CartDto })

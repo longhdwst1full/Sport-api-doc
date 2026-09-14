@@ -4701,6 +4701,27 @@ paths:
       summary: Get or create the signed-in customer cart
       tags:
         - Storefront Account Cart
+  /api/v1/account/cart/merge-guest:
+    post:
+      operationId: mergeGuestCartIntoAccount
+      parameters:
+        - name: x-cart-token
+          in: header
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CartDto"
+      security:
+        - bearer: []
+      summary: Gộp giỏ khách vãng lai của cùng trình duyệt vào giỏ tài khoản sau khi đăng nhập
+      tags:
+        - Storefront Account Cart
   /api/v1/account/cart/items:
     post:
       operationId: setAccountCartItem

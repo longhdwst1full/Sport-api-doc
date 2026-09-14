@@ -1,10 +1,10 @@
 # Sprint 6 — Return, Refund & Flash Sale execution plan
 
-> **Document version:** 1.0.0
+> **Document version:** 1.1.0
 >
-> **Last updated:** 2026-09-13
+> **Last updated:** 2026-09-14
 >
-> **Change summary:** Mở Sprint 6 theo dependency Return → Inspection/Restock → Refund, sau đó mới Flash quota.
+> **Change summary:** S6.4 Flash Sale đã hoàn thành; chốt 5 decision gate thành D54–D58; S6.1–S6.3 sẵn sàng migration.
 
 ## 1. Mục tiêu và thứ tự
 
@@ -13,7 +13,7 @@ Sprint 6 không tạo đồng loạt bảng. Triển khai theo bốn wave có mi
 1. `S6.1 Return policy/request`: eligibility, partial line return, combo nguyên bộ, evidence và review.
 2. `S6.2 Receive/inspection`: nhận đúng warehouse xuất, phân loại `SELLABLE/DAMAGED`, chỉ restock quantity hợp lệ.
 3. `S6.3 Refund`: amount hợp lệ, approval/execution actor, external reference và audit.
-4. `S6.4 Flash Sale`: campaign/item/quota reservation; tích hợp checkout sau khi flow bán thường đã ổn định.
+4. ~~`S6.4 Flash Sale`~~ — **ĐÃ XONG 2026-09-14.** Campaign/item/quota reservation, chống oversell bằng compare-and-set, đã nối checkout/order/cancel. Worker dọn quota quá hạn đã hoàn thành 2026-09-14 — xem `34-flash-sale-quota-expiry-runbook.md`.
 
 ## 2. Baseline đã chốt từ các Sprint trước
 
@@ -63,24 +63,44 @@ Flash quota không thay thế physical inventory reservation. Checkout phải gi
 
 Nest DTO/controller là contract producer; sau mỗi wave: generate OpenAPI → sync/regenerate Admin/Client → ghép UI. Không sửa `src/generated/api` thủ công.
 
-## 5. Decision gates trước migration S6.1/S6.3
+## 5. Decision gates — ĐÃ CHỐT 2026-09-14
 
-Các điểm sau ảnh hưởng trực tiếp constraint, permission và state machine nên chưa tự quyết:
+Ghi vào Decision Log `08-open-decisions.csv` là D54–D58.
 
-1. Cửa sổ đổi trả V1 tính từ `DELIVERED` là bao nhiêu ngày và có loại trừ nhóm sản phẩm nào?
-2. Guest có được tự tạo return bằng `orderNo + guest token`, hay V1 chỉ Account/Admin tạo sau khi xác minh qua điện thoại?
-3. Refund có bắt buộc maker-checker hai người không; vai trò nào request, approve và execute?
-4. Phí giao ban đầu có được hoàn hay mặc định chỉ hoàn giá trị item được duyệt?
-5. Refund COD/Bank transfer sẽ được nhân viên chuyển khoản thủ công và nhập `external_ref`, hay có thêm hoàn tiền mặt tại cửa hàng?
+| ID | Quyết định |
+| --- | --- |
+| D54 | Cửa sổ đổi trả **7 ngày** từ `DELIVERED`. Nhóm hàng loại trừ đặt bằng cờ `returnable` ở cấp **Category** để Admin tự bật/tắt, không hardcode |
+| D55 | V1 **chỉ Account và Admin** tạo return. Guest gọi hotline cung cấp mã đơn và thông tin, nhân viên tạo hộ sau khi xác minh |
+| D56 | Duyệt theo **vai trò**, không phải maker-checker cứng: STAFF tạo thì chờ OWNER/BRANCH_MANAGER duyệt; OWNER/BRANCH_MANAGER tạo thì duyệt luôn |
+| D57 | Mặc định **chỉ hoàn giá trị item** được duyệt. Hoàn thêm phí giao ban đầu khi **lỗi thuộc về shop** — cần trường `fault: SHOP/CUSTOMER` ở bước Admin duyệt |
+| D58 | Khách trả tiền mặt/COD → **hoàn tiền mặt tại cửa hàng**, có thoả thuận hai bên. Khách chuyển khoản → hoàn chuyển khoản, bắt buộc `external_ref`. Không hoàn qua cổng online khi chưa tích hợp |
+
+### Câu hỏi nghiệp vụ còn treo — quyết sau, không chặn các wave khác
+
+Owner đã yêu cầu **hoãn nhóm câu hỏi này để ưu tiên chức năng khác** (2026-09-14). Ghi lại nguyên văn để không mất:
+
+| # | Câu hỏi | Trạng thái |
+| --- | --- | --- |
+| Q1 | **Combo cho trả hay không?** Baseline cũ ghi *"combo phải trả nguyên dòng"* (cho trả, phải trả cả bộ); Owner sau đó nói *"combo không cho trả"*. Hai cách hiểu khác nhau và quyết định luôn cấu trúc `return_items` | ⏸ Treo |
+| Q2 | Danh sách nhóm hàng cụ thể bị loại trừ (găng tay, băng quấn, thảm đã bóc tem, hàng đặt riêng) | ⏸ Treo — mặc định dùng cờ `returnable` ở Category |
+| Q3 | Khách gửi ảnh khi yêu cầu trả — bắt buộc hay tuỳ chọn? Shopee bắt buộc ảnh/video | ⏸ Treo |
+| Q4 | Có hỗ trợ **hoàn một phần mà không cần trả hàng** không? Shopee có và dùng nhiều, tiết kiệm phí vận chuyển hai chiều | ⏸ Treo |
+| Q5 | Nhân viên được tự từ chối yêu cầu trả, hay phải quản lý duyệt? | ⏸ Treo |
+
+**Đã chốt và không đổi:** luồng ngoại lệ đi qua **thoả thuận hai bên** — khách gọi hotline, nhân viên tạo hộ yêu cầu và ghi rõ mức đã thống nhất; vì là ngoại lệ nên bắt buộc có lý do và quản lý duyệt.
+
+**Đã chốt:** hàng trả về lưu ở **tab Hoàn** riêng trong Admin, không lẫn đơn bán; nhận hàng xong mới cập nhật tồn và chỉ với phần còn bán được.
+
+**Tham khảo khi làm:** quy trình Shopee — người mua gửi yêu cầu kèm bằng chứng, người bán chọn *đồng ý nhận hàng* / *hoàn một phần không cần trả* / *thương lượng lại*; mục "Trả hàng/Hoàn tiền" tách riêng trong kênh người bán.
 
 ## 6. Definition of Done
 
-- [ ] Decision gate được ghi Decision Log trước migration.
+- [x] Decision gate được ghi Decision Log trước migration (D54–D58).
 - [ ] Migration forward-only, index/constraint/RLS/grant và workbook annotation đồng bộ.
 - [ ] Return eligibility/quantity/combo ownership có unit + PostgreSQL integration.
 - [ ] Receive/inspection/restock movement atomic, retry-safe và reconciliation pass.
 - [ ] Refund approval/execution/amount cap có maker-checker/scope/idempotency test theo quyết định.
-- [ ] Flash quota concurrency không oversell; release/expire/commit không double count.
+- [x] Flash quota concurrency không oversell; release/expire/commit không double count.
 - [ ] OpenAPI và hai SDK không drift; Admin/Client có loading/empty/error/stale/permission states.
 - [ ] Browser E2E Return/Refund và Flash checkout; Supabase Cron/worker evidence nếu có TTL.
 
@@ -88,4 +108,5 @@ Các điểm sau ảnh hưởng trực tiếp constraint, permission và state m
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.1.0 | 2026-09-14 | Đóng S6.4 Flash Sale; chốt 5 decision gate thành D54–D58. | PLAN-20260913-SPRINT6 S6.4 |
 | 1.0.0 | 2026-09-13 | Tạo kế hoạch Sprint 6, schema proposal và năm decision gate trước migration. | PLAN-20260913-SPRINT6 |

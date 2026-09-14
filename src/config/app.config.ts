@@ -48,6 +48,10 @@ export default registerAs('app', () => ({
       enabled: process.env.PAYMENT_EXPIRY_JOB_ENABLED === 'true',
       batchSize: Number(process.env.PAYMENT_EXPIRY_JOB_BATCH_SIZE ?? 50),
     },
+    flashSaleQuotaExpiry: {
+      enabled: process.env.FLASH_SALE_QUOTA_EXPIRY_JOB_ENABLED === 'true',
+      batchSize: Number(process.env.FLASH_SALE_QUOTA_EXPIRY_JOB_BATCH_SIZE ?? 50),
+    },
     orderCompletion: {
       enabled: process.env.ORDER_COMPLETION_JOB_ENABLED === 'true',
       batchSize: Number(process.env.ORDER_COMPLETION_JOB_BATCH_SIZE ?? 50),
