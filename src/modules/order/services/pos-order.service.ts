@@ -10,12 +10,23 @@ import { InventoryReservationService } from '../../checkout/inventory-reservatio
 import { FulfillmentService } from '../../fulfillment/services/fulfillment.service';
 import { FlashSaleService } from '../../promotion/services/flash-sale.service';
 import type { OrderDetailDto } from '../dto/order.dto';
-import type { CreatePosOrderDto } from '../dto/pos-order.dto';
+import type {
+  CreatePosOrderDto,
+  PosCatalogQueryDto,
+  PosCatalogResponseDto,
+} from '../dto/pos-order.dto';
 import { OrderService } from './order.service';
 
 /** Bán tại quầy: khách cầm hàng về ngay nên không có phí giao và không có cửa sổ chờ. */
 const POS_SHIPPING_METHOD = 'BRANCH_FREE';
 const POS_CHANNEL = 'STORE';
+
+/** Hình dạng tối thiểu để tính tồn: hàng lẻ có `components` rỗng, combo thì không. */
+interface SellableVariant {
+  id: bigint;
+  sku: string;
+  components: Array<{ variantId: bigint; quantity: number }>;
+}
 
 @Injectable()
 export class PosOrderService {
@@ -72,26 +83,189 @@ export class PosOrderService {
   }
 
   /** Chặn sớm trường hợp hết hàng để không tạo rác; tranh chấp vẫn do bước đặt chỗ xử lý. */
-  private async assertAvailable(input: CreatePosOrderDto, warehouseId: bigint): Promise<void> {
+  /**
+   * Danh mục hàng bán được tại quầy: hàng lẻ và combo đang bán, kèm giá hiện hành và
+   * tồn khả dụng tại kho của chi nhánh đang đứng quầy.
+   *
+   * Không dùng lookup biến thể dùng chung của catalog: lookup đó cố tình loại combo ra
+   * vì nó phục vụ việc chọn thành phần combo, và nó không biết chi nhánh nào đang bán.
+   */
+  async searchCatalog(
+    query: PosCatalogQueryDto,
+    principal: AuthPrincipal,
+  ): Promise<PosCatalogResponseDto> {
+    const warehouse = await this.resolveCounter(principal, query.branchId);
+    const search = query.search?.trim();
+    const where: Prisma.ProductVariantWhereInput = {
+      status: 'ACTIVE',
+      product: { status: { not: 'ARCHIVED' } },
+      ...(search
+        ? {
+            OR: [
+              { sku: { contains: search, mode: 'insensitive' } },
+              { name: { contains: search, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+    };
+
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.productVariant.findMany({
+        where,
+        orderBy: [{ sku: 'asc' }, { id: 'asc' }],
+        skip: (query.page - 1) * query.limit,
+        take: query.limit,
+        select: {
+          id: true,
+          sku: true,
+          name: true,
+          prices: {
+            where: { status: 'ACTIVE', channel: 'ONLINE', priceType: 'REGULAR' },
+            orderBy: { startsAt: 'desc' },
+            take: 1,
+            select: { amount: true },
+          },
+          bundleDefinition: {
+            select: {
+              items: {
+                orderBy: { sortOrder: 'asc' },
+                select: {
+                  quantity: true,
+                  componentVariant: { select: { id: true, sku: true, name: true } },
+                },
+              },
+            },
+          },
+        },
+      }),
+      this.prisma.productVariant.count({ where }),
+    ]);
+
+    // Dùng lại chính dữ liệu vừa lấy thay vì hỏi lại cấu trúc combo: mỗi lượt đi
+    // database là ~450ms trên đường truyền hiện tại.
+    const variants: SellableVariant[] = rows.map((row) => ({
+      id: row.id,
+      sku: row.sku,
+      components: (row.bundleDefinition?.items ?? []).map((item) => ({
+        variantId: item.componentVariant.id,
+        quantity: item.quantity,
+      })),
+    }));
+    const availability = this.computeAvailable(
+      variants,
+      await this.availableOf(variants, warehouse.id),
+    );
+
+    return {
+      items: rows.map((row) => {
+        const components = row.bundleDefinition?.items ?? [];
+        return {
+          id: toEntityId(row.id),
+          sku: row.sku,
+          name: row.name,
+          unitPrice: row.prices[0]?.amount.toFixed(2) ?? null,
+          isBundle: components.length > 0,
+          components: components.map((component) => ({
+            productVariantId: toEntityId(component.componentVariant.id),
+            sku: component.componentVariant.sku,
+            name: component.componentVariant.name,
+            quantity: component.quantity,
+          })),
+          availableQuantity: availability.get(row.id.toString())?.available ?? 0,
+        };
+      }),
+      page: query.page,
+      limit: query.limit,
+      total,
+      hasMore: query.page * query.limit < total,
+      branchId: toEntityId(warehouse.branchId),
+    };
+  }
+
+  /**
+   * Tồn khả dụng của từng biến thể, tính từ tồn của các biến thể CÓ dòng tồn kho.
+   *
+   * Combo KHÔNG có dòng tồn riêng — tồn nằm ở các thành phần, và bước đặt chỗ cũng nổ
+   * combo ra thành phần trước khi giữ hàng. Nên combo quy về thành phần thiếu nhất;
+   * tra thẳng tồn của chính biến thể combo sẽ luôn ra 0 và chặn nhầm cả đơn.
+   *
+   * Hàm thuần: nơi gọi tự quyết định lấy dữ liệu bằng mấy lượt truy vấn.
+   */
+  private computeAvailable(
+    variants: SellableVariant[],
+    availableOf: ReadonlyMap<string, number>,
+  ): Map<string, { sku: string; available: number }> {
+    const result = new Map<string, { sku: string; available: number }>();
+    for (const variant of variants) {
+      const available =
+        variant.components.length === 0
+          ? (availableOf.get(variant.id.toString()) ?? 0)
+          : Math.min(
+              ...variant.components.map((component) =>
+                Math.floor(
+                  (availableOf.get(component.variantId.toString()) ?? 0) / component.quantity,
+                ),
+              ),
+            );
+      result.set(variant.id.toString(), { sku: variant.sku, available: Math.max(available, 0) });
+    }
+    return result;
+  }
+
+  /** Các biến thể thực sự có dòng tồn kho: hàng lẻ tính chính nó, combo tính thành phần. */
+  private stockedVariantIds(variants: SellableVariant[]): bigint[] {
+    const ids = new Set<bigint>();
+    for (const variant of variants) {
+      if (variant.components.length === 0) ids.add(variant.id);
+      else for (const component of variant.components) ids.add(component.variantId);
+    }
+    return [...ids];
+  }
+
+  private async availableOf(
+    variants: SellableVariant[],
+    warehouseId: bigint,
+  ): Promise<Map<string, number>> {
+    const stockedIds = this.stockedVariantIds(variants);
+    if (stockedIds.length === 0) return new Map();
     const balances = await this.prisma.inventoryBalance.findMany({
-      where: {
-        warehouseId,
-        productVariantId: { in: input.items.map((item) => toDatabaseId(item.productVariantId)) },
-      },
+      where: { warehouseId, productVariantId: { in: stockedIds } },
+      select: { productVariantId: true, onHand: true, reserved: true },
+    });
+    return new Map(
+      balances.map((row) => [row.productVariantId.toString(), row.onHand - row.reserved]),
+    );
+  }
+
+  private async assertAvailable(input: CreatePosOrderDto, warehouseId: bigint): Promise<void> {
+    const rows = await this.prisma.productVariant.findMany({
+      where: { id: { in: input.items.map((item) => toDatabaseId(item.productVariantId)) } },
       select: {
-        productVariantId: true,
-        onHand: true,
-        reserved: true,
-        productVariant: { select: { sku: true } },
+        id: true,
+        sku: true,
+        bundleDefinition: {
+          select: { items: { select: { componentVariantId: true, quantity: true } } },
+        },
       },
     });
-    const byVariant = new Map(balances.map((row) => [row.productVariantId, row]));
+    const variants: SellableVariant[] = rows.map((row) => ({
+      id: row.id,
+      sku: row.sku,
+      components: (row.bundleDefinition?.items ?? []).map((item) => ({
+        variantId: item.componentVariantId,
+        quantity: item.quantity,
+      })),
+    }));
+    const availability = this.computeAvailable(
+      variants,
+      await this.availableOf(variants, warehouseId),
+    );
 
     for (const item of input.items) {
-      const balance = byVariant.get(toDatabaseId(item.productVariantId));
-      const available = balance ? balance.onHand - balance.reserved : 0;
+      const entry = availability.get(toDatabaseId(item.productVariantId).toString());
+      const available = entry?.available ?? 0;
       if (available < item.quantity) {
-        const sku = balance?.productVariant.sku ?? item.productVariantId;
+        const sku = entry?.sku ?? item.productVariantId;
         throw new ConflictException(
           `Kho quầy không đủ hàng cho ${sku}: còn ${available}, cần ${item.quantity}`,
         );
@@ -99,14 +273,6 @@ export class PosOrderService {
     }
   }
 
-  /**
-   * Quầy bán là kho của chi nhánh nhân viên được phân quyền.
-   *
-   * Nhân viên thuộc một chi nhánh KHÔNG được bán từ kho chi nhánh khác — đó là lý do
-   * không nhận `branchId` tự do từ client. Nhưng tài khoản phạm vi toàn hệ thống
-   * (chủ cửa hàng) lại không gắn chi nhánh nào, nên với họ `branchId` là bắt buộc,
-   * nếu không họ sẽ không đứng quầy được.
-   */
   private async resolveCounter(
     principal: AuthPrincipal,
     requestedBranchId: string | undefined,

@@ -11,6 +11,7 @@ import {
   IsOptional,
   IsString,
   Matches,
+  Max,
   MaxLength,
   Min,
   ValidateNested,
@@ -79,4 +80,74 @@ export class CreatePosOrderDto {
   })
   @IsOptional() @IsEntityId()
   branchId?: string;
+}
+
+export class PosCatalogQueryDto {
+  @ApiPropertyOptional({ maxLength: 100, description: 'Tìm theo SKU hoặc tên sản phẩm' })
+  @IsOptional() @IsString() @MaxLength(100)
+  search?: string;
+
+  @ApiPropertyOptional({ default: 1, minimum: 1 })
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1)
+  page: number = 1;
+
+  @ApiPropertyOptional({ default: 20, minimum: 1, maximum: 50 })
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(50)
+  limit: number = 20;
+
+  @ApiPropertyOptional({
+    ...ENTITY_ID_OPENAPI,
+    description: 'Chi nhánh bán, cùng quy tắc với tạo đơn tại quầy. Quyết định kho tính tồn.',
+  })
+  @IsOptional() @IsEntityId()
+  branchId?: string;
+}
+
+export class PosCatalogComponentDto {
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) productVariantId: string;
+  @ApiProperty({ example: 'HQ-909S' }) sku: string;
+  @ApiProperty({ example: 'Giàn tạ đa năng HQ-909S' }) name: string;
+  @ApiProperty({ example: 2, description: 'Số lượng thành phần trong một combo' })
+  quantity: number;
+}
+
+export class PosCatalogItemDto {
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) id: string;
+  @ApiProperty({ example: 'HQ-909S' }) sku: string;
+  @ApiProperty({ example: 'Giàn tạ đa năng HQ-909S' }) name: string;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: '16000000.00',
+    description: 'Giá bán hiện hành; null nghĩa là chưa có bảng giá hiệu lực, chưa bán được',
+  })
+  unitPrice: string | null;
+
+  @ApiProperty({ example: false, description: 'Combo bán nguyên cụm, không tách lẻ' })
+  isBundle: boolean;
+
+  @ApiProperty({
+    type: [PosCatalogComponentDto],
+    description: 'Thành phần của combo; rỗng với hàng lẻ',
+  })
+  components: PosCatalogComponentDto[];
+
+  @ApiProperty({
+    example: 3,
+    description:
+      'Tồn khả dụng tại kho của chi nhánh bán (đã trừ hàng đang giữ). Combo lấy theo thành '
+      + 'phần thiếu nhất vì combo không có tồn riêng.',
+  })
+  availableQuantity: number;
+}
+
+export class PosCatalogResponseDto {
+  @ApiProperty({ type: [PosCatalogItemDto] }) items: PosCatalogItemDto[];
+  @ApiProperty({ example: 1 }) page: number;
+  @ApiProperty({ example: 20 }) limit: number;
+  @ApiProperty({ example: 42 }) total: number;
+  @ApiProperty({ example: true }) hasMore: boolean;
+  @ApiProperty({ ...ENTITY_ID_OPENAPI, description: 'Chi nhánh đã dùng để tính tồn' })
+  branchId: string;
 }

@@ -9,6 +9,70 @@ servers:
   - url: http://localhost:4000
     description: Local
 paths:
+  /api/v1/admin/orders/pos/catalog:
+    get:
+      operationId: searchPosCatalog
+      parameters:
+        - name: search
+          required: false
+          in: query
+          description: Tìm theo SKU hoặc tên sản phẩm
+          schema:
+            maxLength: 100
+            type: string
+        - name: page
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            default: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            maximum: 50
+            default: 20
+            type: number
+        - name: branchId
+          required: false
+          in: query
+          description: Chi nhánh bán, cùng quy tắc với tạo đơn tại quầy. Quyết định kho tính tồn.
+          schema:
+            pattern: ^[1-9][0-9]*$
+            example: "1"
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PosCatalogResponseDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: Tài khoản không thuộc đúng một chi nhánh
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: "Danh mục bán tại quầy: hàng lẻ và combo kèm giá, tồn khả dụng theo chi nhánh"
+      tags:
+        - Admin Orders
   /api/v1/admin/orders/pos:
     post:
       operationId: createPosOrder
@@ -375,6 +439,71 @@ paths:
         - Admin Orders
 components:
   schemas:
+    PosCatalogResponseDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PosCatalogItemDto"
+        page:
+          type: number
+          example: 1
+        limit:
+          type: number
+          example: 20
+        total:
+          type: number
+          example: 42
+        hasMore:
+          type: boolean
+          example: true
+        branchId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+          description: Chi nhánh đã dùng để tính tồn
+      required:
+        - items
+        - page
+        - limit
+        - total
+        - hasMore
+        - branchId
+    ErrorResponseDto:
+      type: object
+      properties:
+        statusCode:
+          type: number
+          example: 400
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: Dữ liệu gửi lên không hợp lệ.
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorDetailDto"
+        path:
+          type: string
+          example: /api/v1/catalog/products
+        method:
+          type: string
+          example: POST
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+      required:
+        - statusCode
+        - code
+        - message
+        - path
+        - method
+        - timestamp
     CreatePosOrderDto:
       type: object
       properties:
@@ -514,40 +643,6 @@ components:
         - taxTotal
         - items
         - statusHistory
-    ErrorResponseDto:
-      type: object
-      properties:
-        statusCode:
-          type: number
-          example: 400
-        code:
-          type: string
-          example: VALIDATION_ERROR
-        message:
-          type: string
-          example: Dữ liệu gửi lên không hợp lệ.
-        details:
-          type: array
-          items:
-            $ref: "#/components/schemas/ErrorDetailDto"
-        path:
-          type: string
-          example: /api/v1/catalog/products
-        method:
-          type: string
-          example: POST
-        timestamp:
-          type: string
-          format: date-time
-        requestId:
-          type: string
-      required:
-        - statusCode
-        - code
-        - message
-        - path
-        - method
-        - timestamp
     AdminOrderListDto:
       type: object
       properties:
@@ -608,6 +703,60 @@ components:
       required:
         - expectedVersion
         - reason
+    PosCatalogItemDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        sku:
+          type: string
+          example: HQ-909S
+        name:
+          type: string
+          example: Giàn tạ đa năng HQ-909S
+        unitPrice:
+          type: string
+          nullable: true
+          example: "16000000.00"
+          description: Giá bán hiện hành; null nghĩa là chưa có bảng giá hiệu lực, chưa bán được
+        isBundle:
+          type: boolean
+          example: false
+          description: Combo bán nguyên cụm, không tách lẻ
+        components:
+          description: Thành phần của combo; rỗng với hàng lẻ
+          type: array
+          items:
+            $ref: "#/components/schemas/PosCatalogComponentDto"
+        availableQuantity:
+          type: number
+          example: 3
+          description: Tồn khả dụng tại kho của chi nhánh bán (đã trừ hàng đang giữ). Combo lấy theo thành phần thiếu nhất vì combo không có tồn riêng.
+      required:
+        - id
+        - sku
+        - name
+        - unitPrice
+        - isBundle
+        - components
+        - availableQuantity
+    ErrorDetailDto:
+      type: object
+      properties:
+        field:
+          type: string
+          example: name
+        code:
+          type: string
+          example: INVALID_VALUE
+        message:
+          type: string
+          example: 'Trường "name": Trường này không được để trống.'
+      required:
+        - code
+        - message
     PosCustomerDto:
       type: object
       properties:
@@ -746,21 +895,6 @@ components:
         - toStatus
         - actorType
         - createdAt
-    ErrorDetailDto:
-      type: object
-      properties:
-        field:
-          type: string
-          example: name
-        code:
-          type: string
-          example: INVALID_VALUE
-        message:
-          type: string
-          example: 'Trường "name": Trường này không được để trống.'
-      required:
-        - code
-        - message
     AdminOrderSummaryDto:
       type: object
       properties:
@@ -841,6 +975,28 @@ components:
         - recipient
         - placedAt
         - version
+    PosCatalogComponentDto:
+      type: object
+      properties:
+        productVariantId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        sku:
+          type: string
+          example: HQ-909S
+        name:
+          type: string
+          example: Giàn tạ đa năng HQ-909S
+        quantity:
+          type: number
+          example: 2
+          description: Số lượng thành phần trong một combo
+      required:
+        - productVariantId
+        - sku
+        - name
+        - quantity
     OrderItemComponentDto:
       type: object
       properties:

@@ -31,7 +31,11 @@ import {
 } from '../dto/order.dto';
 import { OrderService } from '../services/order.service';
 import { PosOrderService } from '../services/pos-order.service';
-import { CreatePosOrderDto } from '../dto/pos-order.dto';
+import {
+  CreatePosOrderDto,
+  PosCatalogQueryDto,
+  PosCatalogResponseDto,
+} from '../dto/pos-order.dto';
 
 const IDEMPOTENCY_HEADER = 'idempotency-key';
 
@@ -195,6 +199,22 @@ export class AdminOrderController {
     private readonly orders: OrderService,
     private readonly pos: PosOrderService,
   ) {}
+
+  @Get('pos/catalog')
+  @RequirePermissions('order.manage')
+  @ApiOperation({
+    operationId: 'searchPosCatalog',
+    summary: 'Danh mục bán tại quầy: hàng lẻ và combo kèm giá, tồn khả dụng theo chi nhánh',
+  })
+  @ApiOkResponse({ type: PosCatalogResponseDto })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiForbiddenResponse({ type: ErrorResponseDto, description: 'Tài khoản không thuộc đúng một chi nhánh' })
+  searchPosCatalog(
+    @Query() query: PosCatalogQueryDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<PosCatalogResponseDto> {
+    return this.pos.searchCatalog(query, getAuthPrincipal(request));
+  }
 
   @Post('pos')
   @RequirePermissions('order.manage')

@@ -1,10 +1,10 @@
 # Admin CRUD coverage V1
 
-> **Document version:** 1.14.0
+> **Document version:** 1.15.0
 >
 > **Last updated:** 2026-09-15
 >
-> **Change summary:** Bán tại quầy đã nghiệm thu một đơn thành công và có màn Admin; ngừng hoạt động chi nhánh Đà Nẵng, cửa hàng chỉ còn Hồ Chí Minh và Hà Nội.
+> **Change summary:** Thêm `searchPosCatalog` (combo + tồn khả dụng theo chi nhánh) và sửa kiểm tồn sớm để combo quy về thành phần.
 
 ## Bán tại quầy
 
@@ -38,9 +38,25 @@ Nghiệm thu này phát hiện 5 lỗi chặn đã sửa, đáng chú ý nhất:
 `checkout_sessions` chưa nhận VNPAY/CASH (làm vỡ cả checkout VNPAY trên storefront, không riêng POS)
 và audit trùng `(request_id, sequence_no)` vì cả hệ thống ghi cứng `sequenceNo: 1`.
 
+**Danh mục bán tại quầy:** `GET /admin/orders/pos/catalog` (`searchPosCatalog`, quyền `order.manage`)
+— hàng lẻ và combo đang bán, kèm giá hiện hành và tồn khả dụng tại kho của chi nhánh bán.
+
+Không dùng lookup biến thể dùng chung của catalog: lookup đó cố tình loại combo ra
+(`bundleDefinition: { is: null }`) vì nó phục vụ việc chọn thành phần combo, và nó không biết
+chi nhánh nào đang bán.
+
+| Điểm | Cách xử lý |
+| --- | --- |
+| Tồn hàng lẻ | `onHand - reserved` tại kho của chi nhánh bán |
+| Tồn combo | Combo **không có dòng tồn riêng** — tồn nằm ở thành phần, bước đặt chỗ cũng nổ combo ra thành phần. Nên lấy theo thành phần thiếu nhất: `min(floor(tồn thành phần / số lượng trong combo))` |
+| Chi nhánh | Cùng quy tắc với tạo đơn: tài khoản toàn hệ thống bắt buộc truyền `branchId` |
+
+Cùng lúc sửa một lỗi của `assertAvailable`: nó tra thẳng tồn của biến thể combo, vốn luôn bằng 0,
+nên mọi đơn có combo đều bị từ chối nhầm. Nay dùng chung phép quy đổi với danh mục.
+
 **Màn Admin:** `admin/src/features/pos` (route `/pos`, quyền `order.manage`) — chọn hàng, lập giỏ,
-thu tiền, in biên lai. Giới hạn hiện tại: lookup biến thể chưa trả cờ combo và tồn khả dụng nên giỏ
-chưa hiển thị hai thông tin đó; xem `admin/src/features/pos/README.md`.
+thu tiền, in biên lai; hiển thị combo và tồn khả dụng, chặn bán vượt tồn ngay trên UI.
+Xem `admin/src/features/pos/README.md`.
 
 ## Chi nhánh đang vận hành
 
