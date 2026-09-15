@@ -55,6 +55,8 @@ paths:
       summary: Create a short-lived signed Cloudinary image upload
       tags:
         - Admin Media
+      x-required-permissions:
+        - media.asset.upload
   /api/v1/admin/media/uploads/finalize:
     post:
       operationId: finalizeAdminMediaUpload
@@ -107,6 +109,8 @@ paths:
       summary: Verify a direct Cloudinary upload and return trusted metadata
       tags:
         - Admin Media
+      x-required-permissions:
+        - media.asset.upload
 components:
   schemas:
     CreateMediaUploadDto:

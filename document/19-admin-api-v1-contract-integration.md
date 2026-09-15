@@ -1,10 +1,10 @@
 # Admin và Storefront API v1 contract integration
 
-> **Document version:** 1.4.0
+> **Document version:** 1.6.0
 >
-> **Last updated:** 2026-09-13
+> **Last updated:** 2026-09-15
 >
-> **Change summary:** Bổ sung Sellable SKU mặc định cho catalog quick-add và regenerate contract cho Admin/Storefront.
+> **Change summary:** Xuất quyền yêu cầu của từng operation ra OpenAPI qua `x-required-permissions` để Admin canh UI theo contract.
 
 ## Nguyên tắc đã áp dụng
 
@@ -37,9 +37,9 @@
 | CRUD lifecycle category | `GET/POST/PATCH/DELETE` + `POST .../{id}/activate|deactivate` | `list/create/update/delete/activate/deactivateAdminCategory` | `catalog.category.view/manage` | `DELETE` chuyển leaf category sang `INACTIVE`; chặn khi còn child active |
 | Product SPU create/update/detail | `POST/PATCH/GET /api/v1/admin/products...` | `create/update/getAdminProduct` | `catalog.product.manage/view` | Product create/edit drawer + workflow detail |
 | Điều chỉnh kho | `POST /api/v1/admin/inventory/adjustments` | `createStockAdjustment` | `inventory.stock.adjust` | Inventory drawer; generated request option truyền Idempotency-Key |
-| Kiểm duyệt đánh giá | `PATCH /api/v1/admin/reviews/{id}/moderation` | `moderateAdminReview` | `review.moderate` | Reviews actions |
-| Xóa/ẩn đánh giá | `DELETE /api/v1/admin/reviews/{id}` | `deleteAdminReview` | `review.moderate` | Chuyển REJECTED theo expected version; giữ lịch sử Admin |
-| Xóa/lưu trữ bài viết | `DELETE /api/v1/admin/content/posts/{id}` | `deleteAdminPost` | `content.post.manage` | Chuyển ARCHIVED theo expected version; public API chỉ trả PUBLISHED |
+| Kiểm duyệt đánh giá | `PATCH /api/v1/admin/reviews/{id}/moderation` | `moderateAdminReview` | `catalog.review.moderate` | Reviews actions |
+| Xóa/ẩn đánh giá | `DELETE /api/v1/admin/reviews/{id}` | `deleteAdminReview` | `catalog.review.moderate` | Chuyển REJECTED theo expected version; giữ lịch sử Admin |
+| Xóa/lưu trữ bài viết | `DELETE /api/v1/admin/content/posts/{id}` | `deleteAdminPost` | `cms.content.manage` | Chuyển ARCHIVED theo expected version; public API chỉ trả PUBLISHED |
 | Archive/reactivate product hoặc combo | `POST .../products/{id}/archive|reactivate` | `archiveAdminProduct` / `reactivateAdminProduct` | `catalog.product.publish` | Product workflow drawer |
 | Xóa logic product hoặc combo | `DELETE /api/v1/admin/products/{id}` | `deleteAdminProduct` | `catalog.product.publish` | Tái sử dụng invariant archive; body có `expectedVersion` |
 | Archive/reactivate variant | `POST .../products/variants/{id}/archive|reactivate` | `archiveAdminProductVariant` / `reactivateAdminProductVariant` | `catalog.product.manage` | Product workflow drawer |
@@ -139,6 +139,8 @@ Admin dùng `getApiErrorMessage` cho lỗi form/query và `getApiFieldErrors` đ
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.6.0 | 2026-09-15 | Mỗi operation xuất `x-required-permissions`; Admin kiểm tra độ phủ quyền bằng test đọc contract. | API-20260915-PERMISSION-CONTRACT-EXPORT |
+| 1.5.0 | 2026-09-15 | Permission code CMS/Review đổi về `cms.content.*` và `catalog.review.moderate`; `getAdminCurrentUser`/`getCustomerCurrentUser` trả thêm `permissionVersion`. | DB-20260915-PERMISSION-CODE-ALIGNMENT |
 | 1.4.0 | 2026-09-13 | Product summary trả Sellable SKU tương ứng `minPrice`; browser E2E chứng minh cart/checkout chấp nhận ID số thật. | API-20260913-CATALOG-QUICK-ADD |
 | 1.0.0 | 2026-09-04 | Chuẩn hóa metadata; chốt một Admin gốc, lockout, trim input Auth và cách hiển thị lỗi Admin. | DBAPI-20260904-SINGLE-ROOT-ADMIN |
 | 1.1.0 | 2026-09-05 | Bổ sung sáu HTTP DELETE logic, giữ route lifecycle cũ và regenerate OpenAPI/Admin SDK. | API-20260905-LOGICAL-DELETE-V1 |

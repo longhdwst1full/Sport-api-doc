@@ -37,6 +37,8 @@ paths:
       summary: "Số liệu vận hành: đơn theo trạng thái, đơn chờ giao, sản phẩm, khách hàng"
       tags:
         - Admin Reporting
+      x-required-permissions:
+        - report.operation.view
   /api/v1/admin/reports/revenue:
     get:
       operationId: getAdminReportRevenue
@@ -79,6 +81,8 @@ paths:
       summary: Doanh thu đã thực nhận theo khoảng thời gian, kèm chuỗi theo ngày
       tags:
         - Admin Reporting
+      x-required-permissions:
+        - report.revenue.view
   /api/v1/admin/reports/inventory:
     get:
       operationId: getAdminReportInventory
@@ -107,6 +111,8 @@ paths:
       summary: Tồn kho chạm ngưỡng đặt lại và hết hàng bán
       tags:
         - Admin Reporting
+      x-required-permissions:
+        - report.inventory.view
   /api/v1/admin/reports/top-products:
     get:
       operationId: getAdminReportTopProducts
@@ -157,6 +163,8 @@ paths:
       summary: Sản phẩm bán chạy tính trên đơn đã thu được tiền
       tags:
         - Admin Reporting
+      x-required-permissions:
+        - report.revenue.view
 components:
   schemas:
     OverviewReportDto:

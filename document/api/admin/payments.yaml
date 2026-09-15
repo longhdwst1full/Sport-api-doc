@@ -80,6 +80,8 @@ paths:
       summary: Danh sách thanh toán theo trạng thái, phương thức, tìm kiếm và phạm vi chi nhánh
       tags:
         - Admin Payments
+      x-required-permissions:
+        - payment.view
   /api/v1/admin/payments/{id}:
     get:
       operationId: getAdminPayment
@@ -119,6 +121,8 @@ paths:
       summary: Chi tiết thanh toán và bằng chứng trong phạm vi chi nhánh
       tags:
         - Admin Payments
+      x-required-permissions:
+        - payment.view
   /api/v1/admin/payments/{id}/confirm:
     post:
       operationId: confirmAdminPayment
@@ -181,6 +185,8 @@ paths:
       summary: Xác nhận chuyển khoản đủ tiền hoặc thu COD sau giao hàng
       tags:
         - Admin Payments
+      x-required-permissions:
+        - payment.confirm
   /api/v1/admin/payments/{id}/reject:
     post:
       operationId: rejectAdminPayment
@@ -243,6 +249,8 @@ paths:
       summary: Từ chối bằng chứng thanh toán và lưu lý do/audit
       tags:
         - Admin Payments
+      x-required-permissions:
+        - payment.confirm
 components:
   schemas:
     AdminPaymentListDto:

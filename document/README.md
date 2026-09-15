@@ -61,6 +61,7 @@ Mục tiêu: hệ thống web/PWA bán thiết bị tập luyện, dụng cụ v
 | `33-sprint-6-execution-plan.md`              | Sprint 6 — Return, Refund, Flash Sale (S6.1–S6.3 chưa bắt đầu) |
 | `34-flash-sale-quota-expiry-runbook.md`      | Runbook worker dọn quota Flash Sale quá hạn |
 | `35-flash-sale-quota-hardening-plan.md`      | Trace lỗi quota Flash Sale và phương án sửa |
+| `36-delivery-status.md`                      | **Nguồn tiến độ duy nhất** — mọi tài liệu sprint khác đã đóng băng |
 | `DCTD-UTC-V1-database-model-review.xlsx`     | Workbook review có ô đỏ, Excel Note và sheet Change Log |
 | `api/openapi-v1.yaml`                        | Contract OpenAPI V1 tổng được sinh từ NestJS |
 

@@ -1,10 +1,10 @@
 # Admin CRUD coverage V1
 
-> **Document version:** 1.16.0
+> **Document version:** 1.17.0
 >
 > **Last updated:** 2026-09-15
 >
-> **Change summary:** Thêm module `Admin Customers`; màn khách hàng ở Admin hết chạy dữ liệu giả.
+> **Change summary:** Gỡ nhận định fixture đã lỗi thời; trỏ trạng thái về `36-delivery-status.md`.
 
 ## Bán tại quầy
 
@@ -135,7 +135,7 @@ Guard test: `src/modules/catalog/logical-delete.controller.spec.ts`.
 
 ## Chưa được coi là CRUD hoàn chỉnh
 
-- Đơn hàng/POS tại cửa hàng và Khách hàng đang dùng fixture ở admin; backend module vẫn scaffold, không tạo API CRUD giả. Đây là delivery wave sau Sprint 1 vì phải hoàn thành đồng bộ Order snapshot, Payment, Inventory reservation/commit và Fulfillment.
+- ~~Đơn hàng/POS tại cửa hàng và Khách hàng đang dùng fixture ở admin.~~ **Đã gỡ (2026-09-15):** cả ba đều chạy dữ liệu thật — đơn hàng qua `Admin Orders`, bán tại quầy qua `createPosOrder`, khách hàng qua `Admin Customers`. Fixture đã xoá khỏi repo.
 - CMS chưa persist PostgreSQL; create/archive chạy trong vertical slice in-memory và chưa được coi là durable production CRUD. Edit vẫn chưa triển khai.
 - Review hiện là in-memory vertical slice; moderate/delete giữ trạng thái trong runtime nhưng chưa có persistence PostgreSQL production.
 - Inventory core đã persist PostgreSQL và có transaction/locking/idempotency; còn thiếu full branch-scope HTTP regression trước khi ký Sprint DONE.

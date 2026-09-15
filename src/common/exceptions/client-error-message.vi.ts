@@ -93,6 +93,187 @@ const EXACT_MESSAGES: Readonly<Record<string, string>> = {
   'Cloudinary upload signature is invalid': 'Chữ ký tải ảnh không hợp lệ.',
   'Valid cron authorization is required': 'Thông tin xác thực tác vụ định kỳ không hợp lệ.',
   'Invalid Telegram webhook secret': 'Mã bảo mật Telegram webhook không hợp lệ.',
+
+  // Bổ sung: các thông báo trước đây chưa có bản dịch nên khách chỉ thấy câu chung
+  // chung theo mã HTTP, không biết lý do thật và không biết phải làm gì tiếp.
+  'Account changed; retry password change':
+    'Tài khoản vừa được cập nhật. Vui lòng thử đổi mật khẩu lại.',
+  'Active role assignment not found': 'Không tìm thấy phân quyền đang hiệu lực.',
+  'Refresh cookie is required': 'Phiên đăng nhập đã kết thúc. Vui lòng đăng nhập lại.',
+  'refreshToken is required': 'Phiên đăng nhập đã kết thúc. Vui lòng đăng nhập lại.',
+  'BRANCH scope requires one active branchId':
+    'Phạm vi chi nhánh cần đúng một chi nhánh đang hoạt động.',
+  'Only a LOCKED staff user can be unlocked': 'Chỉ mở khoá được nhân viên đang bị khoá.',
+  'Only an ACTIVE staff user can be locked': 'Chỉ khoá được nhân viên đang hoạt động.',
+  'Only subordinate branch assignments can be revoked':
+    'Bạn chỉ thu hồi được phân quyền của chi nhánh cấp dưới.',
+  'Only the root administrator can assign staff roles':
+    'Chỉ quản trị viên gốc được gán vai trò cho nhân viên.',
+  'Only the root administrator can manage staff accounts':
+    'Chỉ quản trị viên gốc được quản lý tài khoản nhân viên.',
+  'OWNER account cannot be locked or unlocked':
+    'Không thể khoá hoặc mở khoá tài khoản chủ hệ thống.',
+  'OWNER assignment cannot be revoked': 'Không thể thu hồi vai trò chủ hệ thống.',
+  'OWNER is the single bootstrap administrator and cannot be assigned':
+    'Chủ hệ thống là tài khoản quản trị gốc duy nhất, không thể gán thêm cho ai.',
+  'Role assignment changed; reload the user list and try again':
+    'Phân quyền vừa thay đổi. Vui lòng tải lại danh sách rồi thử lại.',
+  'Staff status changed; reload the user list and try again':
+    'Trạng thái nhân viên vừa thay đổi. Vui lòng tải lại danh sách rồi thử lại.',
+  'Address changed; reload and retry': 'Địa chỉ vừa thay đổi. Vui lòng tải lại rồi thử lại.',
+  'Choose another default address before removing this one':
+    'Hãy chọn địa chỉ mặc định khác trước khi xoá địa chỉ này.',
+  'Cart changed; reload and retry': 'Giỏ hàng vừa thay đổi. Vui lòng tải lại rồi thử lại.',
+  'Cart changed while checkout was quoted; retry':
+    'Giỏ hàng thay đổi trong lúc báo giá. Vui lòng thử lại.',
+  'Checkout already has another reservation': 'Đơn đặt này đã có một lượt giữ hàng khác.',
+  'Checkout changed; reload and retry':
+    'Thông tin đặt hàng vừa thay đổi. Vui lòng tải lại rồi thử lại.',
+  'Checkout is not awaiting shipping consultation':
+    'Đơn đặt này không ở trạng thái chờ tư vấn giao hàng.',
+  'Checkout is outside the assigned branch scope':
+    'Đơn đặt này không thuộc chi nhánh bạn phụ trách.',
+  'Checkout item has invalid bundle component': 'Combo trong đơn có thành phần không hợp lệ.',
+  'Checkout item has invalid bundle snapshot': 'Dữ liệu combo trong đơn không hợp lệ.',
+  'Checkout item snapshot has invalid quantity': 'Số lượng sản phẩm trong đơn không hợp lệ.',
+  'Checkout token is required': 'Thiếu mã phiên đặt hàng.',
+  'Only a quoted checkout can be confirmed': 'Chỉ xác nhận được đơn đã có báo giá.',
+  'Current price changed; reload before replacing it':
+    'Giá vừa thay đổi. Vui lòng tải lại trước khi cập nhật.',
+  'Idempotency-Key must not exceed 130 characters': 'Khoá chống trùng quá dài.',
+  'Idempotency-Key must not exceed 150 characters': 'Khoá chống trùng quá dài.',
+  'Idempotency-Key was already used with another checkout':
+    'Khoá chống trùng này đã dùng cho một đơn khác.',
+  'Idempotency-Key was already used with another payload':
+    'Khoá chống trùng này đã dùng cho một yêu cầu khác.',
+  'Idempotency key was used with another checkout request':
+    'Khoá chống trùng này đã dùng cho một yêu cầu đặt hàng khác.',
+  'Active warehouse was not found': 'Không tìm thấy kho đang hoạt động.',
+  'Both warehouses must be active': 'Cả kho nguồn và kho đích đều phải đang hoạt động.',
+  'Source and destination warehouses must differ': 'Kho nguồn và kho đích phải khác nhau.',
+  'Branch or warehouse version conflict':
+    'Chi nhánh hoặc kho vừa được cập nhật. Vui lòng tải lại rồi thử lại.',
+  'Claimed reservation has no items': 'Lượt giữ hàng không có sản phẩm nào.',
+  'Claimed reservation set is inconsistent': 'Dữ liệu giữ hàng không nhất quán. Vui lòng thử lại.',
+  'Inventory reservation has no items': 'Lượt giữ hàng không có sản phẩm nào.',
+  'Reservation changed while expiry batch was running':
+    'Lượt giữ hàng thay đổi trong lúc hệ thống dọn hàng hết hạn. Vui lòng thử lại.',
+  'Reservation expiry retry limit reached':
+    'Hệ thống đã thử dọn hàng hết hạn nhiều lần không thành công.',
+  'Reservation token is required': 'Thiếu mã giữ hàng.',
+  'Reservation was already released by another command':
+    'Lượt giữ hàng đã được giải phóng bởi thao tác khác.',
+  'Release reason is required': 'Vui lòng nhập lý do giải phóng hàng.',
+  'Reserved inventory counter is inconsistent':
+    'Số liệu hàng đang giữ không khớp. Vui lòng liên hệ quản trị.',
+  'Inventory balance changed; retry with the same key':
+    'Tồn kho vừa thay đổi. Vui lòng thử lại với cùng thao tác.',
+  'Inventory changed concurrently; retry': 'Tồn kho vừa thay đổi. Vui lòng thử lại.',
+  'Inventory changed concurrently; retry release':
+    'Tồn kho vừa thay đổi. Vui lòng thử giải phóng lại.',
+  'Inventory changed concurrently; retry the transfer command':
+    'Tồn kho vừa thay đổi. Vui lòng thực hiện lại lệnh chuyển kho.',
+  'Inventory changed concurrently; retry with the same key':
+    'Tồn kho vừa thay đổi. Vui lòng thử lại với cùng thao tác.',
+  'Inventory changed while expiring reservations':
+    'Tồn kho thay đổi trong lúc dọn hàng hết hạn. Vui lòng thử lại.',
+  'Inventory cursor is invalid': 'Con trỏ phân trang không hợp lệ.',
+  'Inventory date range is invalid': 'Khoảng thời gian không hợp lệ.',
+  'Adjustment items must contain unique SKU values':
+    'Mỗi SKU chỉ được xuất hiện một lần trong phiếu.',
+  'Adjustment must contain at least one item': 'Phiếu điều chỉnh phải có ít nhất một sản phẩm.',
+  'Manual receipt reference already exists for this warehouse':
+    'Số phiếu nhập này đã tồn tại ở kho.',
+  'MANUAL_RECEIPT requires externalReference': 'Phiếu nhập tay cần số phiếu hoặc số chứng từ.',
+  'Transfer items must contain unique SKU values':
+    'Mỗi SKU chỉ được xuất hiện một lần trong phiếu chuyển.',
+  'Transfer was already received with another result':
+    'Phiếu chuyển đã được nhận với kết quả khác.',
+  'Receive payload must contain every transfer SKU exactly once':
+    'Phiếu nhận phải liệt kê đúng một lần cho mỗi SKU của phiếu chuyển.',
+  'Only a SHIPPED transfer can be received': 'Chỉ nhận được phiếu chuyển đã xuất kho.',
+  'Stock transfer version is stale':
+    'Phiếu chuyển vừa được cập nhật. Vui lòng tải lại rồi thử lại.',
+  'Categories must be unique': 'Mỗi danh mục chỉ được chọn một lần.',
+  'categoryIds and primaryCategoryId must be sent together':
+    'Vui lòng chọn danh mục và danh mục chính cùng lúc.',
+  'Category is not active': 'Danh mục này đang ngừng hoạt động.',
+  'Category version conflict': 'Danh mục vừa được cập nhật. Vui lòng tải lại rồi thử lại.',
+  'Parent category is not active': 'Danh mục cha đang ngừng hoạt động.',
+  'Primary category must be included in categoryIds':
+    'Danh mục chính phải nằm trong các danh mục đã chọn.',
+  'Brand is not active': 'Thương hiệu này đang ngừng hoạt động.',
+  'Brand version conflict': 'Thương hiệu vừa được cập nhật. Vui lòng tải lại rồi thử lại.',
+  'Bundle components must be unique': 'Mỗi sản phẩm chỉ được thêm một lần vào combo.',
+  'Bundle contains invalid component': 'Combo có thành phần không hợp lệ.',
+  'Nested bundles are not allowed': 'Không thể đặt combo bên trong combo.',
+  'At least one mutable variant field is required': 'Vui lòng nhập ít nhất một thông tin cần sửa.',
+  'Only ACTIVE variant can be archived': 'Chỉ lưu trữ được phiên bản đang hoạt động.',
+  'Only INACTIVE variant can be reactivated': 'Chỉ kích hoạt lại được phiên bản đang ngừng.',
+  'Variant must belong to the product': 'Phiên bản không thuộc sản phẩm này.',
+  'Reactivate the product before its variant':
+    'Hãy kích hoạt lại sản phẩm trước khi kích hoạt phiên bản.',
+  'Only DRAFT product can be published': 'Chỉ đăng bán được sản phẩm đang ở bản nháp.',
+  'Product slug cannot change after publish':
+    'Không đổi được đường dẫn sản phẩm sau khi đã đăng bán.',
+  'Product version conflict or product is archived':
+    'Sản phẩm vừa được cập nhật hoặc đã lưu trữ. Vui lòng tải lại rồi thử lại.',
+  'Price startsAt cannot be in the past': 'Ngày bắt đầu áp giá không được ở quá khứ.',
+  'endsAt must be after startsAt': 'Ngày kết thúc phải sau ngày bắt đầu.',
+  'Archived product media cannot be changed': 'Không sửa được ảnh của sản phẩm đã lưu trữ.',
+  'Media asset exists but is inactive': 'Ảnh này đang ngừng sử dụng.',
+  'Media asset is already attached to this target': 'Ảnh này đã được gắn vào đây.',
+  'Media asset is not finalized or active': 'Ảnh chưa tải lên xong hoặc đang ngừng sử dụng.',
+  'Media reorder items must be unique': 'Mỗi ảnh chỉ được sắp xếp một lần.',
+  'Reorder must include every active product media item':
+    'Vui lòng sắp xếp đủ tất cả ảnh đang dùng của sản phẩm.',
+  'Post is already archived': 'Bài viết đã được lưu trữ.',
+  'Post was changed by another request':
+    'Bài viết vừa được người khác cập nhật. Vui lòng tải lại rồi thử lại.',
+  'Review is already hidden': 'Đánh giá này đã được ẩn.',
+  'Review was changed by another request':
+    'Đánh giá vừa được người khác cập nhật. Vui lòng tải lại rồi thử lại.',
+  'ETA maximum must not be less than ETA minimum':
+    'Số ngày giao tối đa không được nhỏ hơn số ngày tối thiểu.',
+  'GHN quote is not configured for this address':
+    'Chưa cấu hình báo giá giao hàng cho địa chỉ này.',
+  'GHTK quote is not configured for this address':
+    'Chưa cấu hình báo giá giao hàng cho địa chỉ này.',
+  'Audit cursor is invalid': 'Con trỏ phân trang không hợp lệ.',
+  'Audit log write returned no row':
+    'Hệ thống đang gặp sự cố khi ghi nhật ký. Vui lòng thử lại sau.',
+  'Telegram bot is not configured': 'Kênh thông báo chưa được cấu hình.',
+  'Telegram could not deliver the bot response': 'Không gửi được thông báo. Vui lòng thử lại sau.',
+  'Active bundle variant must belong to the BUNDLE product':
+    'Phiên bản combo phải thuộc đúng sản phẩm combo.',
+  'Bundle definition can only be created for a BUNDLE product':
+    'Chỉ tạo được cấu hình combo cho sản phẩm loại combo.',
+  'STANDARD product cannot contain a bundle variant':
+    'Sản phẩm thường không chứa được phiên bản combo.',
+  'Every active BUNDLE variant requires an active non-empty definition, effective price and active components':
+    'Combo đang bán cần có đủ thành phần, giá hiệu lực và các thành phần đều đang hoạt động.',
+  'Product supplies an active published combo; archive the combo first':
+    'Sản phẩm đang nằm trong một combo đang bán. Hãy lưu trữ combo đó trước.',
+  'Variant is used by an active published combo; archive the combo first':
+    'Phiên bản đang nằm trong một combo đang bán. Hãy lưu trữ combo đó trước.',
+  'Product type cannot change after variants have been created':
+    'Không đổi được loại sản phẩm sau khi đã tạo phiên bản.',
+  'Published product requires an active variant and effective price':
+    'Sản phẩm đăng bán cần có phiên bản đang hoạt động và giá hiệu lực.',
+  'Deactivate active child categories before deactivating this category':
+    'Hãy ngừng hoạt động các danh mục con trước khi ngừng danh mục này.',
+  'Replacement price must start after the current price starts':
+    'Giá mới phải bắt đầu sau thời điểm bắt đầu của giá hiện tại.',
+  'Media sortOrder must be a unique zero-based sequence':
+    'Thứ tự ảnh phải liền mạch và không trùng nhau.',
+  'Set another media item as primary instead of clearing the current primary':
+    'Hãy chọn ảnh khác làm ảnh chính thay vì bỏ trống ảnh chính.',
+  'Committed reservation cannot be released; create a compensating stock movement':
+    'Lượt giữ hàng đã chốt không giải phóng được. Hãy tạo phiếu điều chỉnh kho bù lại.',
+  'Branch-scoped users may decrease at most 10 units per SKU in one adjustment':
+    'Tài khoản chi nhánh chỉ được giảm tối đa 10 đơn vị cho mỗi SKU trong một phiếu.',
+  'externalReference and sourceName are only allowed for MANUAL_RECEIPT':
+    'Số chứng từ và nguồn hàng chỉ dùng cho phiếu nhập tay.',
 };
 
 const STATUS_MESSAGES: Readonly<Record<number, string>> = {

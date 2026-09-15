@@ -74,6 +74,8 @@ paths:
       summary: Danh sách giao vận theo kho, trạng thái và thông tin đơn hàng
       tags:
         - Admin Fulfillments
+      x-required-permissions:
+        - fulfillment.view
   /api/v1/admin/fulfillments/by-order/{orderId}:
     get:
       operationId: getAdminFulfillmentByOrder
@@ -107,6 +109,8 @@ paths:
       summary: Chi tiết giao vận của một đơn hàng
       tags:
         - Admin Fulfillments
+      x-required-permissions:
+        - fulfillment.view
   /api/v1/admin/fulfillments/{id}:
     get:
       operationId: getAdminFulfillment
@@ -140,6 +144,8 @@ paths:
       summary: Chi tiết và lịch sử giao vận
       tags:
         - Admin Fulfillments
+      x-required-permissions:
+        - fulfillment.view
   /api/v1/admin/fulfillments/{id}/pick:
     post:
       operationId: pickAdminFulfillment
@@ -178,6 +184,8 @@ paths:
       summary: Bắt đầu lấy hàng trong kho
       tags:
         - Admin Fulfillments
+      x-required-permissions:
+        - fulfillment.pick
   /api/v1/admin/fulfillments/{id}/pack:
     post:
       operationId: packAdminFulfillment
@@ -216,6 +224,8 @@ paths:
       summary: Xác nhận đã đóng gói toàn bộ đơn
       tags:
         - Admin Fulfillments
+      x-required-permissions:
+        - fulfillment.pack
   /api/v1/admin/fulfillments/{id}/ship:
     post:
       operationId: shipAdminFulfillment
@@ -266,6 +276,8 @@ paths:
       summary: Bàn giao vận chuyển và commit tồn kho atomically
       tags:
         - Admin Fulfillments
+      x-required-permissions:
+        - fulfillment.ship
   /api/v1/admin/fulfillments/{id}/deliver:
     post:
       operationId: deliverAdminFulfillment
@@ -304,6 +316,8 @@ paths:
       summary: Xác nhận khách đã nhận đủ hàng
       tags:
         - Admin Fulfillments
+      x-required-permissions:
+        - fulfillment.delivery_update
   /api/v1/admin/fulfillments/{id}/fail-delivery:
     post:
       operationId: failAdminFulfillmentDelivery
@@ -342,6 +356,8 @@ paths:
       summary: Ghi nhận giao thất bại và đưa hàng về kho xuất
       tags:
         - Admin Fulfillments
+      x-required-permissions:
+        - fulfillment.delivery_update
   /api/v1/admin/fulfillments/{id}/receive-return:
     post:
       operationId: receiveAdminFulfillmentReturn
@@ -380,6 +396,8 @@ paths:
       summary: Kho nhận hàng giao thất bại; chỉ SELLABLE được hoàn tồn bán
       tags:
         - Admin Fulfillments
+      x-required-permissions:
+        - fulfillment.delivery_update
 components:
   schemas:
     AdminFulfillmentListDto:

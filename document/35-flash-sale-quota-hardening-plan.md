@@ -1,10 +1,10 @@
 # Flash Sale — trace lỗi quota và phương án sửa
 
-> **Document version:** 1.1.0
+> **Document version:** 1.2.0
 >
 > **Last updated:** 2026-09-14
 >
-> **Change summary:** Bước 1–3 đã sửa xong và kiểm chứng E2E; còn Bước 4 integration test và Bước 5 contract.
+> **Change summary:** Bước 4 đã xong — integration test trên PostgreSQL thật đã có trong repo.
 
 ## 1. Đường đi hiện tại
 
@@ -82,7 +82,9 @@ Báo giá khoá giá vào `unit_price`; quota chỉ giữ ở bước xác nhậ
 
 ### L7 — Chưa có integration test và E2E
 
-`test/` không có file nào cho flash sale. 11 unit test hiện tại đều chạy trên mock, **chưa chứng minh được hành vi tranh chấp thật trên PostgreSQL**.
+~~`test/` không có file nào cho flash sale.~~
+
+**Đã gỡ (2026-09-15):** `test/flash-sale-quota.integration-spec.ts` có 6 test chạy trên PostgreSQL thật, kiểm cả ràng buộc `sold + reserved <= quota` ở tầng database lẫn hành vi khi hai request tranh nhau suất cuối.
 
 ## 3. Đánh giá mô hình dữ liệu
 
@@ -154,7 +156,7 @@ Thêm chỉ mục `(customer_key, flash_sale_item_id, status)`.
 | 1. Snapshot suất flash (L2, L3, L4) | ✅ Xong | `checkout_session_items.flash_sale_item_id`; báo giá ghi suất, xác nhận đọc thẳng không tra lại; `UNIQUE(checkout_session_id, product_variant_id)` trên bảng quota |
 | 2. Combo dùng đúng variant (L1) | ✅ Xong | `reserveQuota` nhận `checkout.items` thay vì `demand` đã tách |
 | 3. Giới hạn cộng dồn theo khách (L5) | ✅ Xong | `assertPerCustomerLimit` cộng dồn `ACTIVE + COMMITTED`, bỏ qua chính session hiện tại để retry không bị tính hai lần; chỉ mục `(customer_key, flash_sale_item_id, status)` |
-| 4. Integration test + E2E (L7) | ⏳ Còn | Đã có 15 unit test; chưa có test trên PostgreSQL thật |
+| 4. Integration test + E2E (L7) | ✅ Xong | `test/flash-sale-quota.integration-spec.ts` — 6 test trên PostgreSQL thật |
 | 5. Contract + SDK | ⏳ Còn | DTO chưa đổi nên chưa cần regenerate; xác nhận lại trước khi đóng |
 
 ### Quyết định đã chốt: combo không trừ quota linh kiện

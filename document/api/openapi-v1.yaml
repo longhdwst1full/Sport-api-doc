@@ -31,6 +31,8 @@ paths:
       summary: List V1 business modules and models
       tags:
         - Admin System
+      x-required-permissions:
+        - system.module.view
   /api/v1/admin/system/parameters:
     get:
       operationId: listAdminSystemParameters
@@ -129,6 +131,8 @@ paths:
       summary: Danh sách tham số nghiệp vụ cấu hình được từ Admin
       tags:
         - Admin System
+      x-required-permissions:
+        - system.parameter.view
     post:
       operationId: createAdminSystemParameter
       parameters: []
@@ -168,6 +172,8 @@ paths:
       summary: Tạo tham số tuỳ biến; code không tham chiếu nên chỉ dùng để lưu giá trị vận hành
       tags:
         - Admin System
+      x-required-permissions:
+        - system.parameter.manage
   /api/v1/admin/system/parameters/{code}:
     patch:
       operationId: updateAdminSystemParameter
@@ -219,6 +225,8 @@ paths:
       summary: Cập nhật giá trị tham số; có hiệu lực ngay, không cần deploy
       tags:
         - Admin System
+      x-required-permissions:
+        - system.parameter.manage
     delete:
       operationId: deleteAdminSystemParameter
       parameters:
@@ -265,6 +273,8 @@ paths:
       summary: Ngừng dùng tham số tuỳ biến (xoá mềm); tham số hệ thống không xoá được
       tags:
         - Admin System
+      x-required-permissions:
+        - system.parameter.manage
   /api/v1/system/parameters/public:
     get:
       operationId: listPublicSystemParameters
@@ -366,6 +376,8 @@ paths:
       summary: List immutable redacted audit logs for a global owner
       tags:
         - Admin Audit
+      x-required-permissions:
+        - iam.audit.view
   /api/v1/admin/organization/branches:
     get:
       operationId: listAdminBranches
@@ -394,6 +406,8 @@ paths:
       summary: List sales branches
       tags:
         - Admin Organization
+      x-required-permissions:
+        - org.branch.view
     post:
       operationId: createAdminBranchWithWarehouse
       parameters: []
@@ -433,6 +447,9 @@ paths:
       summary: Create a branch with its single V1 warehouse
       tags:
         - Admin Organization
+      x-required-permissions:
+        - org.branch.manage
+        - org.warehouse.manage
   /api/v1/admin/organization/warehouses:
     get:
       operationId: listAdminWarehouses
@@ -461,6 +478,8 @@ paths:
       summary: List branch warehouses
       tags:
         - Admin Organization
+      x-required-permissions:
+        - org.warehouse.view
   /api/v1/admin/organization/branches/active:
     get:
       operationId: searchActiveAdminBranches
@@ -517,6 +536,8 @@ paths:
       summary: Search active branches for admin lookups
       tags:
         - Admin Organization
+      x-required-permissions:
+        - org.branch.view
   /api/v1/admin/organization/warehouses/active:
     get:
       operationId: searchActiveAdminWarehouses
@@ -581,6 +602,8 @@ paths:
       summary: Search active warehouses for admin lookups
       tags:
         - Admin Organization
+      x-required-permissions:
+        - org.warehouse.view
   /api/v1/admin/organization/branches/{id}:
     patch:
       operationId: updateAdminBranchWithWarehouse
@@ -632,6 +655,9 @@ paths:
       summary: Update a branch and its single V1 warehouse
       tags:
         - Admin Organization
+      x-required-permissions:
+        - org.branch.manage
+        - org.warehouse.manage
     delete:
       operationId: deleteAdminBranchWithWarehouse
       parameters:
@@ -688,6 +714,9 @@ paths:
       summary: Logically delete a branch and its V1 warehouse atomically
       tags:
         - Admin Organization
+      x-required-permissions:
+        - org.branch.manage
+        - org.warehouse.manage
   /api/v1/admin/organization/branches/{id}/deactivate:
     post:
       operationId: deactivateAdminBranchWithWarehouse
@@ -739,6 +768,9 @@ paths:
       summary: Deactivate a branch and its V1 warehouse atomically
       tags:
         - Admin Organization
+      x-required-permissions:
+        - org.branch.manage
+        - org.warehouse.manage
   /api/v1/admin/organization/branches/{id}/activate:
     post:
       operationId: activateAdminBranchWithWarehouse
@@ -790,6 +822,9 @@ paths:
       summary: Reactivate a branch and its V1 warehouse atomically
       tags:
         - Admin Organization
+      x-required-permissions:
+        - org.branch.manage
+        - org.warehouse.manage
   /api/v1/admin/iam/users:
     get:
       operationId: listAdminUsers
@@ -806,6 +841,8 @@ paths:
       summary: List staff users with role scopes
       tags:
         - Admin IAM
+      x-required-permissions:
+        - iam.user.view
     post:
       operationId: createAdminStaffUser
       parameters: []
@@ -857,6 +894,8 @@ paths:
       summary: Root Admin creates an active subordinate account with a branch role
       tags:
         - Admin IAM
+      x-required-permissions:
+        - iam.user.manage
   /api/v1/admin/iam/users/{userId}/lock:
     post:
       operationId: lockAdminStaffUser
@@ -914,6 +953,8 @@ paths:
       summary: Root Admin locks a subordinate account and revokes every active session
       tags:
         - Admin IAM
+      x-required-permissions:
+        - iam.user.manage
   /api/v1/admin/iam/users/{userId}:
     delete:
       operationId: deleteAdminStaffUser
@@ -971,6 +1012,8 @@ paths:
       summary: Logically delete a subordinate staff account by locking it and revoking sessions
       tags:
         - Admin IAM
+      x-required-permissions:
+        - iam.user.manage
   /api/v1/admin/iam/users/{userId}/unlock:
     post:
       operationId: unlockAdminStaffUser
@@ -1022,6 +1065,8 @@ paths:
       summary: Root Admin unlocks a subordinate account and resets its password
       tags:
         - Admin IAM
+      x-required-permissions:
+        - iam.user.manage
   /api/v1/admin/iam/roles:
     get:
       operationId: listAdminRoles
@@ -1038,6 +1083,8 @@ paths:
       summary: List IAM roles
       tags:
         - Admin IAM
+      x-required-permissions:
+        - iam.role.view
     post:
       operationId: createAdminRole
       parameters: []
@@ -1083,6 +1130,8 @@ paths:
       summary: Create a custom role with an explicit permission set
       tags:
         - Admin IAM
+      x-required-permissions:
+        - iam.role.manage
   /api/v1/admin/iam/permissions:
     get:
       operationId: listAdminPermissions
@@ -1099,6 +1148,8 @@ paths:
       summary: List stable permission codes
       tags:
         - Admin IAM
+      x-required-permissions:
+        - iam.role.view
   /api/v1/admin/iam/roles/all:
     get:
       operationId: listAdminAllRoles
@@ -1115,6 +1166,8 @@ paths:
       summary: List every role including INACTIVE ones for role administration
       tags:
         - Admin IAM
+      x-required-permissions:
+        - iam.role.view
   /api/v1/admin/iam/roles/active:
     get:
       operationId: searchActiveAdminRoles
@@ -1171,6 +1224,8 @@ paths:
       summary: Search assignable BRANCH_MANAGER or STAFF roles
       tags:
         - Admin IAM
+      x-required-permissions:
+        - iam.role.view
   /api/v1/admin/iam/roles/{roleId}:
     get:
       operationId: getAdminRole
@@ -1198,6 +1253,8 @@ paths:
       summary: Read one role with its permission set
       tags:
         - Admin IAM
+      x-required-permissions:
+        - iam.role.view
     patch:
       operationId: updateAdminRole
       parameters:
@@ -1254,6 +1311,8 @@ paths:
       summary: Rename a role or replace its permission set
       tags:
         - Admin IAM
+      x-required-permissions:
+        - iam.role.manage
     delete:
       operationId: deleteAdminRole
       parameters:
@@ -1306,6 +1365,8 @@ paths:
       summary: Delete a custom role that is not assigned to any user
       tags:
         - Admin IAM
+      x-required-permissions:
+        - iam.role.manage
   /api/v1/admin/iam/users/{userId}/role-assignments:
     post:
       operationId: assignAdminUserRole
@@ -1351,6 +1412,8 @@ paths:
       summary: Root Admin assigns BRANCH_MANAGER or STAFF within an active branch
       tags:
         - Admin IAM
+      x-required-permissions:
+        - iam.assignment.manage
   /api/v1/admin/iam/users/{userId}/role-assignments/{assignmentId}/revoke:
     post:
       operationId: revokeAdminUserRoleAssignment
@@ -1413,6 +1476,8 @@ paths:
       summary: Root Admin revokes one subordinate assignment and refreshes permissions
       tags:
         - Admin IAM
+      x-required-permissions:
+        - iam.assignment.manage
   /api/v1/admin/auth/login:
     post:
       operationId: loginAdmin
@@ -1753,6 +1818,28 @@ paths:
       summary: Deactivate an owned delivery address
       tags:
         - Storefront Customer
+  /api/v1/account/profile:
+    get:
+      operationId: getCustomerProfile
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerProfileDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: "Hồ sơ của khách đang đăng nhập: tên, email, số điện thoại"
+      tags:
+        - Storefront Customer
   /api/v1/admin/customers:
     get:
       operationId: listAdminCustomers
@@ -1833,6 +1920,8 @@ paths:
       summary: Danh sách khách hàng kèm số đơn, giá trị vòng đời và lần mua gần nhất
       tags:
         - Admin Customers
+      x-required-permissions:
+        - customer.view
   /api/v1/admin/customers/{id}:
     get:
       operationId: getAdminCustomer
@@ -1872,6 +1961,8 @@ paths:
       summary: Chi tiết khách hàng kèm địa chỉ và đơn gần đây
       tags:
         - Admin Customers
+      x-required-permissions:
+        - customer.view
   /api/v1/admin/catalog/brands:
     get:
       operationId: listAdminBrands
@@ -1900,6 +1991,8 @@ paths:
       summary: ""
       tags:
         - Admin Catalog
+      x-required-permissions:
+        - catalog.brand.view
     post:
       operationId: createAdminBrand
       parameters: []
@@ -1933,6 +2026,8 @@ paths:
       summary: ""
       tags:
         - Admin Catalog
+      x-required-permissions:
+        - catalog.brand.manage
   /api/v1/admin/catalog/brands/active:
     get:
       operationId: searchActiveAdminBrands
@@ -1983,6 +2078,8 @@ paths:
       summary: ""
       tags:
         - Admin Catalog
+      x-required-permissions:
+        - catalog.brand.view
   /api/v1/admin/catalog/brands/{id}:
     patch:
       operationId: updateAdminBrand
@@ -2034,6 +2131,8 @@ paths:
       summary: Update mutable brand fields
       tags:
         - Admin Catalog
+      x-required-permissions:
+        - catalog.brand.manage
     delete:
       operationId: deleteAdminBrand
       parameters:
@@ -2086,6 +2185,8 @@ paths:
       summary: Xoá hẳn thương hiệu chưa gắn sản phẩm nào
       tags:
         - Admin Catalog
+      x-required-permissions:
+        - catalog.brand.manage
   /api/v1/admin/catalog/brands/{id}/deactivate:
     post:
       operationId: deactivateAdminBrand
@@ -2137,6 +2238,8 @@ paths:
       summary: Deactivate a brand
       tags:
         - Admin Catalog
+      x-required-permissions:
+        - catalog.brand.manage
   /api/v1/admin/catalog/brands/{id}/activate:
     post:
       operationId: activateAdminBrand
@@ -2188,6 +2291,8 @@ paths:
       summary: Reactivate a brand
       tags:
         - Admin Catalog
+      x-required-permissions:
+        - catalog.brand.manage
   /api/v1/admin/catalog/categories:
     get:
       operationId: listAdminCategories
@@ -2216,6 +2321,8 @@ paths:
       summary: ""
       tags:
         - Admin Catalog
+      x-required-permissions:
+        - catalog.category.view
     post:
       operationId: createAdminCategory
       parameters: []
@@ -2249,6 +2356,8 @@ paths:
       summary: ""
       tags:
         - Admin Catalog
+      x-required-permissions:
+        - catalog.category.manage
   /api/v1/admin/catalog/categories/active:
     get:
       operationId: searchActiveAdminCategories
@@ -2299,6 +2408,8 @@ paths:
       summary: ""
       tags:
         - Admin Catalog
+      x-required-permissions:
+        - catalog.category.view
   /api/v1/admin/catalog/categories/{id}:
     patch:
       operationId: updateAdminCategory
@@ -2350,6 +2461,8 @@ paths:
       summary: Update mutable category fields
       tags:
         - Admin Catalog
+      x-required-permissions:
+        - catalog.category.manage
     delete:
       operationId: deleteAdminCategory
       parameters:
@@ -2412,6 +2525,8 @@ paths:
       summary: Logically delete a leaf category by changing its status to INACTIVE
       tags:
         - Admin Catalog
+      x-required-permissions:
+        - catalog.category.manage
   /api/v1/admin/catalog/categories/{id}/deactivate:
     post:
       operationId: deactivateAdminCategory
@@ -2469,6 +2584,8 @@ paths:
       summary: Deactivate a leaf category
       tags:
         - Admin Catalog
+      x-required-permissions:
+        - catalog.category.manage
   /api/v1/admin/catalog/categories/{id}/activate:
     post:
       operationId: activateAdminCategory
@@ -2526,6 +2643,8 @@ paths:
       summary: Reactivate a category
       tags:
         - Admin Catalog
+      x-required-permissions:
+        - catalog.category.manage
   /api/v1/catalog/categories:
     get:
       operationId: listCatalogCategories
@@ -2715,6 +2834,8 @@ paths:
       summary: List products for admin
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.view
     post:
       operationId: createAdminProduct
       parameters: []
@@ -2748,6 +2869,8 @@ paths:
       summary: Create product
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.manage
   /api/v1/admin/products/variants/active:
     get:
       operationId: searchActiveAdminProductVariants
@@ -2798,6 +2921,8 @@ paths:
       summary: Search active standard SKU variants for selectors and combo components
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.view
   /api/v1/admin/products/{slug}:
     get:
       operationId: getAdminProduct
@@ -2831,6 +2956,8 @@ paths:
       summary: Get product detail for admin
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.view
   /api/v1/admin/products/{id}:
     patch:
       operationId: updateAdminProduct
@@ -2870,6 +2997,8 @@ paths:
       summary: Update product
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.manage
     delete:
       operationId: deleteAdminProduct
       parameters:
@@ -2932,6 +3061,8 @@ paths:
       summary: Logically delete a product or combo by changing its status to ARCHIVED
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.publish
   /api/v1/admin/products/{id}/variants:
     post:
       operationId: createAdminProductVariant
@@ -2971,6 +3102,8 @@ paths:
       summary: Create a sellable SKU variant
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.manage
   /api/v1/admin/products/variants/{variantId}:
     patch:
       operationId: updateAdminProductVariant
@@ -3034,6 +3167,8 @@ paths:
       summary: Update mutable SKU metadata
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.manage
     delete:
       operationId: deleteAdminProductVariant
       parameters:
@@ -3096,6 +3231,8 @@ paths:
       summary: Logically delete one sellable SKU variant by changing its status to INACTIVE
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.manage
   /api/v1/admin/products/{id}/media:
     post:
       operationId: attachAdminProductMedia
@@ -3161,6 +3298,8 @@ paths:
       summary: Attach one finalized media asset to a product or SKU
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.manage
   /api/v1/admin/products/{id}/media/reorder:
     patch:
       operationId: reorderAdminProductMedia
@@ -3226,6 +3365,8 @@ paths:
       summary: Replace the order of all active product media
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.manage
   /api/v1/admin/products/{id}/media/{mediaId}:
     patch:
       operationId: updateAdminProductMedia
@@ -3296,6 +3437,8 @@ paths:
       summary: Update product media alt text or primary flag
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.manage
     delete:
       operationId: deleteAdminProductMedia
       parameters:
@@ -3365,6 +3508,8 @@ paths:
       summary: Logically delete a product media link without deleting its provider asset
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.manage
   /api/v1/admin/products/{id}/media/{mediaId}/archive:
     post:
       operationId: archiveAdminProductMedia
@@ -3435,6 +3580,8 @@ paths:
       summary: Archive a product media link without deleting its asset
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.manage
   /api/v1/admin/products/variants/{variantId}/prices:
     post:
       operationId: createAdminProductPrice
@@ -3492,6 +3639,8 @@ paths:
       summary: Create a global VAT-included price window
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.price.manage
     get:
       operationId: getAdminProductPriceTimeline
       parameters:
@@ -3530,6 +3679,8 @@ paths:
       summary: Get the current, upcoming, and immutable price history of a SKU
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.price.view
   /api/v1/admin/products/variants/{variantId}/prices/replace:
     post:
       operationId: replaceAdminProductPrice
@@ -3593,6 +3744,8 @@ paths:
       summary: Atomically close the current open price and create its replacement
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.price.manage
   /api/v1/admin/products/{id}/publish:
     post:
       operationId: publishAdminProduct
@@ -3650,6 +3803,8 @@ paths:
       summary: Publish a complete draft product
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.publish
   /api/v1/admin/products/{id}/archive:
     post:
       operationId: archiveAdminProduct
@@ -3689,6 +3844,8 @@ paths:
       summary: Archive a product or combo and remove it from storefront sales
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.publish
   /api/v1/admin/products/{id}/reactivate:
     post:
       operationId: reactivateAdminProduct
@@ -3728,6 +3885,8 @@ paths:
       summary: Reactivate an archived product or combo as DRAFT for review
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.publish
   /api/v1/admin/products/variants/{variantId}/archive:
     post:
       operationId: archiveAdminProductVariant
@@ -3767,6 +3926,8 @@ paths:
       summary: Archive one sellable SKU variant
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.manage
   /api/v1/admin/products/variants/{variantId}/reactivate:
     post:
       operationId: reactivateAdminProductVariant
@@ -3806,6 +3967,8 @@ paths:
       summary: Reactivate one archived SKU variant
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.manage
   /api/v1/admin/products/{id}/bundle:
     post:
       operationId: createAdminProductBundle
@@ -3845,6 +4008,8 @@ paths:
       summary: Create a fixed non-nested virtual combo
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.manage
   /api/v1/admin/inventory/balances:
     get:
       operationId: listInventoryBalances
@@ -3913,6 +4078,8 @@ paths:
       summary: List warehouse balances
       tags:
         - Admin Inventory
+      x-required-permissions:
+        - inventory.stock.view
   /api/v1/admin/inventory/movements:
     get:
       operationId: listInventoryMovements
@@ -4015,6 +4182,8 @@ paths:
       summary: List immutable stock ledger entries
       tags:
         - Admin Inventory
+      x-required-permissions:
+        - inventory.stock.view
   /api/v1/admin/inventory/adjustments:
     get:
       operationId: listStockAdjustments
@@ -4087,6 +4256,8 @@ paths:
       summary: List posted stock adjustment documents
       tags:
         - Admin Inventory
+      x-required-permissions:
+        - inventory.stock.view
     post:
       operationId: createStockAdjustment
       parameters:
@@ -4143,6 +4314,8 @@ paths:
       summary: Post a basic stock adjustment
       tags:
         - Admin Inventory
+      x-required-permissions:
+        - inventory.stock.adjust
   /api/v1/admin/inventory/adjustments/{id}:
     get:
       operationId: getStockAdjustment
@@ -4194,6 +4367,8 @@ paths:
       summary: Get a posted stock adjustment document
       tags:
         - Admin Inventory
+      x-required-permissions:
+        - inventory.stock.view
   /api/v1/admin/inventory/transfers:
     get:
       operationId: listStockTransfers
@@ -4271,6 +4446,8 @@ paths:
       summary: List stock transfers visible to the assigned branches
       tags:
         - Admin Inventory Transfers
+      x-required-permissions:
+        - inventory.transfer.view
     post:
       operationId: createStockTransfer
       parameters:
@@ -4327,6 +4504,8 @@ paths:
       summary: Create a DRAFT full-shipment stock transfer
       tags:
         - Admin Inventory Transfers
+      x-required-permissions:
+        - inventory.transfer.create
   /api/v1/admin/inventory/transfers/{id}:
     get:
       operationId: getStockTransfer
@@ -4372,6 +4551,8 @@ paths:
       summary: Get stock transfer detail
       tags:
         - Admin Inventory Transfers
+      x-required-permissions:
+        - inventory.transfer.view
   /api/v1/admin/inventory/transfers/{id}/submit:
     post:
       operationId: submitStockTransfer
@@ -4435,6 +4616,8 @@ paths:
       summary: Submit a DRAFT transfer
       tags:
         - Admin Inventory Transfers
+      x-required-permissions:
+        - inventory.transfer.create
   /api/v1/admin/inventory/transfers/{id}/ship:
     post:
       operationId: shipStockTransfer
@@ -4498,6 +4681,8 @@ paths:
       summary: Ship every requested item from the source warehouse
       tags:
         - Admin Inventory Transfers
+      x-required-permissions:
+        - inventory.transfer.ship
   /api/v1/admin/inventory/transfers/{id}/receive:
     post:
       operationId: receiveStockTransfer
@@ -4561,6 +4746,8 @@ paths:
       summary: Receive a full shipment and record damaged quantities
       tags:
         - Admin Inventory Transfers
+      x-required-permissions:
+        - inventory.transfer.receive
   /api/v1/promotions/flash-sales:
     get:
       operationId: listPublicFlashSales
@@ -4636,6 +4823,8 @@ paths:
       summary: Danh sách chiến dịch flash sale
       tags:
         - Admin Promotions
+      x-required-permissions:
+        - catalog.flash_sale.view
     post:
       operationId: createAdminFlashSale
       parameters: []
@@ -4675,6 +4864,8 @@ paths:
       summary: Tạo chiến dịch flash sale ở trạng thái nháp
       tags:
         - Admin Promotions
+      x-required-permissions:
+        - catalog.flash_sale.manage
   /api/v1/admin/promotions/flash-sales/{id}:
     get:
       operationId: getAdminFlashSale
@@ -4714,6 +4905,8 @@ paths:
       summary: Chi tiết chiến dịch và danh sách suất bán
       tags:
         - Admin Promotions
+      x-required-permissions:
+        - catalog.flash_sale.view
     patch:
       operationId: updateAdminFlashSale
       parameters:
@@ -4758,6 +4951,8 @@ paths:
       summary: Cập nhật thông tin và cửa sổ chạy của chiến dịch
       tags:
         - Admin Promotions
+      x-required-permissions:
+        - catalog.flash_sale.manage
   /api/v1/admin/promotions/flash-sales/{id}/status:
     post:
       operationId: changeAdminFlashSaleStatus
@@ -4803,6 +4998,8 @@ paths:
       summary: Chuyển vòng đời chiến dịch theo state machine
       tags:
         - Admin Promotions
+      x-required-permissions:
+        - catalog.flash_sale.manage
   /api/v1/admin/promotions/flash-sales/{id}/items:
     post:
       operationId: upsertAdminFlashSaleItem
@@ -4848,6 +5045,8 @@ paths:
       summary: Thêm hoặc cập nhật suất bán của một biến thể trong chiến dịch
       tags:
         - Admin Promotions
+      x-required-permissions:
+        - catalog.flash_sale.manage
   /api/v1/admin/promotions/flash-sales/{id}/items/{itemId}:
     delete:
       operationId: removeAdminFlashSaleItem
@@ -4898,6 +5097,8 @@ paths:
       summary: Gỡ suất bán; đã phát sinh giao dịch thì chuyển INACTIVE thay vì xóa
       tags:
         - Admin Promotions
+      x-required-permissions:
+        - catalog.flash_sale.manage
   /api/v1/carts/guest:
     post:
       operationId: createGuestCart
@@ -5457,6 +5658,8 @@ paths:
       summary: List manual shipping quotes visible in the assigned branch scope
       tags:
         - Admin Checkout
+      x-required-permissions:
+        - order.view
   /api/v1/admin/checkouts/{checkoutToken}/shipping-consultation:
     patch:
       operationId: updateAdminManualShippingQuote
@@ -5496,6 +5699,8 @@ paths:
       summary: Record an agreed manual/coach shipping fee and reopen the quote for customer confirmation
       tags:
         - Admin Checkout
+      x-required-permissions:
+        - order.manage
   /api/v1/shipping/quotes:
     post:
       operationId: quoteShipping
@@ -5619,6 +5824,8 @@ paths:
       summary: List posts for administration
       tags:
         - Admin Content
+      x-required-permissions:
+        - cms.content.view
     post:
       operationId: createAdminPost
       parameters: []
@@ -5652,6 +5859,8 @@ paths:
       summary: Create and publish a content post
       tags:
         - Admin Content
+      x-required-permissions:
+        - cms.content.manage
   /api/v1/admin/content/posts/{id}:
     delete:
       operationId: deleteAdminPost
@@ -5709,6 +5918,8 @@ paths:
       summary: Logically delete a content post by archiving it
       tags:
         - Admin Content
+      x-required-permissions:
+        - cms.content.manage
   /api/v1/orders/guest/from-checkout/{checkoutToken}:
     post:
       operationId: placeGuestOrder
@@ -6091,6 +6302,8 @@ paths:
       summary: "Danh mục bán tại quầy: hàng lẻ và combo kèm giá, tồn khả dụng theo chi nhánh"
       tags:
         - Admin Orders
+      x-required-permissions:
+        - order.manage
   /api/v1/admin/orders/pos:
     post:
       operationId: createPosOrder
@@ -6142,6 +6355,8 @@ paths:
       summary: "Tạo đơn bán tại quầy: thu tiền ngay và giao hàng tại chỗ"
       tags:
         - Admin Orders
+      x-required-permissions:
+        - order.manage
   /api/v1/admin/orders:
     get:
       operationId: listAdminOrders
@@ -6224,6 +6439,8 @@ paths:
       summary: Danh sách đơn hàng theo tab trạng thái, tìm kiếm và phạm vi chi nhánh
       tags:
         - Admin Orders
+      x-required-permissions:
+        - order.view
   /api/v1/admin/orders/{id}:
     get:
       operationId: getAdminOrder
@@ -6269,6 +6486,8 @@ paths:
       summary: Chi tiết và lịch sử đơn hàng trong phạm vi chi nhánh
       tags:
         - Admin Orders
+      x-required-permissions:
+        - order.view
   /api/v1/admin/orders/{id}/cancel:
     post:
       operationId: cancelAdminOrder
@@ -6331,6 +6550,8 @@ paths:
       summary: Admin hủy đơn chưa thanh toán/xử lý trong phạm vi chi nhánh
       tags:
         - Admin Orders
+      x-required-permissions:
+        - order.manage
   /api/v1/admin/orders/{id}/confirm:
     post:
       operationId: confirmAdminOrder
@@ -6393,6 +6614,8 @@ paths:
       summary: Admin xác nhận đơn đủ điều kiện để kho bắt đầu xử lý
       tags:
         - Admin Orders
+      x-required-permissions:
+        - order.manage
   /api/v1/admin/orders/{id}/complete:
     post:
       operationId: completeAdminOrder
@@ -6455,6 +6678,8 @@ paths:
       summary: Admin hoàn tất đơn bất kỳ lúc nào sau khi đã giao đủ và thu đủ tiền
       tags:
         - Admin Orders
+      x-required-permissions:
+        - order.manage
   /api/v1/payments/guest/orders/{orderNo}:
     get:
       operationId: getGuestPayment
@@ -6797,6 +7022,8 @@ paths:
       summary: Danh sách thanh toán theo trạng thái, phương thức, tìm kiếm và phạm vi chi nhánh
       tags:
         - Admin Payments
+      x-required-permissions:
+        - payment.view
   /api/v1/admin/payments/{id}:
     get:
       operationId: getAdminPayment
@@ -6836,6 +7063,8 @@ paths:
       summary: Chi tiết thanh toán và bằng chứng trong phạm vi chi nhánh
       tags:
         - Admin Payments
+      x-required-permissions:
+        - payment.view
   /api/v1/admin/payments/{id}/confirm:
     post:
       operationId: confirmAdminPayment
@@ -6898,6 +7127,8 @@ paths:
       summary: Xác nhận chuyển khoản đủ tiền hoặc thu COD sau giao hàng
       tags:
         - Admin Payments
+      x-required-permissions:
+        - payment.confirm
   /api/v1/admin/payments/{id}/reject:
     post:
       operationId: rejectAdminPayment
@@ -6960,6 +7191,8 @@ paths:
       summary: Từ chối bằng chứng thanh toán và lưu lý do/audit
       tags:
         - Admin Payments
+      x-required-permissions:
+        - payment.confirm
   /api/v1/payments/vnpay/return:
     get:
       operationId: verifyVnpayReturn
@@ -7104,6 +7337,8 @@ paths:
       summary: Danh sách giao vận theo kho, trạng thái và thông tin đơn hàng
       tags:
         - Admin Fulfillments
+      x-required-permissions:
+        - fulfillment.view
   /api/v1/admin/fulfillments/by-order/{orderId}:
     get:
       operationId: getAdminFulfillmentByOrder
@@ -7137,6 +7372,8 @@ paths:
       summary: Chi tiết giao vận của một đơn hàng
       tags:
         - Admin Fulfillments
+      x-required-permissions:
+        - fulfillment.view
   /api/v1/admin/fulfillments/{id}:
     get:
       operationId: getAdminFulfillment
@@ -7170,6 +7407,8 @@ paths:
       summary: Chi tiết và lịch sử giao vận
       tags:
         - Admin Fulfillments
+      x-required-permissions:
+        - fulfillment.view
   /api/v1/admin/fulfillments/{id}/pick:
     post:
       operationId: pickAdminFulfillment
@@ -7208,6 +7447,8 @@ paths:
       summary: Bắt đầu lấy hàng trong kho
       tags:
         - Admin Fulfillments
+      x-required-permissions:
+        - fulfillment.pick
   /api/v1/admin/fulfillments/{id}/pack:
     post:
       operationId: packAdminFulfillment
@@ -7246,6 +7487,8 @@ paths:
       summary: Xác nhận đã đóng gói toàn bộ đơn
       tags:
         - Admin Fulfillments
+      x-required-permissions:
+        - fulfillment.pack
   /api/v1/admin/fulfillments/{id}/ship:
     post:
       operationId: shipAdminFulfillment
@@ -7296,6 +7539,8 @@ paths:
       summary: Bàn giao vận chuyển và commit tồn kho atomically
       tags:
         - Admin Fulfillments
+      x-required-permissions:
+        - fulfillment.ship
   /api/v1/admin/fulfillments/{id}/deliver:
     post:
       operationId: deliverAdminFulfillment
@@ -7334,6 +7579,8 @@ paths:
       summary: Xác nhận khách đã nhận đủ hàng
       tags:
         - Admin Fulfillments
+      x-required-permissions:
+        - fulfillment.delivery_update
   /api/v1/admin/fulfillments/{id}/fail-delivery:
     post:
       operationId: failAdminFulfillmentDelivery
@@ -7372,6 +7619,8 @@ paths:
       summary: Ghi nhận giao thất bại và đưa hàng về kho xuất
       tags:
         - Admin Fulfillments
+      x-required-permissions:
+        - fulfillment.delivery_update
   /api/v1/admin/fulfillments/{id}/receive-return:
     post:
       operationId: receiveAdminFulfillmentReturn
@@ -7410,6 +7659,8 @@ paths:
       summary: Kho nhận hàng giao thất bại; chỉ SELLABLE được hoàn tồn bán
       tags:
         - Admin Fulfillments
+      x-required-permissions:
+        - fulfillment.delivery_update
   /api/v1/catalog/products/{slug}/reviews:
     get:
       operationId: listProductReviews
@@ -7457,6 +7708,8 @@ paths:
       summary: List reviews for moderation
       tags:
         - Admin Reviews
+      x-required-permissions:
+        - catalog.review.moderate
   /api/v1/admin/reviews/{id}/moderation:
     patch:
       operationId: moderateAdminReview
@@ -7496,6 +7749,8 @@ paths:
       summary: Approve or reject a review
       tags:
         - Admin Reviews
+      x-required-permissions:
+        - catalog.review.moderate
   /api/v1/admin/reviews/{id}:
     delete:
       operationId: deleteAdminReview
@@ -7553,6 +7808,8 @@ paths:
       summary: Logically delete a review by hiding it from the storefront
       tags:
         - Admin Reviews
+      x-required-permissions:
+        - catalog.review.moderate
   /api/v1/admin/media/uploads/signature:
     post:
       operationId: createAdminMediaUpload
@@ -7599,6 +7856,8 @@ paths:
       summary: Create a short-lived signed Cloudinary image upload
       tags:
         - Admin Media
+      x-required-permissions:
+        - media.asset.upload
   /api/v1/admin/media/uploads/finalize:
     post:
       operationId: finalizeAdminMediaUpload
@@ -7651,6 +7910,8 @@ paths:
       summary: Verify a direct Cloudinary upload and return trusted metadata
       tags:
         - Admin Media
+      x-required-permissions:
+        - media.asset.upload
   /api/v1/admin/reports/overview:
     get:
       operationId: getAdminReportOverview
@@ -7679,6 +7940,8 @@ paths:
       summary: "Số liệu vận hành: đơn theo trạng thái, đơn chờ giao, sản phẩm, khách hàng"
       tags:
         - Admin Reporting
+      x-required-permissions:
+        - report.operation.view
   /api/v1/admin/reports/revenue:
     get:
       operationId: getAdminReportRevenue
@@ -7721,6 +7984,8 @@ paths:
       summary: Doanh thu đã thực nhận theo khoảng thời gian, kèm chuỗi theo ngày
       tags:
         - Admin Reporting
+      x-required-permissions:
+        - report.revenue.view
   /api/v1/admin/reports/inventory:
     get:
       operationId: getAdminReportInventory
@@ -7749,6 +8014,8 @@ paths:
       summary: Tồn kho chạm ngưỡng đặt lại và hết hàng bán
       tags:
         - Admin Reporting
+      x-required-permissions:
+        - report.inventory.view
   /api/v1/admin/reports/top-products:
     get:
       operationId: getAdminReportTopProducts
@@ -7799,6 +8066,8 @@ paths:
       summary: Sản phẩm bán chạy tính trên đơn đã thu được tiền
       tags:
         - Admin Reporting
+      x-required-permissions:
+        - report.revenue.view
 info:
   title: DCTD-UTC Commerce API
   description: Contract for storefront and admin applications
@@ -8898,6 +9167,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AuthScopeDto"
+        permissionVersion:
+          type: string
+          example: "3"
+          description: Changes whenever the user role/permission set changes; clients use it as a cache key for permission-derived UI such as navigation menus
         mustChangePassword:
           type: boolean
           example: false
@@ -8906,6 +9179,7 @@ components:
         - displayName
         - permissions
         - scopes
+        - permissionVersion
         - mustChangePassword
     RegisterCustomerDto:
       type: object
@@ -9053,6 +9327,42 @@ components:
           example: 0
       required:
         - expectedVersion
+    CustomerProfileDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        customerNo:
+          type: string
+          example: KH-000128
+          description: Mã khách, dùng khi liên hệ hỗ trợ
+        name:
+          type: string
+          example: Nguyễn Minh Anh
+        email:
+          type: string
+          nullable: true
+          example: minhanh@example.com
+        phone:
+          type: string
+          nullable: true
+          example: "0903456789"
+        marketingConsent:
+          type: boolean
+          description: Khách có đồng ý nhận tin khuyến mãi
+        createdAt:
+          type: string
+          description: Thời điểm tạo tài khoản
+      required:
+        - id
+        - customerNo
+        - name
+        - email
+        - phone
+        - marketingConsent
+        - createdAt
     AdminCustomerSummaryDto:
       type: object
       properties:

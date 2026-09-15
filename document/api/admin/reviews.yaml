@@ -37,6 +37,8 @@ paths:
       summary: List reviews for moderation
       tags:
         - Admin Reviews
+      x-required-permissions:
+        - catalog.review.moderate
   /api/v1/admin/reviews/{id}/moderation:
     patch:
       operationId: moderateAdminReview
@@ -76,6 +78,8 @@ paths:
       summary: Approve or reject a review
       tags:
         - Admin Reviews
+      x-required-permissions:
+        - catalog.review.moderate
   /api/v1/admin/reviews/{id}:
     delete:
       operationId: deleteAdminReview
@@ -133,6 +137,8 @@ paths:
       summary: Logically delete a review by hiding it from the storefront
       tags:
         - Admin Reviews
+      x-required-permissions:
+        - catalog.review.moderate
 components:
   schemas:
     ProductReviewListDto:

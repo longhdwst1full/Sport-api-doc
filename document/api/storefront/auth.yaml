@@ -254,6 +254,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AuthScopeDto"
+        permissionVersion:
+          type: string
+          example: "3"
+          description: Changes whenever the user role/permission set changes; clients use it as a cache key for permission-derived UI such as navigation menus
         mustChangePassword:
           type: boolean
           example: false
@@ -262,6 +266,7 @@ components:
         - displayName
         - permissions
         - scopes
+        - permissionVersion
         - mustChangePassword
     ErrorDetailDto:
       type: object

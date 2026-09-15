@@ -22,13 +22,23 @@ import {
 import { ScopeType } from '../iam/iam.types';
 import { AUTH_AUDIT_ACTION, AUTH_ERROR, AUTH_SECURITY } from './auth.constants';
 import { ChangePasswordDto, LoginDto, RegisterCustomerDto, TokenPairDto } from './auth.dto';
-import { AccessTokenPayload, AuthPrincipal } from './auth.types';
+import { AccessTokenPayload, AuthPrincipal, AuthScope } from './auth.types';
 import {
   InvalidVietnamesePhoneNumberError,
   normalizeVietnamesePhone,
 } from './phone-normalization';
 
 type LoginUserType = typeof USER_TYPE.CUSTOMER | typeof USER_TYPE.STAFF;
+
+interface CachedGrants {
+  value: { permissions: string[]; scopes: AuthScope[] };
+  expiresAt: number;
+}
+
+/** Short enough that a revoked role assignment without a version bump cannot linger. */
+const AUTH_GRANT_CACHE_TTL_MS = 60_000;
+/** Bounds memory on a long-lived process; a full clear is acceptable because entries are cheap to rebuild. */
+const AUTH_GRANT_CACHE_MAX_ENTRIES = 5_000;
 
 @Injectable()
 export class AuthService {
@@ -38,6 +48,8 @@ export class AuthService {
     private readonly config: ConfigService,
     private readonly audit: AuditWriter,
   ) {}
+
+  private readonly grantCache = new Map<string, CachedGrants>();
 
   async login(
     input: LoginDto,
@@ -268,6 +280,8 @@ export class AuthService {
     }
 
     const now = new Date();
+    // SECURITY: Session row is re-checked on every request so a revoked or expired session stops
+    // working immediately; only the role/permission projection below is cached.
     const session = await this.prisma.authSession.findFirst({
       where: {
         id: toDatabaseId(payload.sid),
@@ -275,21 +289,15 @@ export class AuthService {
         revokedAt: null,
         expiresAt: { gt: now },
       },
-      include: {
+      select: {
+        id: true,
         user: {
-          include: {
-            roleAssignments: {
-              where: {
-                status: ROLE_ASSIGNMENT_STATUS.ACTIVE,
-                validFrom: { lte: now },
-                OR: [{ validTo: null }, { validTo: { gt: now } }],
-              },
-              include: {
-                role: {
-                  include: { permissions: { include: { permission: true } } },
-                },
-              },
-            },
+          select: {
+            id: true,
+            displayName: true,
+            status: true,
+            permissionVersion: true,
+            mustChangePassword: true,
           },
         },
       },
@@ -302,27 +310,88 @@ export class AuthService {
       throw new UnauthorizedException('Access token is no longer valid');
     }
 
-    const activeAssignments = session.user.roleAssignments.filter(
-      ({ role }) => role.status === ROLE_STATUS.ACTIVE,
-    );
+    const grants = await this.resolveGrants(session.user.id, payload.pv, now);
     return {
       userId: toEntityId(session.user.id),
       sessionId: toEntityId(session.id),
       displayName: session.user.displayName,
       permissionVersion: session.user.permissionVersion.toString(),
+      permissions: grants.permissions,
+      scopes: grants.scopes,
+      mustChangePassword: session.user.mustChangePassword,
+    };
+  }
+
+  /**
+   * Resolve the effective permission codes and data scopes of one user.
+   *
+   * SECURITY: The cache key carries `permissionVersion`, which the IAM module bumps on every
+   * role/assignment change. A permission change therefore produces a different key and can never be
+   * served from a stale entry, so the short TTL only bounds memory, not correctness. Each replica
+   * caches independently for the same reason.
+   */
+  private async resolveGrants(
+    userId: bigint,
+    permissionVersion: string,
+    now: Date,
+  ): Promise<{ permissions: string[]; scopes: AuthScope[] }> {
+    const cacheKey = `${userId.toString()}:${permissionVersion}`;
+    const cached = this.grantCache.get(cacheKey);
+    if (cached && cached.expiresAt > now.getTime()) {
+      return cached.value;
+    }
+
+    const assignments = await this.prisma.userRoleAssignment.findMany({
+      where: {
+        userId,
+        status: ROLE_ASSIGNMENT_STATUS.ACTIVE,
+        validFrom: { lte: now },
+        OR: [{ validTo: null }, { validTo: { gt: now } }],
+        role: { status: ROLE_STATUS.ACTIVE },
+      },
+      select: {
+        scopeType: true,
+        branchId: true,
+        validTo: true,
+        role: { select: { permissions: { select: { permission: { select: { code: true } } } } } },
+      },
+    });
+
+    const value = {
       permissions: [
         ...new Set(
-          activeAssignments.flatMap(({ role }) =>
+          assignments.flatMap(({ role }) =>
             role.permissions.map(({ permission }) => permission.code),
           ),
         ),
       ],
-      scopes: activeAssignments.map((assignment) => ({
+      scopes: assignments.map((assignment) => ({
         type: assignment.scopeType as ScopeType,
         ...(assignment.branchId ? { branchId: toEntityId(assignment.branchId) } : {}),
       })),
-      mustChangePassword: session.user.mustChangePassword,
     };
+
+    // INVARIANT: khoá cache chỉ gồm userId và permissionVersion, nên nó chỉ bắt được việc mất
+    // quyền do CÓ NGƯỜI SỬA dữ liệu (mọi đường đó đều bump permissionVersion). Quyền hết hạn do
+    // THỜI GIAN TRÔI QUA không bump gì cả, nên không được phép cache. V1 chưa cho đặt valid_to ở
+    // tương lai (UserRoleAssignmentDto không có field này, iam.service luôn đặt validFrom = now),
+    // nhưng cột vẫn tồn tại trong schema — nếu sau này mở tính năng cấp quyền có thời hạn thì
+    // nhánh dưới đây giữ cho cache không bao giờ trả quyền đã hết hiệu lực.
+    const hasPendingExpiry = assignments.some(
+      (assignment) => assignment.validTo !== null && assignment.validTo.getTime() > now.getTime(),
+    );
+    if (hasPendingExpiry) {
+      return value;
+    }
+
+    if (this.grantCache.size >= AUTH_GRANT_CACHE_MAX_ENTRIES) {
+      this.grantCache.clear();
+    }
+    this.grantCache.set(cacheKey, {
+      value,
+      expiresAt: now.getTime() + AUTH_GRANT_CACHE_TTL_MS,
+    });
+    return value;
   }
 
   private async createSession(

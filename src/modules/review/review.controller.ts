@@ -42,7 +42,7 @@ export class AdminReviewController {
   constructor(private readonly reviews: ReviewService) {}
 
   @Get()
-  @RequirePermissions('review.moderate')
+  @RequirePermissions('catalog.review.moderate')
   @ApiOperation({ operationId: 'listAdminReviews', summary: 'List reviews for moderation' })
   @ApiOkResponse({ type: ProductReviewListDto })
   listAdminReviews(): Promise<ProductReviewListDto> {
@@ -50,7 +50,7 @@ export class AdminReviewController {
   }
 
   @Patch(':id/moderation')
-  @RequirePermissions('review.moderate')
+  @RequirePermissions('catalog.review.moderate')
   @ApiOperation({ operationId: 'moderateAdminReview', summary: 'Approve or reject a review' })
   @ApiOkResponse({ type: ProductReviewDto })
   moderateAdminReview(@Param('id') id: string, @Body() input: ModerateReviewDto): Promise<ProductReviewDto> {
@@ -59,7 +59,7 @@ export class AdminReviewController {
 
   @Delete(':id')
   @HttpCode(200)
-  @RequirePermissions('review.moderate')
+  @RequirePermissions('catalog.review.moderate')
   @ApiOperation({
     operationId: 'deleteAdminReview',
     summary: 'Logically delete a review by hiding it from the storefront',

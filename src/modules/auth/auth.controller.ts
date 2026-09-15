@@ -117,6 +117,7 @@ export class AuthController {
       displayName: request.auth.displayName,
       permissions: request.auth.permissions,
       scopes: request.auth.scopes,
+      permissionVersion: request.auth.permissionVersion,
       mustChangePassword: request.auth.mustChangePassword,
     };
   }
@@ -221,6 +222,7 @@ export class StorefrontAuthController {
       displayName: request.auth.displayName,
       permissions: request.auth.permissions,
       scopes: request.auth.scopes,
+      permissionVersion: request.auth.permissionVersion,
       mustChangePassword: request.auth.mustChangePassword,
     };
   }

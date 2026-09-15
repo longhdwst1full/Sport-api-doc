@@ -77,6 +77,8 @@ paths:
       summary: List warehouse balances
       tags:
         - Admin Inventory
+      x-required-permissions:
+        - inventory.stock.view
   /api/v1/admin/inventory/movements:
     get:
       operationId: listInventoryMovements
@@ -179,6 +181,8 @@ paths:
       summary: List immutable stock ledger entries
       tags:
         - Admin Inventory
+      x-required-permissions:
+        - inventory.stock.view
   /api/v1/admin/inventory/adjustments:
     get:
       operationId: listStockAdjustments
@@ -251,6 +255,8 @@ paths:
       summary: List posted stock adjustment documents
       tags:
         - Admin Inventory
+      x-required-permissions:
+        - inventory.stock.view
     post:
       operationId: createStockAdjustment
       parameters:
@@ -307,6 +313,8 @@ paths:
       summary: Post a basic stock adjustment
       tags:
         - Admin Inventory
+      x-required-permissions:
+        - inventory.stock.adjust
   /api/v1/admin/inventory/adjustments/{id}:
     get:
       operationId: getStockAdjustment
@@ -358,6 +366,8 @@ paths:
       summary: Get a posted stock adjustment document
       tags:
         - Admin Inventory
+      x-required-permissions:
+        - inventory.stock.view
   /api/v1/admin/inventory/transfers:
     get:
       operationId: listStockTransfers
@@ -435,6 +445,8 @@ paths:
       summary: List stock transfers visible to the assigned branches
       tags:
         - Admin Inventory Transfers
+      x-required-permissions:
+        - inventory.transfer.view
     post:
       operationId: createStockTransfer
       parameters:
@@ -491,6 +503,8 @@ paths:
       summary: Create a DRAFT full-shipment stock transfer
       tags:
         - Admin Inventory Transfers
+      x-required-permissions:
+        - inventory.transfer.create
   /api/v1/admin/inventory/transfers/{id}:
     get:
       operationId: getStockTransfer
@@ -536,6 +550,8 @@ paths:
       summary: Get stock transfer detail
       tags:
         - Admin Inventory Transfers
+      x-required-permissions:
+        - inventory.transfer.view
   /api/v1/admin/inventory/transfers/{id}/submit:
     post:
       operationId: submitStockTransfer
@@ -599,6 +615,8 @@ paths:
       summary: Submit a DRAFT transfer
       tags:
         - Admin Inventory Transfers
+      x-required-permissions:
+        - inventory.transfer.create
   /api/v1/admin/inventory/transfers/{id}/ship:
     post:
       operationId: shipStockTransfer
@@ -662,6 +680,8 @@ paths:
       summary: Ship every requested item from the source warehouse
       tags:
         - Admin Inventory Transfers
+      x-required-permissions:
+        - inventory.transfer.ship
   /api/v1/admin/inventory/transfers/{id}/receive:
     post:
       operationId: receiveStockTransfer
@@ -725,6 +745,8 @@ paths:
       summary: Receive a full shipment and record damaged quantities
       tags:
         - Admin Inventory Transfers
+      x-required-permissions:
+        - inventory.transfer.receive
 components:
   schemas:
     InventoryBalanceListDto:

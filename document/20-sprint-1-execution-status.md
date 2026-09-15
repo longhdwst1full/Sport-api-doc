@@ -1,10 +1,14 @@
 # Sprint 1 execution status
 
-> **Document version:** 1.10.0
+> **Document version:** 1.11.0
 >
 > **Last updated:** 2026-09-07
 >
-> **Change summary:** Chốt BR-PRODUCT-01/02 và BR-SKU-01/02; chuyển quyền sinh product_no/slug/sku về backend, khóa identifier và đồng bộ OpenAPI/Admin.
+> **Change summary:** Đóng băng tài liệu; migration D43 đã apply xong nên gỡ nhận định còn thiếu.
+
+> **⚠ Tài liệu này đã đóng băng.** Trạng thái tiến độ nằm ở `36-delivery-status.md` — nguồn duy
+> nhất. Phần dưới giữ lại làm hồ sơ thiết kế và quyết định kỹ thuật tại thời điểm sprint, không
+> phản ánh trạng thái hiện tại.
 
 ## Delta catalog identifiers — 2026-09-07
 
@@ -18,12 +22,12 @@
 
 ## Kết luận
 
-Sprint 1 hiện đạt **100% functional scope đã khóa** và **90% Definition of Done**. Code D43 đã chuyển entity ID sang BIGINT IDENTITY, giữ UUID lịch sử, thêm migrate-at-start, regenerate OpenAPI/SDK và unit gate đã xanh. Tỷ lệ DoD tạm giảm vì migration kiến trúc mới chưa được apply/test trên Supabase thật trong workspace Linux; evidence 9 migration và DB/E2E ở các vòng trước không được dùng thay cho verification migration thứ 10.
+Sprint 1 hiện đạt **100% functional scope đã khóa** và **90% Definition of Done**. Code D43 đã chuyển entity ID sang BIGINT IDENTITY, giữ UUID lịch sử, thêm migrate-at-start, regenerate OpenAPI/SDK và unit gate đã xanh. **Cập nhật 2026-09-15:** migration kiến trúc đã apply xong trên Supabase. Kiểm chứng: `_prisma_migrations` có 54 bản ghi, không bản ghi nào dở dang; ba migration mang `rolled_back_at` đều có bản ghi apply thành công sau đó. Nhận định thiếu apply ở dưới đã hết hiệu lực.
 
 Hai tỷ lệ không được tính theo số file hoặc số endpoint:
 
 - **Functional scope 100/100**: chức năng và API contract so với phạm vi Sprint 1 đã khóa.
-- **Definition of Done 90/100**: còn thiếu apply/verify migration D43 trên Supabase, rerun integration/E2E permission matrix và BA/QA acceptance trên environment chung.
+- **Definition of Done**: migration D43 đã apply/verify. Trạng thái hiện tại xem `36-delivery-status.md`.
 
 ## Delta D43 — ID và database startup
 
@@ -34,7 +38,7 @@ Hai tỷ lệ không được tính theo số file hoặc số endpoint:
 - [x] Startup: migrate trước khi listen, fail-fast, hỗ trợ `APP_MODE=migrate`; không runtime DDL trong business module.
 - [x] OpenAPI và SDK Admin/Storefront đã regenerate; Yup Admin dùng validator chuỗi số thay `.uuid()`.
 - [x] Unit test API: 29 suites / 104 tests pass; build/lint pass ở lần kiểm chứng D43.
-- [ ] Apply migration thứ 10 lên Supabase thật, chạy seed hai lần và kiểm tra row/FK/index/legacy mapping.
+- [x] Apply migration thứ 10 lên Supabase thật *(hoàn thành; xem `36-delivery-status.md`)*.
 - [ ] Rerun 3 integration suites và 2 HTTP E2E suites trên schema D43.
 
 ## Bảng điểm có trọng số

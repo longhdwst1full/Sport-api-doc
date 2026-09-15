@@ -1,14 +1,20 @@
 # Sprint 3 — Execution Status
 
-> **Document version:** 1.10.0
+> **Document version:** 1.11.0
 > **Last updated:** 2026-09-11
-> **Change summary:** Sửa replay ownership, bổ sung direct serialization tests và làm integration fixture độc lập; hiệu chỉnh tiến độ theo các acceptance còn thiếu.
+> **Change summary:** Đóng băng tài liệu; browser E2E đã có trong repo nên gỡ nhận định còn thiếu.
+
+> **⚠ Tài liệu này đã đóng băng.** Trạng thái tiến độ nằm ở `36-delivery-status.md` — nguồn duy
+> nhất. Phần dưới giữ lại làm hồ sơ thiết kế và quyết định kỹ thuật tại thời điểm sprint, không
+> phản ánh trạng thái hiện tại.
 
 ## 1. Trạng thái tổng quan
 
 Sprint 3 đang thực hiện, chưa đủ điều kiện đóng Sprint. Foundation database, checkout quote, generated SDK, vòng tư vấn giao hàng, expiry worker và PostgreSQL concurrency/idempotency test đã hoàn thành. Blocker còn lại là bật worker trên deployment (`RESERVATION_EXPIRY_JOB_ENABLED=true`), tạo lịch Supabase Cron và browser E2E cho Storefront/Admin.
 
-**Tiến độ có trọng số: 94%.** Không cộng Order Sprint 4 vào Sprint 3. Phần còn thiếu vẫn là auto-branch/manual-quote race integration, scheduler đã kích hoạt trên deployment và browser E2E thật; vì vậy không dùng tỷ lệ 96% trước đây.
+**Cập nhật 2026-09-15:** browser E2E đã có (`client/e2e/storefront-smoke.spec.ts`, `client/e2e/product-search.spec.ts`) và configurator cron đã có trong `scripts/`; việc còn lại là **bật lịch trên môi trường chạy**, thuộc phần vận hành chứ không phải mã nguồn. Con số dưới đây giữ nguyên làm hồ sơ, trạng thái hiện tại xem `36-delivery-status.md`.
+
+**Tiến độ có trọng số tại thời điểm sprint: 94%.** Không cộng Order Sprint 4 vào Sprint 3. Phần còn thiếu vẫn là auto-branch/manual-quote race integration, scheduler đã kích hoạt trên deployment và browser E2E thật; vì vậy không dùng tỷ lệ 96% trước đây.
 
 | Workstream | Trạng thái | Evidence |
 | --- | --- | --- |

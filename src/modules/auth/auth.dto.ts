@@ -129,5 +129,11 @@ export class CurrentUserDto {
   @ApiProperty() displayName: string;
   @ApiProperty({ type: [String] }) permissions: string[];
   @ApiProperty({ type: [AuthScopeDto] }) scopes: AuthScopeDto[];
+  @ApiProperty({
+    example: '3',
+    description:
+      'Changes whenever the user role/permission set changes; clients use it as a cache key for permission-derived UI such as navigation menus',
+  })
+  permissionVersion: string;
   @ApiProperty({ example: false }) mustChangePassword: boolean;
 }

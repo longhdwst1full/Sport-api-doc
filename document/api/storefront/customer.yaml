@@ -115,6 +115,28 @@ paths:
       summary: Deactivate an owned delivery address
       tags:
         - Storefront Customer
+  /api/v1/account/profile:
+    get:
+      operationId: getCustomerProfile
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerProfileDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: "Hồ sơ của khách đang đăng nhập: tên, email, số điện thoại"
+      tags:
+        - Storefront Customer
 components:
   schemas:
     CustomerAddressDto:
@@ -272,6 +294,42 @@ components:
         - path
         - method
         - timestamp
+    CustomerProfileDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        customerNo:
+          type: string
+          example: KH-000128
+          description: Mã khách, dùng khi liên hệ hỗ trợ
+        name:
+          type: string
+          example: Nguyễn Minh Anh
+        email:
+          type: string
+          nullable: true
+          example: minhanh@example.com
+        phone:
+          type: string
+          nullable: true
+          example: "0903456789"
+        marketingConsent:
+          type: boolean
+          description: Khách có đồng ý nhận tin khuyến mãi
+        createdAt:
+          type: string
+          description: Thời điểm tạo tài khoản
+      required:
+        - id
+        - customerNo
+        - name
+        - email
+        - phone
+        - marketingConsent
+        - createdAt
     ErrorDetailDto:
       type: object
       properties:

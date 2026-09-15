@@ -70,6 +70,8 @@ paths:
       summary: Danh sách chiến dịch flash sale
       tags:
         - Admin Promotions
+      x-required-permissions:
+        - catalog.flash_sale.view
     post:
       operationId: createAdminFlashSale
       parameters: []
@@ -109,6 +111,8 @@ paths:
       summary: Tạo chiến dịch flash sale ở trạng thái nháp
       tags:
         - Admin Promotions
+      x-required-permissions:
+        - catalog.flash_sale.manage
   /api/v1/admin/promotions/flash-sales/{id}:
     get:
       operationId: getAdminFlashSale
@@ -148,6 +152,8 @@ paths:
       summary: Chi tiết chiến dịch và danh sách suất bán
       tags:
         - Admin Promotions
+      x-required-permissions:
+        - catalog.flash_sale.view
     patch:
       operationId: updateAdminFlashSale
       parameters:
@@ -192,6 +198,8 @@ paths:
       summary: Cập nhật thông tin và cửa sổ chạy của chiến dịch
       tags:
         - Admin Promotions
+      x-required-permissions:
+        - catalog.flash_sale.manage
   /api/v1/admin/promotions/flash-sales/{id}/status:
     post:
       operationId: changeAdminFlashSaleStatus
@@ -237,6 +245,8 @@ paths:
       summary: Chuyển vòng đời chiến dịch theo state machine
       tags:
         - Admin Promotions
+      x-required-permissions:
+        - catalog.flash_sale.manage
   /api/v1/admin/promotions/flash-sales/{id}/items:
     post:
       operationId: upsertAdminFlashSaleItem
@@ -282,6 +292,8 @@ paths:
       summary: Thêm hoặc cập nhật suất bán của một biến thể trong chiến dịch
       tags:
         - Admin Promotions
+      x-required-permissions:
+        - catalog.flash_sale.manage
   /api/v1/admin/promotions/flash-sales/{id}/items/{itemId}:
     delete:
       operationId: removeAdminFlashSaleItem
@@ -332,6 +344,8 @@ paths:
       summary: Gỡ suất bán; đã phát sinh giao dịch thì chuyển INACTIVE thay vì xóa
       tags:
         - Admin Promotions
+      x-required-permissions:
+        - catalog.flash_sale.manage
 components:
   schemas:
     FlashSaleCampaignListDto:

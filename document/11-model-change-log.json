@@ -3148,6 +3148,44 @@
           ]
         }
       ]
+    },
+    {
+      "id": "DB-20260915-PERMISSION-CODE-ALIGNMENT",
+      "date": "2026-09-15",
+      "scope": "DATABASE+API",
+      "summary": "Đổi permission code CMS/Review về đúng catalog RBAC đã review: content.post.view/manage -> cms.content.view/manage, review.moderate -> catalog.review.moderate. role_permissions tham chiếu permissions.id nên toàn bộ grant hiện có được giữ nguyên.",
+      "sources": [
+        "migration:20260915220000_align_permission_codes_with_catalog",
+        "document:05-rbac-permissions.csv",
+        "OpenAPI:listAdminPosts/createAdminPost/deleteAdminPost/listAdminReviews/moderateAdminReview/deleteAdminReview"
+      ],
+      "targets": [
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "permissions",
+            "Tên cột": "code"
+          },
+          "columns": [
+            "Ý nghĩa / trạng thái cho phép"
+          ],
+          "set": {
+            "Ý nghĩa / trạng thái cho phép": "Permission code nghiệp vụ, đồng bộ với document/05-rbac-permissions.csv"
+          }
+        }
+      ]
+    },
+    {
+      "id": "API-20260915-PERMISSION-CONTRACT-EXPORT",
+      "date": "2026-09-15",
+      "scope": "API",
+      "summary": "Mỗi operation Admin xuất quyền yêu cầu ra OpenAPI qua extension x-required-permissions (ngữ nghĩa AND, khớp PermissionGuard). Frontend đọc từ contract thay vì chép tay permission code. Thay đổi cộng thêm, không phá contract cũ.",
+      "sources": [
+        "source:src/common/decorators/require-permissions.decorator.ts",
+        "OpenAPI:document/api/admin/*.yaml",
+        "test:admin/src/core/auth/permission-coverage.test.ts"
+      ],
+      "targets": []
     }
   ]
 }

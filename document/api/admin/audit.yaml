@@ -96,6 +96,8 @@ paths:
       summary: List immutable redacted audit logs for a global owner
       tags:
         - Admin Audit
+      x-required-permissions:
+        - iam.audit.view
 components:
   schemas:
     AuditListDto:

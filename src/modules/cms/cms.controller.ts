@@ -54,7 +54,7 @@ export class AdminContentController {
   constructor(private readonly cms: CmsService) {}
 
   @Get()
-  @RequirePermissions('content.post.view')
+  @RequirePermissions('cms.content.view')
   @ApiOperation({ operationId: 'listAdminPosts', summary: 'List posts for administration' })
   @ApiOkResponse({ type: ContentPostListDto })
   listAdminPosts(
@@ -64,7 +64,7 @@ export class AdminContentController {
   }
 
   @Post()
-  @RequirePermissions('content.post.manage')
+  @RequirePermissions('cms.content.manage')
   @ApiOperation({ operationId: 'createAdminPost', summary: 'Create and publish a content post' })
   @ApiCreatedResponse({ type: ContentPostDto })
   createAdminPost(@Body() input: CreateContentPostDto): Promise<ContentPostDto> {
@@ -73,7 +73,7 @@ export class AdminContentController {
 
   @Delete(':id')
   @HttpCode(200)
-  @RequirePermissions('content.post.manage')
+  @RequirePermissions('cms.content.manage')
   @ApiOperation({
     operationId: 'deleteAdminPost',
     summary: 'Logically delete a content post by archiving it',

@@ -73,6 +73,8 @@ paths:
       summary: "Danh mục bán tại quầy: hàng lẻ và combo kèm giá, tồn khả dụng theo chi nhánh"
       tags:
         - Admin Orders
+      x-required-permissions:
+        - order.manage
   /api/v1/admin/orders/pos:
     post:
       operationId: createPosOrder
@@ -124,6 +126,8 @@ paths:
       summary: "Tạo đơn bán tại quầy: thu tiền ngay và giao hàng tại chỗ"
       tags:
         - Admin Orders
+      x-required-permissions:
+        - order.manage
   /api/v1/admin/orders:
     get:
       operationId: listAdminOrders
@@ -206,6 +210,8 @@ paths:
       summary: Danh sách đơn hàng theo tab trạng thái, tìm kiếm và phạm vi chi nhánh
       tags:
         - Admin Orders
+      x-required-permissions:
+        - order.view
   /api/v1/admin/orders/{id}:
     get:
       operationId: getAdminOrder
@@ -251,6 +257,8 @@ paths:
       summary: Chi tiết và lịch sử đơn hàng trong phạm vi chi nhánh
       tags:
         - Admin Orders
+      x-required-permissions:
+        - order.view
   /api/v1/admin/orders/{id}/cancel:
     post:
       operationId: cancelAdminOrder
@@ -313,6 +321,8 @@ paths:
       summary: Admin hủy đơn chưa thanh toán/xử lý trong phạm vi chi nhánh
       tags:
         - Admin Orders
+      x-required-permissions:
+        - order.manage
   /api/v1/admin/orders/{id}/confirm:
     post:
       operationId: confirmAdminOrder
@@ -375,6 +385,8 @@ paths:
       summary: Admin xác nhận đơn đủ điều kiện để kho bắt đầu xử lý
       tags:
         - Admin Orders
+      x-required-permissions:
+        - order.manage
   /api/v1/admin/orders/{id}/complete:
     post:
       operationId: completeAdminOrder
@@ -437,6 +449,8 @@ paths:
       summary: Admin hoàn tất đơn bất kỳ lúc nào sau khi đã giao đủ và thu đủ tiền
       tags:
         - Admin Orders
+      x-required-permissions:
+        - order.manage
 components:
   schemas:
     PosCatalogResponseDto:

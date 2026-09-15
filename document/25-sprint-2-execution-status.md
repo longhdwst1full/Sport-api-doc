@@ -6,6 +6,10 @@
 >
 > **Change summary:** Bổ sung security follow-up: toàn bộ public base table gồm Prisma migration history bật RLS; khóa default/function grants và mở rộng integration regression.
 
+> **⚠ Tài liệu này đã đóng băng.** Trạng thái tiến độ nằm ở `36-delivery-status.md` — nguồn duy
+> nhất. Phần dưới giữ lại làm hồ sơ thiết kế và quyết định kỹ thuật tại thời điểm sprint, không
+> phản ánh trạng thái hiện tại.
+
 ## 1. Sprint goal và exit milestone
 
 Sprint 2 chỉ gồm `Branch/Warehouse + Inventory Balance/Ledger/Transfer`. Reservation checkout thuộc Sprint 3; Order/Payment thuộc Sprint 4; không kéo các module đó vào sớm.

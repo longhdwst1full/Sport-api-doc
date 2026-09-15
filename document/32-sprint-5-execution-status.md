@@ -6,6 +6,10 @@
 >
 > **Change summary:** Đối soát scope Sprint 5 đã được triển khai sớm trong Sprint 4 và khóa phần tích hợp carrier thật theo credential gate.
 
+> **⚠ Tài liệu này đã đóng băng.** Trạng thái tiến độ nằm ở `36-delivery-status.md` — nguồn duy
+> nhất. Phần dưới giữ lại làm hồ sơ thiết kế và quyết định kỹ thuật tại thời điểm sprint, không
+> phản ánh trạng thái hiện tại.
+
 ## 1. Kết luận
 
 Engineering scope Sprint 5 đạt **100% theo phạm vi V1 đã chốt**. Không tạo lại module/bảng/API vì Fulfillment và Shipping fallback đã được hoàn thiện, kiểm thử và ghép Admin trong Sprint 4.

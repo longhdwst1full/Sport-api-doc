@@ -25,6 +25,8 @@ paths:
       summary: List V1 business modules and models
       tags:
         - Admin System
+      x-required-permissions:
+        - system.module.view
   /api/v1/admin/system/parameters:
     get:
       operationId: listAdminSystemParameters
@@ -123,6 +125,8 @@ paths:
       summary: Danh sách tham số nghiệp vụ cấu hình được từ Admin
       tags:
         - Admin System
+      x-required-permissions:
+        - system.parameter.view
     post:
       operationId: createAdminSystemParameter
       parameters: []
@@ -162,6 +166,8 @@ paths:
       summary: Tạo tham số tuỳ biến; code không tham chiếu nên chỉ dùng để lưu giá trị vận hành
       tags:
         - Admin System
+      x-required-permissions:
+        - system.parameter.manage
   /api/v1/admin/system/parameters/{code}:
     patch:
       operationId: updateAdminSystemParameter
@@ -213,6 +219,8 @@ paths:
       summary: Cập nhật giá trị tham số; có hiệu lực ngay, không cần deploy
       tags:
         - Admin System
+      x-required-permissions:
+        - system.parameter.manage
     delete:
       operationId: deleteAdminSystemParameter
       parameters:
@@ -259,6 +267,8 @@ paths:
       summary: Ngừng dùng tham số tuỳ biến (xoá mềm); tham số hệ thống không xoá được
       tags:
         - Admin System
+      x-required-permissions:
+        - system.parameter.manage
 components:
   schemas:
     SystemModuleListDto:

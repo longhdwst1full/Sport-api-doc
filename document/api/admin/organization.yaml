@@ -37,6 +37,8 @@ paths:
       summary: List sales branches
       tags:
         - Admin Organization
+      x-required-permissions:
+        - org.branch.view
     post:
       operationId: createAdminBranchWithWarehouse
       parameters: []
@@ -76,6 +78,9 @@ paths:
       summary: Create a branch with its single V1 warehouse
       tags:
         - Admin Organization
+      x-required-permissions:
+        - org.branch.manage
+        - org.warehouse.manage
   /api/v1/admin/organization/warehouses:
     get:
       operationId: listAdminWarehouses
@@ -104,6 +109,8 @@ paths:
       summary: List branch warehouses
       tags:
         - Admin Organization
+      x-required-permissions:
+        - org.warehouse.view
   /api/v1/admin/organization/branches/active:
     get:
       operationId: searchActiveAdminBranches
@@ -160,6 +167,8 @@ paths:
       summary: Search active branches for admin lookups
       tags:
         - Admin Organization
+      x-required-permissions:
+        - org.branch.view
   /api/v1/admin/organization/warehouses/active:
     get:
       operationId: searchActiveAdminWarehouses
@@ -224,6 +233,8 @@ paths:
       summary: Search active warehouses for admin lookups
       tags:
         - Admin Organization
+      x-required-permissions:
+        - org.warehouse.view
   /api/v1/admin/organization/branches/{id}:
     patch:
       operationId: updateAdminBranchWithWarehouse
@@ -275,6 +286,9 @@ paths:
       summary: Update a branch and its single V1 warehouse
       tags:
         - Admin Organization
+      x-required-permissions:
+        - org.branch.manage
+        - org.warehouse.manage
     delete:
       operationId: deleteAdminBranchWithWarehouse
       parameters:
@@ -331,6 +345,9 @@ paths:
       summary: Logically delete a branch and its V1 warehouse atomically
       tags:
         - Admin Organization
+      x-required-permissions:
+        - org.branch.manage
+        - org.warehouse.manage
   /api/v1/admin/organization/branches/{id}/deactivate:
     post:
       operationId: deactivateAdminBranchWithWarehouse
@@ -382,6 +399,9 @@ paths:
       summary: Deactivate a branch and its V1 warehouse atomically
       tags:
         - Admin Organization
+      x-required-permissions:
+        - org.branch.manage
+        - org.warehouse.manage
   /api/v1/admin/organization/branches/{id}/activate:
     post:
       operationId: activateAdminBranchWithWarehouse
@@ -433,6 +453,9 @@ paths:
       summary: Reactivate a branch and its V1 warehouse atomically
       tags:
         - Admin Organization
+      x-required-permissions:
+        - org.branch.manage
+        - org.warehouse.manage
 components:
   schemas:
     BranchListDto:

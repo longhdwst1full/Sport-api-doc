@@ -89,6 +89,8 @@ paths:
       summary: Danh sách khách hàng kèm số đơn, giá trị vòng đời và lần mua gần nhất
       tags:
         - Admin Customers
+      x-required-permissions:
+        - customer.view
   /api/v1/admin/customers/{id}:
     get:
       operationId: getAdminCustomer
@@ -128,6 +130,8 @@ paths:
       summary: Chi tiết khách hàng kèm địa chỉ và đơn gần đây
       tags:
         - Admin Customers
+      x-required-permissions:
+        - customer.view
 components:
   schemas:
     AdminCustomerListDto:

@@ -47,6 +47,9 @@
         "summary": "List V1 business modules and models",
         "tags": [
           "Admin System"
+        ],
+        "x-required-permissions": [
+          "system.module.view"
         ]
       }
     },
@@ -193,6 +196,9 @@
         "summary": "Danh sách tham số nghiệp vụ cấu hình được từ Admin",
         "tags": [
           "Admin System"
+        ],
+        "x-required-permissions": [
+          "system.parameter.view"
         ]
       },
       "post": {
@@ -258,6 +264,9 @@
         "summary": "Tạo tham số tuỳ biến; code không tham chiếu nên chỉ dùng để lưu giá trị vận hành",
         "tags": [
           "Admin System"
+        ],
+        "x-required-permissions": [
+          "system.parameter.manage"
         ]
       }
     },
@@ -344,6 +353,9 @@
         "summary": "Cập nhật giá trị tham số; có hiệu lực ngay, không cần deploy",
         "tags": [
           "Admin System"
+        ],
+        "x-required-permissions": [
+          "system.parameter.manage"
         ]
       },
       "delete": {
@@ -421,6 +433,9 @@
         "summary": "Ngừng dùng tham số tuỳ biến (xoá mềm); tham số hệ thống không xoá được",
         "tags": [
           "Admin System"
+        ],
+        "x-required-permissions": [
+          "system.parameter.manage"
         ]
       }
     },
@@ -577,6 +592,9 @@
         "summary": "List immutable redacted audit logs for a global owner",
         "tags": [
           "Admin Audit"
+        ],
+        "x-required-permissions": [
+          "iam.audit.view"
         ]
       }
     },
@@ -624,6 +642,9 @@
         "summary": "List sales branches",
         "tags": [
           "Admin Organization"
+        ],
+        "x-required-permissions": [
+          "org.branch.view"
         ]
       },
       "post": {
@@ -689,6 +710,10 @@
         "summary": "Create a branch with its single V1 warehouse",
         "tags": [
           "Admin Organization"
+        ],
+        "x-required-permissions": [
+          "org.branch.manage",
+          "org.warehouse.manage"
         ]
       }
     },
@@ -736,6 +761,9 @@
         "summary": "List branch warehouses",
         "tags": [
           "Admin Organization"
+        ],
+        "x-required-permissions": [
+          "org.warehouse.view"
         ]
       }
     },
@@ -825,6 +853,9 @@
         "summary": "Search active branches for admin lookups",
         "tags": [
           "Admin Organization"
+        ],
+        "x-required-permissions": [
+          "org.branch.view"
         ]
       }
     },
@@ -925,6 +956,9 @@
         "summary": "Search active warehouses for admin lookups",
         "tags": [
           "Admin Organization"
+        ],
+        "x-required-permissions": [
+          "org.warehouse.view"
         ]
       }
     },
@@ -1011,6 +1045,10 @@
         "summary": "Update a branch and its single V1 warehouse",
         "tags": [
           "Admin Organization"
+        ],
+        "x-required-permissions": [
+          "org.branch.manage",
+          "org.warehouse.manage"
         ]
       },
       "delete": {
@@ -1105,6 +1143,10 @@
         "summary": "Logically delete a branch and its V1 warehouse atomically",
         "tags": [
           "Admin Organization"
+        ],
+        "x-required-permissions": [
+          "org.branch.manage",
+          "org.warehouse.manage"
         ]
       }
     },
@@ -1191,6 +1233,10 @@
         "summary": "Deactivate a branch and its V1 warehouse atomically",
         "tags": [
           "Admin Organization"
+        ],
+        "x-required-permissions": [
+          "org.branch.manage",
+          "org.warehouse.manage"
         ]
       }
     },
@@ -1277,6 +1323,10 @@
         "summary": "Reactivate a branch and its V1 warehouse atomically",
         "tags": [
           "Admin Organization"
+        ],
+        "x-required-permissions": [
+          "org.branch.manage",
+          "org.warehouse.manage"
         ]
       }
     },
@@ -1304,6 +1354,9 @@
         "summary": "List staff users with role scopes",
         "tags": [
           "Admin IAM"
+        ],
+        "x-required-permissions": [
+          "iam.user.view"
         ]
       },
       "post": {
@@ -1389,6 +1442,9 @@
         "summary": "Root Admin creates an active subordinate account with a branch role",
         "tags": [
           "Admin IAM"
+        ],
+        "x-required-permissions": [
+          "iam.user.manage"
         ]
       }
     },
@@ -1485,6 +1541,9 @@
         "summary": "Root Admin locks a subordinate account and revokes every active session",
         "tags": [
           "Admin IAM"
+        ],
+        "x-required-permissions": [
+          "iam.user.manage"
         ]
       }
     },
@@ -1581,6 +1640,9 @@
         "summary": "Logically delete a subordinate staff account by locking it and revoking sessions",
         "tags": [
           "Admin IAM"
+        ],
+        "x-required-permissions": [
+          "iam.user.manage"
         ]
       }
     },
@@ -1667,6 +1729,9 @@
         "summary": "Root Admin unlocks a subordinate account and resets its password",
         "tags": [
           "Admin IAM"
+        ],
+        "x-required-permissions": [
+          "iam.user.manage"
         ]
       }
     },
@@ -1694,6 +1759,9 @@
         "summary": "List IAM roles",
         "tags": [
           "Admin IAM"
+        ],
+        "x-required-permissions": [
+          "iam.role.view"
         ]
       },
       "post": {
@@ -1769,6 +1837,9 @@
         "summary": "Create a custom role with an explicit permission set",
         "tags": [
           "Admin IAM"
+        ],
+        "x-required-permissions": [
+          "iam.role.manage"
         ]
       }
     },
@@ -1796,6 +1867,9 @@
         "summary": "List stable permission codes",
         "tags": [
           "Admin IAM"
+        ],
+        "x-required-permissions": [
+          "iam.role.view"
         ]
       }
     },
@@ -1823,6 +1897,9 @@
         "summary": "List every role including INACTIVE ones for role administration",
         "tags": [
           "Admin IAM"
+        ],
+        "x-required-permissions": [
+          "iam.role.view"
         ]
       }
     },
@@ -1912,6 +1989,9 @@
         "summary": "Search assignable BRANCH_MANAGER or STAFF roles",
         "tags": [
           "Admin IAM"
+        ],
+        "x-required-permissions": [
+          "iam.role.view"
         ]
       }
     },
@@ -1958,6 +2038,9 @@
         "summary": "Read one role with its permission set",
         "tags": [
           "Admin IAM"
+        ],
+        "x-required-permissions": [
+          "iam.role.view"
         ]
       },
       "patch": {
@@ -2052,6 +2135,9 @@
         "summary": "Rename a role or replace its permission set",
         "tags": [
           "Admin IAM"
+        ],
+        "x-required-permissions": [
+          "iam.role.manage"
         ]
       },
       "delete": {
@@ -2139,6 +2225,9 @@
         "summary": "Delete a custom role that is not assigned to any user",
         "tags": [
           "Admin IAM"
+        ],
+        "x-required-permissions": [
+          "iam.role.manage"
         ]
       }
     },
@@ -2215,6 +2304,9 @@
         "summary": "Root Admin assigns BRANCH_MANAGER or STAFF within an active branch",
         "tags": [
           "Admin IAM"
+        ],
+        "x-required-permissions": [
+          "iam.assignment.manage"
         ]
       }
     },
@@ -2319,6 +2411,9 @@
         "summary": "Root Admin revokes one subordinate assignment and refreshes permissions",
         "tags": [
           "Admin IAM"
+        ],
+        "x-required-permissions": [
+          "iam.assignment.manage"
         ]
       }
     },
@@ -2880,6 +2975,43 @@
         ]
       }
     },
+    "/api/v1/account/profile": {
+      "get": {
+        "operationId": "getCustomerProfile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerProfileDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Hồ sơ của khách đang đăng nhập: tên, email, số điện thoại",
+        "tags": [
+          "Storefront Customer"
+        ]
+      }
+    },
     "/api/v1/admin/customers": {
       "get": {
         "operationId": "listAdminCustomers",
@@ -3000,6 +3132,9 @@
         "summary": "Danh sách khách hàng kèm số đơn, giá trị vòng đời và lần mua gần nhất",
         "tags": [
           "Admin Customers"
+        ],
+        "x-required-permissions": [
+          "customer.view"
         ]
       }
     },
@@ -3066,6 +3201,9 @@
         "summary": "Chi tiết khách hàng kèm địa chỉ và đơn gần đây",
         "tags": [
           "Admin Customers"
+        ],
+        "x-required-permissions": [
+          "customer.view"
         ]
       }
     },
@@ -3113,6 +3251,9 @@
         "summary": "",
         "tags": [
           "Admin Catalog"
+        ],
+        "x-required-permissions": [
+          "catalog.brand.view"
         ]
       },
       "post": {
@@ -3168,6 +3309,9 @@
         "summary": "",
         "tags": [
           "Admin Catalog"
+        ],
+        "x-required-permissions": [
+          "catalog.brand.manage"
         ]
       }
     },
@@ -3247,6 +3391,9 @@
         "summary": "",
         "tags": [
           "Admin Catalog"
+        ],
+        "x-required-permissions": [
+          "catalog.brand.view"
         ]
       }
     },
@@ -3333,6 +3480,9 @@
         "summary": "Update mutable brand fields",
         "tags": [
           "Admin Catalog"
+        ],
+        "x-required-permissions": [
+          "catalog.brand.manage"
         ]
       },
       "delete": {
@@ -3420,6 +3570,9 @@
         "summary": "Xoá hẳn thương hiệu chưa gắn sản phẩm nào",
         "tags": [
           "Admin Catalog"
+        ],
+        "x-required-permissions": [
+          "catalog.brand.manage"
         ]
       }
     },
@@ -3506,6 +3659,9 @@
         "summary": "Deactivate a brand",
         "tags": [
           "Admin Catalog"
+        ],
+        "x-required-permissions": [
+          "catalog.brand.manage"
         ]
       }
     },
@@ -3592,6 +3748,9 @@
         "summary": "Reactivate a brand",
         "tags": [
           "Admin Catalog"
+        ],
+        "x-required-permissions": [
+          "catalog.brand.manage"
         ]
       }
     },
@@ -3639,6 +3798,9 @@
         "summary": "",
         "tags": [
           "Admin Catalog"
+        ],
+        "x-required-permissions": [
+          "catalog.category.view"
         ]
       },
       "post": {
@@ -3694,6 +3856,9 @@
         "summary": "",
         "tags": [
           "Admin Catalog"
+        ],
+        "x-required-permissions": [
+          "catalog.category.manage"
         ]
       }
     },
@@ -3773,6 +3938,9 @@
         "summary": "",
         "tags": [
           "Admin Catalog"
+        ],
+        "x-required-permissions": [
+          "catalog.category.view"
         ]
       }
     },
@@ -3859,6 +4027,9 @@
         "summary": "Update mutable category fields",
         "tags": [
           "Admin Catalog"
+        ],
+        "x-required-permissions": [
+          "catalog.category.manage"
         ]
       },
       "delete": {
@@ -3963,6 +4134,9 @@
         "summary": "Logically delete a leaf category by changing its status to INACTIVE",
         "tags": [
           "Admin Catalog"
+        ],
+        "x-required-permissions": [
+          "catalog.category.manage"
         ]
       }
     },
@@ -4059,6 +4233,9 @@
         "summary": "Deactivate a leaf category",
         "tags": [
           "Admin Catalog"
+        ],
+        "x-required-permissions": [
+          "catalog.category.manage"
         ]
       }
     },
@@ -4155,6 +4332,9 @@
         "summary": "Reactivate a category",
         "tags": [
           "Admin Catalog"
+        ],
+        "x-required-permissions": [
+          "catalog.category.manage"
         ]
       }
     },
@@ -4447,6 +4627,9 @@
         "summary": "List products for admin",
         "tags": [
           "Admin Products"
+        ],
+        "x-required-permissions": [
+          "catalog.product.view"
         ]
       },
       "post": {
@@ -4502,6 +4685,9 @@
         "summary": "Create product",
         "tags": [
           "Admin Products"
+        ],
+        "x-required-permissions": [
+          "catalog.product.manage"
         ]
       }
     },
@@ -4581,6 +4767,9 @@
         "summary": "Search active standard SKU variants for selectors and combo components",
         "tags": [
           "Admin Products"
+        ],
+        "x-required-permissions": [
+          "catalog.product.view"
         ]
       }
     },
@@ -4637,6 +4826,9 @@
         "summary": "Get product detail for admin",
         "tags": [
           "Admin Products"
+        ],
+        "x-required-permissions": [
+          "catalog.product.view"
         ]
       }
     },
@@ -4703,6 +4895,9 @@
         "summary": "Update product",
         "tags": [
           "Admin Products"
+        ],
+        "x-required-permissions": [
+          "catalog.product.manage"
         ]
       },
       "delete": {
@@ -4807,6 +5002,9 @@
         "summary": "Logically delete a product or combo by changing its status to ARCHIVED",
         "tags": [
           "Admin Products"
+        ],
+        "x-required-permissions": [
+          "catalog.product.publish"
         ]
       }
     },
@@ -4873,6 +5071,9 @@
         "summary": "Create a sellable SKU variant",
         "tags": [
           "Admin Products"
+        ],
+        "x-required-permissions": [
+          "catalog.product.manage"
         ]
       }
     },
@@ -4979,6 +5180,9 @@
         "summary": "Update mutable SKU metadata",
         "tags": [
           "Admin Products"
+        ],
+        "x-required-permissions": [
+          "catalog.product.manage"
         ]
       },
       "delete": {
@@ -5083,6 +5287,9 @@
         "summary": "Logically delete one sellable SKU variant by changing its status to INACTIVE",
         "tags": [
           "Admin Products"
+        ],
+        "x-required-permissions": [
+          "catalog.product.manage"
         ]
       }
     },
@@ -5192,6 +5399,9 @@
         "summary": "Attach one finalized media asset to a product or SKU",
         "tags": [
           "Admin Products"
+        ],
+        "x-required-permissions": [
+          "catalog.product.manage"
         ]
       }
     },
@@ -5301,6 +5511,9 @@
         "summary": "Replace the order of all active product media",
         "tags": [
           "Admin Products"
+        ],
+        "x-required-permissions": [
+          "catalog.product.manage"
         ]
       }
     },
@@ -5418,6 +5631,9 @@
         "summary": "Update product media alt text or primary flag",
         "tags": [
           "Admin Products"
+        ],
+        "x-required-permissions": [
+          "catalog.product.manage"
         ]
       },
       "delete": {
@@ -5533,6 +5749,9 @@
         "summary": "Logically delete a product media link without deleting its provider asset",
         "tags": [
           "Admin Products"
+        ],
+        "x-required-permissions": [
+          "catalog.product.manage"
         ]
       }
     },
@@ -5650,6 +5869,9 @@
         "summary": "Archive a product media link without deleting its asset",
         "tags": [
           "Admin Products"
+        ],
+        "x-required-permissions": [
+          "catalog.product.manage"
         ]
       }
     },
@@ -5746,6 +5968,9 @@
         "summary": "Create a global VAT-included price window",
         "tags": [
           "Admin Products"
+        ],
+        "x-required-permissions": [
+          "catalog.price.manage"
         ]
       },
       "get": {
@@ -5810,6 +6035,9 @@
         "summary": "Get the current, upcoming, and immutable price history of a SKU",
         "tags": [
           "Admin Products"
+        ],
+        "x-required-permissions": [
+          "catalog.price.view"
         ]
       }
     },
@@ -5916,6 +6144,9 @@
         "summary": "Atomically close the current open price and create its replacement",
         "tags": [
           "Admin Products"
+        ],
+        "x-required-permissions": [
+          "catalog.price.manage"
         ]
       }
     },
@@ -6012,6 +6243,9 @@
         "summary": "Publish a complete draft product",
         "tags": [
           "Admin Products"
+        ],
+        "x-required-permissions": [
+          "catalog.product.publish"
         ]
       }
     },
@@ -6078,6 +6312,9 @@
         "summary": "Archive a product or combo and remove it from storefront sales",
         "tags": [
           "Admin Products"
+        ],
+        "x-required-permissions": [
+          "catalog.product.publish"
         ]
       }
     },
@@ -6144,6 +6381,9 @@
         "summary": "Reactivate an archived product or combo as DRAFT for review",
         "tags": [
           "Admin Products"
+        ],
+        "x-required-permissions": [
+          "catalog.product.publish"
         ]
       }
     },
@@ -6210,6 +6450,9 @@
         "summary": "Archive one sellable SKU variant",
         "tags": [
           "Admin Products"
+        ],
+        "x-required-permissions": [
+          "catalog.product.manage"
         ]
       }
     },
@@ -6276,6 +6519,9 @@
         "summary": "Reactivate one archived SKU variant",
         "tags": [
           "Admin Products"
+        ],
+        "x-required-permissions": [
+          "catalog.product.manage"
         ]
       }
     },
@@ -6342,6 +6588,9 @@
         "summary": "Create a fixed non-nested virtual combo",
         "tags": [
           "Admin Products"
+        ],
+        "x-required-permissions": [
+          "catalog.product.manage"
         ]
       }
     },
@@ -6450,6 +6699,9 @@
         "summary": "List warehouse balances",
         "tags": [
           "Admin Inventory"
+        ],
+        "x-required-permissions": [
+          "inventory.stock.view"
         ]
       }
     },
@@ -6608,6 +6860,9 @@
         "summary": "List immutable stock ledger entries",
         "tags": [
           "Admin Inventory"
+        ],
+        "x-required-permissions": [
+          "inventory.stock.view"
         ]
       }
     },
@@ -6723,6 +6978,9 @@
         "summary": "List posted stock adjustment documents",
         "tags": [
           "Admin Inventory"
+        ],
+        "x-required-permissions": [
+          "inventory.stock.view"
         ]
       },
       "post": {
@@ -6817,6 +7075,9 @@
         "summary": "Post a basic stock adjustment",
         "tags": [
           "Admin Inventory"
+        ],
+        "x-required-permissions": [
+          "inventory.stock.adjust"
         ]
       }
     },
@@ -6903,6 +7164,9 @@
         "summary": "Get a posted stock adjustment document",
         "tags": [
           "Admin Inventory"
+        ],
+        "x-required-permissions": [
+          "inventory.stock.view"
         ]
       }
     },
@@ -7024,6 +7288,9 @@
         "summary": "List stock transfers visible to the assigned branches",
         "tags": [
           "Admin Inventory Transfers"
+        ],
+        "x-required-permissions": [
+          "inventory.transfer.view"
         ]
       },
       "post": {
@@ -7118,6 +7385,9 @@
         "summary": "Create a DRAFT full-shipment stock transfer",
         "tags": [
           "Admin Inventory Transfers"
+        ],
+        "x-required-permissions": [
+          "inventory.transfer.create"
         ]
       }
     },
@@ -7194,6 +7464,9 @@
         "summary": "Get stock transfer detail",
         "tags": [
           "Admin Inventory Transfers"
+        ],
+        "x-required-permissions": [
+          "inventory.transfer.view"
         ]
       }
     },
@@ -7300,6 +7573,9 @@
         "summary": "Submit a DRAFT transfer",
         "tags": [
           "Admin Inventory Transfers"
+        ],
+        "x-required-permissions": [
+          "inventory.transfer.create"
         ]
       }
     },
@@ -7406,6 +7682,9 @@
         "summary": "Ship every requested item from the source warehouse",
         "tags": [
           "Admin Inventory Transfers"
+        ],
+        "x-required-permissions": [
+          "inventory.transfer.ship"
         ]
       }
     },
@@ -7512,6 +7791,9 @@
         "summary": "Receive a full shipment and record damaged quantities",
         "tags": [
           "Admin Inventory Transfers"
+        ],
+        "x-required-permissions": [
+          "inventory.transfer.receive"
         ]
       }
     },
@@ -7628,6 +7910,9 @@
         "summary": "Danh sách chiến dịch flash sale",
         "tags": [
           "Admin Promotions"
+        ],
+        "x-required-permissions": [
+          "catalog.flash_sale.view"
         ]
       },
       "post": {
@@ -7693,6 +7978,9 @@
         "summary": "Tạo chiến dịch flash sale ở trạng thái nháp",
         "tags": [
           "Admin Promotions"
+        ],
+        "x-required-permissions": [
+          "catalog.flash_sale.manage"
         ]
       }
     },
@@ -7759,6 +8047,9 @@
         "summary": "Chi tiết chiến dịch và danh sách suất bán",
         "tags": [
           "Admin Promotions"
+        ],
+        "x-required-permissions": [
+          "catalog.flash_sale.view"
         ]
       },
       "patch": {
@@ -7833,6 +8124,9 @@
         "summary": "Cập nhật thông tin và cửa sổ chạy của chiến dịch",
         "tags": [
           "Admin Promotions"
+        ],
+        "x-required-permissions": [
+          "catalog.flash_sale.manage"
         ]
       }
     },
@@ -7909,6 +8203,9 @@
         "summary": "Chuyển vòng đời chiến dịch theo state machine",
         "tags": [
           "Admin Promotions"
+        ],
+        "x-required-permissions": [
+          "catalog.flash_sale.manage"
         ]
       }
     },
@@ -7985,6 +8282,9 @@
         "summary": "Thêm hoặc cập nhật suất bán của một biến thể trong chiến dịch",
         "tags": [
           "Admin Promotions"
+        ],
+        "x-required-permissions": [
+          "catalog.flash_sale.manage"
         ]
       }
     },
@@ -8069,6 +8369,9 @@
         "summary": "Gỡ suất bán; đã phát sinh giao dịch thì chuyển INACTIVE thay vì xóa",
         "tags": [
           "Admin Promotions"
+        ],
+        "x-required-permissions": [
+          "catalog.flash_sale.manage"
         ]
       }
     },
@@ -8989,6 +9292,9 @@
         "summary": "List manual shipping quotes visible in the assigned branch scope",
         "tags": [
           "Admin Checkout"
+        ],
+        "x-required-permissions": [
+          "order.view"
         ]
       }
     },
@@ -9055,6 +9361,9 @@
         "summary": "Record an agreed manual/coach shipping fee and reopen the quote for customer confirmation",
         "tags": [
           "Admin Checkout"
+        ],
+        "x-required-permissions": [
+          "order.manage"
         ]
       }
     },
@@ -9251,6 +9560,9 @@
         "summary": "List posts for administration",
         "tags": [
           "Admin Content"
+        ],
+        "x-required-permissions": [
+          "cms.content.view"
         ]
       },
       "post": {
@@ -9306,6 +9618,9 @@
         "summary": "Create and publish a content post",
         "tags": [
           "Admin Content"
+        ],
+        "x-required-permissions": [
+          "cms.content.manage"
         ]
       }
     },
@@ -9402,6 +9717,9 @@
         "summary": "Logically delete a content post by archiving it",
         "tags": [
           "Admin Content"
+        ],
+        "x-required-permissions": [
+          "cms.content.manage"
         ]
       }
     },
@@ -10028,6 +10346,9 @@
         "summary": "Danh mục bán tại quầy: hàng lẻ và combo kèm giá, tồn khả dụng theo chi nhánh",
         "tags": [
           "Admin Orders"
+        ],
+        "x-required-permissions": [
+          "order.manage"
         ]
       }
     },
@@ -10114,6 +10435,9 @@
         "summary": "Tạo đơn bán tại quầy: thu tiền ngay và giao hàng tại chỗ",
         "tags": [
           "Admin Orders"
+        ],
+        "x-required-permissions": [
+          "order.manage"
         ]
       }
     },
@@ -10238,6 +10562,9 @@
         "summary": "Danh sách đơn hàng theo tab trạng thái, tìm kiếm và phạm vi chi nhánh",
         "tags": [
           "Admin Orders"
+        ],
+        "x-required-permissions": [
+          "order.view"
         ]
       }
     },
@@ -10314,6 +10641,9 @@
         "summary": "Chi tiết và lịch sử đơn hàng trong phạm vi chi nhánh",
         "tags": [
           "Admin Orders"
+        ],
+        "x-required-permissions": [
+          "order.view"
         ]
       }
     },
@@ -10418,6 +10748,9 @@
         "summary": "Admin hủy đơn chưa thanh toán/xử lý trong phạm vi chi nhánh",
         "tags": [
           "Admin Orders"
+        ],
+        "x-required-permissions": [
+          "order.manage"
         ]
       }
     },
@@ -10522,6 +10855,9 @@
         "summary": "Admin xác nhận đơn đủ điều kiện để kho bắt đầu xử lý",
         "tags": [
           "Admin Orders"
+        ],
+        "x-required-permissions": [
+          "order.manage"
         ]
       }
     },
@@ -10626,6 +10962,9 @@
         "summary": "Admin hoàn tất đơn bất kỳ lúc nào sau khi đã giao đủ và thu đủ tiền",
         "tags": [
           "Admin Orders"
+        ],
+        "x-required-permissions": [
+          "order.manage"
         ]
       }
     },
@@ -11185,6 +11524,9 @@
         "summary": "Danh sách thanh toán theo trạng thái, phương thức, tìm kiếm và phạm vi chi nhánh",
         "tags": [
           "Admin Payments"
+        ],
+        "x-required-permissions": [
+          "payment.view"
         ]
       }
     },
@@ -11251,6 +11593,9 @@
         "summary": "Chi tiết thanh toán và bằng chứng trong phạm vi chi nhánh",
         "tags": [
           "Admin Payments"
+        ],
+        "x-required-permissions": [
+          "payment.view"
         ]
       }
     },
@@ -11355,6 +11700,9 @@
         "summary": "Xác nhận chuyển khoản đủ tiền hoặc thu COD sau giao hàng",
         "tags": [
           "Admin Payments"
+        ],
+        "x-required-permissions": [
+          "payment.confirm"
         ]
       }
     },
@@ -11459,6 +11807,9 @@
         "summary": "Từ chối bằng chứng thanh toán và lưu lý do/audit",
         "tags": [
           "Admin Payments"
+        ],
+        "x-required-permissions": [
+          "payment.confirm"
         ]
       }
     },
@@ -11684,6 +12035,9 @@
         "summary": "Danh sách giao vận theo kho, trạng thái và thông tin đơn hàng",
         "tags": [
           "Admin Fulfillments"
+        ],
+        "x-required-permissions": [
+          "fulfillment.view"
         ]
       }
     },
@@ -11740,6 +12094,9 @@
         "summary": "Chi tiết giao vận của một đơn hàng",
         "tags": [
           "Admin Fulfillments"
+        ],
+        "x-required-permissions": [
+          "fulfillment.view"
         ]
       }
     },
@@ -11796,6 +12153,9 @@
         "summary": "Chi tiết và lịch sử giao vận",
         "tags": [
           "Admin Fulfillments"
+        ],
+        "x-required-permissions": [
+          "fulfillment.view"
         ]
       }
     },
@@ -11860,6 +12220,9 @@
         "summary": "Bắt đầu lấy hàng trong kho",
         "tags": [
           "Admin Fulfillments"
+        ],
+        "x-required-permissions": [
+          "fulfillment.pick"
         ]
       }
     },
@@ -11924,6 +12287,9 @@
         "summary": "Xác nhận đã đóng gói toàn bộ đơn",
         "tags": [
           "Admin Fulfillments"
+        ],
+        "x-required-permissions": [
+          "fulfillment.pack"
         ]
       }
     },
@@ -12008,6 +12374,9 @@
         "summary": "Bàn giao vận chuyển và commit tồn kho atomically",
         "tags": [
           "Admin Fulfillments"
+        ],
+        "x-required-permissions": [
+          "fulfillment.ship"
         ]
       }
     },
@@ -12072,6 +12441,9 @@
         "summary": "Xác nhận khách đã nhận đủ hàng",
         "tags": [
           "Admin Fulfillments"
+        ],
+        "x-required-permissions": [
+          "fulfillment.delivery_update"
         ]
       }
     },
@@ -12136,6 +12508,9 @@
         "summary": "Ghi nhận giao thất bại và đưa hàng về kho xuất",
         "tags": [
           "Admin Fulfillments"
+        ],
+        "x-required-permissions": [
+          "fulfillment.delivery_update"
         ]
       }
     },
@@ -12200,6 +12575,9 @@
         "summary": "Kho nhận hàng giao thất bại; chỉ SELLABLE được hoàn tồn bán",
         "tags": [
           "Admin Fulfillments"
+        ],
+        "x-required-permissions": [
+          "fulfillment.delivery_update"
         ]
       }
     },
@@ -12278,6 +12656,9 @@
         "summary": "List reviews for moderation",
         "tags": [
           "Admin Reviews"
+        ],
+        "x-required-permissions": [
+          "catalog.review.moderate"
         ]
       }
     },
@@ -12344,6 +12725,9 @@
         "summary": "Approve or reject a review",
         "tags": [
           "Admin Reviews"
+        ],
+        "x-required-permissions": [
+          "catalog.review.moderate"
         ]
       }
     },
@@ -12440,6 +12824,9 @@
         "summary": "Logically delete a review by hiding it from the storefront",
         "tags": [
           "Admin Reviews"
+        ],
+        "x-required-permissions": [
+          "catalog.review.moderate"
         ]
       }
     },
@@ -12517,6 +12904,9 @@
         "summary": "Create a short-lived signed Cloudinary image upload",
         "tags": [
           "Admin Media"
+        ],
+        "x-required-permissions": [
+          "media.asset.upload"
         ]
       }
     },
@@ -12604,6 +12994,9 @@
         "summary": "Verify a direct Cloudinary upload and return trusted metadata",
         "tags": [
           "Admin Media"
+        ],
+        "x-required-permissions": [
+          "media.asset.upload"
         ]
       }
     },
@@ -12651,6 +13044,9 @@
         "summary": "Số liệu vận hành: đơn theo trạng thái, đơn chờ giao, sản phẩm, khách hàng",
         "tags": [
           "Admin Reporting"
+        ],
+        "x-required-permissions": [
+          "report.operation.view"
         ]
       }
     },
@@ -12719,6 +13115,9 @@
         "summary": "Doanh thu đã thực nhận theo khoảng thời gian, kèm chuỗi theo ngày",
         "tags": [
           "Admin Reporting"
+        ],
+        "x-required-permissions": [
+          "report.revenue.view"
         ]
       }
     },
@@ -12766,6 +13165,9 @@
         "summary": "Tồn kho chạm ngưỡng đặt lại và hết hàng bán",
         "tags": [
           "Admin Reporting"
+        ],
+        "x-required-permissions": [
+          "report.inventory.view"
         ]
       }
     },
@@ -12845,6 +13247,9 @@
         "summary": "Sản phẩm bán chạy tính trên đơn đã thu được tiền",
         "tags": [
           "Admin Reporting"
+        ],
+        "x-required-permissions": [
+          "report.revenue.view"
         ]
       }
     }
@@ -14339,6 +14744,11 @@
               "$ref": "#/components/schemas/AuthScopeDto"
             }
           },
+          "permissionVersion": {
+            "type": "string",
+            "example": "3",
+            "description": "Changes whenever the user role/permission set changes; clients use it as a cache key for permission-derived UI such as navigation menus"
+          },
           "mustChangePassword": {
             "type": "boolean",
             "example": false
@@ -14349,6 +14759,7 @@
           "displayName",
           "permissions",
           "scopes",
+          "permissionVersion",
           "mustChangePassword"
         ]
       },
@@ -14541,6 +14952,52 @@
         },
         "required": [
           "expectedVersion"
+        ]
+      },
+      "CustomerProfileDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
+          },
+          "customerNo": {
+            "type": "string",
+            "example": "KH-000128",
+            "description": "Mã khách, dùng khi liên hệ hỗ trợ"
+          },
+          "name": {
+            "type": "string",
+            "example": "Nguyễn Minh Anh"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true,
+            "example": "minhanh@example.com"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true,
+            "example": "0903456789"
+          },
+          "marketingConsent": {
+            "type": "boolean",
+            "description": "Khách có đồng ý nhận tin khuyến mãi"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Thời điểm tạo tài khoản"
+          }
+        },
+        "required": [
+          "id",
+          "customerNo",
+          "name",
+          "email",
+          "phone",
+          "marketingConsent",
+          "createdAt"
         ]
       },
       "AdminCustomerSummaryDto": {

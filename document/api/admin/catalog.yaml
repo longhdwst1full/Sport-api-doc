@@ -37,6 +37,8 @@ paths:
       summary: ""
       tags:
         - Admin Catalog
+      x-required-permissions:
+        - catalog.brand.view
     post:
       operationId: createAdminBrand
       parameters: []
@@ -70,6 +72,8 @@ paths:
       summary: ""
       tags:
         - Admin Catalog
+      x-required-permissions:
+        - catalog.brand.manage
   /api/v1/admin/catalog/brands/active:
     get:
       operationId: searchActiveAdminBrands
@@ -120,6 +124,8 @@ paths:
       summary: ""
       tags:
         - Admin Catalog
+      x-required-permissions:
+        - catalog.brand.view
   /api/v1/admin/catalog/brands/{id}:
     patch:
       operationId: updateAdminBrand
@@ -171,6 +177,8 @@ paths:
       summary: Update mutable brand fields
       tags:
         - Admin Catalog
+      x-required-permissions:
+        - catalog.brand.manage
     delete:
       operationId: deleteAdminBrand
       parameters:
@@ -223,6 +231,8 @@ paths:
       summary: Xoá hẳn thương hiệu chưa gắn sản phẩm nào
       tags:
         - Admin Catalog
+      x-required-permissions:
+        - catalog.brand.manage
   /api/v1/admin/catalog/brands/{id}/deactivate:
     post:
       operationId: deactivateAdminBrand
@@ -274,6 +284,8 @@ paths:
       summary: Deactivate a brand
       tags:
         - Admin Catalog
+      x-required-permissions:
+        - catalog.brand.manage
   /api/v1/admin/catalog/brands/{id}/activate:
     post:
       operationId: activateAdminBrand
@@ -325,6 +337,8 @@ paths:
       summary: Reactivate a brand
       tags:
         - Admin Catalog
+      x-required-permissions:
+        - catalog.brand.manage
   /api/v1/admin/catalog/categories:
     get:
       operationId: listAdminCategories
@@ -353,6 +367,8 @@ paths:
       summary: ""
       tags:
         - Admin Catalog
+      x-required-permissions:
+        - catalog.category.view
     post:
       operationId: createAdminCategory
       parameters: []
@@ -386,6 +402,8 @@ paths:
       summary: ""
       tags:
         - Admin Catalog
+      x-required-permissions:
+        - catalog.category.manage
   /api/v1/admin/catalog/categories/active:
     get:
       operationId: searchActiveAdminCategories
@@ -436,6 +454,8 @@ paths:
       summary: ""
       tags:
         - Admin Catalog
+      x-required-permissions:
+        - catalog.category.view
   /api/v1/admin/catalog/categories/{id}:
     patch:
       operationId: updateAdminCategory
@@ -487,6 +507,8 @@ paths:
       summary: Update mutable category fields
       tags:
         - Admin Catalog
+      x-required-permissions:
+        - catalog.category.manage
     delete:
       operationId: deleteAdminCategory
       parameters:
@@ -549,6 +571,8 @@ paths:
       summary: Logically delete a leaf category by changing its status to INACTIVE
       tags:
         - Admin Catalog
+      x-required-permissions:
+        - catalog.category.manage
   /api/v1/admin/catalog/categories/{id}/deactivate:
     post:
       operationId: deactivateAdminCategory
@@ -606,6 +630,8 @@ paths:
       summary: Deactivate a leaf category
       tags:
         - Admin Catalog
+      x-required-permissions:
+        - catalog.category.manage
   /api/v1/admin/catalog/categories/{id}/activate:
     post:
       operationId: activateAdminCategory
@@ -663,6 +689,8 @@ paths:
       summary: Reactivate a category
       tags:
         - Admin Catalog
+      x-required-permissions:
+        - catalog.category.manage
   /api/v1/admin/products:
     get:
       operationId: listAdminProducts
@@ -745,6 +773,8 @@ paths:
       summary: List products for admin
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.view
     post:
       operationId: createAdminProduct
       parameters: []
@@ -778,6 +808,8 @@ paths:
       summary: Create product
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.manage
   /api/v1/admin/products/variants/active:
     get:
       operationId: searchActiveAdminProductVariants
@@ -828,6 +860,8 @@ paths:
       summary: Search active standard SKU variants for selectors and combo components
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.view
   /api/v1/admin/products/{slug}:
     get:
       operationId: getAdminProduct
@@ -861,6 +895,8 @@ paths:
       summary: Get product detail for admin
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.view
   /api/v1/admin/products/{id}:
     patch:
       operationId: updateAdminProduct
@@ -900,6 +936,8 @@ paths:
       summary: Update product
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.manage
     delete:
       operationId: deleteAdminProduct
       parameters:
@@ -962,6 +1000,8 @@ paths:
       summary: Logically delete a product or combo by changing its status to ARCHIVED
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.publish
   /api/v1/admin/products/{id}/variants:
     post:
       operationId: createAdminProductVariant
@@ -1001,6 +1041,8 @@ paths:
       summary: Create a sellable SKU variant
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.manage
   /api/v1/admin/products/variants/{variantId}:
     patch:
       operationId: updateAdminProductVariant
@@ -1064,6 +1106,8 @@ paths:
       summary: Update mutable SKU metadata
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.manage
     delete:
       operationId: deleteAdminProductVariant
       parameters:
@@ -1126,6 +1170,8 @@ paths:
       summary: Logically delete one sellable SKU variant by changing its status to INACTIVE
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.manage
   /api/v1/admin/products/{id}/media:
     post:
       operationId: attachAdminProductMedia
@@ -1191,6 +1237,8 @@ paths:
       summary: Attach one finalized media asset to a product or SKU
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.manage
   /api/v1/admin/products/{id}/media/reorder:
     patch:
       operationId: reorderAdminProductMedia
@@ -1256,6 +1304,8 @@ paths:
       summary: Replace the order of all active product media
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.manage
   /api/v1/admin/products/{id}/media/{mediaId}:
     patch:
       operationId: updateAdminProductMedia
@@ -1326,6 +1376,8 @@ paths:
       summary: Update product media alt text or primary flag
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.manage
     delete:
       operationId: deleteAdminProductMedia
       parameters:
@@ -1395,6 +1447,8 @@ paths:
       summary: Logically delete a product media link without deleting its provider asset
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.manage
   /api/v1/admin/products/{id}/media/{mediaId}/archive:
     post:
       operationId: archiveAdminProductMedia
@@ -1465,6 +1519,8 @@ paths:
       summary: Archive a product media link without deleting its asset
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.manage
   /api/v1/admin/products/variants/{variantId}/prices:
     post:
       operationId: createAdminProductPrice
@@ -1522,6 +1578,8 @@ paths:
       summary: Create a global VAT-included price window
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.price.manage
     get:
       operationId: getAdminProductPriceTimeline
       parameters:
@@ -1560,6 +1618,8 @@ paths:
       summary: Get the current, upcoming, and immutable price history of a SKU
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.price.view
   /api/v1/admin/products/variants/{variantId}/prices/replace:
     post:
       operationId: replaceAdminProductPrice
@@ -1623,6 +1683,8 @@ paths:
       summary: Atomically close the current open price and create its replacement
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.price.manage
   /api/v1/admin/products/{id}/publish:
     post:
       operationId: publishAdminProduct
@@ -1680,6 +1742,8 @@ paths:
       summary: Publish a complete draft product
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.publish
   /api/v1/admin/products/{id}/archive:
     post:
       operationId: archiveAdminProduct
@@ -1719,6 +1783,8 @@ paths:
       summary: Archive a product or combo and remove it from storefront sales
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.publish
   /api/v1/admin/products/{id}/reactivate:
     post:
       operationId: reactivateAdminProduct
@@ -1758,6 +1824,8 @@ paths:
       summary: Reactivate an archived product or combo as DRAFT for review
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.publish
   /api/v1/admin/products/variants/{variantId}/archive:
     post:
       operationId: archiveAdminProductVariant
@@ -1797,6 +1865,8 @@ paths:
       summary: Archive one sellable SKU variant
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.manage
   /api/v1/admin/products/variants/{variantId}/reactivate:
     post:
       operationId: reactivateAdminProductVariant
@@ -1836,6 +1906,8 @@ paths:
       summary: Reactivate one archived SKU variant
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.manage
   /api/v1/admin/products/{id}/bundle:
     post:
       operationId: createAdminProductBundle
@@ -1875,6 +1947,8 @@ paths:
       summary: Create a fixed non-nested virtual combo
       tags:
         - Admin Products
+      x-required-permissions:
+        - catalog.product.manage
 components:
   schemas:
     BrandListDto:

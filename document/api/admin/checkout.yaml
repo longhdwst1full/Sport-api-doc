@@ -62,6 +62,8 @@ paths:
       summary: List manual shipping quotes visible in the assigned branch scope
       tags:
         - Admin Checkout
+      x-required-permissions:
+        - order.view
   /api/v1/admin/checkouts/{checkoutToken}/shipping-consultation:
     patch:
       operationId: updateAdminManualShippingQuote
@@ -101,6 +103,8 @@ paths:
       summary: Record an agreed manual/coach shipping fee and reopen the quote for customer confirmation
       tags:
         - Admin Checkout
+      x-required-permissions:
+        - order.manage
 components:
   schemas:
     AdminShippingConsultationListDto:

@@ -11,7 +11,7 @@ describe('V1 complete role-permission matrix', () => {
     'catalog.category.view',
     'catalog.product.view',
     'catalog.price.view',
-    'review.moderate',
+    'catalog.review.moderate',
     'inventory.stock.view',
     'inventory.stock.adjust',
     'inventory.stocktake.manage',

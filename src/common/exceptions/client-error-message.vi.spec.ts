@@ -1,25 +1,64 @@
-import { clientMessageVi, validationMessageVi } from './client-error-message.vi';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { clientMessageVi } from './client-error-message.vi';
 
-describe('Vietnamese client error messages', () => {
-  it('translates known authentication messages', () => {
-    expect(clientMessageVi('Email/phone or password is incorrect', 401)).toBe(
-      'Email, số điện thoại hoặc mật khẩu không đúng.',
+describe('Thông báo lỗi trả cho người dùng', () => {
+  it('giữ nguyên thông báo vốn đã là tiếng Việt', () => {
+    expect(clientMessageVi('Kho quầy không đủ hàng cho HQ-909S', 409)).toBe(
+      'Kho quầy không đủ hàng cho HQ-909S',
     );
   });
 
-  it('uses a safe Vietnamese status fallback for unknown English messages', () => {
-    expect(clientMessageVi('Provider returned an undocumented error', 503)).toBe(
-      'Dịch vụ tạm thời không khả dụng. Vui lòng thử lại sau.',
+  it('dịch thông báo tiếng Anh có trong bảng', () => {
+    expect(clientMessageVi('Bearer access token is required', 401)).toBe(
+      'Vui lòng đăng nhập để tiếp tục.',
     );
   });
 
-  it('keeps an existing Vietnamese business message', () => {
-    expect(clientMessageVi('Tài khoản đã bị khóa.', 401)).toBe('Tài khoản đã bị khóa.');
+  /**
+   * Thông báo tiếng Anh không có trong bảng sẽ rơi về câu chung theo mã HTTP: khách chỉ
+   * thấy "không thể xử lý yêu cầu" mà không biết lý do thật lẫn việc cần làm tiếp.
+   */
+  it('rơi về câu chung khi chưa có bản dịch', () => {
+    expect(clientMessageVi('Some untranslated failure', 409)).not.toContain('untranslated');
   });
 
-  it('translates validation details without exposing class-validator prose', () => {
-    expect(validationMessageVi('max', 'limit must not be greater than 50', 'limit')).toBe(
-      'Trường "limit": Giá trị vượt quá giới hạn tối đa.',
+  /**
+   * Chặn hồi quy: thêm một exception tiếng Anh mới mà quên bổ sung bản dịch sẽ làm test này
+   * hỏng ngay, thay vì âm thầm trả câu chung chung cho khách.
+   */
+  it('mọi thông báo lỗi trong mã nguồn đều có bản dịch', () => {
+    const root = join(__dirname, '..', '..');
+    const table = readFileSync(join(__dirname, 'client-error-message.vi.ts'), 'utf8');
+    const translated = new Set(
+      Array.from(table.matchAll(/^\s*'((?:[^'\\]|\\.)+)':/gm), (match) =>
+        match[1].replace(/\\'/g, "'"),
+      ),
     );
+
+    const collect = (dir: string): string[] => {
+      const { readdirSync, statSync } = require('node:fs') as typeof import('node:fs');
+      return readdirSync(dir).flatMap((entry: string) => {
+        const full = join(dir, entry);
+        if (statSync(full).isDirectory()) return collect(full);
+        return full.endsWith('.ts') && !full.endsWith('.spec.ts') ? [full] : [];
+      });
+    };
+
+    const pattern =
+      /new (?:BadRequest|NotFound|Conflict|Forbidden|Unauthorized|UnprocessableEntity|ServiceUnavailable|Gone|PreconditionFailed)\w*Exception\(\s*['"`]([^'"`]+)/g;
+    const untranslated = new Set<string>();
+
+    for (const file of collect(root)) {
+      const source = readFileSync(file, 'utf8');
+      for (const match of source.matchAll(pattern)) {
+        const message = match[1];
+        // Chỉ xét thông báo tiếng Anh thuần; thông báo đã tiếng Việt thì trả thẳng.
+        if (!/^[A-Za-z][A-Za-z0-9 ,.:;()'_-]*$/.test(message)) continue;
+        if (!translated.has(message)) untranslated.add(message);
+      }
+    }
+
+    expect(Array.from(untranslated).sort()).toEqual([]);
   });
 });

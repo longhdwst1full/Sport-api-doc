@@ -142,3 +142,101 @@ describe('AuthService login protection', () => {
     });
   });
 });
+
+describe('AuthService permission grant cache', () => {
+  const buildService = () => {
+    const session = {
+      id: 9n,
+      user: {
+        id: 101n,
+        displayName: 'Owner',
+        status: 'ACTIVE',
+        permissionVersion: 3n,
+        mustChangePassword: false,
+      },
+    };
+    const findManyAssignments = jest.fn().mockResolvedValue([
+      {
+        scopeType: 'BRANCH',
+        branchId: 7n,
+        validTo: null,
+        role: { permissions: [{ permission: { code: 'catalog.product.view' } }] },
+      },
+    ]);
+    const prisma = {
+      isEnabled: jest.fn().mockReturnValue(true),
+      authSession: { findFirst: jest.fn().mockResolvedValue(session) },
+      userRoleAssignment: { findMany: findManyAssignments },
+    } as unknown as PrismaService;
+    const jwt = {
+      verifyAsync: jest.fn().mockResolvedValue({ sub: '101', sid: '9', pv: '3', typ: 'access' }),
+    } as unknown as JwtService;
+    const service = new AuthService(prisma, jwt, new ConfigService(), {
+      write: jest.fn(),
+    } as unknown as AuditWriter);
+    return { service, session, findManyAssignments, jwt };
+  };
+
+  it('resolves permissions and scopes once per user permission version', async () => {
+    const { service, findManyAssignments } = buildService();
+
+    const first = await service.authorizeAccessToken('token');
+    const second = await service.authorizeAccessToken('token');
+
+    expect(first.permissions).toEqual(['catalog.product.view']);
+    expect(first.scopes).toHaveLength(1);
+    expect(first.scopes[0].type).toBe('BRANCH');
+    expect(typeof first.scopes[0].branchId).toBe('string');
+    expect(first.permissionVersion).toBe('3');
+    expect(second).toEqual(first);
+    expect(findManyAssignments).toHaveBeenCalledTimes(1);
+  });
+
+  it('rebuilds grants when the permission version changes', async () => {
+    const { service, session, findManyAssignments, jwt } = buildService();
+    await service.authorizeAccessToken('token');
+
+    session.user.permissionVersion = 4n;
+    (jwt.verifyAsync as jest.Mock).mockResolvedValue({
+      sub: '101',
+      sid: '9',
+      pv: '4',
+      typ: 'access',
+    });
+    const refreshed = await service.authorizeAccessToken('token');
+
+    expect(refreshed.permissionVersion).toBe('4');
+    expect(findManyAssignments).toHaveBeenCalledTimes(2);
+  });
+
+  it('rejects a token whose permission version no longer matches the user', async () => {
+    const { service, jwt } = buildService();
+    (jwt.verifyAsync as jest.Mock).mockResolvedValue({
+      sub: '101',
+      sid: '9',
+      pv: '2',
+      typ: 'access',
+    });
+
+    await expect(service.authorizeAccessToken('token')).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+  });
+
+  it('never caches a grant that expires on its own, because expiry does not bump the version', async () => {
+    const { service, findManyAssignments } = buildService();
+    findManyAssignments.mockResolvedValue([
+      {
+        scopeType: 'GLOBAL',
+        branchId: null,
+        validTo: new Date(Date.now() + 3_600_000),
+        role: { permissions: [{ permission: { code: 'order.view' } }] },
+      },
+    ]);
+
+    await service.authorizeAccessToken('token');
+    await service.authorizeAccessToken('token');
+
+    expect(findManyAssignments).toHaveBeenCalledTimes(2);
+  });
+});

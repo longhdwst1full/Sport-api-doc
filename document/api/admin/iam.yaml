@@ -25,6 +25,8 @@ paths:
       summary: List staff users with role scopes
       tags:
         - Admin IAM
+      x-required-permissions:
+        - iam.user.view
     post:
       operationId: createAdminStaffUser
       parameters: []
@@ -76,6 +78,8 @@ paths:
       summary: Root Admin creates an active subordinate account with a branch role
       tags:
         - Admin IAM
+      x-required-permissions:
+        - iam.user.manage
   /api/v1/admin/iam/users/{userId}/lock:
     post:
       operationId: lockAdminStaffUser
@@ -133,6 +137,8 @@ paths:
       summary: Root Admin locks a subordinate account and revokes every active session
       tags:
         - Admin IAM
+      x-required-permissions:
+        - iam.user.manage
   /api/v1/admin/iam/users/{userId}:
     delete:
       operationId: deleteAdminStaffUser
@@ -190,6 +196,8 @@ paths:
       summary: Logically delete a subordinate staff account by locking it and revoking sessions
       tags:
         - Admin IAM
+      x-required-permissions:
+        - iam.user.manage
   /api/v1/admin/iam/users/{userId}/unlock:
     post:
       operationId: unlockAdminStaffUser
@@ -241,6 +249,8 @@ paths:
       summary: Root Admin unlocks a subordinate account and resets its password
       tags:
         - Admin IAM
+      x-required-permissions:
+        - iam.user.manage
   /api/v1/admin/iam/roles:
     get:
       operationId: listAdminRoles
@@ -257,6 +267,8 @@ paths:
       summary: List IAM roles
       tags:
         - Admin IAM
+      x-required-permissions:
+        - iam.role.view
     post:
       operationId: createAdminRole
       parameters: []
@@ -302,6 +314,8 @@ paths:
       summary: Create a custom role with an explicit permission set
       tags:
         - Admin IAM
+      x-required-permissions:
+        - iam.role.manage
   /api/v1/admin/iam/permissions:
     get:
       operationId: listAdminPermissions
@@ -318,6 +332,8 @@ paths:
       summary: List stable permission codes
       tags:
         - Admin IAM
+      x-required-permissions:
+        - iam.role.view
   /api/v1/admin/iam/roles/all:
     get:
       operationId: listAdminAllRoles
@@ -334,6 +350,8 @@ paths:
       summary: List every role including INACTIVE ones for role administration
       tags:
         - Admin IAM
+      x-required-permissions:
+        - iam.role.view
   /api/v1/admin/iam/roles/active:
     get:
       operationId: searchActiveAdminRoles
@@ -390,6 +408,8 @@ paths:
       summary: Search assignable BRANCH_MANAGER or STAFF roles
       tags:
         - Admin IAM
+      x-required-permissions:
+        - iam.role.view
   /api/v1/admin/iam/roles/{roleId}:
     get:
       operationId: getAdminRole
@@ -417,6 +437,8 @@ paths:
       summary: Read one role with its permission set
       tags:
         - Admin IAM
+      x-required-permissions:
+        - iam.role.view
     patch:
       operationId: updateAdminRole
       parameters:
@@ -473,6 +495,8 @@ paths:
       summary: Rename a role or replace its permission set
       tags:
         - Admin IAM
+      x-required-permissions:
+        - iam.role.manage
     delete:
       operationId: deleteAdminRole
       parameters:
@@ -525,6 +549,8 @@ paths:
       summary: Delete a custom role that is not assigned to any user
       tags:
         - Admin IAM
+      x-required-permissions:
+        - iam.role.manage
   /api/v1/admin/iam/users/{userId}/role-assignments:
     post:
       operationId: assignAdminUserRole
@@ -570,6 +596,8 @@ paths:
       summary: Root Admin assigns BRANCH_MANAGER or STAFF within an active branch
       tags:
         - Admin IAM
+      x-required-permissions:
+        - iam.assignment.manage
   /api/v1/admin/iam/users/{userId}/role-assignments/{assignmentId}/revoke:
     post:
       operationId: revokeAdminUserRoleAssignment
@@ -632,6 +660,8 @@ paths:
       summary: Root Admin revokes one subordinate assignment and refreshes permissions
       tags:
         - Admin IAM
+      x-required-permissions:
+        - iam.assignment.manage
 components:
   schemas:
     UserListDto:
