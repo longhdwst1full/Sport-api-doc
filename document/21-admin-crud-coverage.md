@@ -1,10 +1,10 @@
 # Admin CRUD coverage V1
 
-> **Document version:** 1.13.0
+> **Document version:** 1.14.0
 >
 > **Last updated:** 2026-09-15
 >
-> **Change summary:** Thêm bán tại quầy; thêm module báo cáo cho Dashboard; thương hiệu chuyển DELETE sang xoá thật có ràng buộc; bổ sung vai trò, tham số hệ thống, flash sale và lọc danh mục/tìm kiếm tách ô.
+> **Change summary:** Bán tại quầy đã nghiệm thu một đơn thành công và có màn Admin; ngừng hoạt động chi nhánh Đà Nẵng, cửa hàng chỉ còn Hồ Chí Minh và Hà Nội.
 
 ## Bán tại quầy
 
@@ -29,9 +29,25 @@ trừ nên **không được bỏ qua**. Hai đường trừ kho song song là n
 | Kênh | Dùng lại giá trị `STORE` sẵn có của `orders_channel_check` |
 | Hết hàng | Kiểm tồn **sớm**, trước khi tạo khách/giỏ/checkout, để lần gọi hỏng không để lại bản ghi mồ côi |
 
-**Chưa nghiệm thu được một đơn thành công:** 596 sản phẩm mới chưa có dòng tồn kho nào. Ba
-nhánh xác thực đã kiểm: thiếu `Idempotency-Key` → 400, tài khoản toàn hệ thống thiếu `branchId`
-→ 400, hết hàng → 409 kèm số còn và số cần.
+**Đã nghiệm thu (2026-09-15):** `ORD-20260915-00000025` — `DELIVERED`, thanh toán `CASH`/`SUCCESS`,
+kênh `STORE`, tồn kho giảm đúng số bán, 6 bước lịch sử đơn và 9 bản ghi audit nối tiếp trong cùng
+request. Các nhánh xác thực đã kiểm: thiếu `Idempotency-Key` → 400, tài khoản toàn hệ thống thiếu
+`branchId` → 400, hết hàng → 409 kèm số còn và số cần.
+
+Nghiệm thu này phát hiện 5 lỗi chặn đã sửa, đáng chú ý nhất: ràng buộc phương thức thanh toán của
+`checkout_sessions` chưa nhận VNPAY/CASH (làm vỡ cả checkout VNPAY trên storefront, không riêng POS)
+và audit trùng `(request_id, sequence_no)` vì cả hệ thống ghi cứng `sequenceNo: 1`.
+
+**Màn Admin:** `admin/src/features/pos` (route `/pos`, quyền `order.manage`) — chọn hàng, lập giỏ,
+thu tiền, in biên lai. Giới hạn hiện tại: lookup biến thể chưa trả cờ combo và tồn khả dụng nên giỏ
+chưa hiển thị hai thông tin đó; xem `admin/src/features/pos/README.md`.
+
+## Chi nhánh đang vận hành
+
+Chỉ Hồ Chí Minh (`CN-HCM-01`) và Hà Nội (`CN-HN-01`). Đà Nẵng (`CN-DN-01`) là dữ liệu dựng sẵn giai
+đoạn demo, đã chuyển `INACTIVE` cùng kho `KHO-DN-01` — ngừng hoạt động thay vì xoá cứng vì chi nhánh
+và kho được tham chiếu từ sổ cái chỉ-ghi-thêm. Kiểm trước khi ngừng: 0 đơn, 0 phiên checkout, 0 giỏ,
+0 gán quyền, 0 biểu giá vận chuyển, 0 số dư tồn kho.
 
 ## Báo cáo & thống kê
 
