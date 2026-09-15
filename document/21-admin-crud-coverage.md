@@ -1,10 +1,10 @@
 # Admin CRUD coverage V1
 
-> **Document version:** 1.15.0
+> **Document version:** 1.16.0
 >
 > **Last updated:** 2026-09-15
 >
-> **Change summary:** Thêm `searchPosCatalog` (combo + tồn khả dụng theo chi nhánh) và sửa kiểm tồn sớm để combo quy về thành phần.
+> **Change summary:** Thêm module `Admin Customers`; màn khách hàng ở Admin hết chạy dữ liệu giả.
 
 ## Bán tại quầy
 
@@ -57,6 +57,27 @@ nên mọi đơn có combo đều bị từ chối nhầm. Nay dùng chung phép
 **Màn Admin:** `admin/src/features/pos` (route `/pos`, quyền `order.manage`) — chọn hàng, lập giỏ,
 thu tiền, in biên lai; hiển thị combo và tồn khả dụng, chặn bán vượt tồn ngay trên UI.
 Xem `admin/src/features/pos/README.md`.
+
+## Quản lý khách hàng
+
+`GET /admin/customers` (`listAdminCustomers`) và `GET /admin/customers/:id` (`getAdminCustomer`),
+quyền `customer.view`. Trước đó màn khách hàng ở Admin chạy fixture vì backend chưa có
+controller admin nào cho `Customer`.
+
+| Chỉ số | Định nghĩa |
+| --- | --- |
+| Số đơn | Đơn đã đặt, không tính đơn đã huỷ |
+| Đã chi tiêu | Tổng tiền đơn **đã thanh toán** và chưa huỷ — tiền khách thực trả |
+| Loại khách | MEMBER nếu `user_id` khác NULL, GUEST nếu NULL. Suy ra, không phải cột riêng |
+
+"Đã chi tiêu" đo theo trạng thái thanh toán, không theo trạng thái đơn: đơn bán tại quầy dừng
+ở `DELIVERED` nên lấy theo `COMPLETED` sẽ làm mọi khách mua tại quầy có số tiền bằng 0. Khác
+với báo cáo doanh thu (`COMPLETED` là thực nhận, `DELIVERED` là dự thu) vì hai chỗ trả lời hai
+câu hỏi khác nhau.
+
+Hai trường fixture cũ hiển thị — "Xác minh qua" và "Thẻ khách hàng" — không có trong model
+`Customer` nên đã gỡ khỏi màn hình thay vì bịa số liệu. Trạng thái cũng chỉ còn ACTIVE/INACTIVE
+theo `customers_status_check`.
 
 ## Chi nhánh đang vận hành
 

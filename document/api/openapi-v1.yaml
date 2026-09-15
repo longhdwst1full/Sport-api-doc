@@ -1753,6 +1753,125 @@ paths:
       summary: Deactivate an owned delivery address
       tags:
         - Storefront Customer
+  /api/v1/admin/customers:
+    get:
+      operationId: listAdminCustomers
+      parameters:
+        - name: page
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            default: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 20
+            type: number
+        - name: name
+          required: false
+          in: query
+          description: Lọc theo tên khách
+          schema:
+            maxLength: 255
+            type: string
+        - name: phone
+          required: false
+          in: query
+          description: Lọc theo số điện thoại
+          schema:
+            maxLength: 32
+            type: string
+        - name: email
+          required: false
+          in: query
+          description: Lọc theo email
+          schema:
+            maxLength: 255
+            type: string
+        - name: status
+          required: false
+          in: query
+          schema:
+            type: string
+            enum:
+              - ACTIVE
+              - INACTIVE
+        - name: kind
+          required: false
+          in: query
+          schema:
+            type: string
+            enum:
+              - MEMBER
+              - GUEST
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminCustomerListDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Danh sách khách hàng kèm số đơn, giá trị vòng đời và lần mua gần nhất
+      tags:
+        - Admin Customers
+  /api/v1/admin/customers/{id}:
+    get:
+      operationId: getAdminCustomer
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminCustomerDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Chi tiết khách hàng kèm địa chỉ và đơn gần đây
+      tags:
+        - Admin Customers
   /api/v1/admin/catalog/brands:
     get:
       operationId: listAdminBrands
@@ -8934,6 +9053,216 @@ components:
           example: 0
       required:
         - expectedVersion
+    AdminCustomerSummaryDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        customerNo:
+          type: string
+          example: KH-000128
+        name:
+          type: string
+          example: Nguyễn Minh Anh
+        email:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+        kind:
+          type: string
+          enum:
+            - MEMBER
+            - GUEST
+          description: Suy từ việc khách có tài khoản đăng nhập hay không
+        marketingConsent:
+          type: boolean
+          description: Khách có đồng ý nhận tin khuyến mãi
+        orderCount:
+          type: number
+          description: Số đơn đã đặt, không tính đơn đã huỷ
+        lifetimeValue:
+          type: string
+          example: "12480000.00"
+          description: Tổng tiền khách đã thực trả (đơn đã thanh toán, chưa huỷ)
+        lastOrderAt:
+          type: string
+          nullable: true
+          description: Thời điểm đặt đơn gần nhất
+        createdAt:
+          type: string
+      required:
+        - id
+        - customerNo
+        - name
+        - email
+        - phone
+        - status
+        - kind
+        - marketingConsent
+        - orderCount
+        - lifetimeValue
+        - lastOrderAt
+        - createdAt
+    AdminCustomerListDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminCustomerSummaryDto"
+        page:
+          type: number
+          example: 1
+        limit:
+          type: number
+          example: 20
+        total:
+          type: number
+          example: 42
+      required:
+        - items
+        - page
+        - limit
+        - total
+    AdminCustomerAddressDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        recipient:
+          type: string
+        phone:
+          type: string
+        addressLine:
+          type: string
+        ward:
+          type: string
+          nullable: true
+        district:
+          type: string
+          nullable: true
+        provinceCode:
+          type: string
+          example: "01"
+          description: Mã tỉnh/thành. Bảng địa chỉ chỉ lưu mã, không lưu tên.
+        isDefault:
+          type: boolean
+      required:
+        - id
+        - recipient
+        - phone
+        - addressLine
+        - ward
+        - district
+        - provinceCode
+        - isDefault
+    AdminCustomerOrderDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        orderNo:
+          type: string
+          example: ORD-20260915-00000025
+        status:
+          type: string
+        paymentStatus:
+          type: string
+        grandTotal:
+          type: string
+          example: "36100000.00"
+        placedAt:
+          type: string
+      required:
+        - id
+        - orderNo
+        - status
+        - paymentStatus
+        - grandTotal
+        - placedAt
+    AdminCustomerDetailDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        customerNo:
+          type: string
+          example: KH-000128
+        name:
+          type: string
+          example: Nguyễn Minh Anh
+        email:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+        kind:
+          type: string
+          enum:
+            - MEMBER
+            - GUEST
+          description: Suy từ việc khách có tài khoản đăng nhập hay không
+        marketingConsent:
+          type: boolean
+          description: Khách có đồng ý nhận tin khuyến mãi
+        orderCount:
+          type: number
+          description: Số đơn đã đặt, không tính đơn đã huỷ
+        lifetimeValue:
+          type: string
+          example: "12480000.00"
+          description: Tổng tiền khách đã thực trả (đơn đã thanh toán, chưa huỷ)
+        lastOrderAt:
+          type: string
+          nullable: true
+          description: Thời điểm đặt đơn gần nhất
+        createdAt:
+          type: string
+        addresses:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminCustomerAddressDto"
+        recentOrders:
+          description: Tối đa 20 đơn gần nhất
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminCustomerOrderDto"
+      required:
+        - id
+        - customerNo
+        - name
+        - email
+        - phone
+        - status
+        - kind
+        - marketingConsent
+        - orderCount
+        - lifetimeValue
+        - lastOrderAt
+        - createdAt
+        - addresses
+        - recentOrders
     BrandDto:
       type: object
       properties:
