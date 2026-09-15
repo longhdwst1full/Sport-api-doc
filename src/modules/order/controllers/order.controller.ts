@@ -30,6 +30,8 @@ import {
   OrderDetailDto,
 } from '../dto/order.dto';
 import { OrderService } from '../services/order.service';
+import { PosOrderService } from '../services/pos-order.service';
+import { CreatePosOrderDto } from '../dto/pos-order.dto';
 
 const IDEMPOTENCY_HEADER = 'idempotency-key';
 
@@ -189,7 +191,28 @@ export class AccountOrderController {
 @ApiUnauthorizedResponse({ type: ErrorResponseDto })
 @Controller('admin/orders')
 export class AdminOrderController {
-  constructor(private readonly orders: OrderService) {}
+  constructor(
+    private readonly orders: OrderService,
+    private readonly pos: PosOrderService,
+  ) {}
+
+  @Post('pos')
+  @RequirePermissions('order.manage')
+  @ApiOperation({
+    operationId: 'createPosOrder',
+    summary: 'Tạo đơn bán tại quầy: thu tiền ngay và giao hàng tại chỗ',
+  })
+  @ApiCreatedResponse({ type: OrderDetailDto })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiForbiddenResponse({ type: ErrorResponseDto, description: 'Tài khoản không thuộc đúng một chi nhánh' })
+  @ApiConflictResponse({ type: ErrorResponseDto, description: 'Hết hàng hoặc sản phẩm chưa có giá' })
+  createPosOrder(
+    @Body() input: CreatePosOrderDto,
+    @Headers('Idempotency-Key') idempotencyKey: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<OrderDetailDto> {
+    return this.pos.create(input, idempotencyKey ?? '', requestId(request), getAuthPrincipal(request));
+  }
 
   @Get()
   @RequirePermissions('order.view')

@@ -9742,6 +9742,92 @@
         ]
       }
     },
+    "/api/v1/admin/orders/pos": {
+      "post": {
+        "operationId": "createPosOrder",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePosOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderDetailDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản không thuộc đúng một chi nhánh",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Hết hàng hoặc sản phẩm chưa có giá",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Tạo đơn bán tại quầy: thu tiền ngay và giao hàng tại chỗ",
+        "tags": [
+          "Admin Orders"
+        ]
+      }
+    },
     "/api/v1/admin/orders": {
       "get": {
         "operationId": "listAdminOrders",
@@ -18181,6 +18267,86 @@
           "page",
           "limit",
           "total"
+        ]
+      },
+      "PosCustomerDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Nguyễn Văn An",
+            "maxLength": 255
+          },
+          "phone": {
+            "type": "string",
+            "example": "0901234567",
+            "description": "Dùng để tìm lại khách cũ và tra cứu bảo hành sau này"
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "name",
+          "phone"
+        ]
+      },
+      "PosOrderItemDto": {
+        "type": "object",
+        "properties": {
+          "productVariantId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
+          },
+          "quantity": {
+            "type": "number",
+            "minimum": 1,
+            "example": 1
+          }
+        },
+        "required": [
+          "productVariantId",
+          "quantity"
+        ]
+      },
+      "CreatePosOrderDto": {
+        "type": "object",
+        "properties": {
+          "customer": {
+            "$ref": "#/components/schemas/PosCustomerDto"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PosOrderItemDto"
+            }
+          },
+          "paymentMethod": {
+            "type": "string",
+            "enum": [
+              "CASH",
+              "BANK_TRANSFER"
+            ],
+            "example": "CASH"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Ghi chú tại quầy; lưu kèm đơn để truy vết về sau"
+          },
+          "branchId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1",
+            "description": "Chi nhánh bán. BẮT BUỘC với tài khoản phạm vi toàn hệ thống vì họ không gắn chi nhánh nào. Tài khoản thuộc một chi nhánh thì bỏ trống, hoặc truyền đúng chi nhánh của mình."
+          }
+        },
+        "required": [
+          "customer",
+          "items",
+          "paymentMethod"
         ]
       },
       "AdminOrderListDto": {

@@ -9,6 +9,57 @@ servers:
   - url: http://localhost:4000
     description: Local
 paths:
+  /api/v1/admin/orders/pos:
+    post:
+      operationId: createPosOrder
+      parameters:
+        - name: Idempotency-Key
+          required: true
+          in: header
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePosOrderDto"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderDetailDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: Tài khoản không thuộc đúng một chi nhánh
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: Hết hàng hoặc sản phẩm chưa có giá
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: "Tạo đơn bán tại quầy: thu tiền ngay và giao hàng tại chỗ"
+      tags:
+        - Admin Orders
   /api/v1/admin/orders:
     get:
       operationId: listAdminOrders
@@ -324,58 +375,34 @@ paths:
         - Admin Orders
 components:
   schemas:
-    AdminOrderListDto:
+    CreatePosOrderDto:
       type: object
       properties:
+        customer:
+          $ref: "#/components/schemas/PosCustomerDto"
         items:
           type: array
           items:
-            $ref: "#/components/schemas/AdminOrderSummaryDto"
-        page:
-          type: number
-        limit:
-          type: number
-        total:
-          type: number
+            $ref: "#/components/schemas/PosOrderItemDto"
+        paymentMethod:
+          type: string
+          enum:
+            - CASH
+            - BANK_TRANSFER
+          example: CASH
+        note:
+          type: string
+          maxLength: 1000
+          description: Ghi chú tại quầy; lưu kèm đơn để truy vết về sau
+        branchId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+          description: Chi nhánh bán. BẮT BUỘC với tài khoản phạm vi toàn hệ thống vì họ không gắn chi nhánh nào. Tài khoản thuộc một chi nhánh thì bỏ trống, hoặc truyền đúng chi nhánh của mình.
       required:
+        - customer
         - items
-        - page
-        - limit
-        - total
-    ErrorResponseDto:
-      type: object
-      properties:
-        statusCode:
-          type: number
-          example: 400
-        code:
-          type: string
-          example: VALIDATION_ERROR
-        message:
-          type: string
-          example: Dữ liệu gửi lên không hợp lệ.
-        details:
-          type: array
-          items:
-            $ref: "#/components/schemas/ErrorDetailDto"
-        path:
-          type: string
-          example: /api/v1/catalog/products
-        method:
-          type: string
-          example: POST
-        timestamp:
-          type: string
-          format: date-time
-        requestId:
-          type: string
-      required:
-        - statusCode
-        - code
-        - message
-        - path
-        - method
-        - timestamp
+        - paymentMethod
     OrderDetailDto:
       type: object
       properties:
@@ -487,6 +514,58 @@ components:
         - taxTotal
         - items
         - statusHistory
+    ErrorResponseDto:
+      type: object
+      properties:
+        statusCode:
+          type: number
+          example: 400
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: Dữ liệu gửi lên không hợp lệ.
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorDetailDto"
+        path:
+          type: string
+          example: /api/v1/catalog/products
+        method:
+          type: string
+          example: POST
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+      required:
+        - statusCode
+        - code
+        - message
+        - path
+        - method
+        - timestamp
+    AdminOrderListDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminOrderSummaryDto"
+        page:
+          type: number
+        limit:
+          type: number
+        total:
+          type: number
+      required:
+        - items
+        - page
+        - limit
+        - total
     OrderCancelCommandDto:
       type: object
       properties:
@@ -529,101 +608,37 @@ components:
       required:
         - expectedVersion
         - reason
-    AdminOrderSummaryDto:
+    PosCustomerDto:
       type: object
       properties:
-        id:
+        name:
+          type: string
+          example: Nguyễn Văn An
+          maxLength: 255
+        phone:
+          type: string
+          example: "0901234567"
+          description: Dùng để tìm lại khách cũ và tra cứu bảo hành sau này
+        email:
+          type: string
+          maxLength: 255
+      required:
+        - name
+        - phone
+    PosOrderItemDto:
+      type: object
+      properties:
+        productVariantId:
           type: string
           pattern: ^[1-9][0-9]*$
           example: "1"
-        orderNo:
-          type: string
-        status:
-          type: string
-          enum:
-            - PENDING_CONFIRMATION
-            - CONFIRMED
-            - PICKING
-            - PACKED
-            - SHIPPED
-            - DELIVERED
-            - COMPLETED
-            - CANCELLED
-        paymentStatus:
-          type: string
-          enum:
-            - PENDING
-            - AWAITING_CONFIRMATION
-            - NEED_REVIEW
-            - SUCCESS
-            - FAILED
-            - CANCELLED
-            - REFUNDED
-        fulfillmentStatus:
-          type: string
-          enum:
-            - PENDING
-            - PICKING
-            - PACKED
-            - SHIPPED
-            - DELIVERED
-            - FAILED
-            - RETURNED
-            - CANCELLED
-        paymentMethod:
-          type: string
-        shippingMethod:
-          type: string
-        branchId:
-          type: string
-          pattern: ^[1-9][0-9]*$
-          example: "1"
-        branchName:
-          type: string
-        warehouseName:
-          type: string
-        grandTotal:
-          type: string
-        itemCount:
+        quantity:
           type: number
-        recipient:
-          $ref: "#/components/schemas/OrderRecipientDto"
-        placedAt:
-          type: string
-          format: date-time
-        version:
-          type: number
+          minimum: 1
+          example: 1
       required:
-        - id
-        - orderNo
-        - status
-        - paymentStatus
-        - fulfillmentStatus
-        - paymentMethod
-        - shippingMethod
-        - branchId
-        - branchName
-        - warehouseName
-        - grandTotal
-        - itemCount
-        - recipient
-        - placedAt
-        - version
-    ErrorDetailDto:
-      type: object
-      properties:
-        field:
-          type: string
-          example: name
-        code:
-          type: string
-          example: INVALID_VALUE
-        message:
-          type: string
-          example: 'Trường "name": Trường này không được để trống.'
-      required:
-        - code
-        - message
+        - productVariantId
+        - quantity
     OrderRecipientDto:
       type: object
       properties:
@@ -731,6 +746,101 @@ components:
         - toStatus
         - actorType
         - createdAt
+    ErrorDetailDto:
+      type: object
+      properties:
+        field:
+          type: string
+          example: name
+        code:
+          type: string
+          example: INVALID_VALUE
+        message:
+          type: string
+          example: 'Trường "name": Trường này không được để trống.'
+      required:
+        - code
+        - message
+    AdminOrderSummaryDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        orderNo:
+          type: string
+        status:
+          type: string
+          enum:
+            - PENDING_CONFIRMATION
+            - CONFIRMED
+            - PICKING
+            - PACKED
+            - SHIPPED
+            - DELIVERED
+            - COMPLETED
+            - CANCELLED
+        paymentStatus:
+          type: string
+          enum:
+            - PENDING
+            - AWAITING_CONFIRMATION
+            - NEED_REVIEW
+            - SUCCESS
+            - FAILED
+            - CANCELLED
+            - REFUNDED
+        fulfillmentStatus:
+          type: string
+          enum:
+            - PENDING
+            - PICKING
+            - PACKED
+            - SHIPPED
+            - DELIVERED
+            - FAILED
+            - RETURNED
+            - CANCELLED
+        paymentMethod:
+          type: string
+        shippingMethod:
+          type: string
+        branchId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        branchName:
+          type: string
+        warehouseName:
+          type: string
+        grandTotal:
+          type: string
+        itemCount:
+          type: number
+        recipient:
+          $ref: "#/components/schemas/OrderRecipientDto"
+        placedAt:
+          type: string
+          format: date-time
+        version:
+          type: number
+      required:
+        - id
+        - orderNo
+        - status
+        - paymentStatus
+        - fulfillmentStatus
+        - paymentMethod
+        - shippingMethod
+        - branchId
+        - branchName
+        - warehouseName
+        - grandTotal
+        - itemCount
+        - recipient
+        - placedAt
+        - version
     OrderItemComponentDto:
       type: object
       properties:

@@ -43,7 +43,13 @@ import {
 
 type PlacementActor =
   | { type: 'GUEST'; cartId: bigint }
-  | { type: 'CUSTOMER'; userId: string };
+  | { type: 'CUSTOMER'; userId: string }
+  // Nhân viên bán tại quầy: giỏ do server tạo nên không thuộc sở hữu của ai.
+  // Thay cho kiểm sở hữu giỏ, chỗ này kiểm phạm vi chi nhánh.
+  | { type: 'STAFF'; principal: AuthPrincipal; branchId: bigint };
+
+/** Chủ thể có giỏ hàng riêng; dùng cho các lệnh tra cứu đơn theo quyền sở hữu. */
+type CustomerPlacementActor = Extract<PlacementActor, { type: 'GUEST' | 'CUSTOMER' }>;
 
 type TransitionActor = PlacementActor | { type: 'ADMIN'; principal: AuthPrincipal };
 
@@ -364,7 +370,7 @@ export class OrderService {
     );
   }
 
-  private async findOwnedOrder(orderNo: string, actor: PlacementActor): Promise<LoadedOrder> {
+  private async findOwnedOrder(orderNo: string, actor: CustomerPlacementActor): Promise<LoadedOrder> {
     const normalizedOrderNo = orderNo.trim().toUpperCase();
     if (!normalizedOrderNo) throw new BadRequestException('Mã đơn hàng là bắt buộc');
     const ownership: Prisma.OrderWhereInput = actor.type === 'GUEST'
@@ -640,7 +646,7 @@ export class OrderService {
     throw new ServiceUnavailableException('Không thể xử lý đơn hàng do xung đột đồng thời');
   }
 
-  private async place(
+  async place(
     rawCheckoutToken: string,
     rawIdempotencyKey: string,
     requestId: string,
@@ -949,6 +955,9 @@ export class OrderService {
   }
 
   private assertPlacementOwnership(cartId: bigint, cartUserId: bigint | null, actor: PlacementActor): void {
+    // Đơn tại quầy không có chủ sở hữu giỏ; quyền được xét bằng phạm vi chi nhánh
+    // ở `PosOrderService` trước khi gọi tới đây.
+    if (actor.type === 'STAFF') return;
     const owned = actor.type === 'GUEST'
       ? cartId === actor.cartId
       : cartUserId === toDatabaseId(actor.userId);

@@ -7,11 +7,14 @@ import { PaymentModule } from '../payment/payment.module';
 import { PromotionModule } from '../promotion/promotion.module';
 import { OrderMaintenanceController } from './controllers/order-maintenance.controller';
 import { OrderCompletionService } from './services/order-completion.service';
+import { PosOrderService } from './services/pos-order.service';
+import { CheckoutModule } from '../checkout/checkout.module';
+import { FulfillmentModule } from '../fulfillment/fulfillment.module';
 
 @Module({
-  imports: [AuditModule, CartModule, PaymentModule, PromotionModule],
+  imports: [AuditModule, CartModule, PaymentModule, PromotionModule, CheckoutModule, FulfillmentModule],
   controllers: [GuestOrderController, AccountOrderController, AdminOrderController, OrderMaintenanceController],
-  providers: [OrderService, OrderCompletionService],
-  exports: [OrderService],
+  providers: [OrderService, OrderCompletionService, PosOrderService],
+  exports: [OrderService, PosOrderService],
 })
 export class OrderModule {}
