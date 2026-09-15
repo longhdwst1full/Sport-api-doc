@@ -66,9 +66,10 @@ export class CatalogMasterService {
         imageAsset: { select: { secureUrl: true, thumbnailUrl: true } },
         // Menu nhiều cấp của Storefront cần biết cha là ai; trước đây phải hardcode.
         parent: { select: { slug: true } },
-        _count: { select: { products: { where: { product: { status: 'PUBLISHED' } } } } },
       },
     });
+
+    const counts = await this.publishedProductCountByCategory();
     const items: CatalogCategoryDto[] = rows.map((row) => ({
       code: row.code,
       name: row.name,
@@ -76,11 +77,33 @@ export class CatalogMasterService {
       description: row.description ?? undefined,
       imageUrl: row.imageAsset?.thumbnailUrl ?? row.imageAsset?.secureUrl ?? null,
       sortOrder: row.sortOrder,
-      productCount: row._count.products,
+      productCount: counts.get(row.id.toString()) ?? 0,
       depth: row.depth,
       parentSlug: row.parent?.slug ?? null,
     }));
     return { items, total: items.length };
+  }
+
+  /**
+   * Số sản phẩm PUBLISHED của từng danh mục, **cộng dồn cả nhánh con** — đúng cách bộ
+   * lọc sản phẩm hiểu một danh mục (`ProductsService.resolveCategoryFilter` khớp theo
+   * tiền tố `path`). Đếm trực tiếp bằng `_count` làm danh mục cha luôn ra 0 trong khi
+   * bấm vào nó lại liệt kê hàng chục sản phẩm.
+   *
+   * `COUNT(DISTINCT ...)` vì một sản phẩm có thể gắn đồng thời vào cha và con.
+   */
+  private async publishedProductCountByCategory(): Promise<Map<string, number>> {
+    const rows = await this.prisma.$queryRaw<Array<{ id: bigint; total: number }>>`
+      SELECT c.id, COUNT(DISTINCT p.id)::int AS total
+      FROM public.categories c
+      LEFT JOIN public.categories d
+        ON d.path = c.path OR d.path LIKE c.path || '/%'
+      LEFT JOIN public.product_categories pc ON pc.category_id = d.id
+      LEFT JOIN public.products p ON p.id = pc.product_id AND p.status = 'PUBLISHED'
+      WHERE c.status = 'ACTIVE'
+      GROUP BY c.id
+    `;
+    return new Map(rows.map((row) => [row.id.toString(), row.total]));
   }
 
   async searchActiveBrands(query: ActiveSearchQueryDto): Promise<ActiveLookupResponseDto> {
