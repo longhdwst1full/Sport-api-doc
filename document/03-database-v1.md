@@ -1,10 +1,10 @@
 # Thiết kế dữ liệu V1
 
-> **Document version:** 2.17.0
+> **Document version:** 2.18.0
 >
 > **Last updated:** 2026-09-15
 >
-> **Change summary:** Nạp 10 bài viết thật của baoansport.vn và lưu trữ 8 bài dựng sẵn giai đoạn demo.
+> **Change summary:** Dọn 596 ảnh thu nhỏ 150x150 lọt vào thư viện khi crawl catalog.
 
 ## 1. Chuẩn chung
 
@@ -225,6 +225,7 @@ Hệ quả: đơn bán tại quầy **chưa bán được SKU nào** cho tới k
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 2.18.0 | 2026-09-15 | Xoá 596 ảnh thu nhỏ 150x150 và các liên kết `product_media` của chúng. Kiểm trước: 0 ảnh là ảnh chính, 0 dùng làm bìa bài/ảnh danh mục, 0 sản phẩm đang bán mất ảnh. Lọc theo `secure_url` vì `width`/`height` của ảnh crawl đều NULL. | `20260915210000_remove_crawled_thumbnails` |
 | 2.17.0 | 2026-09-15 | Nạp 10 bài viết thật (4.400-26.900 ký tự, ảnh và ngày đăng gốc) vào `posts`; lưu trữ 8 bài dựng sẵn có thân bài 82-374 ký tự và ảnh Unsplash. Thân bài mang tiền tố nhẹ `## `/`### `/`- ` để giữ tiêu đề mục. | `20260915190000_seed_baoansport_articles` / `20260915200000_article_body_structure` |
 | 2.16.0 | 2026-09-15 | `CN-DN-01` và `KHO-DN-01` chuyển `INACTIVE`. Ngừng hoạt động thay vì xoá cứng vì chi nhánh/kho được tham chiếu từ sổ cái chỉ-ghi-thêm. Đã kiểm trước: 0 đơn, 0 checkout, 0 giỏ, 0 gán quyền, 0 biểu giá, 0 số dư tồn. | `20260915180000_deactivate_danang_branch` |
 | 2.15.0 | 2026-09-15 | `checkout_sessions.payment_method` nhận thêm VNPAY và CASH; `branches.address_json` có `provinceCode` (Hà Nội 01, TP.HCM 79, Đà Nẵng 48 theo mã hành chính GSO). Phát hiện khi nghiệm thu bán tại quầy. | `20260915160000_checkout_session_payment_methods` / `20260915170000_branch_address_province_code` |
