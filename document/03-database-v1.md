@@ -1,6 +1,6 @@
 # Thiết kế dữ liệu V1
 
-> **Document version:** 2.13.0
+> **Document version:** 2.14.0
 >
 > **Last updated:** 2026-09-15
 >
@@ -206,10 +206,26 @@ chiến lược mặc định tách mỗi quan hệ thành một truy vấn riê
 - **`orders_channel_check` KHÔNG đổi.** Ràng buộc sẵn có đã cho giá trị `'STORE'`; đơn tại quầy
   dùng lại giá trị này thay vì đẻ thêm từ vựng trùng nghĩa.
 
+### Mở sổ tồn kho
+
+`20260915140000_seed_hanoi_opening_inventory` tạo 596 dòng `inventory_balances` cho kho
+`KHO-HN-01`, mỗi SKU đang bán một dòng.
+
+| Trường | Giá trị | Lý do |
+| --- | --- | --- |
+| `on_hand` | **0** | Số lượng thật do cửa hàng nhập bằng phiếu điều chỉnh tồn. Seed một con số kho tuỳ tiện sẽ khiến báo cáo và checkout tin vào hàng không có thật |
+| `reorder_point` | **5** | Mọi SKU lập tức nằm dưới ngưỡng nên Dashboard liệt kê đúng danh sách cần nhập, thay vì im lặng |
+
+**Không ghi bút toán kho** vì số lượng bằng 0 — không có gì để đối soát.
+
+Hệ quả: đơn bán tại quầy **chưa bán được SKU nào** cho tới khi có tồn thật. Đây là hành vi
+đúng: `PosOrderService` kiểm tồn sớm và từ chối với thông báo nêu rõ số còn và số cần.
+
 ## Revision history
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 2.14.0 | 2026-09-15 | Mở sổ tồn kho Hà Nội: 596 SKU, tồn 0, ngưỡng đặt lại 5. | `20260915140000_seed_hanoi_opening_inventory` |
 | 2.13.0 | 2026-09-15 | Gỡ CARD: cửa hàng không dùng máy quẹt thẻ. | `20260915110000_drop_card_payment_method` |
 | 2.12.0 | 2026-09-15 | Thêm CASH cho bán tại quầy; giữ nguyên kênh STORE sẵn có. | `20260915100000_pos_payment_methods` |
 | 2.11.0 | 2026-09-15 | Seed catalog Bảo An Sport thật và lưu trữ catalog demo; thêm post type POLICY; thêm VNPAY và actor hệ thống; bật relationJoins. | `20260914060000` / `20260914080000` / `20260914120000` |
