@@ -39,23 +39,34 @@ export class PrismaAuditWriter extends AuditWriter {
     const actorType =
       input.actorType === 'USER' && hasNonDatabaseActor ? 'SYSTEM' : input.actorType;
 
-    const result = await (transaction ?? this.prisma).auditLog.create({
-      data: {
-        requestId: input.requestId,
-        sequenceNo: input.sequenceNo,
-        actorType,
-        actorUserId,
-        action: input.action,
-        entityType: input.entityType,
-        entityId: input.entityId,
-        beforeJson: input.before,
-        afterJson: input.after,
-        reason: input.reason,
-        ipHash: input.ipHash,
-        userAgentHash: input.userAgentHash,
-      },
-      select: { id: true, createdAt: true },
-    });
-    return { id: toEntityId(result.id), createdAt: result.createdAt.toISOString() };
+    // `@@unique([requestId, sequenceNo])`: một HTTP request ghi nhiều audit thì mỗi bản
+    // ghi phải mang số thứ tự riêng. Phần lớn luồng chỉ ghi một bản nên caller truyền 1;
+    // luồng ghép nhiều nghiệp vụ (bán tại quầy: checkout -> giữ hàng -> đặt -> thu tiền ->
+    // giao) thì các bước sau phải nối tiếp. Cấp số ngay trong câu INSERT để không tốn thêm
+    // round-trip và để không phải bắt lỗi trùng bên trong transaction (lỗi ràng buộc làm
+    // Postgres huỷ cả transaction, không retry được tại chỗ).
+    const client = transaction ?? this.prisma;
+    const [result] = await client.$queryRaw<{ id: bigint; created_at: Date }[]>`
+      INSERT INTO public.audit_logs (
+        request_id, sequence_no, actor_type, actor_user_id, action,
+        entity_type, entity_id, before_json, after_json, reason, ip_hash, user_agent_hash
+      ) VALUES (
+        ${input.requestId},
+        GREATEST(
+          ${input.sequenceNo}::int,
+          COALESCE((SELECT MAX(sequence_no) FROM public.audit_logs WHERE request_id = ${input.requestId}), 0) + 1
+        ),
+        ${actorType}, ${actorUserId ?? null}, ${input.action},
+        ${input.entityType}, ${input.entityId ?? null},
+        ${input.before === undefined || input.before === null ? null : JSON.stringify(input.before)}::jsonb,
+        ${input.after === undefined || input.after === null ? null : JSON.stringify(input.after)}::jsonb,
+        ${input.reason ?? null}, ${input.ipHash ?? null}, ${input.userAgentHash ?? null}
+      )
+      RETURNING id, created_at
+    `;
+    if (!result) {
+      throw new ServiceUnavailableException('Audit log write returned no row');
+    }
+    return { id: toEntityId(result.id), createdAt: result.created_at.toISOString() };
   }
 }

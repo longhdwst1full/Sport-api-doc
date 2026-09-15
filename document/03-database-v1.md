@@ -1,10 +1,10 @@
 # Thiết kế dữ liệu V1
 
-> **Document version:** 2.14.0
+> **Document version:** 2.15.0
 >
 > **Last updated:** 2026-09-15
 >
-> **Change summary:** Seed catalog Bảo An Sport thật; thêm loại bài viết POLICY; thêm phương thức thanh toán VNPAY kèm actor hệ thống; bật relationJoins của Prisma.
+> **Change summary:** Nới ràng buộc phương thức thanh toán của `checkout_sessions` cho VNPAY/CASH (trước đó chỉ `payments` được nới, nên checkout VNPAY và bán tại quầy đều vỡ); bổ sung `provinceCode` vào địa chỉ chi nhánh để đơn tại quầy dựng được snapshot địa chỉ nhận.
 
 ## 1. Chuẩn chung
 
@@ -225,6 +225,7 @@ Hệ quả: đơn bán tại quầy **chưa bán được SKU nào** cho tới k
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 2.15.0 | 2026-09-15 | `checkout_sessions.payment_method` nhận thêm VNPAY và CASH; `branches.address_json` có `provinceCode` (Hà Nội 01, TP.HCM 79, Đà Nẵng 48 theo mã hành chính GSO). Phát hiện khi nghiệm thu bán tại quầy. | `20260915160000_checkout_session_payment_methods` / `20260915170000_branch_address_province_code` |
 | 2.14.0 | 2026-09-15 | Mở sổ tồn kho Hà Nội: 596 SKU, tồn 0, ngưỡng đặt lại 5. | `20260915140000_seed_hanoi_opening_inventory` |
 | 2.13.0 | 2026-09-15 | Gỡ CARD: cửa hàng không dùng máy quẹt thẻ. | `20260915110000_drop_card_payment_method` |
 | 2.12.0 | 2026-09-15 | Thêm CASH cho bán tại quầy; giữ nguyên kênh STORE sẵn có. | `20260915100000_pos_payment_methods` |

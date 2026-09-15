@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma.service';
@@ -255,8 +255,16 @@ export class PosOrderService {
     });
 
     await this.prisma.$transaction(async (transaction) => {
+      // `carts_active_customer_key` chỉ cho mỗi khách một giỏ ACTIVE. Giỏ tại quầy là
+      // giỏ giao dịch dùng một lần của phiên bán, không phải giỏ online của khách — gắn
+      // nó vào customerId sẽ đụng giỏ khách đang có trên storefront. Định danh giỏ theo
+      // chính phiên checkout; khách vẫn gắn vào đơn qua `checkoutSession.customerId`.
       const cart = await transaction.cart.create({
-        data: { customerId, branchId: warehouse.branchId, status: 'ACTIVE' },
+        data: {
+          anonymousTokenHash: createHash('sha256').update(checkoutToken).digest('hex'),
+          branchId: warehouse.branchId,
+          status: 'ACTIVE',
+        },
       });
       const cartItems = await Promise.all(
         lines.map((line) =>
@@ -290,12 +298,13 @@ export class PosOrderService {
           etaMaxDays: 0,
           // Khách nhận hàng tại quầy nên "người nhận" là chính khách, địa chỉ là
           // địa chỉ chi nhánh bán — trung thực hơn là bịa địa chỉ giao của khách.
+          // Phải đúng hình dạng `CheckoutRecipientDto`: đặt đơn đọc snapshot này để dựng
+          // địa chỉ nhận của đơn và sẽ từ chối nếu thiếu recipient/addressLine/province.
           recipientSnapshot: {
-            name: input.customer.name.trim(),
+            recipient: input.customer.name.trim(),
             phone: input.customer.phone.trim(),
-            email: input.customer.email?.trim() ?? null,
-            pickupAtBranch: branch.name,
-            address: branch.addressJson,
+            email: input.customer.email?.trim() || undefined,
+            ...this.branchAddressSnapshot(branch),
           } as unknown as Prisma.InputJsonValue,
           shippingRuleSnapshot: {
             method: POS_SHIPPING_METHOD,
@@ -421,9 +430,13 @@ export class PosOrderService {
     requestId: string,
     principal: AuthPrincipal,
   ): Promise<OrderDetailDto> {
+    // `placed` được chụp trước bước thu tiền; ghi nhận thanh toán đã tăng version của
+    // đơn nên số hiệu ở đây đã cũ. Đọc lại ngay trước khi xác nhận để khoá lạc quan so
+    // đúng bản hiện hành — vẫn giữ khoá, không nới lỏng nó.
+    const current = await this.orders.getAdmin(placed.id, principal);
     await this.orders.confirmAdmin(
       placed.id,
-      { expectedVersion: placed.version },
+      { expectedVersion: current.version },
       `${key}:confirm`,
       requestId,
       principal,
@@ -442,4 +455,37 @@ export class PosOrderService {
 
     return this.orders.getAdmin(placed.id, principal);
   }
+
+  /**
+   * Khách nhận hàng ngay tại quầy nên địa chỉ nhận là địa chỉ chi nhánh bán —
+   * trung thực hơn là bịa địa chỉ giao của khách. `provinceCode` là bắt buộc ở
+   * snapshot đơn; chi nhánh thiếu trường này là lỗi dữ liệu, phải báo rõ thay vì
+   * để nghiệp vụ vỡ ở tầng sâu hơn với thông điệp khó lần.
+   */
+  private branchAddressSnapshot(branch: { name: string; addressJson: Prisma.JsonValue }) {
+    const address = (branch.addressJson ?? {}) as Record<string, unknown>;
+    const text = (key: string): string | undefined => {
+      const value = address[key];
+      return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+    };
+    const addressLine = text('addressLine');
+    const province = text('province');
+    const provinceCode = text('provinceCode');
+    if (!addressLine || !province || !provinceCode) {
+      throw new ConflictException(
+        `Địa chỉ chi nhánh "${branch.name}" thiếu addressLine/province/provinceCode, chưa bán tại quầy được`,
+      );
+    }
+    return {
+      addressLine,
+      province,
+      provinceCode,
+      district: text('district') ?? '',
+      districtCode: text('districtCode'),
+      ward: text('ward'),
+      wardCode: text('wardCode'),
+      pickupAtBranch: branch.name,
+    };
+  }
+
 }

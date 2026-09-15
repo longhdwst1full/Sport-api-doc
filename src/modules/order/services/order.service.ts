@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
-import { toDatabaseId, toEntityId } from '../../../common/identifiers/entity-id';
+import { toActorDatabaseId, toDatabaseId, toEntityId } from '../../../common/identifiers/entity-id';
 import { PrismaService } from '../../../database/prisma.service';
 import type { AuthPrincipal } from '../../auth/auth.types';
 import { AuditWriter } from '../../audit/audit.writer';
@@ -771,7 +771,9 @@ export class OrderService {
               customerId: checkout.customerId,
               branchId: checkout.branchId,
               warehouseId: checkout.warehouseId,
-              channel: ORDER_CHANNEL.WEB,
+              // Nhân viên đặt hộ tại quầy là bán tại cửa hàng; ghi WEB cho mọi đơn sẽ làm
+              // báo cáo doanh thu theo kênh sai ngay từ nguồn.
+              channel: actor.type === 'STAFF' ? ORDER_CHANNEL.STORE : ORDER_CHANNEL.WEB,
               status: ORDER_STATUS.PENDING_CONFIRMATION,
               paymentStatus: ORDER_PAYMENT_STATUS.PENDING,
               fulfillmentStatus: ORDER_FULFILLMENT_STATUS.PENDING,
@@ -810,8 +812,16 @@ export class OrderService {
                 create: {
                   sequenceNo: 1,
                   toStatus: ORDER_STATUS.PENDING_CONFIRMATION,
-                  actorType: actor.type,
-                  actorId: actor.type === 'CUSTOMER' ? toDatabaseId(actor.userId) : null,
+                  // `order_status_history_actor_type_check` chỉ nhận GUEST/CUSTOMER/USER/SYSTEM.
+                  // Nhân viên bán tại quầy là user trong hệ thống, không phải một loại chủ thể
+                  // mới — ghi 'USER' và giữ danh tính người bán ở `actorId` để còn truy vết.
+                  actorType: actor.type === 'STAFF' ? 'USER' : actor.type,
+                  actorId:
+                    actor.type === 'CUSTOMER'
+                      ? toDatabaseId(actor.userId)
+                      : actor.type === 'STAFF'
+                        ? toActorDatabaseId(actor.principal.userId) ?? null
+                        : null,
                   requestId,
                   idempotencyKey,
                   requestHash,
@@ -876,8 +886,15 @@ export class OrderService {
           await this.audit.write({
             requestId,
             sequenceNo: 1,
+            // `audit_logs_actor_consistency_check`: actorType USER bắt buộc kèm danh tính.
+            // Đơn tại quầy do nhân viên đặt hộ nên người chịu trách nhiệm là nhân viên đó.
             actorType: actor.type === 'GUEST' ? 'GUEST' : 'USER',
-            actorUserId: actor.type === 'CUSTOMER' ? actor.userId : undefined,
+            actorUserId:
+              actor.type === 'CUSTOMER'
+                ? actor.userId
+                : actor.type === 'STAFF'
+                  ? actor.principal.userId
+                  : undefined,
             action: ORDER_AUDIT_ACTION.PLACE,
             entityType: 'ORDER',
             entityId: toEntityId(created.id),
