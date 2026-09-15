@@ -1,10 +1,37 @@
 # Admin CRUD coverage V1
 
-> **Document version:** 1.12.0
+> **Document version:** 1.13.0
 >
 > **Last updated:** 2026-09-15
 >
-> **Change summary:** Thêm module báo cáo cho Dashboard; thương hiệu chuyển DELETE sang xoá thật có ràng buộc; bổ sung vai trò, tham số hệ thống, flash sale và lọc danh mục/tìm kiếm tách ô.
+> **Change summary:** Thêm bán tại quầy; thêm module báo cáo cho Dashboard; thương hiệu chuyển DELETE sang xoá thật có ràng buộc; bổ sung vai trò, tham số hệ thống, flash sale và lọc danh mục/tìm kiếm tách ô.
+
+## Bán tại quầy
+
+`POST /admin/orders/pos` (`createPosOrder`, quyền `order.manage`, bắt buộc `Idempotency-Key`).
+
+**Đi qua đúng đường của đơn online, không có đường trừ kho riêng:**
+
+```
+checkout session -> đặt chỗ tồn kho -> place() -> CONFIRMED -> PICKING -> PACKED -> SHIPPED -> DELIVERED
+```
+
+`place()` khoá `FOR UPDATE` cả checkout lẫn reservation; `SHIPPED` là nơi tồn kho thực sự bị
+trừ nên **không được bỏ qua**. Hai đường trừ kho song song là nguồn gốc của bán vượt hàng.
+
+| Điểm | Cách xử lý |
+| --- | --- |
+| Chi nhánh bán | Lấy từ phạm vi phân quyền. Tài khoản toàn hệ thống **bắt buộc** truyền `branchId` vì không gắn chi nhánh nào; nhân viên chi nhánh **không được** bán từ kho chi nhánh khác |
+| Khách hàng | Tìm theo số điện thoại, chưa có thì tạo mới để lần sau tra được bảo hành |
+| Giao hàng | `BRANCH_FREE`, phí 0. Địa chỉ đơn ghi địa chỉ chi nhánh bán, không bịa địa chỉ khách |
+| Thanh toán | `CASH` hoặc `BANK_TRANSFER`, ghi `SUCCESS` ngay, `confirmedBy` là người thu |
+| Truy vết | Bút toán thanh toán lưu `soldByUserId`, hình thức và ghi chú tại quầy |
+| Kênh | Dùng lại giá trị `STORE` sẵn có của `orders_channel_check` |
+| Hết hàng | Kiểm tồn **sớm**, trước khi tạo khách/giỏ/checkout, để lần gọi hỏng không để lại bản ghi mồ côi |
+
+**Chưa nghiệm thu được một đơn thành công:** 596 sản phẩm mới chưa có dòng tồn kho nào. Ba
+nhánh xác thực đã kiểm: thiếu `Idempotency-Key` → 400, tài khoản toàn hệ thống thiếu `branchId`
+→ 400, hết hàng → 409 kèm số còn và số cần.
 
 ## Báo cáo & thống kê
 
@@ -108,6 +135,7 @@ Admin đã chỉnh. Dữ liệu hiện tại gồm 3 chi nhánh/kho, 9 thương 
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.13.0 | 2026-09-15 | Thêm `createPosOrder` cho bán tại quầy; ghi rõ vì sao không dựng đường trừ kho riêng. | POS-20260915-COUNTER-ORDER |
 | 1.12.0 | 2026-09-15 | Thêm module Admin Reporting với 4 endpoint báo cáo; Dashboard chuyển sang số liệu kinh doanh thật. | REPORT-20260915-DASHBOARD |
 | 1.11.0 | 2026-09-15 | Thương hiệu: DELETE thành xoá thật có ràng buộc tham chiếu. | CRUD-20260915-BRAND-HARD-DELETE |
 | 1.10.0 | 2026-09-06 | Khóa demo seed manual-only; mặc định giữ dữ liệu Admin và tái sử dụng media. | Demo seed safety hardening |

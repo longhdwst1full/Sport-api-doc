@@ -1,6 +1,6 @@
 # Thiết kế dữ liệu V1
 
-> **Document version:** 2.11.0
+> **Document version:** 2.13.0
 >
 > **Last updated:** 2026-09-15
 >
@@ -193,10 +193,25 @@ chiến lược mặc định tách mỗi quan hệ thành một truy vấn riê
 `join` gộp còn 4. Đo thực tế: 1.930ms → 814ms ở tầng truy vấn, endpoint chi tiết sản phẩm
 2.017ms → 438ms.
 
+### Bán tại quầy
+
+`20260915100000_pos_payment_methods`:
+
+- `payments_method_check` thêm **`CASH`**. Bán tại quầy thu tiền ngay nên không dùng được
+  `COD` — `COD` nghĩa là thu hộ khi giao hàng, dùng sai sẽ làm hỏng đối soát.
+- `payments_expiry_check` xếp `CASH` cùng nhóm `COD`: thu ngay nên không có cửa sổ chờ.
+- `20260915110000_drop_card_payment_method` gỡ `CARD` đã thêm nhầm ở bản trước: cửa hàng không
+  dùng máy quẹt thẻ. Migration tiến-một-chiều, thu hẹp ràng buộc bằng bản mới thay vì sửa bản
+  đã áp; an toàn vì chưa payment nào mang giá trị đó.
+- **`orders_channel_check` KHÔNG đổi.** Ràng buộc sẵn có đã cho giá trị `'STORE'`; đơn tại quầy
+  dùng lại giá trị này thay vì đẻ thêm từ vựng trùng nghĩa.
+
 ## Revision history
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 2.13.0 | 2026-09-15 | Gỡ CARD: cửa hàng không dùng máy quẹt thẻ. | `20260915110000_drop_card_payment_method` |
+| 2.12.0 | 2026-09-15 | Thêm CASH cho bán tại quầy; giữ nguyên kênh STORE sẵn có. | `20260915100000_pos_payment_methods` |
 | 2.11.0 | 2026-09-15 | Seed catalog Bảo An Sport thật và lưu trữ catalog demo; thêm post type POLICY; thêm VNPAY và actor hệ thống; bật relationJoins. | `20260914060000` / `20260914080000` / `20260914120000` |
 | 2.10.0 | 2026-09-13 | Persist posts, product_reviews và product_review_comments; contract giữ nguyên; cột đích nullable chờ luồng review theo đơn và media asset. | DBAPI-20260913-PERSIST-CMS-REVIEWS |
 | 2.9.0 | 2026-09-13 | Sửa mô tả outbox/RLS/idempotency cho khớp code; ghi căn cứ kinh doanh của ràng buộc 1 branch–1 warehouse; stock_transfer_items chuyển sang RESTRICT; bổ sung 4 chỉ mục FK. | REVIEW-20260913-V1-GAP |

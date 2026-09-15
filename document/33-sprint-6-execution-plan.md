@@ -1,10 +1,25 @@
 # Sprint 6 — Return, Refund & Flash Sale execution plan
 
-> **Document version:** 1.1.0
+> **Document version:** 1.2.0
 >
-> **Last updated:** 2026-09-14
+> **Last updated:** 2026-09-15
 >
-> **Change summary:** S6.4 Flash Sale đã hoàn thành; chốt 5 decision gate thành D54–D58; S6.1–S6.3 sẵn sàng migration.
+> **Change summary:** Ghi rõ S6.1–S6.3 **chưa bắt đầu** và còn 4 câu hỏi treo đang chặn; S6.4 Flash Sale đã xong.
+
+## Trạng thái tại 2026-09-15
+
+| Hạng mục | Trạng thái | Bằng chứng |
+| --- | --- | --- |
+| S6.4 Flash Sale | ✅ Xong | Quota hardening + worker dọn quota + màn quản lý |
+| S6.1 Return policy & request | ⛔ Chưa bắt đầu | `grep -c "model Return" prisma/schema.prisma` → `0` |
+| S6.2 Receive & inspection | ⛔ Chưa bắt đầu | Chưa có bảng |
+| S6.3 Refund | ⛔ Chưa bắt đầu | `grep -c "model Refund" prisma/schema.prisma` → `0` |
+
+**Không nên bắt đầu migration S6.1 khi Q1, Q3, Q4, Q5 còn treo.** Q1 quyết luôn cấu trúc
+`return_items`, Q4 quyết có cần bảng riêng cho hoàn tiền không kèm trả hàng. Chọn sai ở hai
+câu này là phải migrate lại bảng đã có dữ liệu.
+
+Hệ quả kéo theo: Dashboard **chưa báo được số lượng đơn hoàn** vì chưa có bảng nào lưu.
 
 ## 1. Mục tiêu và thứ tự
 
