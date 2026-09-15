@@ -1,10 +1,10 @@
 # Thiết kế dữ liệu V1
 
-> **Document version:** 2.10.0
+> **Document version:** 2.11.0
 >
-> **Last updated:** 2026-09-13
+> **Last updated:** 2026-09-15
 >
-> **Change summary:** Vật lý hóa CMS Content và Product Reviews; ghi rõ các cột đích được nới lỏng có chủ ý ở V1.
+> **Change summary:** Seed catalog Bảo An Sport thật; thêm loại bài viết POLICY; thêm phương thức thanh toán VNPAY kèm actor hệ thống; bật relationJoins của Prisma.
 
 ## 1. Chuẩn chung
 
@@ -151,10 +151,53 @@ Fulfillment ghi reason bắt buộc rồi chuyển `DELIVERY_FAILED -> RETURNING
 - Không dùng boolean `is_paid/is_delivered`; dùng state machine + history.
 - `checkout_sessions` giữ payment/shipping method, provider, khoảng cách, note và snapshot quote. `AWAITING_SHIPPING_CONSULTATION` không được confirm/reserve cho tới khi nhân viên nhập phí/ETA đã thỏa thuận.
 
+## Thay đổi tháng 9/2026
+
+### Catalog thật thay cho seed demo
+
+`20260914080000_seed_baoansport_catalog` nạp 596 sản phẩm, 61 danh mục (17 cha + 44 con),
+2.980 ảnh và 9 trang chính sách từ dữ liệu của chính cửa hàng.
+
+Catalog demo cũ **được lưu trữ chứ không xoá**: `products.status = ARCHIVED`, slug đổi tiền tố
+`luu-tru-`, `sku` đổi tiền tố `OLD-` để nhường mã cho hàng thật. Lý do không xoá cứng:
+`product_variants` bị RESTRICT từ `order_items`, `cart_items`, `inventory_balances`,
+`inventory_movements` và `product_reviews`; muốn xoá phải xoá cả đơn hàng và bút toán kho demo,
+trong khi `payment_transactions`, `inventory_movements`, `fulfillment_status_history` là sổ cái
+append-only có trigger chặn UPDATE/DELETE. Lưu trữ đạt đúng kết quả kinh doanh mà không phá
+lớp bảo vệ lịch sử tiền và kho.
+
+Cùng migration này, `posts_post_type_check` được mở rộng thêm giá trị `POLICY`.
+
+### VNPay
+
+`20260914120000_vnpay_payment_method`:
+
+- `payments_method_check` thêm `VNPAY`.
+- `payments_expiry_check` xếp `VNPAY` cùng nhóm `BANK_TRANSFER`: đang `PENDING` thì bắt buộc có `expires_at`.
+- Thêm tài khoản `SYSTEM` (`system@dctd.local`, `status = INACTIVE`, không đăng nhập được).
+  Cần vì `payments_confirmation_check` bắt buộc `confirmed_by` khi `status = SUCCESS`, mà IPN
+  của VNPay không có người duyệt. Tạo chủ thể đại diện hệ thống thay vì nới lỏng ràng buộc —
+  nới lỏng sẽ mất khả năng truy vết ai đã xác nhận tiền.
+
+### Quyền tham số hệ thống
+
+`20260914060000_seed_system_parameter_permissions` seed `system.parameter.view` và
+`system.parameter.manage` vào bảng `permissions` và cấp cho OWNER. Hai mã này trước đó chỉ có
+trong `PERMISSION_CATALOG` của mã nguồn, chưa từng vào database, nên không vai trò nào cấp được.
+
+### relationJoins
+
+`schema.prisma` bật `previewFeatures = ["relationJoins"]`. Các truy vấn đọc nóng của catalog
+dùng `relationLoadStrategy: 'join'`. Lý do: database đặt ở xa nên chi phí chính là số vòng mạng;
+chiến lược mặc định tách mỗi quan hệ thành một truy vấn riêng (12 vòng cho include của sản phẩm),
+`join` gộp còn 4. Đo thực tế: 1.930ms → 814ms ở tầng truy vấn, endpoint chi tiết sản phẩm
+2.017ms → 438ms.
+
 ## Revision history
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 2.11.0 | 2026-09-15 | Seed catalog Bảo An Sport thật và lưu trữ catalog demo; thêm post type POLICY; thêm VNPAY và actor hệ thống; bật relationJoins. | `20260914060000` / `20260914080000` / `20260914120000` |
 | 2.10.0 | 2026-09-13 | Persist posts, product_reviews và product_review_comments; contract giữ nguyên; cột đích nullable chờ luồng review theo đơn và media asset. | DBAPI-20260913-PERSIST-CMS-REVIEWS |
 | 2.9.0 | 2026-09-13 | Sửa mô tả outbox/RLS/idempotency cho khớp code; ghi căn cứ kinh doanh của ràng buộc 1 branch–1 warehouse; stock_transfer_items chuyển sang RESTRICT; bổ sung 4 chỉ mục FK. | REVIEW-20260913-V1-GAP |
 | 2.8.0 | 2026-09-13 | Thêm Fulfillment persisted, history append-only/idempotent, stock commit tại SHIPPED và restock SELLABLE sau hàng hoàn thực nhận. | DBAPI-20260913-FULFILLMENT-S43 |

@@ -64,6 +64,8 @@ export class CatalogMasterService {
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       include: {
         imageAsset: { select: { secureUrl: true, thumbnailUrl: true } },
+        // Menu nhiều cấp của Storefront cần biết cha là ai; trước đây phải hardcode.
+        parent: { select: { slug: true } },
         _count: { select: { products: { where: { product: { status: 'PUBLISHED' } } } } },
       },
     });
@@ -75,6 +77,8 @@ export class CatalogMasterService {
       imageUrl: row.imageAsset?.thumbnailUrl ?? row.imageAsset?.secureUrl ?? null,
       sortOrder: row.sortOrder,
       productCount: row._count.products,
+      depth: row.depth,
+      parentSlug: row.parent?.slug ?? null,
     }));
     return { items, total: items.length };
   }

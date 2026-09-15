@@ -296,12 +296,20 @@ components:
         productCount:
           type: number
           description: Số sản phẩm PUBLISHED thuộc danh mục
+        depth:
+          type: number
+          description: Độ sâu trong cây danh mục; 0 là danh mục gốc
+        parentSlug:
+          type: string
+          nullable: true
+          description: Slug danh mục cha; null nếu là danh mục gốc. Dùng để dựng menu nhiều cấp.
       required:
         - code
         - name
         - slug
         - sortOrder
         - productCount
+        - depth
     ProductSummaryDto:
       type: object
       properties:

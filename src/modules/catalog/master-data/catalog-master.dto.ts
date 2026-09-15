@@ -58,6 +58,16 @@ export class CatalogCategoryDto {
   @ApiPropertyOptional({ type: String, format: 'uri', nullable: true }) imageUrl?: string | null;
   @ApiProperty() sortOrder: number;
   @ApiProperty({ description: 'Số sản phẩm PUBLISHED thuộc danh mục' }) productCount: number;
+
+  @ApiProperty({ description: 'Độ sâu trong cây danh mục; 0 là danh mục gốc' })
+  depth: number;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Slug danh mục cha; null nếu là danh mục gốc. Dùng để dựng menu nhiều cấp.',
+  })
+  parentSlug?: string | null;
 }
 
 export class CatalogCategoryListDto {

@@ -1,0 +1,97 @@
+import { Type } from 'class-transformer';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsInt, IsISO8601, IsOptional, Max, Min } from 'class-validator';
+
+export class ReportRangeQueryDto {
+  @ApiPropertyOptional({
+    format: 'date-time',
+    description: 'Mốc đầu khoảng thống kê. Bỏ trống thì lấy 30 ngày gần nhất.',
+  })
+  @IsOptional()
+  @IsISO8601()
+  from?: string;
+
+  @ApiPropertyOptional({ format: 'date-time', description: 'Mốc cuối; bỏ trống là hiện tại.' })
+  @IsOptional()
+  @IsISO8601()
+  to?: string;
+}
+
+export class TopProductQueryDto extends ReportRangeQueryDto {
+  @ApiPropertyOptional({ type: Number, default: 10, minimum: 1, maximum: 50 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  @IsOptional()
+  limit = 10;
+}
+
+export class OrderStatusCountDto {
+  @ApiProperty({ example: 'PENDING_CONFIRMATION' }) status: string;
+  @ApiProperty({ example: 12 }) count: number;
+}
+
+export class OverviewReportDto {
+  @ApiProperty({ description: 'Đơn đặt trong ngày hôm nay' }) ordersToday: number;
+  @ApiProperty({ description: 'Đơn đặt trong 30 ngày gần nhất' }) ordersLast30Days: number;
+  @ApiProperty({ description: 'Đơn chưa giao xong' }) ordersAwaitingFulfillment: number;
+  @ApiProperty({ description: 'Đơn đã huỷ trong 30 ngày' }) ordersCancelledLast30Days: number;
+  @ApiProperty({ description: 'Sản phẩm đang bán' }) publishedProducts: number;
+  @ApiProperty({ description: 'Khách hàng đã có tài khoản hoặc từng đặt hàng' }) customers: number;
+  @ApiProperty({ type: [OrderStatusCountDto] }) ordersByStatus: OrderStatusCountDto[];
+}
+
+export class RevenuePointDto {
+  @ApiProperty({ example: '2026-09-15' }) date: string;
+  @ApiProperty({ type: String, example: '15400000.00' }) amount: string;
+  @ApiProperty({ example: 3 }) orderCount: number;
+}
+
+export class RevenueReportDto {
+  @ApiProperty({ format: 'date-time' }) from: string;
+  @ApiProperty({ format: 'date-time' }) to: string;
+  @ApiProperty({
+    type: String,
+    description: 'Tổng tiền đã thực nhận trong khoảng; chỉ tính đơn có thanh toán SUCCESS',
+  })
+  totalRevenue: string;
+  @ApiProperty({ description: 'Số đơn đã thu được tiền' }) paidOrderCount: number;
+  @ApiProperty({ type: String, description: 'Giá trị trung bình mỗi đơn đã thu tiền' })
+  averageOrderValue: string;
+  @ApiProperty({
+    type: String,
+    description: 'Tiền của đơn chưa thu (COD chưa giao, chuyển khoản chờ xác nhận)',
+  })
+  pendingRevenue: string;
+  @ApiProperty({ type: [RevenuePointDto] }) series: RevenuePointDto[];
+}
+
+export class LowStockItemDto {
+  @ApiProperty() sku: string;
+  @ApiProperty() productName: string;
+  @ApiProperty() warehouseName: string;
+  @ApiProperty({ description: 'Tồn thực tế' }) onHand: number;
+  @ApiProperty({ description: 'Đang giữ cho đơn chưa xuất' }) reserved: number;
+  @ApiProperty({ description: 'Còn bán được = onHand - reserved' }) available: number;
+  @ApiProperty({ description: 'Ngưỡng đặt lại hàng' }) reorderPoint: number;
+}
+
+export class InventoryReportDto {
+  @ApiProperty({ description: 'Số dòng tồn đang theo dõi' }) trackedBalances: number;
+  @ApiProperty({ description: 'Số dòng hết hàng bán (available <= 0)' }) outOfStock: number;
+  @ApiProperty({ description: 'Số dòng chạm hoặc dưới ngưỡng đặt lại' }) lowStock: number;
+  @ApiProperty({ type: [LowStockItemDto], description: 'Danh sách cần nhập thêm, ưu tiên thiếu nhất' })
+  items: LowStockItemDto[];
+}
+
+export class TopProductDto {
+  @ApiProperty() sku: string;
+  @ApiProperty() productName: string;
+  @ApiProperty({ description: 'Số lượng đã bán trong khoảng' }) quantitySold: number;
+  @ApiProperty({ type: String, description: 'Doanh thu đã thực nhận từ SKU này' }) revenue: string;
+}
+
+export class TopProductListDto {
+  @ApiProperty({ type: [TopProductDto] }) items: TopProductDto[];
+}

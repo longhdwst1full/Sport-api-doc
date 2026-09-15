@@ -1,10 +1,43 @@
 # Admin CRUD coverage V1
 
-> **Document version:** 1.10.0
+> **Document version:** 1.12.0
 >
-> **Last updated:** 2026-09-06
+> **Last updated:** 2026-09-15
 >
-> **Change summary:** Cập nhật demo seed manual-only, create-only mặc định và số lượng catalog demo hiện tại.
+> **Change summary:** Thêm module báo cáo cho Dashboard; thương hiệu chuyển DELETE sang xoá thật có ràng buộc; bổ sung vai trò, tham số hệ thống, flash sale và lọc danh mục/tìm kiếm tách ô.
+
+## Báo cáo & thống kê
+
+Module `Admin Reporting` (`api/src/modules/reporting/`) cung cấp 4 endpoint, thay thế số liệu
+tiến độ lập trình vốn hiển thị nhầm ở Dashboard:
+
+| Operation | Quyền | Nội dung |
+| --- | --- | --- |
+| `getAdminReportOverview` | `report.operation.view` | Đơn hôm nay / 30 ngày, đơn chờ giao, đơn huỷ, sản phẩm đang bán, số khách |
+| `getAdminReportRevenue` | `report.revenue.view` | Doanh thu đã thực nhận, tiền chờ thu, giá trị trung bình mỗi đơn, chuỗi theo ngày |
+| `getAdminReportInventory` | `report.inventory.view` | SKU hết hàng bán và chạm ngưỡng đặt lại |
+| `getAdminReportTopProducts` | `report.revenue.view` | Bán chạy theo số lượng và doanh thu |
+
+**Định nghĩa doanh thu:** chỉ cộng đơn có `paymentStatus = SUCCESS` — tiền đã thực nhận.
+Đơn COD chưa giao và chuyển khoản chờ xác nhận tách riêng ở `pendingRevenue`.
+
+**Phạm vi:** mọi số liệu lọc theo chi nhánh mà người đăng nhập được phân quyền; chỉ phạm vi
+GLOBAL mới thấy toàn hệ thống.
+
+Ba mã quyền `report.*` đã được khai báo từ Sprint 1 nhưng tới 2026-09-15 mới có controller dùng.
+
+## Ngoại lệ của quy ước "DELETE = xoá mềm"
+
+Sprint 1 chốt mọi `DELETE` là xoá logic. **Thương hiệu là ngoại lệ duy nhất** kể từ 2026-09-15:
+`deleteAdminBrand` xoá hẳn bản ghi, và chỉ chạy khi chưa có sản phẩm nào tham chiếu
+(`Product.brand` là khoá ngoại RESTRICT). Thương hiệu đang dùng thì API trả 409 kèm số sản phẩm
+đang gắn, người dùng chuyển sang **Ngừng** thay vì xoá.
+
+Lý do đổi: tạo nhầm một thương hiệu trước đây không gỡ đi được, vì `DELETE` chỉ là bí danh của
+`deactivate`. Danh mục, chi nhánh, sản phẩm, biến thể và ảnh **giữ nguyên** hành vi xoá mềm, vì
+chúng bị dòng đơn hàng và sổ kho tham chiếu.
+
+Guard test: `src/modules/catalog/logical-delete.controller.spec.ts`.
 
 ## Đã có API thật và màn quản lý
 
@@ -75,6 +108,8 @@ Admin đã chỉnh. Dữ liệu hiện tại gồm 3 chi nhánh/kho, 9 thương 
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.12.0 | 2026-09-15 | Thêm module Admin Reporting với 4 endpoint báo cáo; Dashboard chuyển sang số liệu kinh doanh thật. | REPORT-20260915-DASHBOARD |
+| 1.11.0 | 2026-09-15 | Thương hiệu: DELETE thành xoá thật có ràng buộc tham chiếu. | CRUD-20260915-BRAND-HARD-DELETE |
 | 1.10.0 | 2026-09-06 | Khóa demo seed manual-only; mặc định giữ dữ liệu Admin và tái sử dụng media. | Demo seed safety hardening |
 | 1.0.0 | 2026-09-04 | Cập nhật coverage CRUD, bootstrap Admin, inventory và rich-text editor. | Current worktree Admin review |
 | 1.1.0 | 2026-09-04 | Bỏ custom Cloudinary uploader khỏi CKEditor 4 trong Product/CMS form. | User decision 2026-09-04 |
