@@ -38,13 +38,34 @@ export class AdminOrderQueryDto {
 
   @ApiPropertyOptional({
     maxLength: 100,
-    description: 'Tìm theo mã đơn, tên/SĐT/email người nhận',
+    description: 'Tìm gộp theo mã đơn, tên/SĐT/email người nhận. Giữ cho tương thích ngược.',
   })
   @Transform(trimOptional)
   @IsString()
   @MaxLength(100)
   @IsOptional()
   search?: string;
+
+  @ApiPropertyOptional({ maxLength: 100, description: 'Chỉ lọc theo mã đơn' })
+  @Transform(trimOptional)
+  @IsString()
+  @MaxLength(100)
+  @IsOptional()
+  orderNo?: string;
+
+  @ApiPropertyOptional({ maxLength: 100, description: 'Chỉ lọc theo tên người nhận' })
+  @Transform(trimOptional)
+  @IsString()
+  @MaxLength(100)
+  @IsOptional()
+  recipientName?: string;
+
+  @ApiPropertyOptional({ maxLength: 100, description: 'Chỉ lọc theo số điện thoại người nhận' })
+  @Transform(trimOptional)
+  @IsString()
+  @MaxLength(100)
+  @IsOptional()
+  recipientPhone?: string;
 }
 
 export class AccountOrderQueryDto {

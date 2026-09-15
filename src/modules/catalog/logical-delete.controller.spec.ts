@@ -23,29 +23,36 @@ describe('Sprint 1 logical DELETE controllers', () => {
   } as unknown as AuthenticatedRequest;
   const context = { requestId: 'delete-request-id', actorUserId: 'actor-id' };
 
-  it('maps Brand and Category DELETE to their INACTIVE lifecycle', async () => {
-    const changeBrandStatus = jest.fn().mockResolvedValue({ id: 'brand-id' });
+  it('maps Category DELETE to its INACTIVE lifecycle', async () => {
     const changeCategoryStatus = jest.fn().mockResolvedValue({ id: 'category-id' });
     const controller = new CatalogMasterController({
-      changeBrandStatus,
       changeCategoryStatus,
     } as unknown as CatalogMasterService);
 
-    await controller.deleteBrand('brand-id', { expectedVersion: 2 }, request);
     await controller.deleteCategory('category-id', { expectedVersion: 3 }, request);
 
-    expect(changeBrandStatus).toHaveBeenCalledWith(
-      'brand-id',
-      'INACTIVE',
-      { expectedVersion: 2 },
-      context,
-    );
     expect(changeCategoryStatus).toHaveBeenCalledWith(
       'category-id',
       'INACTIVE',
       { expectedVersion: 3 },
       context,
     );
+  });
+
+  /**
+   * Thương hiệu là ngoại lệ có chủ ý của quy ước "DELETE = xoá mềm": tạo nhầm một
+   * thương hiệu thì phải gỡ được hẳn. Service tự chặn khi còn sản phẩm tham chiếu,
+   * nên xoá cứng ở đây không làm mất xuất xứ của hàng đã bán.
+   */
+  it('maps Brand DELETE to a real delete guarded by product references', async () => {
+    const deleteBrand = jest.fn().mockResolvedValue(undefined);
+    const controller = new CatalogMasterController({
+      deleteBrand,
+    } as unknown as CatalogMasterService);
+
+    await controller.deleteBrand('brand-id', { expectedVersion: 2 }, request);
+
+    expect(deleteBrand).toHaveBeenCalledWith('brand-id', { expectedVersion: 2 }, context);
   });
 
   it('maps Branch DELETE to the atomic branch and warehouse INACTIVE lifecycle', async () => {

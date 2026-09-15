@@ -260,6 +260,55 @@ export class CatalogMasterService {
     });
   }
 
+  /**
+   * Xoá hẳn một thương hiệu. Chỉ dùng được khi chưa có sản phẩm nào trỏ tới:
+   * `Product.brand` là khoá ngoại Restrict, và xoá thương hiệu đang dùng sẽ làm
+   * mất thông tin xuất xứ của sản phẩm đã bán. Thương hiệu đang dùng thì chuyển
+   * sang Ngừng thay vì xoá.
+   */
+  async deleteBrand(
+    id: string,
+    input: ChangeMasterStatusDto,
+    context: MutationContext,
+  ): Promise<void> {
+    const databaseId = toDatabaseId(id);
+    await this.prisma.$transaction(async (transaction) => {
+      const current = await transaction.brand.findUnique({ where: { id: databaseId } });
+      if (!current) throw new NotFoundException('Brand not found');
+
+      const productCount = await transaction.product.count({ where: { brandId: databaseId } });
+      if (productCount > 0) {
+        throw new ConflictException(
+          `Thương hiệu đang gắn với ${productCount} sản phẩm; hãy đổi thương hiệu của các sản phẩm đó hoặc chuyển sang Ngừng dùng`,
+        );
+      }
+
+      const result = await transaction.brand.deleteMany({
+        where: { id: databaseId, version: BigInt(input.expectedVersion) },
+      });
+      if (result.count !== 1) throw new ConflictException('Brand version conflict');
+
+      await this.audit.write(
+        {
+          requestId: context.requestId,
+          sequenceNo: 1,
+          actorType: 'USER',
+          actorUserId: context.actorUserId,
+          action: 'catalog.brand.delete',
+          entityType: 'BRAND',
+          entityId: id,
+          before: {
+            code: current.code,
+            name: current.name,
+            status: current.status,
+            version: Number(current.version),
+          },
+        },
+        transaction,
+      );
+    });
+  }
+
   async updateCategory(
     id: string,
     input: UpdateCategoryDto,

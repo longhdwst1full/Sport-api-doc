@@ -1,5 +1,9 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  // relationJoins: gộp quan hệ vào một truy vấn LATERAL JOIN thay vì mỗi quan hệ
+  // một truy vấn. Với database ở xa, chi phí chính là số vòng mạng chứ không phải
+  // độ phức tạp câu lệnh.
+  previewFeatures = ["relationJoins"]
 }
 
 datasource db {

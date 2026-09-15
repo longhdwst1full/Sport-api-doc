@@ -45,11 +45,31 @@ paths:
         - name: search
           required: false
           in: query
+          description: Tìm gộp theo tên, mã sản phẩm hoặc SKU. Giữ cho tương thích ngược.
+          schema:
+            type: string
+        - name: name
+          required: false
+          in: query
+          description: Chỉ lọc theo tên sản phẩm
+          schema:
+            type: string
+        - name: productNo
+          required: false
+          in: query
+          description: Chỉ lọc theo mã sản phẩm
+          schema:
+            type: string
+        - name: sku
+          required: false
+          in: query
+          description: Chỉ lọc theo SKU của biến thể
           schema:
             type: string
         - name: category
           required: false
           in: query
+          description: Slug danh mục; gồm cả nhánh con
           schema:
             type: string
         - name: status

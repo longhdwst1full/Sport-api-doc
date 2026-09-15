@@ -137,8 +137,20 @@ export class ListProductsQueryDto {
   @ApiPropertyOptional({ default: 12, minimum: 1, maximum: 100 })
   @Type(() => Number) @IsInt() @Min(1) @Max(100) @IsOptional() limit: number = 12;
 
-  @ApiPropertyOptional() @IsString() @IsOptional() search?: string;
-  @ApiPropertyOptional() @IsString() @IsOptional() category?: string;
+  @ApiPropertyOptional({ description: 'Tìm gộp theo tên, mã sản phẩm hoặc SKU. Giữ cho tương thích ngược.' })
+  @IsString() @IsOptional() search?: string;
+
+  @ApiPropertyOptional({ description: 'Chỉ lọc theo tên sản phẩm' })
+  @IsString() @IsOptional() name?: string;
+
+  @ApiPropertyOptional({ description: 'Chỉ lọc theo mã sản phẩm' })
+  @IsString() @IsOptional() productNo?: string;
+
+  @ApiPropertyOptional({ description: 'Chỉ lọc theo SKU của biến thể' })
+  @IsString() @IsOptional() sku?: string;
+
+  @ApiPropertyOptional({ description: 'Slug danh mục; gồm cả nhánh con' })
+  @IsString() @IsOptional() category?: string;
   @ApiPropertyOptional({ enum: Object.values(PRODUCT_STATUS) })
   @IsIn(Object.values(PRODUCT_STATUS)) @IsOptional() status?: ProductStatus;
 }

@@ -168,6 +168,21 @@ export class ProductsService {
             ],
           }
         : {}),
+      // Các ô riêng cộng dồn: nhập cả tên lẫn SKU thì phải thoả cả hai,
+      // khác với ô gộp ở trên vốn là OR.
+      ...(query.name?.trim()
+        ? { name: { contains: query.name.trim(), mode: 'insensitive' as const } }
+        : {}),
+      ...(query.productNo?.trim()
+        ? { productNo: { contains: query.productNo.trim(), mode: 'insensitive' as const } }
+        : {}),
+      ...(query.sku?.trim()
+        ? {
+            variants: {
+              some: { sku: { contains: query.sku.trim(), mode: 'insensitive' as const } },
+            },
+          }
+        : {}),
       ...(categoryWhere ? { categories: { some: { category: categoryWhere } } } : {}),
     };
     const skip = (query.page - 1) * query.limit;
@@ -175,6 +190,10 @@ export class ProductsService {
       this.prisma.product.findMany({
         where,
         include: this.productInclude(now, storefront),
+        // Database ở xa nên chi phí chính là số vòng mạng: chiến lược mặc định
+        // tách mỗi quan hệ thành một truy vấn riêng (12 vòng cho include này),
+        // còn 'join' gộp lại còn 4. Đo được 1.930ms -> 814ms.
+        relationLoadStrategy: 'join',
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         skip,
         take: query.limit,
@@ -195,6 +214,7 @@ export class ProductsService {
   async getBySlug(slug: string, storefront: boolean): Promise<ProductDetailDto> {
     const now = new Date();
     const row = await this.prisma.product.findFirst({
+      relationLoadStrategy: 'join',
       where: {
         slug,
         ...(storefront

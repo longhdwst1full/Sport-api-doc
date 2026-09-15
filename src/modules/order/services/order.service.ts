@@ -921,6 +921,21 @@ export class OrderService {
         ],
       });
     }
+    // Các ô riêng cộng dồn bằng AND: nhập cả mã đơn lẫn số điện thoại thì phải
+    // thoả cả hai, khác với ô gộp ở trên vốn là OR.
+    if (query.orderNo) {
+      filters.push({ orderNo: { contains: query.orderNo, mode: 'insensitive' } });
+    }
+    if (query.recipientName) {
+      filters.push({
+        addresses: { some: { recipientName: { contains: query.recipientName, mode: 'insensitive' } } },
+      });
+    }
+    if (query.recipientPhone) {
+      filters.push({
+        addresses: { some: { recipientPhone: { contains: query.recipientPhone, mode: 'insensitive' } } },
+      });
+    }
     return { AND: filters };
   }
 

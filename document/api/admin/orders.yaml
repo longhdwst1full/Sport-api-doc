@@ -42,7 +42,28 @@ paths:
         - name: search
           required: false
           in: query
-          description: Tìm theo mã đơn, tên/SĐT/email người nhận
+          description: Tìm gộp theo mã đơn, tên/SĐT/email người nhận. Giữ cho tương thích ngược.
+          schema:
+            maxLength: 100
+            type: string
+        - name: orderNo
+          required: false
+          in: query
+          description: Chỉ lọc theo mã đơn
+          schema:
+            maxLength: 100
+            type: string
+        - name: recipientName
+          required: false
+          in: query
+          description: Chỉ lọc theo tên người nhận
+          schema:
+            maxLength: 100
+            type: string
+        - name: recipientPhone
+          required: false
+          in: query
+          description: Chỉ lọc theo số điện thoại người nhận
           schema:
             maxLength: 100
             type: string

@@ -172,3 +172,24 @@ export class VnpayReturnDto {
   displayStatus: 'SUCCESS' | 'FAILED' | 'INVALID';
   @ApiProperty() message: string;
 }
+
+/**
+ * Tham số VNPay đính vào `vnp_ReturnUrl` khi trình duyệt khách quay về.
+ * Khai báo tường minh để SDK sinh ra hàm nhận đủ tham số; chữ ký vẫn do
+ * backend kiểm, client không được tự diễn giải kết quả.
+ */
+export class VnpayReturnQueryDto {
+  @ApiPropertyOptional() @IsOptional() @IsString() vnp_Amount?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() vnp_BankCode?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() vnp_BankTranNo?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() vnp_CardType?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() vnp_OrderInfo?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() vnp_PayDate?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() vnp_ResponseCode?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() vnp_TmnCode?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() vnp_TransactionNo?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() vnp_TransactionStatus?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() vnp_TxnRef?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() vnp_SecureHash?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() vnp_SecureHashType?: string;
+}

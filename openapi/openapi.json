@@ -3169,15 +3169,8 @@
           }
         },
         "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BrandDto"
-                }
-              }
-            }
+          "204": {
+            "description": ""
           },
           "400": {
             "description": "",
@@ -3220,7 +3213,7 @@
             }
           },
           "409": {
-            "description": "",
+            "description": "Thương hiệu đang gắn với sản phẩm, hoặc version đã thay đổi",
             "content": {
               "application/json": {
                 "schema": {
@@ -3235,7 +3228,7 @@
             "bearer": []
           }
         ],
-        "summary": "Logically delete a brand by changing its status to INACTIVE",
+        "summary": "Xoá hẳn thương hiệu chưa gắn sản phẩm nào",
         "tags": [
           "Admin Catalog"
         ]
@@ -4027,6 +4020,34 @@
             "name": "search",
             "required": false,
             "in": "query",
+            "description": "Tìm gộp theo tên, mã sản phẩm hoặc SKU. Giữ cho tương thích ngược.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "required": false,
+            "in": "query",
+            "description": "Chỉ lọc theo tên sản phẩm",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "productNo",
+            "required": false,
+            "in": "query",
+            "description": "Chỉ lọc theo mã sản phẩm",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sku",
+            "required": false,
+            "in": "query",
+            "description": "Chỉ lọc theo SKU của biến thể",
             "schema": {
               "type": "string"
             }
@@ -4035,6 +4056,7 @@
             "name": "category",
             "required": false,
             "in": "query",
+            "description": "Slug danh mục; gồm cả nhánh con",
             "schema": {
               "type": "string"
             }
@@ -4141,6 +4163,34 @@
             "name": "search",
             "required": false,
             "in": "query",
+            "description": "Tìm gộp theo tên, mã sản phẩm hoặc SKU. Giữ cho tương thích ngược.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "required": false,
+            "in": "query",
+            "description": "Chỉ lọc theo tên sản phẩm",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "productNo",
+            "required": false,
+            "in": "query",
+            "description": "Chỉ lọc theo mã sản phẩm",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sku",
+            "required": false,
+            "in": "query",
+            "description": "Chỉ lọc theo SKU của biến thể",
             "schema": {
               "type": "string"
             }
@@ -4149,6 +4199,7 @@
             "name": "category",
             "required": false,
             "in": "query",
+            "description": "Slug danh mục; gồm cả nhánh con",
             "schema": {
               "type": "string"
             }
@@ -9735,7 +9786,37 @@
             "name": "search",
             "required": false,
             "in": "query",
-            "description": "Tìm theo mã đơn, tên/SĐT/email người nhận",
+            "description": "Tìm gộp theo mã đơn, tên/SĐT/email người nhận. Giữ cho tương thích ngược.",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "orderNo",
+            "required": false,
+            "in": "query",
+            "description": "Chỉ lọc theo mã đơn",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "recipientName",
+            "required": false,
+            "in": "query",
+            "description": "Chỉ lọc theo tên người nhận",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "recipientPhone",
+            "required": false,
+            "in": "query",
+            "description": "Chỉ lọc theo số điện thoại người nhận",
             "schema": {
               "maxLength": 100,
               "type": "string"
@@ -11009,7 +11090,112 @@
     "/api/v1/payments/vnpay/return": {
       "get": {
         "operationId": "verifyVnpayReturn",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "vnp_Amount",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_BankCode",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_BankTranNo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_CardType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_OrderInfo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_PayDate",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_ResponseCode",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_TmnCode",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_TransactionNo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_TransactionStatus",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_TxnRef",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_SecureHash",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_SecureHashType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",

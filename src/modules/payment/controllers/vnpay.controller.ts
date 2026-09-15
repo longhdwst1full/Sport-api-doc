@@ -1,7 +1,7 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiExcludeEndpoint, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { ReturnQueryFromVNPay } from 'vnpay';
-import { VnpayReturnDto } from '../dto/payment.dto';
+import { VnpayReturnDto, VnpayReturnQueryDto } from '../dto/payment.dto';
 import { VnpayIpnResult, VnpayService } from '../services/vnpay.service';
 
 @ApiTags('Storefront Payments')
@@ -30,7 +30,7 @@ export class VnpayController {
     summary: 'Kiểm tra chữ ký khi khách quay về từ VNPay (chỉ để hiển thị)',
   })
   @ApiOkResponse({ type: VnpayReturnDto })
-  handleReturn(@Query() query: ReturnQueryFromVNPay): VnpayReturnDto {
-    return this.vnpay.handleReturn(query);
+  handleReturn(@Query() query: VnpayReturnQueryDto): VnpayReturnDto {
+    return this.vnpay.handleReturn(query as unknown as ReturnQueryFromVNPay);
   }
 }

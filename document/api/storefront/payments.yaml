@@ -283,7 +283,72 @@ paths:
   /api/v1/payments/vnpay/return:
     get:
       operationId: verifyVnpayReturn
-      parameters: []
+      parameters:
+        - name: vnp_Amount
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: vnp_BankCode
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: vnp_BankTranNo
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: vnp_CardType
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: vnp_OrderInfo
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: vnp_PayDate
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: vnp_ResponseCode
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: vnp_TmnCode
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: vnp_TransactionNo
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: vnp_TransactionStatus
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: vnp_TxnRef
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: vnp_SecureHash
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: vnp_SecureHashType
+          required: false
+          in: query
+          schema:
+            type: string
       responses:
         "200":
           description: ""

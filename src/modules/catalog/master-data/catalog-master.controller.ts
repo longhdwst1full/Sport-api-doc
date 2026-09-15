@@ -17,6 +17,7 @@ import {
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiForbiddenResponse,
+  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -96,22 +97,25 @@ export class CatalogMasterController {
   }
 
   @Delete('brands/:id')
-  @HttpCode(HttpStatus.OK)
+  @HttpCode(HttpStatus.NO_CONTENT)
   @RequirePermissions('catalog.brand.manage')
   @ApiOperation({
     operationId: 'deleteAdminBrand',
-    summary: 'Logically delete a brand by changing its status to INACTIVE',
+    summary: 'Xoá hẳn thương hiệu chưa gắn sản phẩm nào',
   })
-  @ApiOkResponse({ type: BrandDto })
+  @ApiNoContentResponse()
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
-  @ApiConflictResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({
+    type: ErrorResponseDto,
+    description: 'Thương hiệu đang gắn với sản phẩm, hoặc version đã thay đổi',
+  })
   deleteBrand(
     @Param('id', new ParseEntityIdPipe()) id: string,
     @Body() input: ChangeMasterStatusDto,
     @Req() request: AuthenticatedRequest,
-  ): Promise<BrandDto> {
-    return this.catalog.changeBrandStatus(id, 'INACTIVE', input, getMutationContext(request));
+  ): Promise<void> {
+    return this.catalog.deleteBrand(id, input, getMutationContext(request));
   }
 
   @Post('brands/:id/activate')
