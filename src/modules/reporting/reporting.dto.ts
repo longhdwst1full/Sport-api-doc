@@ -48,23 +48,47 @@ export class RevenuePointDto {
   @ApiProperty({ example: 3 }) orderCount: number;
 }
 
+export class BranchRevenueDto {
+  @ApiProperty() branchName: string;
+  @ApiProperty({ type: String }) completedRevenue: string;
+  @ApiProperty() completedOrderCount: number;
+  @ApiProperty({ type: String }) expectedRevenue: string;
+}
+
 export class RevenueReportDto {
   @ApiProperty({ format: 'date-time' }) from: string;
   @ApiProperty({ format: 'date-time' }) to: string;
+
   @ApiProperty({
     type: String,
-    description: 'Tổng tiền đã thực nhận trong khoảng; chỉ tính đơn có thanh toán SUCCESS',
+    description: 'Doanh thu thực nhận: đơn đã COMPLETED, tính theo mốc hoàn tất',
   })
-  totalRevenue: string;
-  @ApiProperty({ description: 'Số đơn đã thu được tiền' }) paidOrderCount: number;
-  @ApiProperty({ type: String, description: 'Giá trị trung bình mỗi đơn đã thu tiền' })
+  completedRevenue: string;
+
+  @ApiProperty({ description: 'Số đơn đã hoàn tất' }) completedOrderCount: number;
+
+  @ApiProperty({
+    type: String,
+    description: 'Dự thu: đơn đã DELIVERED, đang chờ tự chuyển hoàn tất',
+  })
+  expectedRevenue: string;
+
+  @ApiProperty({ description: 'Số đơn đã giao, chờ hoàn tất' }) expectedOrderCount: number;
+
+  @ApiProperty({
+    type: String,
+    description: 'Đơn đang xử lý (đã xác nhận tới đang giao); chưa tính vào hai nhóm trên',
+  })
+  inProgressRevenue: string;
+
+  @ApiProperty({ type: String, description: 'Giá trị trung bình mỗi đơn đã hoàn tất' })
   averageOrderValue: string;
-  @ApiProperty({
-    type: String,
-    description: 'Tiền của đơn chưa thu (COD chưa giao, chuyển khoản chờ xác nhận)',
-  })
-  pendingRevenue: string;
-  @ApiProperty({ type: [RevenuePointDto] }) series: RevenuePointDto[];
+
+  @ApiProperty({ type: [RevenuePointDto], description: 'Doanh thu thực nhận theo ngày hoàn tất' })
+  series: RevenuePointDto[];
+
+  @ApiProperty({ type: [BranchRevenueDto], description: 'Bóc tách theo chi nhánh' })
+  byBranch: BranchRevenueDto[];
 }
 
 export class LowStockItemDto {

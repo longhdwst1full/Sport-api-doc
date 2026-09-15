@@ -14,11 +14,17 @@ import {
 } from './reporting.dto';
 
 /**
- * Doanh thu ở đây là **tiền đã thực nhận**: chỉ cộng đơn có `paymentStatus = SUCCESS`.
- * Đơn COD chưa giao hay chuyển khoản chờ xác nhận nằm ở `pendingRevenue`, không trộn
- * vào doanh thu — trộn vào sẽ báo lãi cho khoản tiền chưa về.
+ * Ghi nhận doanh thu theo **vòng đời đơn hàng**, không theo trạng thái thanh toán:
+ *
+ * - `COMPLETED` → doanh thu thực nhận. Đơn đã giao xong và qua cửa sổ giữ, không còn
+ *   khả năng hoàn huỷ thông thường.
+ * - `DELIVERED` → dự thu. Đã giao tới khách, worker sẽ tự chuyển COMPLETED sau cửa sổ giữ.
+ * - `CONFIRMED…SHIPPED` → đang xử lý. Tách riêng để không có khoản tiền nào biến mất
+ *   khỏi báo cáo, nhưng cũng không bị đếm nhầm là đã thu.
  */
-const PAID_STATUS = 'SUCCESS';
+const COMPLETED_STATUS = 'COMPLETED';
+const DELIVERED_STATUS = 'DELIVERED';
+const IN_PROGRESS_STATUSES = ['CONFIRMED', 'PICKING', 'PACKED', 'SHIPPED'];
 const DEFAULT_RANGE_DAYS = 30;
 
 @Injectable()
@@ -26,51 +32,57 @@ export class ReportingService {
   constructor(private readonly prisma: PrismaService) {}
 
   async overview(actor: AuthPrincipal): Promise<OverviewReportDto> {
-    const scope = this.scopeWhere(actor);
+    const branchIds = this.visibleBranchIds(actor);
     const now = new Date();
     const startOfToday = new Date(now);
     startOfToday.setHours(0, 0, 0, 0);
     const since = this.daysAgo(now, DEFAULT_RANGE_DAYS);
 
-    const [
-      ordersToday,
-      ordersLast30Days,
-      ordersAwaitingFulfillment,
-      ordersCancelledLast30Days,
-      publishedProducts,
-      customers,
-    ] = await this.prisma.$transaction([
-      this.prisma.order.count({ where: { ...scope, placedAt: { gte: startOfToday } } }),
-      this.prisma.order.count({ where: { ...scope, placedAt: { gte: since } } }),
-      this.prisma.order.count({
-        // Đơn đã huỷ vẫn giữ fulfillmentStatus = PENDING, nên phải loại theo trạng thái
-        // đơn; nếu không thì đơn huỷ bị đếm nhầm là đang chờ giao.
-        where: {
-          ...scope,
-          status: { notIn: ['CANCELLED', 'COMPLETED'] },
-          fulfillmentStatus: { notIn: ['DELIVERED', 'CANCELLED'] },
-        },
-      }),
-      this.prisma.order.count({
-        where: { ...scope, status: 'CANCELLED', placedAt: { gte: since } },
-      }),
+    // Gộp 6 phép đếm thành MỘT câu lệnh bằng đếm có điều kiện. Database ở xa nên chi phí
+    // là số vòng mạng: 7 truy vấn riêng mất ~1.6s, gộp lại còn một vòng.
+    // Tham số truyền qua $queryRaw dạng tagged template nên vẫn được bind an toàn.
+    const branchFilter = branchIds
+      ? Prisma.sql`AND o.branch_id IN (${Prisma.join(branchIds)})`
+      : Prisma.empty;
+
+    const [counts] = await this.prisma.$queryRaw<
+      {
+        orders_today: bigint;
+        orders_last_30: bigint;
+        orders_awaiting: bigint;
+        orders_cancelled: bigint;
+      }[]
+    >`
+      SELECT
+        count(*) FILTER (WHERE o.placed_at >= ${startOfToday}) AS orders_today,
+        count(*) FILTER (WHERE o.placed_at >= ${since}) AS orders_last_30,
+        count(*) FILTER (
+          WHERE o.status NOT IN ('CANCELLED', 'COMPLETED')
+            AND o.fulfillment_status NOT IN ('DELIVERED', 'CANCELLED')
+        ) AS orders_awaiting,
+        count(*) FILTER (
+          WHERE o.status = 'CANCELLED' AND o.placed_at >= ${since}
+        ) AS orders_cancelled
+      FROM public.orders o
+      WHERE true ${branchFilter}
+    `;
+
+    const [publishedProducts, customers, grouped] = await Promise.all([
       this.prisma.product.count({ where: { status: 'PUBLISHED' } }),
       this.prisma.customer.count(),
+      this.prisma.order.groupBy({
+        by: ['status'],
+        where: { ...this.scopeWhere(actor), placedAt: { gte: since } },
+        orderBy: { status: 'asc' },
+        _count: { status: true },
+      }),
     ]);
 
-    // Tách khỏi $transaction dạng mảng: kiểu trả về của groupBy bị làm rộng khi gộp chung.
-    const grouped = await this.prisma.order.groupBy({
-      by: ['status'],
-      where: { ...scope, placedAt: { gte: since } },
-      orderBy: { status: 'asc' },
-      _count: { status: true },
-    });
-
     return {
-      ordersToday,
-      ordersLast30Days,
-      ordersAwaitingFulfillment,
-      ordersCancelledLast30Days,
+      ordersToday: Number(counts?.orders_today ?? 0),
+      ordersLast30Days: Number(counts?.orders_last_30 ?? 0),
+      ordersAwaitingFulfillment: Number(counts?.orders_awaiting ?? 0),
+      ordersCancelledLast30Days: Number(counts?.orders_cancelled ?? 0),
       publishedProducts,
       customers,
       ordersByStatus: grouped
@@ -82,38 +94,54 @@ export class ReportingService {
   async revenue(query: ReportRangeQueryDto, actor: AuthPrincipal): Promise<RevenueReportDto> {
     const { from, to } = this.resolveRange(query);
     const scope = this.scopeWhere(actor);
-    const window = { placedAt: { gte: from, lte: to } };
 
-    const [paid, pending, rows] = await this.prisma.$transaction([
+    // Doanh thu cắt theo mốc HOÀN TẤT, không theo mốc đặt hàng: đơn đặt tháng trước mà
+    // hoàn tất tháng này thì tiền thuộc về tháng này.
+    const completedWindow = { status: COMPLETED_STATUS, completedAt: { gte: from, lte: to } };
+    const placedWindow = { placedAt: { gte: from, lte: to } };
+
+    const [completed, expected, inProgress, rows, branchRows] = await this.prisma.$transaction([
       this.prisma.order.aggregate({
-        where: { ...scope, ...window, paymentStatus: PAID_STATUS },
+        where: { ...scope, ...completedWindow },
         _sum: { grandTotal: true },
         _count: { _all: true },
       }),
       this.prisma.order.aggregate({
-        where: {
-          ...scope,
-          ...window,
-          paymentStatus: { notIn: [PAID_STATUS, 'CANCELLED', 'REFUNDED'] },
-          status: { not: 'CANCELLED' },
-        },
+        where: { ...scope, ...placedWindow, status: DELIVERED_STATUS },
+        _sum: { grandTotal: true },
+        _count: { _all: true },
+      }),
+      this.prisma.order.aggregate({
+        where: { ...scope, ...placedWindow, status: { in: IN_PROGRESS_STATUSES } },
         _sum: { grandTotal: true },
       }),
       this.prisma.order.findMany({
-        where: { ...scope, ...window, paymentStatus: PAID_STATUS },
-        select: { placedAt: true, grandTotal: true },
-        orderBy: { placedAt: 'asc' },
+        where: { ...scope, ...completedWindow },
+        select: { completedAt: true, grandTotal: true },
+        orderBy: { completedAt: 'asc' },
+      }),
+      this.prisma.order.findMany({
+        where: {
+          ...scope,
+          OR: [completedWindow, { ...placedWindow, status: DELIVERED_STATUS }],
+        },
+        select: {
+          status: true,
+          grandTotal: true,
+          branch: { select: { name: true } },
+        },
       }),
     ]);
 
-    const total = paid._sum.grandTotal ?? new Prisma.Decimal(0);
-    const paidOrderCount = paid._count._all;
+    const completedTotal = completed._sum.grandTotal ?? new Prisma.Decimal(0);
+    const completedOrderCount = completed._count._all;
 
     // Gom theo ngày ở tầng ứng dụng: số đơn mỗi khoảng còn nhỏ, và làm vậy tránh
     // phụ thuộc vào múi giờ của database khi cắt ngày.
     const byDate = new Map<string, { amount: Prisma.Decimal; orderCount: number }>();
     for (const row of rows) {
-      const key = row.placedAt.toISOString().slice(0, 10);
+      if (!row.completedAt) continue;
+      const key = row.completedAt.toISOString().slice(0, 10);
       const current = byDate.get(key) ?? { amount: new Prisma.Decimal(0), orderCount: 0 };
       byDate.set(key, {
         amount: current.amount.plus(row.grandTotal),
@@ -121,14 +149,36 @@ export class ReportingService {
       });
     }
 
+    const byBranch = new Map<
+      string,
+      { completedRevenue: Prisma.Decimal; completedOrderCount: number; expectedRevenue: Prisma.Decimal }
+    >();
+    for (const row of branchRows) {
+      const key = row.branch.name;
+      const current = byBranch.get(key) ?? {
+        completedRevenue: new Prisma.Decimal(0),
+        completedOrderCount: 0,
+        expectedRevenue: new Prisma.Decimal(0),
+      };
+      if (row.status === COMPLETED_STATUS) {
+        current.completedRevenue = current.completedRevenue.plus(row.grandTotal);
+        current.completedOrderCount += 1;
+      } else {
+        current.expectedRevenue = current.expectedRevenue.plus(row.grandTotal);
+      }
+      byBranch.set(key, current);
+    }
+
     return {
       from: from.toISOString(),
       to: to.toISOString(),
-      totalRevenue: total.toFixed(2),
-      paidOrderCount,
+      completedRevenue: completedTotal.toFixed(2),
+      completedOrderCount,
+      expectedRevenue: (expected._sum.grandTotal ?? new Prisma.Decimal(0)).toFixed(2),
+      expectedOrderCount: expected._count._all,
+      inProgressRevenue: (inProgress._sum.grandTotal ?? new Prisma.Decimal(0)).toFixed(2),
       averageOrderValue:
-        paidOrderCount > 0 ? total.dividedBy(paidOrderCount).toFixed(2) : '0.00',
-      pendingRevenue: (pending._sum.grandTotal ?? new Prisma.Decimal(0)).toFixed(2),
+        completedOrderCount > 0 ? completedTotal.dividedBy(completedOrderCount).toFixed(2) : '0.00',
       series: [...byDate.entries()]
         .sort(([left], [right]) => left.localeCompare(right))
         .map(([date, value]) => ({
@@ -136,14 +186,19 @@ export class ReportingService {
           amount: value.amount.toFixed(2),
           orderCount: value.orderCount,
         })),
+      byBranch: [...byBranch.entries()]
+        .map(([branchName, value]) => ({
+          branchName,
+          completedRevenue: value.completedRevenue.toFixed(2),
+          completedOrderCount: value.completedOrderCount,
+          expectedRevenue: value.expectedRevenue.toFixed(2),
+        }))
+        .sort((left, right) => Number(right.completedRevenue) - Number(left.completedRevenue)),
     };
   }
 
   async inventory(actor: AuthPrincipal): Promise<InventoryReportDto> {
-    const warehouseIds = this.visibleWarehouseFilter(actor);
-    const where: Prisma.InventoryBalanceWhereInput = warehouseIds
-      ? { warehouseId: { in: warehouseIds } }
-      : {};
+    const where = this.inventoryScopeWhere(actor);
 
     const balances = await this.prisma.inventoryBalance.findMany({
       where,
@@ -183,7 +238,8 @@ export class ReportingService {
 
     const items = await this.prisma.orderItem.findMany({
       where: {
-        order: { ...scope, placedAt: { gte: from, lte: to }, paymentStatus: PAID_STATUS },
+        // Bán chạy tính trên đơn đã hoàn tất, cùng chuẩn với doanh thu.
+        order: { ...scope, status: COMPLETED_STATUS, completedAt: { gte: from, lte: to } },
       },
       select: {
         skuSnapshot: true,
@@ -236,11 +292,15 @@ export class ReportingService {
     );
   }
 
-  private visibleWarehouseFilter(actor: AuthPrincipal): bigint[] | undefined {
+  /**
+   * Tồn kho lọc qua quan hệ `warehouse.branchId`, KHÔNG phải `warehouseId`.
+   * `Warehouse.id` và `Warehouse.branch_id` là hai cột khác nhau; đem branch id
+   * so với warehouse id sẽ trả về kho của chi nhánh khác hoặc rỗng.
+   */
+  private inventoryScopeWhere(actor: AuthPrincipal): Prisma.InventoryBalanceWhereInput {
     const branchIds = this.visibleBranchIds(actor);
-    if (!branchIds) return undefined;
-    // Kho gắn với chi nhánh; lọc theo branchId của kho ở tầng quan hệ là đủ.
-    return branchIds;
+    if (!branchIds) return {};
+    return { warehouse: { branchId: { in: branchIds } } };
   }
 
   private resolveRange(query: ReportRangeQueryDto): { from: Date; to: Date } {

@@ -235,30 +235,45 @@ components:
         to:
           type: string
           format: date-time
-        totalRevenue:
+        completedRevenue:
           type: string
-          description: Tổng tiền đã thực nhận trong khoảng; chỉ tính đơn có thanh toán SUCCESS
-        paidOrderCount:
+          description: "Doanh thu thực nhận: đơn đã COMPLETED, tính theo mốc hoàn tất"
+        completedOrderCount:
           type: number
-          description: Số đơn đã thu được tiền
+          description: Số đơn đã hoàn tất
+        expectedRevenue:
+          type: string
+          description: "Dự thu: đơn đã DELIVERED, đang chờ tự chuyển hoàn tất"
+        expectedOrderCount:
+          type: number
+          description: Số đơn đã giao, chờ hoàn tất
+        inProgressRevenue:
+          type: string
+          description: Đơn đang xử lý (đã xác nhận tới đang giao); chưa tính vào hai nhóm trên
         averageOrderValue:
           type: string
-          description: Giá trị trung bình mỗi đơn đã thu tiền
-        pendingRevenue:
-          type: string
-          description: Tiền của đơn chưa thu (COD chưa giao, chuyển khoản chờ xác nhận)
+          description: Giá trị trung bình mỗi đơn đã hoàn tất
         series:
+          description: Doanh thu thực nhận theo ngày hoàn tất
           type: array
           items:
             $ref: "#/components/schemas/RevenuePointDto"
+        byBranch:
+          description: Bóc tách theo chi nhánh
+          type: array
+          items:
+            $ref: "#/components/schemas/BranchRevenueDto"
       required:
         - from
         - to
-        - totalRevenue
-        - paidOrderCount
+        - completedRevenue
+        - completedOrderCount
+        - expectedRevenue
+        - expectedOrderCount
+        - inProgressRevenue
         - averageOrderValue
-        - pendingRevenue
         - series
+        - byBranch
     InventoryReportDto:
       type: object
       properties:
@@ -333,6 +348,22 @@ components:
         - date
         - amount
         - orderCount
+    BranchRevenueDto:
+      type: object
+      properties:
+        branchName:
+          type: string
+        completedRevenue:
+          type: string
+        completedOrderCount:
+          type: number
+        expectedRevenue:
+          type: string
+      required:
+        - branchName
+        - completedRevenue
+        - completedOrderCount
+        - expectedRevenue
     LowStockItemDto:
       type: object
       properties:
