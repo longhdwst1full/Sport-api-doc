@@ -9,6 +9,7 @@ import { PermissionGuard } from './common/guards/permission.guard';
 import appConfig from './config/app.config';
 import cloudinaryConfig from './config/cloudinary.config';
 import databaseConfig from './config/database.config';
+import mailtrapConfig from './config/mailtrap.config';
 import { validateEnvironment } from './config/env.validation';
 import telegramConfig from './config/telegram.config';
 import vnpayConfig from './config/vnpay.config';
@@ -46,7 +47,7 @@ import { SystemModule } from './modules/system/system.module';
       isGlobal: true,
       cache: true,
       envFilePath: ['.env.local', '.env'],
-      load: [appConfig, databaseConfig, cloudinaryConfig, telegramConfig, vnpayConfig],
+      load: [appConfig, databaseConfig, cloudinaryConfig, mailtrapConfig, telegramConfig, vnpayConfig],
       validate: validateEnvironment,
     }),
     LoggerModule.forRootAsync({

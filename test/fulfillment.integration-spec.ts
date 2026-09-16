@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@prisma/client';
+import { DisabledShippingPartnerClient } from '../src/integrations/shipping-partner/disabled-shipping-partner.client';
 import { PrismaService } from '../src/database/prisma.service';
 import { AuditWriter } from '../src/modules/audit/audit.writer';
 import type { AuthPrincipal } from '../src/modules/auth/auth.types';
@@ -23,6 +24,8 @@ describe('Fulfillment stock commit and delivery return', () => {
   const service = new FulfillmentService(
     prisma,
     { write: jest.fn().mockResolvedValue({ id: '1', createdAt: new Date().toISOString() }) } as unknown as AuditWriter,
+    // Không gọi hãng giao hàng trong integration test: mã vận đơn do Admin nhập tay.
+    new DisabledShippingPartnerClient(),
   );
   let branchId = 0n;
   let warehouseId = 0n;

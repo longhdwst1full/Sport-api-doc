@@ -22,6 +22,7 @@ import {
   FulfillmentTransitionDto,
   ReceiveReturnDto,
   ShipFulfillmentDto,
+  FulfillmentLabelDto,
 } from '../dto/fulfillment.dto';
 import { FulfillmentService } from '../services/fulfillment.service';
 
@@ -94,6 +95,18 @@ export class AdminFulfillmentController {
     @Headers(IDEMPOTENCY_HEADER) key: string, @Req() request: AuthenticatedRequest) {
     const context = getMutationContext(request);
     return this.fulfillments.ship(id, input, key ?? '', context.requestId, getAuthPrincipal(request));
+  }
+
+  @Post(':id/label')
+  @RequirePermissions('fulfillment.pack')
+  @ApiOperation({
+    operationId: 'createAdminFulfillmentLabel',
+    summary: 'Lấy URL in phiếu giao từ hãng vận chuyển',
+  })
+  @ApiOkResponse({ type: FulfillmentLabelDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  createLabel(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
+    return this.fulfillments.createLabelUrl(id, getAuthPrincipal(request));
   }
 
   @Post(':id/deliver')

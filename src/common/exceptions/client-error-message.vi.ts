@@ -149,8 +149,23 @@ export const ERROR_KEY = {
   // --- MEDIA ---
   MEDIA_OBJECT_STORAGE_PROVIDER_IS_NOT_CONFIGURED: 'Object storage provider is not configured',
 
+  // --- EMAIL ---
+  EMAIL_PROVIDER_IS_NOT_CONFIGURED: 'Email provider is not configured',
+  EMAIL_PROVIDER_REJECTED_THE_MESSAGE: 'Email provider rejected the message',
+  EMAIL_HAS_NO_RECIPIENT: 'Email has no recipient',
+
   // --- SHIPPING ---
   SHIPPING_SHIPPING_PARTNER_IS_NOT_CONFIGURED: 'Shipping partner is not configured',
+  SHIPPING_GHN_IS_NOT_REACHABLE: 'GHN is not reachable',
+  SHIPPING_GHN_DID_NOT_RETURN_A_TRACKING_CODE: 'GHN did not return a tracking code',
+  SHIPPING_GHN_DID_NOT_RETURN_A_PRINT_TOKEN: 'GHN did not return a print token',
+  SHIPPING_GHN_LABEL_REQUIRES_AT_LEAST_ONE_TRACKING_CODE:
+    'GHN label requires at least one tracking code',
+  SHIPPING_GHN_SHIPMENT_REQUIRES_RECIPIENT_DISTRICT_AND_WARD_CODES:
+    'GHN shipment requires recipient district and ward codes',
+  SHIPPING_GHN_WEBHOOK_SECRET_IS_NOT_CONFIGURED: 'GHN webhook secret is not configured',
+  SHIPPING_GHN_WEBHOOK_ACTOR_USER_IS_NOT_CONFIGURED: 'GHN webhook actor user is not configured',
+  SHIPPING_INVALID_GHN_WEBHOOK_SECRET: 'Invalid GHN webhook secret',
 
   // --- INVENTORY ---
   INVENTORY_DURABLE_INVENTORY_STORAGE_IS_NOT_ENABLED: 'Durable inventory storage is not enabled',
@@ -468,7 +483,27 @@ const EXACT_MESSAGES: Readonly<Record<string, string>> = {
     'Không tìm thấy chi nhánh giao hàng phù hợp.',
   [ERROR_KEY.MEDIA_OBJECT_STORAGE_PROVIDER_IS_NOT_CONFIGURED]:
     'Dịch vụ lưu trữ ảnh chưa được cấu hình.',
+  [ERROR_KEY.EMAIL_PROVIDER_IS_NOT_CONFIGURED]: 'Dịch vụ gửi email chưa được cấu hình.',
+  [ERROR_KEY.EMAIL_PROVIDER_REJECTED_THE_MESSAGE]:
+    'Không gửi được email vào lúc này. Vui lòng thử lại sau.',
+  [ERROR_KEY.EMAIL_HAS_NO_RECIPIENT]: 'Email không có người nhận.',
   [ERROR_KEY.SHIPPING_SHIPPING_PARTNER_IS_NOT_CONFIGURED]: 'Đối tác giao hàng chưa được cấu hình.',
+  [ERROR_KEY.SHIPPING_GHN_IS_NOT_REACHABLE]:
+    'Không kết nối được tới GHN. Vui lòng thử lại sau ít phút.',
+  [ERROR_KEY.SHIPPING_GHN_DID_NOT_RETURN_A_TRACKING_CODE]:
+    'GHN không trả về mã vận đơn. Vui lòng thử lại hoặc tạo vận đơn thủ công.',
+  [ERROR_KEY.SHIPPING_GHN_DID_NOT_RETURN_A_PRINT_TOKEN]:
+    'GHN không trả về phiếu in. Vui lòng thử lại.',
+  [ERROR_KEY.SHIPPING_GHN_LABEL_REQUIRES_AT_LEAST_ONE_TRACKING_CODE]:
+    'Chưa chọn vận đơn nào để in.',
+  [ERROR_KEY.SHIPPING_GHN_SHIPMENT_REQUIRES_RECIPIENT_DISTRICT_AND_WARD_CODES]:
+    'Địa chỉ giao hàng thiếu mã quận/huyện hoặc phường/xã của GHN.',
+  // Ba thông báo dưới chỉ tới webhook của GHN, không hiển thị cho người dùng cuối.
+  [ERROR_KEY.SHIPPING_GHN_WEBHOOK_SECRET_IS_NOT_CONFIGURED]:
+    'Webhook GHN chưa được cấu hình bí mật dùng chung.',
+  [ERROR_KEY.SHIPPING_GHN_WEBHOOK_ACTOR_USER_IS_NOT_CONFIGURED]:
+    'Webhook GHN chưa được gán tài khoản dịch vụ.',
+  [ERROR_KEY.SHIPPING_INVALID_GHN_WEBHOOK_SECRET]: 'Bí mật webhook GHN không hợp lệ.',
   [ERROR_KEY.INVENTORY_DURABLE_INVENTORY_STORAGE_IS_NOT_ENABLED]:
     'Dịch vụ lưu trữ tồn kho chưa sẵn sàng.',
   [ERROR_KEY.CHECKOUT_DURABLE_CHECKOUT_STORAGE_IS_NOT_ENABLED]:

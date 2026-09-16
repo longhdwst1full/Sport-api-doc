@@ -144,3 +144,31 @@ describe('validateEnvironment', () => {
     expect(environment.TELEGRAM_ALLOWED_USER_ID).toBe('5333290241');
   });
 });
+
+describe('biến tuỳ chọn để trống', () => {
+  // File .env thật thường khai báo `KEY=` cho những tính năng chưa bật. Chuỗi rỗng phải được
+  // hiểu là "chưa cấu hình", nếu không ứng dụng sẽ chết ngay lúc khởi động.
+  const blankOptionalKeys = [
+    'GHN_BASE_URL',
+    'GHN_FROM_DISTRICT_ID',
+    'GHN_FROM_WARD_CODE',
+    'GHN_SERVICE_TYPE_ID',
+    'GHN_WEBHOOK_SECRET',
+    'MAILTRAP_API_TOKEN',
+    'MAILTRAP_SENDER_NAME',
+    'MAILTRAP_REDIRECT_ALL_TO',
+  ];
+
+  it.each(blankOptionalKeys)('chấp nhận %s để trống', (key) => {
+    expect(() => validateEnvironment({ [key]: '' })).not.toThrow();
+  });
+
+  it('vẫn báo lỗi khi giá trị có nhưng sai định dạng', () => {
+    expect(() => validateEnvironment({ GHN_FROM_DISTRICT_ID: 'abc' })).toThrow(
+      /GHN_FROM_DISTRICT_ID must be numeric/,
+    );
+    expect(() => validateEnvironment({ MAILTRAP_REDIRECT_ALL_TO: 'khong-phai-email' })).toThrow(
+      /MAILTRAP_REDIRECT_ALL_TO must be a valid email/,
+    );
+  });
+});

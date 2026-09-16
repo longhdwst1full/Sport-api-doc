@@ -4,11 +4,16 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { toDatabaseId, toEntityId } from '../../../common/identifiers/entity-id';
+import {
+  PartnerShipmentResult,
+  ShippingPartnerClient,
+} from '../../../integrations/shipping-partner/shipping-partner.client';
 import { PrismaService } from '../../../database/prisma.service';
 import type { AuthPrincipal } from '../../auth/auth.types';
 import { AuditWriter } from '../../audit/audit.writer';
@@ -23,6 +28,7 @@ import {
   FailDeliveryDto,
   FulfillmentDetailDto,
   FulfillmentTransitionDto,
+  FulfillmentLabelDto,
   ReceiveReturnDto,
   ShipFulfillmentDto,
 } from '../dto/fulfillment.dto';
@@ -32,6 +38,9 @@ import {
   FULFILLMENT_TRANSACTION,
   RETURN_CONDITION,
 } from '../fulfillment.constants';
+
+/** Khối lượng quy ước cho mỗi sản phẩm khi kiện hàng chưa được cân thật. */
+const DEFAULT_ITEM_WEIGHT_GRAMS = 500;
 
 const fulfillmentInclude = {
   warehouse: { select: { name: true, branchId: true } },
@@ -62,9 +71,12 @@ interface TransitionIntent {
 
 @Injectable()
 export class FulfillmentService {
+  private readonly logger = new Logger(FulfillmentService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditWriter,
+    private readonly shippingPartner: ShippingPartnerClient,
   ) {}
 
   async list(query: AdminFulfillmentQueryDto, principal: AuthPrincipal): Promise<AdminFulfillmentListDto> {
@@ -125,6 +137,120 @@ export class FulfillmentService {
     this.ensurePersistence();
     const fulfillmentId = toDatabaseId(id);
     const intent = this.intent(key, FULFILLMENT_ACTION.SHIP, id, input);
+    // PROVIDER: vận đơn phải tạo NGOÀI transaction. Gọi HTTP bên trong sẽ giữ khoá tồn kho suốt
+    // vòng mạng, và mỗi lần serializable retry sẽ tạo thêm một vận đơn trùng ở hãng giao hàng.
+    const partnerShipment = await this.createPartnerShipment(fulfillmentId, input, intent, principal);
+    const carrierCode = input.carrierCode?.trim() || partnerShipment?.provider || null;
+    const trackingNo = input.trackingNo?.trim() || partnerShipment?.trackingCode || null;
+    try {
+      return await this.shipWithinTransaction(
+        fulfillmentId,
+        input,
+        intent,
+        requestId,
+        principal,
+        carrierCode,
+        trackingNo,
+      );
+    } catch (error) {
+      // TRANSACTION: transaction thất bại nhưng vận đơn đã nằm ở hãng. Phải huỷ bù, nếu không
+      // shipper vẫn tới lấy một kiện hàng mà hệ thống coi như chưa xuất kho.
+      if (partnerShipment) {
+        await this.cancelPartnerShipment(partnerShipment.trackingCode, 'Xuất kho thất bại');
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Tạo vận đơn ở hãng giao hàng trước khi mở transaction.
+   *
+   * IDEMPOTENCY: chỉ tạo khi lệnh này chưa từng chạy (`replay` rỗng) và Admin không tự nhập mã
+   * vận đơn. `client_order_code` gửi lên là `orderNo`, nên hãng cũng từ chối trùng ở phía họ.
+   */
+  private async createPartnerShipment(
+    fulfillmentId: bigint,
+    input: ShipFulfillmentDto,
+    intent: TransitionIntent,
+    principal: AuthPrincipal,
+  ): Promise<PartnerShipmentResult | undefined> {
+    if (input.trackingNo?.trim() || !this.shippingPartner.isEnabled()) return undefined;
+
+    const fulfillment = await this.loadForMutation(this.prisma, fulfillmentId, principal);
+    if (this.replay(fulfillment, intent)) return undefined;
+    if (fulfillment.status !== FULFILLMENT_STATUS.PACKED) return undefined;
+
+    const address = fulfillment.order.addresses[0];
+    if (!address) {
+      throw new ConflictException('Đơn hàng chưa có địa chỉ giao để tạo vận đơn');
+    }
+
+    const isCod = fulfillment.order.checkoutSession.paymentMethod === PAYMENT_METHOD.COD;
+    const grandTotal = Math.round(Number(fulfillment.order.grandTotal));
+    return this.shippingPartner.createShipment({
+      orderId: toEntityId(fulfillment.orderId),
+      orderNo: fulfillment.order.orderNo,
+      recipientName: address.recipientName,
+      recipientPhone: address.recipientPhone,
+      addressLine: address.addressLine,
+      provinceCode: address.provinceCode,
+      ...(address.districtCode ? { districtCode: address.districtCode } : {}),
+      ...(address.wardCode ? { wardCode: address.wardCode } : {}),
+      weightGrams: this.estimateWeightGrams(fulfillment),
+      // COD chỉ thu khi chưa thanh toán trước; chuyển khoản/VNPay đã thu nên cod_amount phải là 0.
+      codAmount: isCod ? grandTotal : 0,
+      declaredValue: grandTotal,
+      ...(input.note?.trim() ? { note: input.note.trim() } : {}),
+    });
+  }
+
+  /**
+   * Tạo URL in phiếu giao của hãng vận chuyển.
+   *
+   * SECURITY: URL do hãng phát hành và sống rất ngắn; không lưu vào DB, không đưa vào audit,
+   * chỉ trả thẳng cho người vừa yêu cầu in.
+   */
+  async createLabelUrl(id: string, principal: AuthPrincipal): Promise<FulfillmentLabelDto> {
+    this.ensurePersistence();
+    const fulfillment = await this.loadForMutation(this.prisma, toDatabaseId(id), principal);
+    if (!fulfillment.trackingNo) {
+      throw new ConflictException('Giao vận chưa có mã vận đơn để in');
+    }
+    const url = await this.shippingPartner.createLabelUrl([fulfillment.trackingNo]);
+    return { trackingNo: fulfillment.trackingNo, labelUrl: url };
+  }
+
+  private async cancelPartnerShipment(trackingCode: string, reason: string): Promise<void> {
+    try {
+      await this.shippingPartner.cancelShipment(trackingCode, reason);
+    } catch (cancelError) {
+      // Không nuốt lỗi gốc của transaction; chỉ ghi lại để vận hành huỷ tay ở cổng hãng.
+      this.logger.error({
+        message: 'Không huỷ được vận đơn sau khi xuất kho thất bại',
+        trackingCode,
+        error: cancelError instanceof Error ? cancelError.message : 'unknown error',
+      });
+    }
+  }
+
+  /** GHN tính cước theo gram; chưa có cân thật nên dùng khối lượng tối thiểu cho mỗi sản phẩm. */
+  private estimateWeightGrams(fulfillment: LoadedFulfillment): number {
+    const quantity = fulfillment.order.reservation.items.reduce(
+      (total, item) => total + item.quantity,
+      0,
+    );
+    return Math.max(DEFAULT_ITEM_WEIGHT_GRAMS, quantity * DEFAULT_ITEM_WEIGHT_GRAMS);
+  }
+
+  private shipWithinTransaction(
+    fulfillmentId: bigint,
+    input: ShipFulfillmentDto,
+    intent: TransitionIntent,
+    requestId: string,
+    principal: AuthPrincipal,
+    carrierCode: string | null,
+    trackingNo: string | null,
+  ): Promise<FulfillmentDetailDto> {
     return this.withSerializationRetry(() => this.prisma.$transaction(async (transaction) => {
       await this.lockAggregate(transaction, fulfillmentId);
       const fulfillment = await this.loadForMutation(transaction, fulfillmentId, principal);
@@ -197,8 +323,8 @@ export class FulfillmentService {
       return this.persistTransition(transaction, fulfillment, FULFILLMENT_STATUS.SHIPPED, ORDER_STATUS.SHIPPED,
         ORDER_FULFILLMENT_STATUS.SHIPPED, input.note, intent, requestId, principal, {
           shippedAt: now,
-          carrierCode: input.carrierCode?.trim() || null,
-          trackingNo: input.trackingNo?.trim() || null,
+          carrierCode,
+          trackingNo,
         });
     }, this.transactionOptions()));
   }

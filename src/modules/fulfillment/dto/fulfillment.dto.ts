@@ -100,3 +100,11 @@ export class FulfillmentDetailDto extends FulfillmentSummaryDto {
   @ApiPropertyOptional({ type: String, nullable: true }) returnCondition: string | null;
   @ApiProperty({ type: [FulfillmentHistoryDto] }) history: FulfillmentHistoryDto[];
 }
+
+export class FulfillmentLabelDto {
+  @ApiProperty({ example: 'LXQ7A9' }) trackingNo: string;
+  @ApiProperty({
+    description: 'URL in phiếu giao do hãng vận chuyển phát hành; chỉ có hiệu lực trong vài phút',
+  })
+  labelUrl: string;
+}

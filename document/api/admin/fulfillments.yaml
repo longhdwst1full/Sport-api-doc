@@ -278,6 +278,41 @@ paths:
         - Admin Fulfillments
       x-required-permissions:
         - fulfillment.ship
+  /api/v1/admin/fulfillments/{id}/label:
+    post:
+      operationId: createAdminFulfillmentLabel
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FulfillmentLabelDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Lấy URL in phiếu giao từ hãng vận chuyển
+      tags:
+        - Admin Fulfillments
+      x-required-permissions:
+        - fulfillment.pack
   /api/v1/admin/fulfillments/{id}/deliver:
     post:
       operationId: deliverAdminFulfillment
@@ -583,6 +618,18 @@ components:
           maxLength: 128
       required:
         - expectedVersion
+    FulfillmentLabelDto:
+      type: object
+      properties:
+        trackingNo:
+          type: string
+          example: LXQ7A9
+        labelUrl:
+          type: string
+          description: URL in phiếu giao do hãng vận chuyển phát hành; chỉ có hiệu lực trong vài phút
+      required:
+        - trackingNo
+        - labelUrl
     FailDeliveryDto:
       type: object
       properties:

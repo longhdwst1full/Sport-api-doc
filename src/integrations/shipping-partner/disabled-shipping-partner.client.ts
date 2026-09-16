@@ -7,6 +7,10 @@ import {
 
 @Injectable()
 export class DisabledShippingPartnerClient extends ShippingPartnerClient {
+  isEnabled(): boolean {
+    return false;
+  }
+
   createShipment(input: CreatePartnerShipmentInput): Promise<PartnerShipmentResult> {
     void input;
     throw new ServiceUnavailableException('Shipping partner is not configured');
@@ -15,6 +19,11 @@ export class DisabledShippingPartnerClient extends ShippingPartnerClient {
   cancelShipment(trackingCode: string, reason: string): Promise<void> {
     void trackingCode;
     void reason;
+    throw new ServiceUnavailableException('Shipping partner is not configured');
+  }
+
+  createLabelUrl(trackingCodes: string[]): Promise<string> {
+    void trackingCodes;
     throw new ServiceUnavailableException('Shipping partner is not configured');
   }
 }

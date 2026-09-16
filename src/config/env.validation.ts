@@ -1,6 +1,7 @@
 import { plainToInstance, Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
+  IsEmail,
   IsEnum,
   IsInt,
   IsOptional,
@@ -26,6 +27,14 @@ enum AppMode {
 }
 
 const toBoolean = ({ value }: { value: unknown }) => value === true || value === 'true';
+
+/**
+ * Biến để trống trong file .env vẫn là chuỗi rỗng chứ không phải undefined, nên `@IsOptional()`
+ * không bỏ qua và validator sẽ báo lỗi cho một biến vốn có nghĩa là "chưa cấu hình". Chuẩn hoá
+ * chuỗi rỗng về undefined để "để trống" và "không khai báo" hành xử giống nhau.
+ */
+const toOptionalString = ({ value }: { value: unknown }) =>
+  typeof value === 'string' && value.trim() === '' ? undefined : value;
 
 class EnvironmentVariables {
   @IsEnum(AppMode)
@@ -191,6 +200,39 @@ class EnvironmentVariables {
   @Matches(/^\d+$/, { message: 'GHN_SHOP_ID must be numeric' })
   GHN_SHOP_ID?: string;
 
+  @Transform(toOptionalString)
+  @IsOptional()
+  @IsString()
+  @Matches(/^https?:\/\//, { message: 'GHN_BASE_URL must be an absolute URL' })
+  GHN_BASE_URL?: string;
+
+  // Điểm lấy hàng: thiếu thì chỉ tắt tạo vận đơn tự động, không chặn báo giá cước.
+  @Transform(toOptionalString)
+  @IsOptional()
+  @Matches(/^\d+$/, { message: 'GHN_FROM_DISTRICT_ID must be numeric' })
+  GHN_FROM_DISTRICT_ID?: string;
+
+  @Transform(toOptionalString)
+  @IsOptional()
+  @IsString()
+  GHN_FROM_WARD_CODE?: string;
+
+  // Giữ dạng chuỗi số: @Type(() => Number) sẽ biến chuỗi rỗng thành NaN trước khi kịp chuẩn hoá.
+  @Transform(toOptionalString)
+  @IsOptional()
+  @Matches(/^[1-9]\d*$/, { message: 'GHN_SERVICE_TYPE_ID must be a positive integer' })
+  GHN_SERVICE_TYPE_ID?: string;
+
+  @Transform(toOptionalString)
+  @IsOptional()
+  @IsString()
+  @MinLength(16)
+  GHN_WEBHOOK_SECRET?: string;
+
+  @ValidateIf((environment: EnvironmentVariables) => Boolean(environment.GHN_WEBHOOK_SECRET))
+  @Matches(/^\d+$/, { message: 'GHN_WEBHOOK_ACTOR_USER_ID must be a numeric user ID' })
+  GHN_WEBHOOK_ACTOR_USER_ID?: string;
+
   @Transform(toBoolean)
   @IsBoolean()
   GHTK_ENABLED = false;
@@ -247,6 +289,28 @@ class EnvironmentVariables {
     message: 'CLOUDINARY_FOLDER must be a relative provider folder',
   })
   CLOUDINARY_FOLDER?: string;
+
+  // Mailtrap: để trống thì tính năng email tắt. Chỉ khi có TOKEN mới bắt buộc SENDER_EMAIL,
+  // để môi trường chưa cấu hình không chặn khởi động và OpenAPI generation.
+  @Transform(toOptionalString)
+  @IsOptional()
+  @IsString()
+  @MinLength(16)
+  MAILTRAP_API_TOKEN?: string;
+
+  @ValidateIf((environment: EnvironmentVariables) => Boolean(environment.MAILTRAP_API_TOKEN))
+  @IsEmail({}, { message: 'MAILTRAP_SENDER_EMAIL must be a valid email' })
+  MAILTRAP_SENDER_EMAIL?: string;
+
+  @Transform(toOptionalString)
+  @IsOptional()
+  @IsString()
+  MAILTRAP_SENDER_NAME?: string;
+
+  @Transform(toOptionalString)
+  @IsOptional()
+  @IsEmail({}, { message: 'MAILTRAP_REDIRECT_ALL_TO must be a valid email' })
+  MAILTRAP_REDIRECT_ALL_TO?: string;
 
   @Transform(toBoolean)
   @IsBoolean()
