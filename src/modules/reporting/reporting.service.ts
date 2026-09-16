@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
+import { startOfVietnamDay, vietnamDateKey, vietnamDaysAgo } from '../../common/time/vietnam-time';
 import { toDatabaseId } from '../../common/identifiers/entity-id';
 import type { AuthPrincipal } from '../auth/auth.types';
 import { ScopeType } from '../iam/iam.types';
@@ -34,8 +35,9 @@ export class ReportingService {
   async overview(actor: AuthPrincipal): Promise<OverviewReportDto> {
     const branchIds = this.visibleBranchIds(actor);
     const now = new Date();
-    const startOfToday = new Date(now);
-    startOfToday.setHours(0, 0, 0, 0);
+    // Cắt ngày theo giờ cửa hàng, không theo giờ máy chủ: máy chủ chạy UTC thì "hôm nay"
+    // bắt đầu lúc 7h sáng giờ Việt Nam và bỏ sót đơn đặt trước đó.
+    const startOfToday = startOfVietnamDay(now);
     const since = this.daysAgo(now, DEFAULT_RANGE_DAYS);
 
     // Gộp 6 phép đếm thành MỘT câu lệnh bằng đếm có điều kiện. Database ở xa nên chi phí
@@ -136,12 +138,13 @@ export class ReportingService {
     const completedTotal = completed._sum.grandTotal ?? new Prisma.Decimal(0);
     const completedOrderCount = completed._count._all;
 
-    // Gom theo ngày ở tầng ứng dụng: số đơn mỗi khoảng còn nhỏ, và làm vậy tránh
-    // phụ thuộc vào múi giờ của database khi cắt ngày.
+    // Gom theo ngày ở tầng ứng dụng: số đơn mỗi khoảng còn nhỏ, và làm vậy tránh phụ
+    // thuộc vào múi giờ của database khi cắt ngày. Khoá ngày lấy theo giờ Việt Nam —
+    // dùng UTC sẽ đẩy đơn đặt lúc 0h–7h sáng sang ngày hôm trước.
     const byDate = new Map<string, { amount: Prisma.Decimal; orderCount: number }>();
     for (const row of rows) {
       if (!row.completedAt) continue;
-      const key = row.completedAt.toISOString().slice(0, 10);
+      const key = vietnamDateKey(row.completedAt);
       const current = byDate.get(key) ?? { amount: new Prisma.Decimal(0), orderCount: 0 };
       byDate.set(key, {
         amount: current.amount.plus(row.grandTotal),
@@ -310,9 +313,6 @@ export class ReportingService {
   }
 
   private daysAgo(anchor: Date, days: number): Date {
-    const value = new Date(anchor);
-    value.setDate(value.getDate() - days);
-    value.setHours(0, 0, 0, 0);
-    return value;
+    return vietnamDaysAgo(anchor, days);
   }
 }

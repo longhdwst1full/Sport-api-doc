@@ -239,7 +239,7 @@ export class PaymentService {
       const replay = await transaction.paymentTransaction.findUnique({ where: { idempotencyKey } });
       if (replay) {
         if (replay.paymentId !== payment.id || replay.requestHash !== requestHash) {
-          throw new ConflictException('Idempotency-Key đã được dùng cho yêu cầu thanh toán khác');
+          throw new ConflictException('Thao tác này đã được dùng cho một lần thanh toán khác. Vui lòng tải lại rồi thử lại.');
         }
         return this.toDetail(payment);
       }
@@ -334,7 +334,7 @@ export class PaymentService {
       const replay = await transaction.paymentTransaction.findUnique({ where: { idempotencyKey } });
       if (replay) {
         if (replay.paymentId !== payment.id || replay.requestHash !== requestHash) {
-          throw new ConflictException('Idempotency-Key đã được dùng cho yêu cầu thanh toán khác');
+          throw new ConflictException('Thao tác này đã được dùng cho một lần thanh toán khác. Vui lòng tải lại rồi thử lại.');
         }
         return this.toDetail(payment);
       }
@@ -588,7 +588,7 @@ export class PaymentService {
   private requireIdempotencyKey(value: string): string {
     const key = value.trim();
     if (key.length < 8 || key.length > 150) {
-      throw new BadRequestException('Idempotency-Key phải có từ 8 đến 150 ký tự');
+      throw new BadRequestException('Không gửi được yêu cầu. Vui lòng thử lại.');
     }
     return key;
   }

@@ -2,6 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { toDatabaseId, toEntityId } from '../../common/identifiers/entity-id';
+import type { AuthPrincipal } from '../auth/auth.types';
+import { ScopeType } from '../iam/iam.types';
 import {
   AdminCustomerDetailDto,
   AdminCustomerListDto,
@@ -33,8 +35,27 @@ interface OrderRollup {
 export class AdminCustomerService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async list(query: AdminCustomerQueryDto): Promise<AdminCustomerListDto> {
+  /**
+   * Chi nhánh mà tài khoản được phép nhìn thấy; `undefined` nghĩa là toàn hệ thống.
+   * Khách hàng không gắn trực tiếp vào chi nhánh nào — quan hệ đi qua đơn hàng của họ.
+   */
+  private visibleBranchIds(actor: AuthPrincipal): bigint[] | undefined {
+    if (actor.scopes.some(({ type }) => type === ScopeType.GLOBAL)) return undefined;
+    return actor.scopes.flatMap(({ type, branchId }) =>
+      type === ScopeType.BRANCH && branchId ? [toDatabaseId(branchId)] : [],
+    );
+  }
+
+  /** Nhân viên chi nhánh chỉ thấy khách đã từng mua ở chi nhánh mình phụ trách. */
+  private customerScopeWhere(branchIds: bigint[] | undefined): Prisma.CustomerWhereInput {
+    if (!branchIds) return {};
+    return { orders: { some: { branchId: { in: branchIds } } } };
+  }
+
+  async list(query: AdminCustomerQueryDto, actor: AuthPrincipal): Promise<AdminCustomerListDto> {
+    const branchIds = this.visibleBranchIds(actor);
     const where: Prisma.CustomerWhereInput = {
+      ...this.customerScopeWhere(branchIds),
       ...(query.name ? { name: { contains: query.name.trim(), mode: 'insensitive' } } : {}),
       ...(query.phone ? { phone: { contains: query.phone.trim() } } : {}),
       ...(query.email ? { email: { contains: query.email.trim(), mode: 'insensitive' } } : {}),
@@ -54,7 +75,7 @@ export class AdminCustomerService {
       this.prisma.customer.count({ where }),
     ]);
 
-    const rollups = await this.orderRollups(rows.map((row) => row.id));
+    const rollups = await this.orderRollups(rows.map((row) => row.id), branchIds);
     return {
       items: rows.map((row) => this.toSummary(row, rollups.get(row.id.toString()))),
       page: query.page,
@@ -63,16 +84,21 @@ export class AdminCustomerService {
     };
   }
 
-  async get(id: string): Promise<AdminCustomerDetailDto> {
+  async get(id: string, actor: AuthPrincipal): Promise<AdminCustomerDetailDto> {
     const databaseId = toDatabaseId(id);
-    const customer = await this.prisma.customer.findUnique({
-      where: { id: databaseId },
+    const branchIds = this.visibleBranchIds(actor);
+    // Dùng `findFirst` kèm điều kiện phạm vi: khách ngoài chi nhánh trả "không tìm thấy"
+    // thay vì "không có quyền", để không lộ việc khách đó có tồn tại hay không.
+    const customer = await this.prisma.customer.findFirst({
+      where: { id: databaseId, ...this.customerScopeWhere(branchIds) },
       include: {
         addresses: {
           where: { status: 'ACTIVE' },
           orderBy: [{ isDefault: 'desc' }, { id: 'asc' }],
         },
         orders: {
+          // Đơn của chi nhánh khác không thuộc phạm vi xem của nhân viên chi nhánh.
+          where: branchIds ? { branchId: { in: branchIds } } : undefined,
           orderBy: { placedAt: 'desc' },
           take: 20,
           select: {
@@ -88,7 +114,7 @@ export class AdminCustomerService {
     });
     if (!customer) throw new NotFoundException('Không tìm thấy khách hàng');
 
-    const rollups = await this.orderRollups([customer.id]);
+    const rollups = await this.orderRollups([customer.id], branchIds);
     return {
       ...this.toSummary(customer, rollups.get(customer.id.toString())),
       addresses: customer.addresses.map((address) => ({
@@ -116,8 +142,17 @@ export class AdminCustomerService {
    * Số đơn, giá trị vòng đời và lần mua gần nhất cho cả trang trong một lượt truy vấn.
    * Tính từng khách một sẽ là N lượt đi database, mỗi lượt ~450ms trên đường truyền hiện tại.
    */
-  private async orderRollups(customerIds: bigint[]): Promise<Map<string, OrderRollup>> {
+  private async orderRollups(
+    customerIds: bigint[],
+    branchIds: bigint[] | undefined,
+  ): Promise<Map<string, OrderRollup>> {
     if (customerIds.length === 0) return new Map();
+
+    // Số đơn và số tiền đã chi cũng phải nằm trong phạm vi chi nhánh: nếu không, nhân viên
+    // một chi nhánh suy ra được doanh số của chi nhánh khác qua tổng chi tiêu của khách.
+    const branchFilter = branchIds
+      ? Prisma.sql`AND o.branch_id IN (${Prisma.join(branchIds)})`
+      : Prisma.empty;
 
     const rows = await this.prisma.$queryRaw<
       Array<{ customer_id: bigint; order_count: number; lifetime_value: Prisma.Decimal | null; last_order_at: Date | null }>
@@ -132,6 +167,7 @@ export class AdminCustomerService {
         MAX(o.placed_at) FILTER (WHERE o.status <> ${CANCELLED_STATUS}) AS last_order_at
       FROM public.orders o
       WHERE o.customer_id IN (${Prisma.join(customerIds)})
+        ${branchFilter}
       GROUP BY o.customer_id
     `;
 

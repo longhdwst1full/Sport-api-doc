@@ -235,7 +235,16 @@ export class PrismaIamRepository extends IamRepository {
             })),
           });
         }
-        // Người đang đăng nhập phải được cấp lại token khi quyền của vai trò đổi.
+      }
+
+      // Người đang đăng nhập phải được cấp lại token khi quyền hiệu lực của họ đổi.
+      //
+      // Không chỉ khi sửa danh sách quyền: chuyển vai trò sang INACTIVE cũng làm mất quyền,
+      // mà lời gọi đó không gửi kèm `permissionCodes`. Bản trước đặt lệnh tăng phiên bản bên
+      // trong nhánh `permissionCodes` nên người dùng giữ nguyên quyền cũ tới khi token hết
+      // hạn — vẫn thao tác được bằng vai trò vừa bị vô hiệu hoá.
+      const statusChanged = input.status !== undefined && input.status !== before.status;
+      if (input.permissionCodes || statusChanged) {
         await transaction.user.updateMany({
           where: {
             roleAssignments: {

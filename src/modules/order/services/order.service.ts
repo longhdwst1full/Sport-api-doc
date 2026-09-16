@@ -381,7 +381,7 @@ export class OrderService {
       include: orderInclude,
     });
     // SECURITY: Trả 404 thống nhất để không tiết lộ mã đơn có tồn tại nhưng thuộc người khác.
-    if (!order) throw new NotFoundException('Không tìm thấy đơn hàng thuộc tài khoản hoặc token này');
+    if (!order) throw new NotFoundException('Không tìm thấy đơn hàng.');
     return order;
   }
 
@@ -572,7 +572,7 @@ export class OrderService {
   ): TransitionIdempotency {
     const key = rawKey.trim();
     if (!key || key.length > 150) {
-      throw new BadRequestException('Header Idempotency-Key hợp lệ là bắt buộc');
+      throw new BadRequestException('Không gửi được yêu cầu. Vui lòng thử lại.');
     }
     // IDEMPOTENCY: expectedVersion là một phần intent. Cùng key nhưng client gửi
     // một snapshot version khác phải conflict thay vì bị coi là replay hợp lệ.
@@ -596,7 +596,7 @@ export class OrderService {
     const replay = order.statusHistory.find((history) => history.idempotencyKey === key);
     if (!replay) return false;
     if (replay.requestHash !== hash || replay.toStatus !== targetStatus) {
-      throw new ConflictException('Idempotency-Key đã được dùng cho thao tác đơn hàng khác');
+      throw new ConflictException('Thao tác này đã được dùng cho một đơn hàng khác. Vui lòng tải lại rồi thử lại.');
     }
     return true;
   }
@@ -655,9 +655,9 @@ export class OrderService {
     this.ensurePersistence();
     const checkoutToken = rawCheckoutToken.trim();
     const idempotencyKey = rawIdempotencyKey.trim();
-    if (!checkoutToken) throw new BadRequestException('Checkout token là bắt buộc');
+    if (!checkoutToken) throw new BadRequestException('Thiếu thông tin phiên đặt hàng. Vui lòng tải lại trang.');
     if (!idempotencyKey || idempotencyKey.length > 150) {
-      throw new BadRequestException('Header Idempotency-Key hợp lệ là bắt buộc');
+      throw new BadRequestException('Không gửi được yêu cầu. Vui lòng thử lại.');
     }
 
     const preflight = await this.prisma.checkoutSession.findUnique({
@@ -683,7 +683,7 @@ export class OrderService {
     if (replay) {
       this.assertOrderOwnership(replay, actor);
       if (replay.requestHash !== requestHash) {
-        throw new ConflictException('Idempotency-Key đã được dùng cho yêu cầu tạo đơn khác');
+        throw new ConflictException('Thao tác này đã được dùng cho một đơn khác. Vui lòng tải lại rồi thử lại.');
       }
       return this.toDetail(replay);
     }
@@ -1076,7 +1076,7 @@ export class OrderService {
 
   private toSummary(order: LoadedOrder | LoadedOrderSummary): AdminOrderSummaryDto {
     const address = order.addresses[0];
-    if (!address) throw new ServiceUnavailableException('Đơn hàng thiếu snapshot địa chỉ nhận hàng');
+    if (!address) throw new ServiceUnavailableException('Đơn hàng thiếu địa chỉ nhận hàng.');
     return {
       id: toEntityId(order.id),
       orderNo: order.orderNo,

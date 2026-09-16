@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query, Req } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiForbiddenResponse,
@@ -9,6 +9,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../common/exceptions/error-response.dto';
+import { AuthenticatedRequest, getAuthPrincipal } from '../../common/request/request-context';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import {
   AdminCustomerDetailDto,
@@ -32,8 +33,11 @@ export class AdminCustomerController {
     summary: 'Danh sách khách hàng kèm số đơn, giá trị vòng đời và lần mua gần nhất',
   })
   @ApiOkResponse({ type: AdminCustomerListDto })
-  list(@Query() query: AdminCustomerQueryDto): Promise<AdminCustomerListDto> {
-    return this.customers.list(query);
+  list(
+    @Query() query: AdminCustomerQueryDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<AdminCustomerListDto> {
+    return this.customers.list(query, getAuthPrincipal(request));
   }
 
   @Get(':id')
@@ -44,7 +48,10 @@ export class AdminCustomerController {
   })
   @ApiOkResponse({ type: AdminCustomerDetailDto })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
-  get(@Param('id') id: string): Promise<AdminCustomerDetailDto> {
-    return this.customers.get(id);
+  get(
+    @Param('id') id: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<AdminCustomerDetailDto> {
+    return this.customers.get(id, getAuthPrincipal(request));
   }
 }

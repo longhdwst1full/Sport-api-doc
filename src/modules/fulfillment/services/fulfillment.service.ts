@@ -510,7 +510,7 @@ export class FulfillmentService {
     const history = fulfillment.history.find((item) => item.idempotencyKey === intent.key);
     if (!history) return undefined;
     if (history.requestHash !== intent.hash) {
-      throw new ConflictException('Idempotency-Key đã được dùng cho thao tác giao vận khác');
+      throw new ConflictException('Thao tác này đã được dùng cho một lệnh giao vận khác. Vui lòng tải lại rồi thử lại.');
     }
     return this.toDetail(fulfillment);
   }
@@ -518,7 +518,7 @@ export class FulfillmentService {
   private intent(key: string, action: string, id: string, input: object): TransitionIntent {
     const normalizedKey = key.trim();
     if (normalizedKey.length < 8 || normalizedKey.length > 150) {
-      throw new BadRequestException('Header Idempotency-Key phải có từ 8 đến 150 ký tự');
+      throw new BadRequestException('Không gửi được yêu cầu. Vui lòng thử lại.');
     }
     return {
       key: normalizedKey,

@@ -1,6 +1,6 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { clientMessageVi } from './client-error-message.vi';
+import { clientMessageVi, ERROR_KEY } from './client-error-message.vi';
 
 describe('Thông báo lỗi trả cho người dùng', () => {
   it('giữ nguyên thông báo vốn đã là tiếng Việt', () => {
@@ -29,21 +29,16 @@ describe('Thông báo lỗi trả cho người dùng', () => {
    */
   it('mọi thông báo lỗi trong mã nguồn đều có bản dịch', () => {
     const root = join(__dirname, '..', '..');
-    const table = readFileSync(join(__dirname, 'client-error-message.vi.ts'), 'utf8');
-    const translated = new Set(
-      Array.from(table.matchAll(/^\s*'((?:[^'\\]|\\.)+)':/gm), (match) =>
-        match[1].replace(/\\'/g, "'"),
-      ),
-    );
+    // Đọc thẳng từ hằng số thay vì dò chuỗi trong file: đổi cách khai báo bảng không được
+    // làm bài kiểm tra này im lặng bỏ qua.
+    const translated = new Set<string>(Object.values(ERROR_KEY));
 
-    const collect = (dir: string): string[] => {
-      const { readdirSync, statSync } = require('node:fs') as typeof import('node:fs');
-      return readdirSync(dir).flatMap((entry: string) => {
+    const collect = (dir: string): string[] =>
+      readdirSync(dir).flatMap((entry: string) => {
         const full = join(dir, entry);
         if (statSync(full).isDirectory()) return collect(full);
         return full.endsWith('.ts') && !full.endsWith('.spec.ts') ? [full] : [];
       });
-    };
 
     const pattern =
       /new (?:BadRequest|NotFound|Conflict|Forbidden|Unauthorized|UnprocessableEntity|ServiceUnavailable|Gone|PreconditionFailed)\w*Exception\(\s*['"`]([^'"`]+)/g;

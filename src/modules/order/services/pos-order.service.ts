@@ -57,7 +57,7 @@ export class PosOrderService {
   ): Promise<OrderDetailDto> {
     const key = idempotencyKey.trim();
     if (!key || key.length > 150) {
-      throw new BadRequestException('Header Idempotency-Key hợp lệ là bắt buộc');
+      throw new BadRequestException('Không gửi được yêu cầu. Vui lòng thử lại.');
     }
 
     const warehouse = await this.resolveCounter(principal, input.branchId);
