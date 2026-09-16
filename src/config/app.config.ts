@@ -82,20 +82,10 @@ export default registerAs('app', () => ({
         'https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/fee',
       token: process.env.GHN_TOKEN,
       shopId: process.env.GHN_SHOP_ID,
-      // GHN yêu cầu district/ward của điểm lấy hàng khi tạo vận đơn; chưa có thì tắt tạo đơn tự động.
-      fromDistrictId: process.env.GHN_FROM_DISTRICT_ID,
-      fromWardCode: process.env.GHN_FROM_WARD_CODE,
       serviceTypeId: Number(process.env.GHN_SERVICE_TYPE_ID ?? 2),
       webhookSecret: process.env.GHN_WEBHOOK_SECRET,
       // Tài khoản dịch vụ đứng tên các transition do webhook kích hoạt; audit cần actor có thật.
       webhookActorUserId: process.env.GHN_WEBHOOK_ACTOR_USER_ID,
-    },
-    ghtk: {
-      enabled: process.env.GHTK_ENABLED === 'true',
-      apiUrl:
-        process.env.GHTK_API_URL ??
-        'https://services.giaohangtietkiem.vn/services/shipment/fee',
-      token: process.env.GHTK_TOKEN,
     },
   },
 }));

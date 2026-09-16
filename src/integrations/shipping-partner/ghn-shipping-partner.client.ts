@@ -9,8 +9,6 @@ export interface GhnShippingPartnerOptions {
   baseUrl: string;
   token: string;
   shopId: string;
-  fromDistrictId: number;
-  fromWardCode: string;
   serviceTypeId: number;
   timeoutMs: number;
 }
@@ -49,6 +47,10 @@ export class GhnShippingPartnerClient extends ShippingPartnerClient {
   }
 
   async createShipment(input: CreatePartnerShipmentInput): Promise<PartnerShipmentResult> {
+    if (!/^\d+$/.test(input.pickup.districtCode) || !input.pickup.wardCode) {
+      // Chi nhánh chưa được gán mã địa giới GHN. Đây là dữ liệu vận hành, không phải lỗi kỹ thuật.
+      throw new ServiceUnavailableException('Branch is missing GHN district and ward codes');
+    }
     if (!input.districtCode || !/^\d+$/.test(input.districtCode) || !input.wardCode) {
       // PROVIDER: GHN định tuyến bằng mã quận/phường của chính họ, không nhận địa chỉ chữ.
       // Thiếu mã thì phải dừng ở đây thay vì gửi lên rồi nhận lỗi khó đọc.
@@ -65,8 +67,8 @@ export class GhnShippingPartnerClient extends ShippingPartnerClient {
       to_address: input.addressLine,
       to_ward_code: input.wardCode,
       to_district_id: Number(input.districtCode),
-      from_district_id: this.options.fromDistrictId,
-      from_ward_code: this.options.fromWardCode,
+      from_district_id: Number(input.pickup.districtCode),
+      from_ward_code: input.pickup.wardCode,
       cod_amount: codAmount,
       insurance_value: Math.min(
         GHN_MAX_INSURANCE_VALUE,

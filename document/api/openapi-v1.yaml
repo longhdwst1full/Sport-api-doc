@@ -5733,6 +5733,80 @@ paths:
       summary: Preview V1 delivery fee and ETA; checkout revalidates inputs
       tags:
         - Storefront Shipping
+  /api/v1/shipping/areas/provinces:
+    get:
+      operationId: listShippingProvinces
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShippingAreaListDto"
+        "503":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      summary: Danh sách tỉnh/thành theo mã của hãng vận chuyển
+      tags:
+        - Shipping Areas
+  /api/v1/shipping/areas/districts:
+    get:
+      operationId: listShippingDistricts
+      parameters:
+        - name: provinceCode
+          required: true
+          in: query
+          description: Mã tỉnh/thành do endpoint provinces trả về
+          schema:
+            example: "201"
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShippingAreaListDto"
+        "503":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      summary: Danh sách quận/huyện của một tỉnh/thành
+      tags:
+        - Shipping Areas
+  /api/v1/shipping/areas/wards:
+    get:
+      operationId: listShippingWards
+      parameters:
+        - name: districtCode
+          required: true
+          in: query
+          description: Mã quận/huyện do endpoint districts trả về
+          schema:
+            example: "1442"
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShippingAreaListDto"
+        "503":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      summary: Danh sách phường/xã của một quận/huyện
+      tags:
+        - Shipping Areas
   /api/v1/content/posts:
     get:
       operationId: listPublishedPosts
@@ -11999,6 +12073,28 @@ components:
         - fee
         - etaMinDays
         - etaMaxDays
+    ShippingAreaDto:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "1442"
+          description: Mã địa giới của hãng vận chuyển; lưu vào districtCode/wardCode của địa chỉ
+        name:
+          type: string
+          example: Quận Ba Đình
+      required:
+        - code
+        - name
+    ShippingAreaListDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ShippingAreaDto"
+      required:
+        - items
     ContentPostDto:
       type: object
       properties:

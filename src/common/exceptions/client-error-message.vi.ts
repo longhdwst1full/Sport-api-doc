@@ -163,6 +163,10 @@ export const ERROR_KEY = {
     'GHN label requires at least one tracking code',
   SHIPPING_GHN_SHIPMENT_REQUIRES_RECIPIENT_DISTRICT_AND_WARD_CODES:
     'GHN shipment requires recipient district and ward codes',
+  SHIPPING_BRANCH_IS_MISSING_GHN_DISTRICT_AND_WARD_CODES:
+    'Branch is missing GHN district and ward codes',
+  SHIPPING_AREA_LOOKUP_IS_NOT_CONFIGURED: 'Shipping area lookup is not configured',
+  SHIPPING_GHN_REJECTED_THE_SHIPPING_AREA_LOOKUP: 'GHN rejected the shipping area lookup',
   SHIPPING_GHN_WEBHOOK_SECRET_IS_NOT_CONFIGURED: 'GHN webhook secret is not configured',
   SHIPPING_GHN_WEBHOOK_ACTOR_USER_IS_NOT_CONFIGURED: 'GHN webhook actor user is not configured',
   SHIPPING_INVALID_GHN_WEBHOOK_SECRET: 'Invalid GHN webhook secret',
@@ -352,7 +356,6 @@ export const ERROR_KEY = {
 
   // --- CHECKOUT ---
   CHECKOUT_GHN_QUOTE_IS_NOT_CONFIGURED_FOR_THIS_ADDRESS: 'GHN quote is not configured for this address',
-  CHECKOUT_GHTK_QUOTE_IS_NOT_CONFIGURED_FOR_THIS_ADDRESS: 'GHTK quote is not configured for this address',
 
   // --- AUDIT ---
   AUDIT_AUDIT_CURSOR_IS_INVALID: 'Audit cursor is invalid',
@@ -498,6 +501,12 @@ const EXACT_MESSAGES: Readonly<Record<string, string>> = {
     'Chưa chọn vận đơn nào để in.',
   [ERROR_KEY.SHIPPING_GHN_SHIPMENT_REQUIRES_RECIPIENT_DISTRICT_AND_WARD_CODES]:
     'Địa chỉ giao hàng thiếu mã quận/huyện hoặc phường/xã của GHN.',
+  [ERROR_KEY.SHIPPING_BRANCH_IS_MISSING_GHN_DISTRICT_AND_WARD_CODES]:
+    'Chi nhánh xuất hàng chưa có mã quận/huyện và phường/xã của GHN.',
+  [ERROR_KEY.SHIPPING_AREA_LOOKUP_IS_NOT_CONFIGURED]:
+    'Tra cứu địa giới hành chính chưa được cấu hình.',
+  [ERROR_KEY.SHIPPING_GHN_REJECTED_THE_SHIPPING_AREA_LOOKUP]:
+    'Không tải được danh sách địa giới hành chính. Vui lòng thử lại.',
   // Ba thông báo dưới chỉ tới webhook của GHN, không hiển thị cho người dùng cuối.
   [ERROR_KEY.SHIPPING_GHN_WEBHOOK_SECRET_IS_NOT_CONFIGURED]:
     'Webhook GHN chưa được cấu hình bí mật dùng chung.',
@@ -685,8 +694,6 @@ const EXACT_MESSAGES: Readonly<Record<string, string>> = {
   [ERROR_KEY.SHIPPING_ETA_MAXIMUM_MUST_NOT_BE_LESS_THAN_ETA_MINIMUM]:
     'Số ngày giao tối đa không được nhỏ hơn số ngày tối thiểu.',
   [ERROR_KEY.CHECKOUT_GHN_QUOTE_IS_NOT_CONFIGURED_FOR_THIS_ADDRESS]:
-    'Chưa cấu hình báo giá giao hàng cho địa chỉ này.',
-  [ERROR_KEY.CHECKOUT_GHTK_QUOTE_IS_NOT_CONFIGURED_FOR_THIS_ADDRESS]:
     'Chưa cấu hình báo giá giao hàng cho địa chỉ này.',
   [ERROR_KEY.AUDIT_AUDIT_CURSOR_IS_INVALID]: 'Con trỏ phân trang không hợp lệ.',
   [ERROR_KEY.AUDIT_AUDIT_LOG_WRITE_RETURNED_NO_ROW]:

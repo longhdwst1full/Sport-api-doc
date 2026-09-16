@@ -8,7 +8,6 @@ import { SystemParameterService } from '../system/parameters/system-parameter.se
 import { SHIPPING_CURRENCY, SHIPPING_METHOD, SHIPPING_RULE_STATUS } from './shipping.constants';
 import { ShippingQuoteDto, ShippingQuoteRequestDto } from './shipping-quote.dto';
 import { GhnRateProvider } from './providers/ghn-rate.provider';
-import { GhtkRateProvider } from './providers/ghtk-rate.provider';
 import { ShippingRateQuoteInput } from './providers/shipping-rate.provider';
 
 export interface DeliveryQuoteCandidateInput extends ShippingRateQuoteInput {
@@ -20,7 +19,7 @@ export interface DeliveryQuoteCandidateInput extends ShippingRateQuoteInput {
 
 export interface DeliveryQuoteOption {
   method: (typeof SHIPPING_METHOD)[keyof typeof SHIPPING_METHOD];
-  provider: 'GHN' | 'GHTK' | 'INTERNAL' | null;
+  provider: 'GHN' | 'INTERNAL' | null;
   fee: string | null;
   etaMinDays: number | null;
   etaMaxDays: number | null;
@@ -35,7 +34,6 @@ export class ShippingQuoteService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly ghn: GhnRateProvider,
-    private readonly ghtk: GhtkRateProvider,
     private readonly parameters: SystemParameterService,
   ) {}
 
@@ -55,8 +53,9 @@ export class ShippingQuoteService {
       };
     }
 
-    const enabledProviders = [this.ghn, this.ghtk]
-      .filter((provider) => provider.isEnabled() && provider.canQuote(input));
+    const enabledProviders = [this.ghn].filter(
+      (provider) => provider.isEnabled() && provider.canQuote(input),
+    );
     const settled = await Promise.allSettled(enabledProviders.map((provider) => provider.quote(input)));
     const external = settled
       .filter((result): result is PromiseFulfilledResult<Awaited<ReturnType<GhnRateProvider['quote']>>> => result.status === 'fulfilled')

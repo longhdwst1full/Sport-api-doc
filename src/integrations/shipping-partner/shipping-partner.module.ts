@@ -13,11 +13,9 @@ import { ShippingPartnerClient } from './shipping-partner.client';
         const enabled = config.get<boolean>('app.shipping.ghn.enabled') === true;
         const token = config.get<string>('app.shipping.ghn.token');
         const shopId = config.get<string>('app.shipping.ghn.shopId');
-        const fromDistrictId = config.get<string>('app.shipping.ghn.fromDistrictId');
-        const fromWardCode = config.get<string>('app.shipping.ghn.fromWardCode');
-        // Thiếu bất kỳ mảnh nào thì tạo vận đơn tự động phải tắt hẳn, không đoán giá trị mặc định:
-        // sai điểm lấy hàng nghĩa là shipper tới nhầm địa chỉ.
-        if (!enabled || !token || !shopId || !fromDistrictId || !fromWardCode) {
+        // Điểm lấy hàng không nằm ở đây: nó là địa chỉ của chi nhánh xuất đơn và đi kèm từng
+        // vận đơn. Ở tầng cấu hình chỉ cần đủ thông tin để nói chuyện được với GHN.
+        if (!enabled || !token || !shopId) {
           return new DisabledShippingPartnerClient();
         }
 
@@ -25,8 +23,6 @@ import { ShippingPartnerClient } from './shipping-partner.client';
           baseUrl: config.getOrThrow<string>('app.shipping.ghn.baseUrl'),
           token,
           shopId,
-          fromDistrictId: Number(fromDistrictId),
-          fromWardCode,
           serviceTypeId: config.get<number>('app.shipping.ghn.serviceTypeId') ?? 2,
           timeoutMs: config.get<number>('app.shipping.providerTimeoutMs') ?? 5_000,
         });

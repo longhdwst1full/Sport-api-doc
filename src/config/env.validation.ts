@@ -206,17 +206,6 @@ class EnvironmentVariables {
   @Matches(/^https?:\/\//, { message: 'GHN_BASE_URL must be an absolute URL' })
   GHN_BASE_URL?: string;
 
-  // Điểm lấy hàng: thiếu thì chỉ tắt tạo vận đơn tự động, không chặn báo giá cước.
-  @Transform(toOptionalString)
-  @IsOptional()
-  @Matches(/^\d+$/, { message: 'GHN_FROM_DISTRICT_ID must be numeric' })
-  GHN_FROM_DISTRICT_ID?: string;
-
-  @Transform(toOptionalString)
-  @IsOptional()
-  @IsString()
-  GHN_FROM_WARD_CODE?: string;
-
   // Giữ dạng chuỗi số: @Type(() => Number) sẽ biến chuỗi rỗng thành NaN trước khi kịp chuẩn hoá.
   @Transform(toOptionalString)
   @IsOptional()
@@ -232,18 +221,6 @@ class EnvironmentVariables {
   @ValidateIf((environment: EnvironmentVariables) => Boolean(environment.GHN_WEBHOOK_SECRET))
   @Matches(/^\d+$/, { message: 'GHN_WEBHOOK_ACTOR_USER_ID must be a numeric user ID' })
   GHN_WEBHOOK_ACTOR_USER_ID?: string;
-
-  @Transform(toBoolean)
-  @IsBoolean()
-  GHTK_ENABLED = false;
-
-  @ValidateIf((environment: EnvironmentVariables) => environment.GHTK_ENABLED)
-  @IsString()
-  GHTK_API_URL?: string;
-
-  @ValidateIf((environment: EnvironmentVariables) => environment.GHTK_ENABLED)
-  @IsString()
-  GHTK_TOKEN?: string;
 
   @Transform(toBoolean)
   @IsBoolean()

@@ -28,7 +28,6 @@ describe('validateEnvironment', () => {
     expect(environment.SHIPPING_MEDIUM_FEE_VND).toBe(100000);
     expect(environment.SHIPPING_LARGE_FEE_VND).toBe(200000);
     expect(environment.GHN_ENABLED).toBe(false);
-    expect(environment.GHTK_ENABLED).toBe(false);
   });
 
   it('allows development to opt in to permission bypass explicitly', () => {
@@ -85,7 +84,6 @@ describe('validateEnvironment', () => {
 
   it('requires carrier credentials only when that carrier is enabled', () => {
     expect(() => validateEnvironment({ GHN_ENABLED: 'true' })).toThrow('GHN_API_URL');
-    expect(() => validateEnvironment({ GHTK_ENABLED: 'true' })).toThrow('GHTK_API_URL');
   });
 
   it('rejects overlapping default shipping weight tiers', () => {
@@ -150,8 +148,6 @@ describe('biến tuỳ chọn để trống', () => {
   // hiểu là "chưa cấu hình", nếu không ứng dụng sẽ chết ngay lúc khởi động.
   const blankOptionalKeys = [
     'GHN_BASE_URL',
-    'GHN_FROM_DISTRICT_ID',
-    'GHN_FROM_WARD_CODE',
     'GHN_SERVICE_TYPE_ID',
     'GHN_WEBHOOK_SECRET',
     'MAILTRAP_API_TOKEN',
@@ -164,8 +160,8 @@ describe('biến tuỳ chọn để trống', () => {
   });
 
   it('vẫn báo lỗi khi giá trị có nhưng sai định dạng', () => {
-    expect(() => validateEnvironment({ GHN_FROM_DISTRICT_ID: 'abc' })).toThrow(
-      /GHN_FROM_DISTRICT_ID must be numeric/,
+    expect(() => validateEnvironment({ GHN_SERVICE_TYPE_ID: 'abc' })).toThrow(
+      /GHN_SERVICE_TYPE_ID must be a positive integer/,
     );
     expect(() => validateEnvironment({ MAILTRAP_REDIRECT_ALL_TO: 'khong-phai-email' })).toThrow(
       /MAILTRAP_REDIRECT_ALL_TO must be a valid email/,

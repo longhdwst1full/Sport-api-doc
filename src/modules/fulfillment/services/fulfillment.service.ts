@@ -11,6 +11,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { toDatabaseId, toEntityId } from '../../../common/identifiers/entity-id';
 import {
+  PartnerPickupPoint,
   PartnerShipmentResult,
   ShippingPartnerClient,
 } from '../../../integrations/shipping-partner/shipping-partner.client';
@@ -43,7 +44,9 @@ import {
 const DEFAULT_ITEM_WEIGHT_GRAMS = 500;
 
 const fulfillmentInclude = {
-  warehouse: { select: { name: true, branchId: true } },
+  warehouse: {
+    select: { name: true, branchId: true, branch: { select: { addressJson: true } } },
+  },
   order: {
     include: {
       addresses: { orderBy: { id: 'asc' as const }, take: 1 },
@@ -185,11 +188,13 @@ export class FulfillmentService {
       throw new ConflictException('Đơn hàng chưa có địa chỉ giao để tạo vận đơn');
     }
 
+    const pickup = this.branchPickupPoint(fulfillment);
     const isCod = fulfillment.order.checkoutSession.paymentMethod === PAYMENT_METHOD.COD;
     const grandTotal = Math.round(Number(fulfillment.order.grandTotal));
     return this.shippingPartner.createShipment({
       orderId: toEntityId(fulfillment.orderId),
       orderNo: fulfillment.order.orderNo,
+      pickup,
       recipientName: address.recipientName,
       recipientPhone: address.recipientPhone,
       addressLine: address.addressLine,
@@ -218,6 +223,26 @@ export class FulfillmentService {
     }
     const url = await this.shippingPartner.createLabelUrl([fulfillment.trackingNo]);
     return { trackingNo: fulfillment.trackingNo, labelUrl: url };
+  }
+
+  /**
+   * Điểm lấy hàng là địa chỉ chi nhánh sở hữu kho xuất, không phải cấu hình toàn hệ thống:
+   * mỗi chi nhánh giao từ địa chỉ của chính nó. Mã quận/phường do Admin chọn qua API địa giới
+   * của hãng vận chuyển và nằm trong `branches.address_json`.
+   */
+  private branchPickupPoint(fulfillment: LoadedFulfillment): PartnerPickupPoint {
+    const address = fulfillment.warehouse.branch.addressJson as {
+      districtCode?: unknown;
+      wardCode?: unknown;
+    } | null;
+    const districtCode = typeof address?.districtCode === 'string' ? address.districtCode : '';
+    const wardCode = typeof address?.wardCode === 'string' ? address.wardCode : '';
+    if (!districtCode || !wardCode) {
+      throw new ConflictException(
+        'Chi nhánh xuất hàng chưa có mã quận/huyện và phường/xã của hãng vận chuyển',
+      );
+    }
+    return { districtCode, wardCode };
   }
 
   private async cancelPartnerShipment(trackingCode: string, reason: string): Promise<void> {

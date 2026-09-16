@@ -21,6 +21,11 @@ function buildFulfillment(paymentMethod: 'COD' | 'BANK_TRANSFER') {
     id: 5n,
     orderId: 9n,
     warehouseId: 3n,
+    warehouse: {
+      name: 'Kho HCM',
+      branchId: 2n,
+      branch: { addressJson: { districtCode: '1454', wardCode: '21308' } as Record<string, string> },
+    },
     status: 'PACKED',
     version: 1n,
     history: [] as { idempotencyKey: string; requestHash: string }[],
@@ -92,6 +97,8 @@ describe('FulfillmentService partner shipment', () => {
     expect(createShipment).toHaveBeenCalledTimes(1);
     expect(createShipment.mock.calls[0]?.[0]).toMatchObject({
       orderNo: 'DH-0009',
+      // Điểm lấy hàng lấy từ chi nhánh sở hữu kho xuất, không phải từ biến môi trường.
+      pickup: { districtCode: '1454', wardCode: '21308' },
       districtCode: '1489',
       wardCode: '1A0607',
       // COD thu hộ đúng tổng tiền đơn.
@@ -148,5 +155,16 @@ describe('FulfillmentService partner shipment', () => {
     ).rejects.toBeInstanceOf(ConflictException);
 
     expect(cancelShipment).toHaveBeenCalledWith('LXQ7A9', 'Xuất kho thất bại');
+  });
+
+  it('refuses to ship when the branch has no carrier area codes', async () => {
+    const branchWithoutCodes = buildFulfillment('COD');
+    branchWithoutCodes.warehouse.branch.addressJson = {};
+    const { service, createShipment } = buildService({ fulfillment: branchWithoutCodes });
+
+    await expect(
+      service.ship('5', shipInput, 'idem-key-0007', 'req-7', principal),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(createShipment).not.toHaveBeenCalled();
   });
 });

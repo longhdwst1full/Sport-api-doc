@@ -2,7 +2,6 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { GhnRateProvider } from './providers/ghn-rate.provider';
-import { GhtkRateProvider } from './providers/ghtk-rate.provider';
 import { ShippingQuoteService } from './shipping-quote.service';
 import { SYSTEM_PARAMETER_CODE } from '../system/parameters/system-parameter.catalog';
 import { SystemParameterService } from '../system/parameters/system-parameter.service';
@@ -38,7 +37,6 @@ function parameterServiceDouble(overrides: Record<string, number> = {}) {
     prisma,
     config,
     disabledProvider as unknown as GhnRateProvider,
-    disabledProvider as unknown as GhtkRateProvider,
     parameterServiceDouble(),
   );
 
@@ -117,8 +115,7 @@ function parameterServiceDouble(overrides: Record<string, number> = {}) {
       prisma,
       config,
       disabledProvider as unknown as GhnRateProvider,
-      disabledProvider as unknown as GhtkRateProvider,
-      parameterServiceDouble(),
+        parameterServiceDouble(),
     );
 
     await expect(tierService.quoteCandidate({

@@ -5,14 +5,14 @@ const options = {
   baseUrl: 'https://dev-online-gateway.ghn.vn/shiip/public-api',
   token: 'ghn-token',
   shopId: '123456',
-  fromDistrictId: 1442,
-  fromWardCode: '21012',
   serviceTypeId: 2,
   timeoutMs: 5_000,
 };
 
 const validInput = {
   orderId: '9',
+  // Điểm lấy hàng đi kèm từng vận đơn vì mỗi chi nhánh giao từ địa chỉ của chính nó.
+  pickup: { districtCode: '1442', wardCode: '21012' },
   orderNo: 'DH-0009',
   recipientName: 'Nguyễn Văn A',
   recipientPhone: '0912345678',
@@ -67,6 +67,7 @@ describe('GhnShippingPartnerClient', () => {
     expect(body.cod_amount).toBe(450_000);
     expect(body.to_district_id).toBe(1489);
     expect(body.from_district_id).toBe(1442);
+    expect(body.from_ward_code).toBe('21012');
   });
 
   it('marks a prepaid order as sender-paid', async () => {
@@ -90,7 +91,17 @@ describe('GhnShippingPartnerClient', () => {
     expect(body.insurance_value).toBe(2_200_000);
   });
 
-  it('refuses an address without GHN district and ward codes', async () => {
+  it('refuses a branch without GHN district and ward codes', async () => {
+    const fetchMock = mockFetch({ code: 200, data: { order_code: 'LXQ7A9' } });
+    const client = new GhnShippingPartnerClient(options);
+
+    await expect(
+      client.createShipment({ ...validInput, pickup: { districtCode: '', wardCode: '' } }),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('refuses a recipient address without GHN district and ward codes', async () => {
     const fetchMock = mockFetch({ code: 200, data: { order_code: 'LXQ7A9' } });
     const client = new GhnShippingPartnerClient(options);
 

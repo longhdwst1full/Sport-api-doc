@@ -4,8 +4,17 @@ export interface PartnerShipmentItem {
   weightGrams?: number;
 }
 
+/** Điểm lấy hàng: chi nhánh xuất đơn, không phải cấu hình toàn hệ thống. */
+export interface PartnerPickupPoint {
+  /** Mã quận/huyện của hãng vận chuyển, lấy từ địa chỉ chi nhánh. */
+  districtCode: string;
+  /** Mã phường/xã của hãng vận chuyển, lấy từ địa chỉ chi nhánh. */
+  wardCode: string;
+}
+
 export interface CreatePartnerShipmentInput {
   orderId: string;
+  pickup: PartnerPickupPoint;
   /** Mã đơn hiển thị cho khách; đối tác dùng làm client order code để tra cứu hai chiều. */
   orderNo?: string;
   recipientName: string;

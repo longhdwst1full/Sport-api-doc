@@ -24,7 +24,7 @@ export interface ShippingRateQuoteInput {
 }
 
 export interface ExternalShippingRateQuote {
-  provider: 'GHN' | 'GHTK';
+  provider: 'GHN';
   fee: number;
   etaMinDays: number;
   etaMaxDays: number;

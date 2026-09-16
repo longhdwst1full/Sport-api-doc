@@ -19,7 +19,7 @@ Quyết định mới: **ngưỡng nghiệp vụ chuyển sang bảng, bí mật
 | Vào bảng | Ở lại env |
 | --- | --- |
 | Biểu phí giao hàng, bán kính miễn phí | `DATABASE_URL`, `JWT_ACCESS_SECRET` |
-| TTL giữ chỗ, thời gian chờ hoàn tất đơn | Khoá Cloudinary, GHN/GHTK |
+| TTL giữ chỗ, thời gian chờ hoàn tất đơn | Khoá Cloudinary, GHN |
 | Hạn thanh toán, TTL giỏ khách vãng lai | `AUTH_BYPASS`, `CORS_ORIGINS` |
 | TTL giữ suất flash sale | Bật/tắt job, `CRON_SECRET` |
 
