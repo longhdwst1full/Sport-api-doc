@@ -180,6 +180,10 @@ components:
             - DRAFT
             - PUBLISHED
             - ARCHIVED
+        isPublished:
+          type: boolean
+          example: true
+          description: Có hiển thị trên website hay không. Tách khỏi status để ẩn tạm một sản phẩm đang bán mà không phải đẩy về DRAFT.
         version:
           type: number
           example: 0
@@ -236,6 +240,7 @@ components:
         - slug
         - productType
         - status
+        - isPublished
         - version
         - currency
         - variants
@@ -348,6 +353,10 @@ components:
             - DRAFT
             - PUBLISHED
             - ARCHIVED
+        isPublished:
+          type: boolean
+          example: true
+          description: Có hiển thị trên website hay không. Tách khỏi status để ẩn tạm một sản phẩm đang bán mà không phải đẩy về DRAFT.
         version:
           type: number
           example: 0
@@ -371,6 +380,7 @@ components:
         - slug
         - productType
         - status
+        - isPublished
         - version
         - currency
     ProductListMetaDto:

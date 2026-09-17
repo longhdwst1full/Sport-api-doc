@@ -4,6 +4,7 @@ import {
   PublicSystemParameterController,
   SystemParameterController,
 } from './parameters/system-parameter.controller';
+import { IntegrationConfigService } from './parameters/integration-config.service';
 import { SystemParameterService } from './parameters/system-parameter.service';
 import { SystemController } from './system.controller';
 import { SystemService } from './system.service';
@@ -11,7 +12,7 @@ import { SystemService } from './system.service';
 @Module({
   imports: [AuditModule],
   controllers: [SystemController, SystemParameterController, PublicSystemParameterController],
-  providers: [SystemService, SystemParameterService],
-  exports: [SystemParameterService],
+  providers: [SystemService, SystemParameterService, IntegrationConfigService],
+  exports: [SystemParameterService, IntegrationConfigService],
 })
 export class SystemModule {}

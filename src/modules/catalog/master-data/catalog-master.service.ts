@@ -386,6 +386,52 @@ export class CatalogMasterService {
     }
   }
 
+  /**
+   * Nâng các danh mục con lên làm con của `newParentId`.
+   *
+   * INVARIANT: `path` và `depth` là cây đường dẫn vật chất hoá, nên đổi cha phải viết lại cho CẢ
+   * nhánh con chứ không chỉ con trực tiếp; bỏ sót thì cây hiển thị sai và truy vấn theo tiền tố
+   * `path` đếm nhầm sản phẩm.
+   */
+  private async reparentChildren(
+    transaction: Prisma.TransactionClient,
+    categoryId: bigint,
+    newParentId: bigint | null,
+  ): Promise<void> {
+    const children = await transaction.category.findMany({
+      where: { parentId: categoryId },
+      select: { id: true, path: true, depth: true },
+    });
+    if (children.length === 0) return;
+
+    const newParent = newParentId
+      ? await transaction.category.findUnique({
+          where: { id: newParentId },
+          select: { path: true, depth: true },
+        })
+      : null;
+
+    for (const child of children) {
+      const childEntityId = toEntityId(child.id);
+      const newPath = newParent ? `${newParent.path}/${childEntityId}` : childEntityId;
+      const newDepth = newParent ? newParent.depth + 1 : 0;
+      const depthDelta = newDepth - child.depth;
+
+      await transaction.category.update({
+        where: { id: child.id },
+        data: { parentId: newParentId, version: { increment: 1 } },
+      });
+      // Một câu lệnh cho cả nhánh: đổi tiền tố path và dịch depth theo cùng một khoảng.
+      await transaction.$executeRaw(Prisma.sql`
+        UPDATE categories
+        SET path = ${newPath} || SUBSTRING(path FROM ${child.path.length + 1}),
+            depth = depth + ${depthDelta},
+            updated_at = NOW()
+        WHERE path = ${child.path} OR path LIKE ${`${child.path}/%`}
+      `);
+    }
+  }
+
   async changeCategoryStatus(
     id: string,
     status: CategoryDto['status'],
@@ -403,14 +449,10 @@ export class CatalogMasterService {
         if (!parent) throw new UnprocessableEntityException('Parent category is not active');
       }
       if (status === 'INACTIVE') {
-        const activeChildren = await transaction.category.count({
-          where: { parentId: databaseId, status: 'ACTIVE' },
-        });
-        if (activeChildren > 0) {
-          throw new UnprocessableEntityException(
-            'Deactivate active child categories before deactivating this category',
-          );
-        }
+        // Danh mục con được nâng lên cha của danh mục vừa gỡ. Trước đây thao tác bị chặn hẳn khi
+        // còn con, buộc người dùng gỡ thủ công từ dưới lên; làm vậy dễ bỏ sót và có lúc để lại
+        // cả nhánh mồ côi. Danh mục gốc bị gỡ thì con của nó trở thành gốc.
+        await this.reparentChildren(transaction, databaseId, current.parentId);
       }
       const result = await transaction.category.updateMany({
         where: { id: databaseId, version: BigInt(input.expectedVersion) },

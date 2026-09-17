@@ -4,9 +4,9 @@ export const USER_TYPE = {
   SYSTEM: 'SYSTEM',
 } as const;
 
+/** Ba trạng thái tài khoản nhân sự. INVITED đã bỏ: không dòng dữ liệu nào dùng và luồng mời chưa có. */
 export const USER_STATUS = {
   ACTIVE: 'ACTIVE',
-  INVITED: 'INVITED',
   LOCKED: 'LOCKED',
   INACTIVE: 'INACTIVE',
 } as const;

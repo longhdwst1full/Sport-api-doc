@@ -12,6 +12,7 @@ type PostRow = {
   coverAssetId: bigint | null;
   relatedProductSlugs: unknown;
   status: string;
+  isPublished: boolean;
   publishedAt: Date;
   archivedAt: Date | null;
   archiveReason: string | null;
@@ -32,6 +33,7 @@ function post(id: number, overrides: Partial<PostRow> = {}): PostRow {
     coverAssetId: null,
     relatedProductSlugs: ['combo-tap-gym-tai-nha'],
     status: 'PUBLISHED',
+    isPublished: true,
     publishedAt: new Date('2026-08-20T02:00:00.000Z'),
     archivedAt: null,
     archiveReason: null,
@@ -86,7 +88,10 @@ function createPrismaDouble(rows: PostRow[]) {
 describe('CmsService', () => {
   it('chỉ trả bài viết đã xuất bản cho storefront', async () => {
     const service = new CmsService(
-      createPrismaDouble([post(1), post(2, { slug: 'da-luu-tru', status: 'ARCHIVED' })]),
+      createPrismaDouble([
+        post(1),
+        post(2, { slug: 'da-luu-tru', status: 'ARCHIVED', isPublished: false }),
+      ]),
     );
 
     const result = await service.listPublished();

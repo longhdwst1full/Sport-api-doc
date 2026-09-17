@@ -361,6 +361,7 @@ model Product {
   shortDescription String?   @map("short_description")
   description      String?
   status           String    @default("DRAFT") @db.VarChar(24)
+  isPublished      Boolean   @default(false) @map("is_published")
   publishedAt      DateTime? @map("published_at") @db.Timestamptz(6)
   seoJson          Json?     @map("seo_json") @db.JsonB
   version          BigInt    @default(0)
@@ -379,6 +380,7 @@ model Product {
 
   @@index([brandId])
   @@index([status, publishedAt])
+  @@index([isPublished, status], map: "products_is_published_idx")
   @@index([name])
   @@map("products")
 }
@@ -1305,6 +1307,7 @@ model ContentPost {
   coverAssetId        BigInt?   @map("cover_asset_id")
   relatedProductSlugs Json      @default("[]") @map("related_product_slugs") @db.JsonB
   status              String    @default("PUBLISHED") @db.VarChar(24)
+  isPublished         Boolean   @default(true) @map("is_published")
   publishedAt         DateTime  @map("published_at") @db.Timestamptz(6)
   archivedAt          DateTime? @map("archived_at") @db.Timestamptz(6)
   archiveReason       String?   @map("archive_reason") @db.VarChar(255)
@@ -1316,6 +1319,7 @@ model ContentPost {
 
   @@index([status, publishedAt(sort: Desc), id(sort: Desc)])
   @@index([postType, status])
+  @@index([isPublished, publishedAt(sort: Desc)], map: "posts_is_published_idx")
   @@map("posts")
 }
 
@@ -1330,7 +1334,7 @@ model ProductReview {
   title               String    @db.VarChar(255)
   content             String
   verifiedPurchase    Boolean   @default(false) @map("verified_purchase")
-  status              String    @default("PENDING") @db.VarChar(24)
+  status              String    @default("APPROVED") @db.VarChar(24)
   moderationReason    String?   @map("moderation_reason")
   moderatedAt         DateTime? @map("moderated_at") @db.Timestamptz(6)
   moderatedBy         BigInt?   @map("moderated_by")
@@ -1389,6 +1393,7 @@ model SystemParameter {
   status       String   @default("ACTIVE") @db.VarChar(24)
   isPublic     Boolean  @default(false) @map("is_public")
   isSystem     Boolean  @default(false) @map("is_system")
+  isSecret     Boolean  @default(false) @map("is_secret")
   remarks      String?  @db.VarChar(500)
   version      BigInt   @default(0)
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)

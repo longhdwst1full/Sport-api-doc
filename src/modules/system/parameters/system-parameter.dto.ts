@@ -35,6 +35,13 @@ export class SystemParameterDto {
   @ApiProperty({ description: 'Storefront được phép đọc tham số này qua API công khai' }) isPublic: boolean;
   @ApiProperty({ description: 'Tham số hệ thống: code đang đọc theo mã, chỉ sửa được giá trị' })
   isSystem: boolean;
+
+  @ApiProperty({
+    description:
+      'Bí mật nhà cung cấp: giá trị không đọc lại được qua API, chỉ ghi đè. Trường value trả về '
+      + 'dấu che nếu đã cấu hình và chuỗi rỗng nếu chưa.',
+  })
+  isSecret: boolean;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Ghi chú của lần sửa gần nhất' })
   remarks: string | null;
   @ApiProperty() version: string;

@@ -532,7 +532,15 @@ components:
           enum:
             - CASH
             - BANK_TRANSFER
+            - COD
           example: CASH
+        delivery:
+          description: "Bỏ trống: khách nhận ngay tại quầy như cũ. Có giá trị: đơn đi giao hàng, tồn kho vẫn đặt chỗ như luồng checkout của khách."
+          allOf:
+            - $ref: "#/components/schemas/PosDeliveryAddressDto"
+        handOverImmediately:
+          type: boolean
+          description: Chạy luôn hết vòng giao hàng và đánh dấu đã giao. Mặc định bật cho đơn tại quầy và tắt cho đơn giao hàng; bật cho đơn giao hàng khi khách lấy ngay tại cửa hàng.
         note:
           type: string
           maxLength: 1000
@@ -802,6 +810,51 @@ components:
       required:
         - productVariantId
         - quantity
+    PosDeliveryAddressDto:
+      type: object
+      properties:
+        recipient:
+          type: string
+          example: Nguyễn Văn An
+          maxLength: 255
+        phone:
+          type: string
+          example: "0901234567"
+        addressLine:
+          type: string
+          example: 12 Nguyễn Trãi
+          maxLength: 500
+        province:
+          type: string
+          example: Hà Nội
+          maxLength: 255
+        provinceCode:
+          type: string
+          example: "201"
+          maxLength: 32
+          description: Mã tỉnh/thành của hãng vận chuyển
+        district:
+          type: string
+          example: Ba Đình
+          maxLength: 255
+        districtCode:
+          type: string
+          example: "1442"
+          maxLength: 32
+        ward:
+          type: string
+          example: Phúc Xá
+          maxLength: 255
+        wardCode:
+          type: string
+          example: "21012"
+          maxLength: 32
+      required:
+        - recipient
+        - phone
+        - addressLine
+        - province
+        - provinceCode
     OrderRecipientDto:
       type: object
       properties:

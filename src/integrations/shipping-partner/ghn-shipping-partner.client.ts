@@ -13,6 +13,9 @@ export interface GhnShippingPartnerOptions {
   timeoutMs: number;
 }
 
+/** Đọc cấu hình tại thời điểm gọi để token xoay từ màn Admin có hiệu lực ngay. */
+export type GhnOptionsResolver = () => Promise<GhnShippingPartnerOptions | undefined>;
+
 interface GhnEnvelope<TData> {
   code?: number;
   message?: string;
@@ -38,12 +41,24 @@ const GHN_MIN_DIMENSION_CM = 1;
 export class GhnShippingPartnerClient extends ShippingPartnerClient {
   private readonly logger = new Logger(GhnShippingPartnerClient.name);
 
-  constructor(private readonly options: GhnShippingPartnerOptions) {
+  constructor(private readonly resolveOptions: GhnOptionsResolver) {
     super();
   }
 
+  /**
+   * Chỉ nói "có adapter thật hay không". Cấu hình còn thiếu thì lời gọi bên dưới ném 503; không
+   * chặn ở đây vì hàm này đồng bộ còn cấu hình phải đọc bất đồng bộ.
+   */
   isEnabled(): boolean {
     return true;
+  }
+
+  private async options(): Promise<GhnShippingPartnerOptions> {
+    const options = await this.resolveOptions();
+    if (!options?.token || !options.shopId) {
+      throw new ServiceUnavailableException('Shipping partner is not configured');
+    }
+    return options;
   }
 
   async createShipment(input: CreatePartnerShipmentInput): Promise<PartnerShipmentResult> {
@@ -78,7 +93,7 @@ export class GhnShippingPartnerClient extends ShippingPartnerClient {
       length: Math.max(GHN_MIN_DIMENSION_CM, Math.trunc(input.lengthCm ?? GHN_MIN_DIMENSION_CM)),
       width: Math.max(GHN_MIN_DIMENSION_CM, Math.trunc(input.widthCm ?? GHN_MIN_DIMENSION_CM)),
       height: Math.max(GHN_MIN_DIMENSION_CM, Math.trunc(input.heightCm ?? GHN_MIN_DIMENSION_CM)),
-      service_type_id: this.options.serviceTypeId,
+      service_type_id: (await this.options()).serviceTypeId,
       ...(input.note ? { note: input.note } : {}),
       ...(input.items?.length
         ? {
@@ -120,21 +135,23 @@ export class GhnShippingPartnerClient extends ShippingPartnerClient {
       throw new ServiceUnavailableException('GHN did not return a print token');
     }
     // PROVIDER: token in chỉ sống vài phút, nên trả URL cho client mở ngay thay vì lưu lại.
-    return `${this.options.baseUrl.replace(/\/shiip\/public-api$/, '')}/a5/public-api/printA5?token=${data.token}`;
+    const baseUrl = (await this.options()).baseUrl;
+    return `${baseUrl.replace(/\/shiip\/public-api$/, '')}/a5/public-api/printA5?token=${data.token}`;
   }
 
   private async call<TData = unknown>(path: string, body: unknown): Promise<TData> {
+    const options = await this.options();
     let response: Response;
     try {
-      response = await fetch(`${this.options.baseUrl}${path}`, {
+      response = await fetch(`${options.baseUrl}${path}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Token: this.options.token,
-          ShopId: this.options.shopId,
+          Token: options.token,
+          ShopId: options.shopId,
         },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(this.options.timeoutMs),
+        signal: AbortSignal.timeout(options.timeoutMs),
       });
     } catch (error) {
       // PROVIDER: timeout hoặc mất mạng. Không log body vì chứa tên, số điện thoại và địa chỉ khách.

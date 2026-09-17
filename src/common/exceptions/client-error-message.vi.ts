@@ -374,7 +374,6 @@ export const ERROR_KEY = {
   CATALOG_VARIANT_IS_USED_BY_AN_ACTIVE_PUBLISHED_COMBO_ARCHIVE_THE_C: 'Variant is used by an active published combo; archive the combo first',
   CATALOG_PRODUCT_TYPE_CANNOT_CHANGE_AFTER_VARIANTS_HAVE_BEEN_CREATE: 'Product type cannot change after variants have been created',
   CATALOG_PUBLISHED_PRODUCT_REQUIRES_AN_ACTIVE_VARIANT_AND_EFFECTIVE: 'Published product requires an active variant and effective price',
-  CATALOG_DEACTIVATE_ACTIVE_CHILD_CATEGORIES_BEFORE_DEACTIVATING_THI: 'Deactivate active child categories before deactivating this category',
   CATALOG_REPLACEMENT_PRICE_MUST_START_AFTER_THE_CURRENT_PRICE_START: 'Replacement price must start after the current price starts',
 
   // --- MEDIA ---
@@ -717,8 +716,6 @@ const EXACT_MESSAGES: Readonly<Record<string, string>> = {
     'Không đổi được loại sản phẩm sau khi đã tạo phiên bản.',
   [ERROR_KEY.CATALOG_PUBLISHED_PRODUCT_REQUIRES_AN_ACTIVE_VARIANT_AND_EFFECTIVE]:
     'Sản phẩm đăng bán cần có phiên bản đang hoạt động và giá hiệu lực.',
-  [ERROR_KEY.CATALOG_DEACTIVATE_ACTIVE_CHILD_CATEGORIES_BEFORE_DEACTIVATING_THI]:
-    'Hãy ngừng hoạt động các danh mục con trước khi ngừng danh mục này.',
   [ERROR_KEY.CATALOG_REPLACEMENT_PRICE_MUST_START_AFTER_THE_CURRENT_PRICE_START]:
     'Giá mới phải bắt đầu sau thời điểm bắt đầu của giá hiện tại.',
   [ERROR_KEY.MEDIA_MEDIA_SORTORDER_MUST_BE_A_UNIQUE_ZERO_BASED_SEQUENCE]:

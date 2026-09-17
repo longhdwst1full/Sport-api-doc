@@ -62,6 +62,7 @@ components:
             - PAYMENT
             - CART
             - PROMOTION
+            - INTEGRATION
         label:
           type: string
         description:
@@ -97,6 +98,9 @@ components:
         isSystem:
           type: boolean
           description: "Tham số hệ thống: code đang đọc theo mã, chỉ sửa được giá trị"
+        isSecret:
+          type: boolean
+          description: "Bí mật nhà cung cấp: giá trị không đọc lại được qua API, chỉ ghi đè. Trường value trả về dấu che nếu đã cấu hình và chuỗi rỗng nếu chưa."
         remarks:
           type: string
           nullable: true
@@ -122,6 +126,7 @@ components:
         - status
         - isPublic
         - isSystem
+        - isSecret
         - version
         - updatedAt
   securitySchemes:

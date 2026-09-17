@@ -1,6 +1,16 @@
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsEmail,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { ENTITY_ID_OPENAPI } from '../../common/identifiers/entity-id';
 
 /** Khách có tài khoản đăng nhập là MEMBER; khách mua không đăng ký là GUEST. */
@@ -71,6 +81,12 @@ export class AdminCustomerSummaryDto {
   lastOrderAt: string | null;
 
   @ApiProperty() createdAt: string;
+
+  @ApiProperty({
+    example: 3,
+    description: 'Gửi lại làm expectedVersion khi sửa, ngừng hoạt động hoặc xoá',
+  })
+  version: number;
 }
 
 export class AdminCustomerListDto {
@@ -110,4 +126,54 @@ export class AdminCustomerDetailDto extends AdminCustomerSummaryDto {
 
   @ApiProperty({ type: [AdminCustomerOrderDto], description: 'Tối đa 20 đơn gần nhất' })
   recentOrders: AdminCustomerOrderDto[];
+}
+
+export class CreateAdminCustomerDto {
+  @ApiProperty({ example: 'Nguyễn Minh Anh', maxLength: 255 })
+  @IsString() @MaxLength(255)
+  name: string;
+
+  @ApiPropertyOptional({ example: '0912345678', maxLength: 32 })
+  @IsOptional() @IsString() @MaxLength(32)
+  phone?: string;
+
+  @ApiPropertyOptional({ example: 'minh.anh@example.com', maxLength: 255 })
+  @IsOptional() @IsEmail({}, { message: 'Email không hợp lệ' }) @MaxLength(255)
+  email?: string;
+
+  @ApiPropertyOptional({ default: false, description: 'Khách đồng ý nhận tin khuyến mãi' })
+  @IsOptional() @IsBoolean()
+  marketingConsent?: boolean;
+}
+
+export class UpdateAdminCustomerDto {
+  @ApiProperty({ minimum: 0, description: 'Version khách hàng mà Admin đang xem' })
+  @Type(() => Number) @IsInt() @Min(0)
+  expectedVersion: number;
+
+  @ApiPropertyOptional({ maxLength: 255 })
+  @IsOptional() @IsString() @MaxLength(255)
+  name?: string;
+
+  @ApiPropertyOptional({ maxLength: 32, description: 'Gửi chuỗi rỗng để xoá số điện thoại' })
+  @IsOptional() @IsString() @MaxLength(32)
+  phone?: string;
+
+  @ApiPropertyOptional({ maxLength: 255, description: 'Gửi chuỗi rỗng để xoá email' })
+  @IsOptional() @IsString() @MaxLength(255)
+  email?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional() @IsBoolean()
+  marketingConsent?: boolean;
+}
+
+export class CustomerStatusCommandDto {
+  @ApiProperty({ minimum: 0, description: 'Version khách hàng mà Admin đang xem' })
+  @Type(() => Number) @IsInt() @Min(0)
+  expectedVersion: number;
+
+  @ApiPropertyOptional({ maxLength: 500, description: 'Lý do, lưu lại để truy vết' })
+  @IsOptional() @IsString() @MaxLength(500)
+  reason?: string;
 }

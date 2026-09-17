@@ -1,10 +1,10 @@
 # Order module — maintenance note
 
-> **Document version:** 1.3.0
+> **Document version:** 1.4.0
 >
-> **Last updated:** 2026-09-13
+> **Last updated:** 2026-09-17
 >
-> **Change summary:** Thêm Admin confirm và worker auto-complete sau hold time cấu hình.
+> **Change summary:** Nhân viên lập đơn có giao hàng, thêm COD và tuỳ chọn giao ngay; màn Bán tại quầy gộp vào Đơn hàng.
 
 ## Phạm vi hiện tại
 
@@ -15,6 +15,7 @@
 - Admin được manual complete bất kỳ thời điểm nào sau khi Order/Fulfillment đã `DELIVERED` và Payment `SUCCESS`; reason + audit bắt buộc. Auto-complete 72 giờ thuộc worker ở wave Fulfillment.
 - Admin confirm Order sau khi payment policy hợp lệ; Fulfillment đảm nhiệm pick/pack/ship/delivery. Return/refund đầy đủ thuộc wave tiếp theo.
 - Worker auto-complete chạy sau hold time; manual complete vẫn giữ điều kiện DELIVERED + SUCCESS + reason/audit.
+- Nhân viên lập đơn hộ khách qua `createPosOrder`: bỏ trống `delivery` là khách nhận tại quầy, có `delivery` là đơn đi giao hàng. Cả hai nhánh dùng chung đường đặt chỗ tồn kho của checkout, không có luồng trừ kho riêng.
 
 ## Cấu trúc
 
@@ -23,6 +24,7 @@
 | `controllers/order.controller.ts` | Guest/Account placement/read/cancel và Admin read/transition contract. |
 | `dto/order.dto.ts` | OpenAPI DTO, page/search/status group và response snapshot. |
 | `services/order.service.ts` | Ownership, idempotency, transaction, snapshot và branch scope. |
+| `services/pos-order.service.ts` | Nhân viên lập đơn: danh mục bán, đặt chỗ tồn, thu tiền và giao ngay nếu được chọn. |
 | `services/order-completion.service.ts` | Claim và auto-complete Order đã giao/đã thu tiền sau hold time. |
 | `controllers/order-maintenance.controller.ts` | Internal cron endpoint; không thuộc OpenAPI FE. |
 | `order.constants.ts` | Status, status-group, payment/fulfillment state và audit action. |
@@ -40,6 +42,10 @@
 - Cancel lock theo `order → reservation → inventory_balances(sorted variant_id)` và release counter/history/audit trong cùng serializable transaction.
 - Complete sớm không tự suy diễn payment; cả ba state `DELIVERED/SUCCESS/DELIVERED` phải đúng tại thời điểm lock.
 - Client/Admin chỉ dùng SDK sinh từ OpenAPI, không tự khai báo path/DTO.
+- `resolveOrderCreationPlan` là nơi duy nhất quyết định ba việc của đơn nhân viên lập: thu tiền ngay hay không, giao ngay hay không, và phương thức giao. Sửa quy tắc phải sửa ở đó, đừng rải điều kiện vào `create`.
+- COD chỉ dành cho đơn có giao hàng và **không** ghi nhận đã thu: tiền về lúc giao, đánh dấu SUCCESS sớm sẽ làm báo cáo doanh thu đếm tiền chưa có.
+- Đơn tại quầy mặc định chạy hết vòng giao hàng; đơn giao hàng mặc định dừng lại cho kho xử lý, trừ khi nhân viên bật `handOverImmediately` vì khách lấy ngay tại cửa hàng.
+- Đơn có giao hàng dùng `STANDARD_DELIVERY` và snapshot địa chỉ của khách; đơn tại quầy dùng `BRANCH_FREE` và snapshot địa chỉ chi nhánh — không bịa địa chỉ giao cho khách cầm hàng về.
 
 ## Checklist khi sửa
 
@@ -54,6 +60,7 @@
 
 | Version | Date | Change summary | Source |
 | --- | --- | --- | --- |
+| 1.4.0 | 2026-09-17 | Đơn nhân viên lập có địa chỉ giao, COD và tuỳ chọn giao ngay; quy tắc gom vào `resolveOrderCreationPlan`. | API-20260917-STAFF-DELIVERY-ORDER |
 | 1.3.0 | 2026-09-13 | Admin confirm và worker auto-complete sau hold time. | DBAPI-20260913-FULFILLMENT-S43 |
 | 1.2.0 | 2026-09-12 | Bỏ giới hạn complete trong ngày; giữ DELIVERED, Payment SUCCESS, reason và audit. | API-20260912-ORDER-GUEST-HARDENING |
 | 1.1.1 | 2026-09-11 | Bổ sung expectedVersion vào transition hash, list projection và test branch scope/replay conflict. | API-20260911-ORDER-S41-HARDENING |

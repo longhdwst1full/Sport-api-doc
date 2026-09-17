@@ -9,132 +9,91 @@ servers:
   - url: http://localhost:4000
     description: Local
 paths:
-  /api/v1/content/posts:
+  /api/v1/shipping/areas/provinces:
     get:
-      operationId: listPublishedPosts
-      parameters:
-        - name: postType
-          required: false
-          in: query
-          description: Lọc theo loại bài viết. Bỏ trống để lấy tất cả.
-          schema:
-            type: string
-            enum:
-              - NEWS
-              - TRAINING_GUIDE
-              - PRODUCT_GUIDE
-              - ABOUT
-              - POLICY
+      operationId: listShippingProvinces
+      parameters: []
       responses:
         "200":
           description: ""
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ContentPostListDto"
-      summary: List published content posts
-      tags:
-        - Storefront Content
-  /api/v1/content/posts/{slug}:
-    get:
-      operationId: getPublishedPost
-      parameters:
-        - name: slug
-          required: true
-          in: path
-          schema:
-            type: string
-      responses:
-        "200":
-          description: ""
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ContentPostDto"
-        "404":
+                $ref: "#/components/schemas/ShippingAreaListDto"
+        "503":
           description: ""
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponseDto"
-      summary: Get a published post by slug
+      summary: Danh sách tỉnh/thành theo mã của hãng vận chuyển
       tags:
-        - Storefront Content
+        - Shipping Areas
+  /api/v1/shipping/areas/districts:
+    get:
+      operationId: listShippingDistricts
+      parameters:
+        - name: provinceCode
+          required: true
+          in: query
+          description: Mã tỉnh/thành do endpoint provinces trả về
+          schema:
+            example: "201"
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShippingAreaListDto"
+        "503":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      summary: Danh sách quận/huyện của một tỉnh/thành
+      tags:
+        - Shipping Areas
+  /api/v1/shipping/areas/wards:
+    get:
+      operationId: listShippingWards
+      parameters:
+        - name: districtCode
+          required: true
+          in: query
+          description: Mã quận/huyện do endpoint districts trả về
+          schema:
+            example: "1442"
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShippingAreaListDto"
+        "503":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      summary: Danh sách phường/xã của một quận/huyện
+      tags:
+        - Shipping Areas
 components:
   schemas:
-    ContentPostListDto:
+    ShippingAreaListDto:
       type: object
       properties:
         items:
           type: array
           items:
-            $ref: "#/components/schemas/ContentPostDto"
-        total:
-          type: number
+            $ref: "#/components/schemas/ShippingAreaDto"
       required:
         - items
-        - total
-    ContentPostDto:
-      type: object
-      properties:
-        id:
-          type: string
-        slug:
-          type: string
-        postType:
-          type: string
-          enum:
-            - NEWS
-            - TRAINING_GUIDE
-            - PRODUCT_GUIDE
-            - ABOUT
-            - POLICY
-        isPublished:
-          type: boolean
-          example: true
-          description: Có hiển thị trên website hay không; tách khỏi status để ẩn tạm bài viết
-        title:
-          type: string
-        excerpt:
-          type: string
-        body:
-          type: string
-        coverUrl:
-          type: string
-          format: uri
-        relatedProductSlugs:
-          type: array
-          items:
-            type: string
-        publishedAt:
-          type: string
-          format: date-time
-        status:
-          type: string
-          enum:
-            - PUBLISHED
-            - ARCHIVED
-        version:
-          type: number
-          minimum: 0
-        archivedAt:
-          type: string
-          format: date-time
-        archiveReason:
-          type: string
-      required:
-        - id
-        - slug
-        - postType
-        - isPublished
-        - title
-        - excerpt
-        - body
-        - coverUrl
-        - relatedProductSlugs
-        - publishedAt
-        - status
-        - version
     ErrorResponseDto:
       type: object
       properties:
@@ -169,6 +128,19 @@ components:
         - path
         - method
         - timestamp
+    ShippingAreaDto:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "1442"
+          description: Mã địa giới của hãng vận chuyển; lưu vào districtCode/wardCode của địa chỉ
+        name:
+          type: string
+          example: Quận Ba Đình
+      required:
+        - code
+        - name
     ErrorDetailDto:
       type: object
       properties:

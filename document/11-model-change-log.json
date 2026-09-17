@@ -3186,6 +3186,165 @@
         "test:admin/src/core/auth/permission-coverage.test.ts"
       ],
       "targets": []
+    },
+    {
+      "id": "API-20260916-MAILTRAP-EMAIL",
+      "date": "2026-09-16",
+      "scope": "API",
+      "summary": "Dựng cổng gửi email đầu tiên qua Mailtrap theo pattern port/adapter của ObjectStorage. Thiếu cấu hình thì rơi về DisabledEmailClient ném 503 rõ ràng thay vì im lặng nuốt email. Ngoài production mọi người nhận bị đổi hướng về hộp thư kiểm thử để không gửi nhầm khách thật. Bổ sung ba mã lỗi email vào bảng dịch tiếng Việt.",
+      "sources": [
+        "source:src/integrations/email/mailtrap-email.client.ts",
+        "source:src/config/mailtrap.config.ts",
+        "test:src/integrations/email/mailtrap-email.client.spec.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260916-GHN-SHIPPING",
+      "date": "2026-09-16",
+      "scope": "API",
+      "summary": "Nối hãng vận chuyển GHN: tạo và huỷ vận đơn khi ship, webhook đồng bộ trạng thái giao hàng, in phiếu giao và proxy danh mục địa giới. Vận đơn tạo ngoài transaction kèm huỷ bù vì gọi HTTP trong transaction sẽ giữ khoá tồn kho và mỗi lần serializable retry sẽ tạo vận đơn trùng. Điểm lấy hàng đọc từ địa chỉ chi nhánh sở hữu kho xuất, không phải biến môi trường. Bỏ tích hợp GHTK. Bổ sung mã lỗi vận chuyển vào bảng dịch tiếng Việt.",
+      "sources": [
+        "source:src/integrations/shipping-partner/ghn-shipping-partner.client.ts",
+        "source:src/modules/fulfillment/services/carrier-status-sync.service.ts",
+        "source:src/modules/shipping/shipping-area.service.ts",
+        "OpenAPI:createAdminFulfillmentLabel/listShippingProvinces/listShippingDistricts/listShippingWards",
+        "test:src/integrations/shipping-partner/ghn-shipping-partner.client.spec.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260917-CUSTOMER-ADMIN-CRUD",
+      "date": "2026-09-17",
+      "scope": "API",
+      "summary": "Admin tạo, sửa, ngừng hoạt động, mở lại và xoá hồ sơ khách hàng. Xoá chỉ áp dụng cho khách chưa phát sinh đơn và chưa có tài khoản đăng nhập; khách đã mua hàng chỉ ngừng được để không mất gốc lịch sử đơn. AdminCustomerSummaryDto bổ sung version cho optimistic locking.",
+      "sources": [
+        "source:src/modules/customer/admin-customer.controller.ts",
+        "source:src/modules/customer/admin-customer.service.ts",
+        "OpenAPI:createAdminCustomer/updateAdminCustomer/deactivateAdminCustomer/activateAdminCustomer/deleteAdminCustomer",
+        "test:src/modules/customer/admin-customer-mutations.spec.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260917-CATEGORY-REPARENT-ON-DELETE",
+      "date": "2026-09-17",
+      "scope": "API",
+      "summary": "Gỡ danh mục không còn bị chặn khi còn danh mục con: con được nâng lên làm con của cha, path/depth của cả nhánh được viết lại trong cùng transaction. Danh mục gốc bị gỡ thì con của nó trở thành gốc.",
+      "sources": [
+        "source:src/modules/catalog/master-data/catalog-master.service.ts",
+        "OpenAPI:deleteAdminCategory/deactivateAdminCategory",
+        "test:src/modules/catalog/master-data/catalog-master.service.spec.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260917-CONTENT-POST-UPDATE",
+      "date": "2026-09-17",
+      "scope": "API",
+      "summary": "Bổ sung updateAdminPost để sửa bài viết đã đăng theo expectedVersion. Bài đã lưu trữ không sửa được vì không còn hiển thị trên website. Trùng slug trả 409.",
+      "sources": [
+        "source:src/modules/cms/cms.controller.ts",
+        "source:src/modules/cms/cms.service.ts",
+        "OpenAPI:updateAdminPost",
+        "test:src/modules/cms/cms-update.spec.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "DB-20260917-IS-PUBLISHED-FLAG",
+      "date": "2026-09-17",
+      "scope": "DATABASE+API",
+      "summary": "Thêm cột is_published cho products và posts, đặt cạnh status chứ không thay thế. status giữ vòng đời nghiệp vụ (DRAFT/PUBLISHED/ARCHIVED), is_published trả lời câu hỏi có hiển thị trên website hay không, nhờ đó ẩn tạm một bản ghi không phải đẩy nó về DRAFT. Backfill từ status hiện có nên hành vi hiển thị không đổi; Storefront lọc thêm theo cờ; đưa về DRAFT/ARCHIVED sẽ tắt cờ.",
+      "sources": [
+        "migration:20260917100000_add_is_published_flag",
+        "source:src/modules/catalog/products/services/products.service.ts",
+        "source:src/modules/cms/cms.service.ts",
+        "OpenAPI:updateAdminProduct/updateAdminPost"
+      ],
+      "targets": [
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "products",
+            "Tên cột": "status"
+          },
+          "columns": [
+            "Ý nghĩa / trạng thái cho phép"
+          ],
+          "set": {
+            "Ý nghĩa / trạng thái cho phép": "Vòng đời DRAFT/PUBLISHED/ARCHIVED; hiển thị website do cột is_published quyết định"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "posts",
+            "Tên cột": "status"
+          },
+          "columns": [
+            "Ý nghĩa / trạng thái cho phép"
+          ],
+          "set": {
+            "Ý nghĩa / trạng thái cho phép": "Vòng đời PUBLISHED/ARCHIVED; hiển thị website do cột is_published quyết định"
+          }
+        }
+      ]
+    },
+    {
+      "id": "API-20260917-STAFF-DELIVERY-ORDER",
+      "date": "2026-09-17",
+      "scope": "API",
+      "summary": "Nhân viên lập đơn có giao hàng: CreatePosOrderDto nhận thêm delivery (địa chỉ kèm mã địa giới hãng vận chuyển) và handOverImmediately. Bổ sung COD vào phương thức thanh toán; COD để payment ở trạng thái chờ vì thu tiền lúc giao. Đơn giao hàng dùng shippingMethod STANDARD_DELIVERY và không tự chạy hết vòng giao, trừ khi nhân viên chọn khách lấy ngay. Tồn kho vẫn đi qua đặt chỗ như luồng checkout của khách. Danh mục địa giới được đưa vào cả slice admin lẫn storefront.",
+      "sources": [
+        "source:src/modules/order/services/pos-order.service.ts",
+        "source:src/modules/order/dto/pos-order.dto.ts",
+        "OpenAPI:createPosOrder/listShippingProvinces/listShippingDistricts/listShippingWards",
+        "test:src/modules/order/services/pos-order.service.spec.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "DB-20260917-REVIEW-NO-APPROVAL-GATE",
+      "date": "2026-09-17",
+      "scope": "DATABASE+API",
+      "summary": "Đánh giá không còn chờ duyệt: product_reviews.status mặc định APPROVED thay vì PENDING, các dòng PENDING được đẩy sang APPROVED. Storefront lọc theo 'khác REJECTED' thay vì chỉ APPROVED, nên đánh giá mới hiện ngay còn Admin vẫn gỡ được nội dung xấu. Trạng thái PENDING bị bỏ khỏi contract.",
+      "sources": [
+        "migration:20260917140000_reviews_publish_without_approval",
+        "source:src/modules/review/review.service.ts",
+        "OpenAPI:listProductReviews/moderateAdminReview",
+        "test:src/modules/review/review.service.spec.ts"
+      ],
+      "targets": [
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "product_reviews",
+            "Tên cột": "status"
+          },
+          "columns": [
+            "Default",
+            "Ý nghĩa / trạng thái cho phép"
+          ],
+          "set": {
+            "Default": "APPROVED",
+            "Ý nghĩa / trạng thái cho phép": "APPROVED hiển thị ngay khi gửi; REJECTED là đã bị Admin gỡ. Không còn PENDING."
+          }
+        }
+      ]
+    },
+    {
+      "id": "DB-20260917-INTEGRATION-CONFIG-PARAMETERS",
+      "date": "2026-09-17",
+      "scope": "DATABASE+API",
+      "summary": "Cấu hình tích hợp GHN, VNPay, Mailtrap, Cloudinary và Telegram chuyển vào system_parameters nhóm INTEGRATION (24 tham số, 7 trong đó là bí mật). Thêm cột is_secret kèm CHECK loại trừ với is_public: giá trị bí mật không trả ra API đọc, gửi lại dấu che thì giữ giá trị cũ, và audit không chép giá trị bí mật. Backend đọc tham số trước, biến môi trường là fallback nên môi trường chưa cấu hình vẫn chạy. Adapter Mailtrap và GHN đọc cấu hình tại thời điểm dùng thay vì lúc khởi tạo module để đổi từ Admin có hiệu lực ngay. Đồng thời bổ sung bảng system_parameters vào DBML và table catalog — bảng này trước đó chưa được tài liệu hoá.",
+      "sources": [
+        "migration:20260917160000_system_parameter_secret_flag",
+        "source:src/modules/system/parameters/system-parameter.catalog.ts",
+        "source:src/modules/system/parameters/integration-config.service.ts",
+        "test:src/modules/system/parameters/system-parameter.service.spec.ts"
+      ],
+      "targets": []
     }
   ]
 }

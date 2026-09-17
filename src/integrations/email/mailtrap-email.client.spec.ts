@@ -6,11 +6,14 @@ jest.mock('mailtrap', () => ({
   MailtrapClient: jest.fn().mockImplementation(() => ({ send })),
 }));
 
-const options = {
+const OPTIONS = {
   token: 'test-token-0123456789',
   senderEmail: 'hello@demomailtrap.co',
   senderName: 'Bảo An Sport',
 };
+
+/** Cấu hình giờ đọc tại thời điểm gửi, nên client nhận một hàm thay vì object cố định. */
+const options = () => Promise.resolve(OPTIONS);
 
 describe('MailtrapEmailClient', () => {
   beforeEach(() => {
@@ -31,7 +34,7 @@ describe('MailtrapEmailClient', () => {
     expect(result).toEqual({ provider: 'MAILTRAP', messageIds: ['msg-1'] });
     expect(send).toHaveBeenCalledWith(
       expect.objectContaining({
-        from: { email: options.senderEmail, name: options.senderName },
+        from: { email: 'hello@demomailtrap.co', name: 'Bảo An Sport' },
         to: [{ email: 'khach@example.com', name: 'Khách' }],
         subject: 'Đơn hàng đã xác nhận',
         category: 'Order',
@@ -40,7 +43,9 @@ describe('MailtrapEmailClient', () => {
   });
 
   it('redirects every recipient to the test inbox outside production', async () => {
-    const client = new MailtrapEmailClient({ ...options, redirectAllTo: 'qa@example.com' });
+    const client = new MailtrapEmailClient(() =>
+      Promise.resolve({ ...OPTIONS, redirectAllTo: 'qa@example.com' }),
+    );
 
     await client.send({
       to: [{ email: 'khach@example.com' }, { email: 'khac@example.com' }],

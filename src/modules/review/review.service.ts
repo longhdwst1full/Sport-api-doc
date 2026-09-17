@@ -19,9 +19,10 @@ export class ReviewService {
   constructor(private readonly prisma: PrismaService) {}
 
   async listApproved(productSlug: string): Promise<ProductReviewListDto> {
-    // Storefront chỉ thấy nội dung đã được kiểm duyệt (rule commerce-content-media).
+    // Đánh giá hiển thị ngay, không chờ duyệt: Storefront ẩn đúng thứ Admin đã gỡ (REJECTED).
+    // Lọc theo 'APPROVED' như trước sẽ giấu luôn đánh giá mới nếu sau này có trạng thái trung gian.
     const rows = await this.prisma.productReview.findMany({
-      where: { productSlug: productSlug.trim(), status: 'APPROVED' },
+      where: { productSlug: productSlug.trim(), status: { not: 'REJECTED' } },
       include: reviewInclude,
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     });

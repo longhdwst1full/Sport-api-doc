@@ -4,6 +4,7 @@ import {
   ArrayMaxSize,
   ArrayNotEmpty,
   IsArray,
+  IsBoolean,
   IsEmail,
   IsIn,
   IsInt,
@@ -18,9 +19,54 @@ import {
 } from 'class-validator';
 import { ENTITY_ID_OPENAPI, IsEntityId } from '../../../common/identifiers/entity-id';
 
-/** Bán tại quầy thu tiền ngay; không có COD vì khách cầm hàng về luôn. */
-export const POS_PAYMENT_METHODS = ['CASH', 'BANK_TRANSFER'] as const;
+/**
+ * Cách thu tiền cho đơn do nhân viên lập.
+ *
+ * CASH và BANK_TRANSFER là thu ngay tại quầy. COD chỉ dùng cho đơn có giao hàng: tiền thu khi
+ * giao, nên đơn được tạo ở trạng thái chờ thanh toán chứ không ghi nhận đã thu.
+ */
+export const POS_PAYMENT_METHODS = ['CASH', 'BANK_TRANSFER', 'COD'] as const;
 export type PosPaymentMethod = (typeof POS_PAYMENT_METHODS)[number];
+
+/** Địa chỉ giao cho đơn nhân viên lập hộ khách; bỏ trống nghĩa là khách nhận ngay tại quầy. */
+export class PosDeliveryAddressDto {
+  @ApiProperty({ example: 'Nguyễn Văn An', maxLength: 255 })
+  @IsString() @IsNotEmpty() @MaxLength(255)
+  recipient: string;
+
+  @ApiProperty({ example: '0901234567' })
+  @IsString()
+  @Matches(/^0\d{8,10}$/, { message: 'Số điện thoại phải bắt đầu bằng 0 và có 9-11 chữ số' })
+  phone: string;
+
+  @ApiProperty({ example: '12 Nguyễn Trãi', maxLength: 500 })
+  @IsString() @IsNotEmpty() @MaxLength(500)
+  addressLine: string;
+
+  @ApiProperty({ example: 'Hà Nội', maxLength: 255 })
+  @IsString() @IsNotEmpty() @MaxLength(255)
+  province: string;
+
+  @ApiProperty({ example: '201', maxLength: 32, description: 'Mã tỉnh/thành của hãng vận chuyển' })
+  @IsString() @IsNotEmpty() @MaxLength(32)
+  provinceCode: string;
+
+  @ApiPropertyOptional({ example: 'Ba Đình', maxLength: 255 })
+  @IsOptional() @IsString() @MaxLength(255)
+  district?: string;
+
+  @ApiPropertyOptional({ example: '1442', maxLength: 32 })
+  @IsOptional() @IsString() @MaxLength(32)
+  districtCode?: string;
+
+  @ApiPropertyOptional({ example: 'Phúc Xá', maxLength: 255 })
+  @IsOptional() @IsString() @MaxLength(255)
+  ward?: string;
+
+  @ApiPropertyOptional({ example: '21012', maxLength: 32 })
+  @IsOptional() @IsString() @MaxLength(32)
+  wardCode?: string;
+}
 
 export class PosCustomerDto {
   @ApiProperty({ example: 'Nguyễn Văn An', maxLength: 255 })
@@ -63,6 +109,23 @@ export class CreatePosOrderDto {
   @ApiProperty({ enum: POS_PAYMENT_METHODS, example: 'CASH' })
   @IsIn(POS_PAYMENT_METHODS)
   paymentMethod: PosPaymentMethod;
+
+  @ApiPropertyOptional({
+    type: PosDeliveryAddressDto,
+    description:
+      'Bỏ trống: khách nhận ngay tại quầy như cũ. Có giá trị: đơn đi giao hàng, tồn kho vẫn đặt '
+      + 'chỗ như luồng checkout của khách.',
+  })
+  @IsOptional() @ValidateNested() @Type(() => PosDeliveryAddressDto)
+  delivery?: PosDeliveryAddressDto;
+
+  @ApiPropertyOptional({
+    description:
+      'Chạy luôn hết vòng giao hàng và đánh dấu đã giao. Mặc định bật cho đơn tại quầy và tắt '
+      + 'cho đơn giao hàng; bật cho đơn giao hàng khi khách lấy ngay tại cửa hàng.',
+  })
+  @IsOptional() @IsBoolean()
+  handOverImmediately?: boolean;
 
   @ApiPropertyOptional({
     maxLength: 1000,

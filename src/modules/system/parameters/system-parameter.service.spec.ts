@@ -70,3 +70,93 @@ describe('SystemParameterService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 });
+
+describe('SystemParameterService với tham số bí mật', () => {
+  const secretRow = {
+    id: 1n,
+    code: 'GHN_TOKEN',
+    groupCode: 'INTEGRATION',
+    label: 'Token GHN',
+    description: null,
+    valueType: 'STRING',
+    value: 'token-that-cua-ghn',
+    defaultValue: '',
+    minValue: null,
+    maxValue: null,
+    unit: null,
+    status: 'ACTIVE',
+    isPublic: false,
+    isSystem: true,
+    isSecret: true,
+    remarks: null,
+    version: 3n,
+    updatedAt: new Date('2026-09-17T00:00:00.000Z'),
+    updatedBy: null,
+  };
+
+  function buildService(row = secretRow) {
+    const update = jest.fn(
+      (args: { data: Record<string, unknown> }): Promise<typeof secretRow> => {
+        void args;
+        return Promise.resolve({ ...row, version: row.version + 1n });
+      },
+    );
+    const auditWrite = jest.fn((entry: Record<string, unknown>): Promise<void> => {
+      void entry;
+      return Promise.resolve();
+    });
+    const prisma = {
+      isEnabled: () => true,
+      systemParameter: {
+        findMany: jest.fn().mockResolvedValue([row]),
+        count: jest.fn().mockResolvedValue(1),
+        findUnique: jest.fn().mockResolvedValue(row),
+        update,
+      },
+      $transaction: jest.fn((work: (client: unknown) => unknown) =>
+        work({ systemParameter: { findUnique: () => Promise.resolve(row), update } }),
+      ),
+    } as unknown as PrismaService;
+    const service = new SystemParameterService(prisma, {
+      write: auditWrite,
+    } as unknown as AuditWriter);
+    return { service, update, auditWrite };
+  }
+
+  it('không trả giá trị bí mật ra API đọc', async () => {
+    const { service } = buildService();
+
+    const listed = await service.list({ page: 1, limit: 20 } as never);
+
+    expect(listed.items[0].value).not.toContain('token-that-cua-ghn');
+    // Vẫn phải nói được là đã cấu hình hay chưa.
+    expect(listed.items[0].value).toBeTruthy();
+    expect(listed.items[0].isSecret).toBe(true);
+  });
+
+  it('gửi lại dấu che thì giữ nguyên giá trị cũ, không ghi dấu chấm thành token', async () => {
+    const { service, update } = buildService();
+
+    await service.update(
+      'GHN_TOKEN',
+      { value: '••••••••', expectedVersion: 3, reason: 'Không đổi token' } as never,
+      { requestId: 'r1', actorUserId: '2' } as never,
+    );
+
+    expect(update.mock.calls[0]?.[0].data.value).toBe('token-that-cua-ghn');
+  });
+
+  it('không chép giá trị bí mật vào audit', async () => {
+    const { service, auditWrite } = buildService();
+
+    await service.update(
+      'GHN_TOKEN',
+      { value: 'token-moi', expectedVersion: 3, reason: 'Xoay token' } as never,
+      { requestId: 'r1', actorUserId: '2' } as never,
+    );
+
+    const entry = JSON.stringify(auditWrite.mock.calls[0]?.[0] ?? {});
+    expect(entry).not.toContain('token-that-cua-ghn');
+    expect(entry).not.toContain('token-moi');
+  });
+});

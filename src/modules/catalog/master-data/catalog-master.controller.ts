@@ -166,7 +166,7 @@ export class CatalogMasterController {
   @Post('categories/:id/deactivate')
   @HttpCode(HttpStatus.OK)
   @RequirePermissions('catalog.category.manage')
-  @ApiOperation({ operationId: 'deactivateAdminCategory', summary: 'Deactivate a leaf category' })
+  @ApiOperation({ operationId: 'deactivateAdminCategory', summary: 'Ngừng danh mục và nâng danh mục con lên làm con của cha nó' })
   @ApiOkResponse({ type: CategoryDto })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
   @ApiConflictResponse({ type: ErrorResponseDto })
@@ -184,7 +184,8 @@ export class CatalogMasterController {
   @RequirePermissions('catalog.category.manage')
   @ApiOperation({
     operationId: 'deleteAdminCategory',
-    summary: 'Logically delete a leaf category by changing its status to INACTIVE',
+    summary:
+      'Gỡ danh mục: chuyển trạng thái INACTIVE và nâng các danh mục con lên làm con của cha nó',
   })
   @ApiOkResponse({ type: CategoryDto })
   @ApiBadRequestResponse({ type: ErrorResponseDto })

@@ -1,10 +1,10 @@
 # Admin và Storefront API v1 contract integration
 
-> **Document version:** 1.6.0
+> **Document version:** 1.7.0
 >
 > **Last updated:** 2026-09-15
 >
-> **Change summary:** Xuất quyền yêu cầu của từng operation ra OpenAPI qua `x-required-permissions` để Admin canh UI theo contract.
+> **Change summary:** Bổ sung CRUD khách hàng, sửa bài viết, cờ hiển thị sản phẩm/bài viết, đơn nhân viên lập có giao hàng, vận đơn GHN và danh mục địa giới.
 
 ## Nguyên tắc đã áp dụng
 
@@ -34,12 +34,12 @@
 | Tạo account cấp dưới + branch role | `POST /api/v1/admin/iam/users` | `createAdminStaffUser` | `iam.user.manage` — OWNER duy nhất | Chỉ BRANCH_MANAGER/STAFF |
 | Xóa logic account cấp dưới | `DELETE /api/v1/admin/iam/users/{userId}` | `deleteAdminStaffUser` | `iam.user.manage` — OWNER duy nhất | Chuyển LOCKED, revoke session và audit; cấm OWNER |
 | CRUD lifecycle brand | `GET/POST/PATCH/DELETE` + `POST .../{id}/activate|deactivate` | `list/create/update/delete/activate/deactivateAdminBrand` | `catalog.brand.view/manage` | `DELETE` chuyển `INACTIVE`; không xóa row |
-| CRUD lifecycle category | `GET/POST/PATCH/DELETE` + `POST .../{id}/activate|deactivate` | `list/create/update/delete/activate/deactivateAdminCategory` | `catalog.category.view/manage` | `DELETE` chuyển leaf category sang `INACTIVE`; chặn khi còn child active |
+| CRUD lifecycle category | `GET/POST/PATCH/DELETE` + `POST .../{id}/activate|deactivate` | `list/create/update/delete/activate/deactivateAdminCategory` | `catalog.category.view/manage` | `DELETE` chuyển `INACTIVE` và nâng danh mục con lên cha; danh mục gốc bị gỡ thì con thành gốc |
 | Product SPU create/update/detail | `POST/PATCH/GET /api/v1/admin/products...` | `create/update/getAdminProduct` | `catalog.product.manage/view` | Product create/edit drawer + workflow detail |
 | Điều chỉnh kho | `POST /api/v1/admin/inventory/adjustments` | `createStockAdjustment` | `inventory.stock.adjust` | Inventory drawer; generated request option truyền Idempotency-Key |
-| Kiểm duyệt đánh giá | `PATCH /api/v1/admin/reviews/{id}/moderation` | `moderateAdminReview` | `catalog.review.moderate` | Reviews actions |
+| Ẩn/hiện lại đánh giá | `PATCH /api/v1/admin/reviews/{id}/moderation` | `moderateAdminReview` | `catalog.review.moderate` | Hậu kiểm: đánh giá hiển thị ngay khi gửi, `APPROVED` nghĩa là hiện lại |
 | Xóa/ẩn đánh giá | `DELETE /api/v1/admin/reviews/{id}` | `deleteAdminReview` | `catalog.review.moderate` | Chuyển REJECTED theo expected version; giữ lịch sử Admin |
-| Xóa/lưu trữ bài viết | `DELETE /api/v1/admin/content/posts/{id}` | `deleteAdminPost` | `cms.content.manage` | Chuyển ARCHIVED theo expected version; public API chỉ trả PUBLISHED |
+| Xóa/lưu trữ bài viết | `DELETE /api/v1/admin/content/posts/{id}` | `deleteAdminPost` | `cms.content.manage` | Chuyển ARCHIVED theo expected version; Storefront lọc thêm theo `isPublished` |
 | Archive/reactivate product hoặc combo | `POST .../products/{id}/archive|reactivate` | `archiveAdminProduct` / `reactivateAdminProduct` | `catalog.product.publish` | Product workflow drawer |
 | Xóa logic product hoặc combo | `DELETE /api/v1/admin/products/{id}` | `deleteAdminProduct` | `catalog.product.publish` | Tái sử dụng invariant archive; body có `expectedVersion` |
 | Archive/reactivate variant | `POST .../products/variants/{id}/archive|reactivate` | `archiveAdminProductVariant` / `reactivateAdminProductVariant` | `catalog.product.manage` | Product workflow drawer |
@@ -47,6 +47,14 @@
 | Sửa metadata variant | `PATCH /api/v1/admin/products/variants/{variantId}` | `updateAdminProductVariant` | `catalog.product.manage` | Variant edit drawer; SKU bất biến |
 | Product media lifecycle | `POST/PATCH .../products/{id}/media...` | `attach/update/reorder/archiveAdminProductMedia` | `catalog.product.manage` | Product media panel |
 | Xóa logic liên kết ảnh sản phẩm | `DELETE /api/v1/admin/products/{id}/media/{mediaId}` | `deleteAdminProductMedia` | `catalog.product.manage` | Chuyển link `INACTIVE`, không xóa `media_assets` hay asset trên provider |
+| Sửa bài viết đã đăng | `PATCH /api/v1/admin/content/posts/{id}` | `updateAdminPost` | `cms.content.manage` | Chỉ gửi trường được truyền; bài ARCHIVED không sửa được |
+| Bật/tắt hiển thị sản phẩm | `PATCH /api/v1/admin/products/{id}` | `updateAdminProduct` | `catalog.product.manage` | `isPublished` tách khỏi `status`; ẩn tạm không phải đẩy về DRAFT |
+| CRUD khách hàng | `POST/PATCH/DELETE /api/v1/admin/customers...` | `create/update/deleteAdminCustomer` | `customer.manage` | Xoá chỉ khi chưa có đơn và chưa có tài khoản đăng nhập |
+| Ngừng/mở lại khách hàng | `POST .../customers/{id}/deactivate\|activate` | `deactivate/activateAdminCustomer` | `customer.manage` | Giữ nguyên lịch sử mua hàng |
+| Nhân viên lập đơn | `POST /api/v1/admin/orders/pos` | `createPosOrder` | `order.manage` | `delivery` bật đơn giao hàng; COD để payment chờ; `handOverImmediately` khi khách lấy ngay |
+| In phiếu giao | `POST /api/v1/admin/fulfillments/{id}/label` | `createAdminFulfillmentLabel` | `fulfillment.pack` | URL do hãng phát hành, sống vài phút, không lưu DB |
+| Danh mục địa giới | `GET /api/v1/shipping/areas/provinces\|districts\|wards` | `listShippingProvinces/Districts/Wards` | không yêu cầu quyền | Proxy GHN vì token là bí mật backend; có throttle và cache 1 giờ |
+| Duyệt đơn chờ xác nhận | `POST /api/v1/admin/orders/{id}/confirm` | `confirmAdminOrder` | `order.manage` | Khối đơn chờ trên Bảng điều khiển; bắt buộc `Idempotency-Key` |
 | Finalize media asset | `POST /api/v1/admin/media/uploads/finalize` | `finalizeAdminMediaUpload` | `media.asset.upload` | Cloudinary upload adapter; verify rồi persist idempotent |
 | Search SKU active để tạo combo | `GET /api/v1/admin/products/variants/active` | `searchActiveAdminProductVariants` | `catalog.product.view` | Combo builder; chỉ SKU thường ACTIVE, không nested combo |
 | Thay giá hiện hành atomic | `POST /api/v1/admin/products/variants/{variantId}/prices/replace` | `replaceAdminProductPrice` | `catalog.price.manage` | Price form gửi expected price id/version |
@@ -139,6 +147,7 @@ Admin dùng `getApiErrorMessage` cho lỗi form/query và `getApiFieldErrors` đ
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.7.0 | 2026-09-17 | CRUD khách hàng, sửa bài viết, cờ `isPublished`, đơn nhân viên lập có giao hàng, vận đơn GHN và danh mục địa giới. | API-20260917-STAFF-DELIVERY-ORDER |
 | 1.6.0 | 2026-09-15 | Mỗi operation xuất `x-required-permissions`; Admin kiểm tra độ phủ quyền bằng test đọc contract. | API-20260915-PERMISSION-CONTRACT-EXPORT |
 | 1.5.0 | 2026-09-15 | Permission code CMS/Review đổi về `cms.content.*` và `catalog.review.moderate`; `getAdminCurrentUser`/`getCustomerCurrentUser` trả thêm `permissionVersion`. | DB-20260915-PERMISSION-CODE-ALIGNMENT |
 | 1.4.0 | 2026-09-13 | Product summary trả Sellable SKU tương ứng `minPrice`; browser E2E chứng minh cart/checkout chấp nhận ID số thật. | API-20260913-CATALOG-QUICK-ADD |

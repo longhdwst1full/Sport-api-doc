@@ -35,6 +35,9 @@ import {
  */
 const CACHE_TTL_MS = 30_000;
 
+/** Thay cho giá trị bí mật khi trả ra API: chỉ nói đã cấu hình, không nói cấu hình bằng gì. */
+const SECRET_MASK = '••••••••';
+
 const definitionByCode = new Map<string, SystemParameterDefinition>(
   SYSTEM_PARAMETER_CATALOG.map((definition) => [definition.code, definition]),
 );
@@ -171,10 +174,14 @@ export class SystemParameterService implements OnModuleInit {
         throw new ConflictException('Tham số đã thay đổi; vui lòng tải lại trước khi lưu');
       }
 
+      // Gửi lại đúng dấu che nghĩa là người dùng không sửa ô bí mật; giữ nguyên giá trị cũ thay
+      // vì ghi chuỗi dấu chấm vào làm token.
+      const nextValue = current.isSecret && input.value === SECRET_MASK ? current.value : input.value;
+
       const row = await transaction.systemParameter.update({
         where: { code },
         data: {
-          value: input.value,
+          value: nextValue,
           remarks: input.reason,
           updatedBy: toActorDatabaseId(context.actorUserId),
           version: { increment: 1 },
@@ -189,8 +196,10 @@ export class SystemParameterService implements OnModuleInit {
           action: 'system.parameter.update',
           entityType: 'SYSTEM_PARAMETER',
           entityId: toEntityId(row.id),
-          before: { value: current.value },
-          after: { value: row.value },
+          // SECURITY: audit không lưu giá trị bí mật. Ghi lại chỉ để biết AI đổi và ĐỔI LÚC NÀO;
+          // chép token vào audit là nhân bản bí mật sang một bảng giữ 10 năm.
+          before: { value: current.isSecret ? SECRET_MASK : current.value },
+          after: { value: row.isSecret ? SECRET_MASK : row.value },
           reason: input.reason,
         },
         transaction,
@@ -346,6 +355,7 @@ export class SystemParameterService implements OnModuleInit {
             unit: definition.unit ?? null,
             sortOrder: definition.sortOrder,
             isPublic: definition.isPublic ?? false,
+            isSecret: definition.isSecret ?? false,
             isSystem: true,
           },
         });
@@ -365,6 +375,7 @@ export class SystemParameterService implements OnModuleInit {
           unit: definition.unit ?? null,
           sortOrder: definition.sortOrder,
           isPublic: definition.isPublic ?? false,
+          isSecret: definition.isSecret ?? false,
           isSystem: true,
         },
       });
@@ -375,7 +386,16 @@ export class SystemParameterService implements OnModuleInit {
   }
 
   private async readValue(code: string): Promise<string | undefined> {
-    if (!this.prisma.isEnabled()) return undefined;
+    const stored = this.prisma.isEnabled() ? await this.readStoredValue(code) : undefined;
+    if (stored !== undefined && stored !== '') return stored;
+    // Tham số để trống nghĩa là chưa cấu hình qua Admin: rơi về biến môi trường để môi trường
+    // mới chạy được ngay, và để database hỏng không kéo theo mất toàn bộ cấu hình tích hợp.
+    const envName = definitionByCode.get(code as SystemParameterCode)?.envFallback;
+    const fromEnv = envName ? process.env[envName]?.trim() : undefined;
+    return fromEnv || stored;
+  }
+
+  private async readStoredValue(code: string): Promise<string | undefined> {
     const now = Date.now();
     if (now > this.cacheExpiresAt) {
       const rows = await this.prisma.systemParameter.findMany({
@@ -422,7 +442,8 @@ export class SystemParameterService implements OnModuleInit {
     id: bigint; code: string; groupCode: string; label: string; description: string | null;
     valueType: string; value: string; defaultValue: string;
     minValue: Prisma.Decimal | null; maxValue: Prisma.Decimal | null;
-    unit: string | null; status: string; isPublic: boolean; isSystem: boolean; remarks: string | null;
+    unit: string | null; status: string; isPublic: boolean; isSystem: boolean; isSecret: boolean;
+    remarks: string | null;
     version: bigint; updatedAt: Date; updatedBy: bigint | null;
   }): SystemParameterDto {
     return {
@@ -432,14 +453,18 @@ export class SystemParameterService implements OnModuleInit {
       label: row.label,
       description: row.description,
       valueType: row.valueType,
-      value: row.value,
-      defaultValue: row.defaultValue,
+      // SECURITY: bí mật nhà cung cấp chỉ ghi được, không đọc lại được. Trả giá trị thật ra đây
+      // nghĩa là mọi tài khoản xem tham số đều cầm được khoá, và khoá nằm trong log của mọi
+      // proxy giữa đường. Chỉ báo đã cấu hình hay chưa.
+      value: row.isSecret ? (row.value ? SECRET_MASK : '') : row.value,
+      defaultValue: row.isSecret ? '' : row.defaultValue,
       minValue: row.minValue ? row.minValue.toNumber() : null,
       maxValue: row.maxValue ? row.maxValue.toNumber() : null,
       unit: row.unit,
       status: row.status,
       isPublic: row.isPublic,
       isSystem: row.isSystem,
+      isSecret: row.isSecret,
       remarks: row.remarks,
       version: row.version.toString(),
       updatedAt: row.updatedAt.toISOString(),

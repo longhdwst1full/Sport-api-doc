@@ -90,7 +90,8 @@
                 "ORDER",
                 "PAYMENT",
                 "CART",
-                "PROMOTION"
+                "PROMOTION",
+                "INTEGRATION"
               ]
             }
           },
@@ -3136,6 +3137,84 @@
         "x-required-permissions": [
           "customer.view"
         ]
+      },
+      "post": {
+        "operationId": "createAdminCustomer",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAdminCustomerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCustomerDetailDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Số điện thoại hoặc email đã có chủ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Nhân viên tạo hồ sơ khách mua tại quầy hoặc qua điện thoại",
+        "tags": [
+          "Admin Customers"
+        ],
+        "x-required-permissions": [
+          "customer.manage"
+        ]
       }
     },
     "/api/v1/admin/customers/{id}": {
@@ -3204,6 +3283,321 @@
         ],
         "x-required-permissions": [
           "customer.view"
+        ]
+      },
+      "patch": {
+        "operationId": "updateAdminCustomer",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAdminCustomerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCustomerDetailDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Sửa thông tin liên hệ của khách theo expected version",
+        "tags": [
+          "Admin Customers"
+        ],
+        "x-required-permissions": [
+          "customer.manage"
+        ]
+      },
+      "delete": {
+        "operationId": "deleteAdminCustomer",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomerStatusCommandDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Khách đã có đơn hoặc có tài khoản đăng nhập",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Xoá hồ sơ khách chưa phát sinh đơn và chưa có tài khoản đăng nhập",
+        "tags": [
+          "Admin Customers"
+        ],
+        "x-required-permissions": [
+          "customer.manage"
+        ]
+      }
+    },
+    "/api/v1/admin/customers/{id}/deactivate": {
+      "post": {
+        "operationId": "deactivateAdminCustomer",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomerStatusCommandDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCustomerDetailDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ngừng hoạt động hồ sơ khách, giữ nguyên lịch sử mua hàng",
+        "tags": [
+          "Admin Customers"
+        ],
+        "x-required-permissions": [
+          "customer.manage"
+        ]
+      }
+    },
+    "/api/v1/admin/customers/{id}/activate": {
+      "post": {
+        "operationId": "activateAdminCustomer",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomerStatusCommandDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCustomerDetailDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mở lại hồ sơ khách đã ngừng",
+        "tags": [
+          "Admin Customers"
+        ],
+        "x-required-permissions": [
+          "customer.manage"
         ]
       }
     },
@@ -4131,7 +4525,7 @@
             "bearer": []
           }
         ],
-        "summary": "Logically delete a leaf category by changing its status to INACTIVE",
+        "summary": "Gỡ danh mục: chuyển trạng thái INACTIVE và nâng các danh mục con lên làm con của cha nó",
         "tags": [
           "Admin Catalog"
         ],
@@ -4230,7 +4624,7 @@
             "bearer": []
           }
         ],
-        "summary": "Deactivate a leaf category",
+        "summary": "Ngừng danh mục và nâng danh mục con lên làm con của cha nó",
         "tags": [
           "Admin Catalog"
         ],
@@ -9743,6 +10137,93 @@
       }
     },
     "/api/v1/admin/content/posts/{id}": {
+      "patch": {
+        "operationId": "updateAdminPost",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateContentPostDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentPostDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Sửa nội dung bài viết đã đăng theo expected version",
+        "tags": [
+          "Admin Content"
+        ],
+        "x-required-permissions": [
+          "cms.content.manage"
+        ]
+      },
       "delete": {
         "operationId": "deleteAdminPost",
         "parameters": [
@@ -13662,7 +14143,8 @@
               "ORDER",
               "PAYMENT",
               "CART",
-              "PROMOTION"
+              "PROMOTION",
+              "INTEGRATION"
             ]
           },
           "label": {
@@ -13712,6 +14194,10 @@
             "type": "boolean",
             "description": "Tham số hệ thống: code đang đọc theo mã, chỉ sửa được giá trị"
           },
+          "isSecret": {
+            "type": "boolean",
+            "description": "Bí mật nhà cung cấp: giá trị không đọc lại được qua API, chỉ ghi đè. Trường value trả về dấu che nếu đã cấu hình và chuỗi rỗng nếu chưa."
+          },
           "remarks": {
             "type": "string",
             "nullable": true,
@@ -13742,6 +14228,7 @@
           "status",
           "isPublic",
           "isSystem",
+          "isSecret",
           "version",
           "updatedAt"
         ]
@@ -13813,7 +14300,8 @@
               "ORDER",
               "PAYMENT",
               "CART",
-              "PROMOTION"
+              "PROMOTION",
+              "INTEGRATION"
             ]
           },
           "label": {
@@ -14437,8 +14925,8 @@
             "type": "string",
             "enum": [
               "ACTIVE",
-              "INVITED",
-              "LOCKED"
+              "LOCKED",
+              "INACTIVE"
             ]
           },
           "permissionVersion": {
@@ -15236,6 +15724,11 @@
           },
           "createdAt": {
             "type": "string"
+          },
+          "version": {
+            "type": "number",
+            "example": 3,
+            "description": "Gửi lại làm expectedVersion khi sửa, ngừng hoạt động hoặc xoá"
           }
         },
         "required": [
@@ -15250,7 +15743,8 @@
           "orderCount",
           "lifetimeValue",
           "lastOrderAt",
-          "createdAt"
+          "createdAt",
+          "version"
         ]
       },
       "AdminCustomerListDto": {
@@ -15422,6 +15916,11 @@
           "createdAt": {
             "type": "string"
           },
+          "version": {
+            "type": "number",
+            "example": 3,
+            "description": "Gửi lại làm expectedVersion khi sửa, ngừng hoạt động hoặc xoá"
+          },
           "addresses": {
             "type": "array",
             "items": {
@@ -15449,8 +15948,85 @@
           "lifetimeValue",
           "lastOrderAt",
           "createdAt",
+          "version",
           "addresses",
           "recentOrders"
+        ]
+      },
+      "CreateAdminCustomerDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Nguyễn Minh Anh",
+            "maxLength": 255
+          },
+          "phone": {
+            "type": "string",
+            "example": "0912345678",
+            "maxLength": 32
+          },
+          "email": {
+            "type": "string",
+            "example": "minh.anh@example.com",
+            "maxLength": 255
+          },
+          "marketingConsent": {
+            "type": "boolean",
+            "default": false,
+            "description": "Khách đồng ý nhận tin khuyến mãi"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateAdminCustomerDto": {
+        "type": "object",
+        "properties": {
+          "expectedVersion": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Version khách hàng mà Admin đang xem"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "phone": {
+            "type": "string",
+            "maxLength": 32,
+            "description": "Gửi chuỗi rỗng để xoá số điện thoại"
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "Gửi chuỗi rỗng để xoá email"
+          },
+          "marketingConsent": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ]
+      },
+      "CustomerStatusCommandDto": {
+        "type": "object",
+        "properties": {
+          "expectedVersion": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Version khách hàng mà Admin đang xem"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "Lý do, lưu lại để truy vết"
+          }
+        },
+        "required": [
+          "expectedVersion"
         ]
       },
       "BrandDto": {
@@ -15842,6 +16418,11 @@
               "ARCHIVED"
             ]
           },
+          "isPublished": {
+            "type": "boolean",
+            "example": true,
+            "description": "Có hiển thị trên website hay không. Tách khỏi status để ẩn tạm một sản phẩm đang bán mà không phải đẩy về DRAFT."
+          },
           "version": {
             "type": "number",
             "example": 0
@@ -15871,6 +16452,7 @@
           "slug",
           "productType",
           "status",
+          "isPublished",
           "version",
           "currency"
         ]
@@ -16184,6 +16766,11 @@
               "ARCHIVED"
             ]
           },
+          "isPublished": {
+            "type": "boolean",
+            "example": true,
+            "description": "Có hiển thị trên website hay không. Tách khỏi status để ẩn tạm một sản phẩm đang bán mà không phải đẩy về DRAFT."
+          },
           "version": {
             "type": "number",
             "example": 0
@@ -16259,6 +16846,7 @@
           "slug",
           "productType",
           "status",
+          "isPublished",
           "version",
           "currency",
           "variants",
@@ -16364,6 +16952,10 @@
           "expectedVersion": {
             "type": "number",
             "minimum": 0
+          },
+          "isPublished": {
+            "type": "boolean",
+            "description": "Bật/tắt hiển thị trên website. Không đổi status của sản phẩm."
           }
         },
         "required": [
@@ -18753,6 +19345,11 @@
               "POLICY"
             ]
           },
+          "isPublished": {
+            "type": "boolean",
+            "example": true,
+            "description": "Có hiển thị trên website hay không; tách khỏi status để ẩn tạm bài viết"
+          },
           "title": {
             "type": "string"
           },
@@ -18799,6 +19396,7 @@
           "id",
           "slug",
           "postType",
+          "isPublished",
           "title",
           "excerpt",
           "body",
@@ -18870,6 +19468,45 @@
           "excerpt",
           "body",
           "coverUrl"
+        ]
+      },
+      "UpdateContentPostDto": {
+        "type": "object",
+        "properties": {
+          "expectedVersion": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Version bài viết mà Admin đang xem"
+          },
+          "title": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "excerpt": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "coverUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "relatedProductSlugs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "isPublished": {
+            "type": "boolean",
+            "description": "Bật/tắt hiển thị trên website; không đổi status"
+          }
+        },
+        "required": [
+          "expectedVersion"
         ]
       },
       "ArchiveContentPostDto": {
@@ -19662,6 +20299,63 @@
           "quantity"
         ]
       },
+      "PosDeliveryAddressDto": {
+        "type": "object",
+        "properties": {
+          "recipient": {
+            "type": "string",
+            "example": "Nguyễn Văn An",
+            "maxLength": 255
+          },
+          "phone": {
+            "type": "string",
+            "example": "0901234567"
+          },
+          "addressLine": {
+            "type": "string",
+            "example": "12 Nguyễn Trãi",
+            "maxLength": 500
+          },
+          "province": {
+            "type": "string",
+            "example": "Hà Nội",
+            "maxLength": 255
+          },
+          "provinceCode": {
+            "type": "string",
+            "example": "201",
+            "maxLength": 32,
+            "description": "Mã tỉnh/thành của hãng vận chuyển"
+          },
+          "district": {
+            "type": "string",
+            "example": "Ba Đình",
+            "maxLength": 255
+          },
+          "districtCode": {
+            "type": "string",
+            "example": "1442",
+            "maxLength": 32
+          },
+          "ward": {
+            "type": "string",
+            "example": "Phúc Xá",
+            "maxLength": 255
+          },
+          "wardCode": {
+            "type": "string",
+            "example": "21012",
+            "maxLength": 32
+          }
+        },
+        "required": [
+          "recipient",
+          "phone",
+          "addressLine",
+          "province",
+          "provinceCode"
+        ]
+      },
       "CreatePosOrderDto": {
         "type": "object",
         "properties": {
@@ -19678,9 +20372,22 @@
             "type": "string",
             "enum": [
               "CASH",
-              "BANK_TRANSFER"
+              "BANK_TRANSFER",
+              "COD"
             ],
             "example": "CASH"
+          },
+          "delivery": {
+            "description": "Bỏ trống: khách nhận ngay tại quầy như cũ. Có giá trị: đơn đi giao hàng, tồn kho vẫn đặt chỗ như luồng checkout của khách.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PosDeliveryAddressDto"
+              }
+            ]
+          },
+          "handOverImmediately": {
+            "type": "boolean",
+            "description": "Chạy luôn hết vòng giao hàng và đánh dấu đã giao. Mặc định bật cho đơn tại quầy và tắt cho đơn giao hàng; bật cho đơn giao hàng khi khách lấy ngay tại cửa hàng."
           },
           "note": {
             "type": "string",
@@ -20709,10 +21416,10 @@
           "status": {
             "type": "string",
             "enum": [
-              "PENDING",
               "APPROVED",
               "REJECTED"
-            ]
+            ],
+            "description": "Đánh giá hiển thị ngay khi gửi; REJECTED là đã bị Admin gỡ khỏi website"
           },
           "version": {
             "type": "number",

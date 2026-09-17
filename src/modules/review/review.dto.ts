@@ -17,8 +17,11 @@ export class ProductReviewDto {
   @ApiProperty() title: string;
   @ApiProperty() content: string;
   @ApiProperty() verifiedPurchase: boolean;
-  @ApiProperty({ enum: ['PENDING', 'APPROVED', 'REJECTED'] })
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  @ApiProperty({
+    enum: ['APPROVED', 'REJECTED'],
+    description: 'Đánh giá hiển thị ngay khi gửi; REJECTED là đã bị Admin gỡ khỏi website',
+  })
+  status: 'APPROVED' | 'REJECTED';
   @ApiProperty({ minimum: 0 }) version: number;
   @ApiPropertyOptional() moderationReason?: string;
   @ApiPropertyOptional({ format: 'date-time' }) moderatedAt?: string;

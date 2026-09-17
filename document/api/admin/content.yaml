@@ -87,6 +87,58 @@ paths:
       x-required-permissions:
         - cms.content.manage
   /api/v1/admin/content/posts/{id}:
+    patch:
+      operationId: updateAdminPost
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateContentPostDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContentPostDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Sửa nội dung bài viết đã đăng theo expected version
+      tags:
+        - Admin Content
+      x-required-permissions:
+        - cms.content.manage
     delete:
       operationId: deleteAdminPost
       parameters:
@@ -241,6 +293,10 @@ components:
             - PRODUCT_GUIDE
             - ABOUT
             - POLICY
+        isPublished:
+          type: boolean
+          example: true
+          description: Có hiển thị trên website hay không; tách khỏi status để ẩn tạm bài viết
         title:
           type: string
         excerpt:
@@ -274,6 +330,7 @@ components:
         - id
         - slug
         - postType
+        - isPublished
         - title
         - excerpt
         - body
@@ -282,6 +339,33 @@ components:
         - publishedAt
         - status
         - version
+    UpdateContentPostDto:
+      type: object
+      properties:
+        expectedVersion:
+          type: number
+          minimum: 0
+          description: Version bài viết mà Admin đang xem
+        title:
+          type: string
+        slug:
+          type: string
+        excerpt:
+          type: string
+        body:
+          type: string
+        coverUrl:
+          type: string
+          format: uri
+        relatedProductSlugs:
+          type: array
+          items:
+            type: string
+        isPublished:
+          type: boolean
+          description: Bật/tắt hiển thị trên website; không đổi status
+      required:
+        - expectedVersion
     ArchiveContentPostDto:
       type: object
       properties:

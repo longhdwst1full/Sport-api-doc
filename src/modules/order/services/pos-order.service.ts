@@ -19,6 +19,8 @@ import { OrderService } from './order.service';
 
 /** Bán tại quầy: khách cầm hàng về ngay nên không có phí giao và không có cửa sổ chờ. */
 const POS_SHIPPING_METHOD = 'BRANCH_FREE';
+/** Đơn nhân viên lập hộ có giao hàng đi theo phương thức giao tiêu chuẩn như đơn của khách. */
+const DELIVERY_SHIPPING_METHOD = 'STANDARD_DELIVERY';
 const POS_CHANNEL = 'STORE';
 
 /** Hình dạng tối thiểu để tính tồn: hàng lẻ có `components` rỗng, combo thì không. */
@@ -26,6 +28,28 @@ interface SellableVariant {
   id: bigint;
   sku: string;
   components: Array<{ variantId: bigint; quantity: number }>;
+}
+
+/**
+ * Quy tắc lập đơn của nhân viên, tách riêng để đọc được cả ba nhánh cùng lúc và test không cần
+ * dựng nguyên service.
+ *
+ * - Thu tiền ngay với tiền mặt và chuyển khoản tại quầy; COD là thu khi giao nên đơn phải để
+ *   payment ở trạng thái chờ, ghi SUCCESS sẽ làm báo cáo đếm tiền chưa về.
+ * - Đơn tại quầy mặc định giao ngay; đơn có địa chỉ giao mặc định để kho xử lý theo luồng thường,
+ *   trừ khi nhân viên chọn khách lấy luôn.
+ */
+export function resolveOrderCreationPlan(input: {
+  paymentMethod: string;
+  delivery?: unknown;
+  handOverImmediately?: boolean;
+}): { settleNow: boolean; handOverNow: boolean; shippingMethod: string } {
+  const isDelivery = Boolean(input.delivery);
+  return {
+    settleNow: input.paymentMethod !== 'COD',
+    handOverNow: input.handOverImmediately ?? !isDelivery,
+    shippingMethod: isDelivery ? DELIVERY_SHIPPING_METHOD : POS_SHIPPING_METHOD,
+  };
 }
 
 @Injectable()
@@ -78,7 +102,11 @@ export class PosOrderService {
       branchId: warehouse.branchId,
     });
 
-    await this.settlePayment(placed, input, requestId, principal);
+    const plan = resolveOrderCreationPlan(input);
+    if (plan.settleNow) {
+      await this.settlePayment(placed, input, requestId, principal);
+    }
+    if (!plan.handOverNow) return placed;
     return this.handOver(placed, key, requestId, principal);
   }
 
@@ -455,7 +483,7 @@ export class PosOrderService {
           warehouseId: warehouse.id,
           status: 'QUOTED',
           paymentMethod: input.paymentMethod,
-          shippingMethod: POS_SHIPPING_METHOD,
+          shippingMethod: resolveOrderCreationPlan(input).shippingMethod,
           customerNote: input.note?.trim() || null,
           itemSubtotal,
           shippingTotal: new Prisma.Decimal(0),
@@ -466,14 +494,29 @@ export class PosOrderService {
           // địa chỉ chi nhánh bán — trung thực hơn là bịa địa chỉ giao của khách.
           // Phải đúng hình dạng `CheckoutRecipientDto`: đặt đơn đọc snapshot này để dựng
           // địa chỉ nhận của đơn và sẽ từ chối nếu thiếu recipient/addressLine/province.
-          recipientSnapshot: {
-            recipient: input.customer.name.trim(),
-            phone: input.customer.phone.trim(),
-            email: input.customer.email?.trim() || undefined,
-            ...this.branchAddressSnapshot(branch),
-          } as unknown as Prisma.InputJsonValue,
+          recipientSnapshot: (input.delivery
+            ? {
+                recipient: input.delivery.recipient.trim(),
+                phone: input.delivery.phone.trim(),
+                email: input.customer.email?.trim() || undefined,
+                addressLine: input.delivery.addressLine.trim(),
+                province: input.delivery.province.trim(),
+                provinceCode: input.delivery.provinceCode.trim(),
+                ...(input.delivery.district ? { district: input.delivery.district.trim() } : {}),
+                ...(input.delivery.districtCode
+                  ? { districtCode: input.delivery.districtCode.trim() }
+                  : {}),
+                ...(input.delivery.ward ? { ward: input.delivery.ward.trim() } : {}),
+                ...(input.delivery.wardCode ? { wardCode: input.delivery.wardCode.trim() } : {}),
+              }
+            : {
+                recipient: input.customer.name.trim(),
+                phone: input.customer.phone.trim(),
+                email: input.customer.email?.trim() || undefined,
+                ...this.branchAddressSnapshot(branch),
+              }) as unknown as Prisma.InputJsonValue,
           shippingRuleSnapshot: {
-            method: POS_SHIPPING_METHOD,
+            method: resolveOrderCreationPlan(input).shippingMethod,
             channel: POS_CHANNEL,
             soldByUserId: principal.userId,
             quotedAt: new Date().toISOString(),

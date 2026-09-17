@@ -1,13 +1,16 @@
 import { ServiceUnavailableException } from '@nestjs/common';
 import { GhnShippingPartnerClient } from './ghn-shipping-partner.client';
 
-const options = {
+const OPTIONS = {
   baseUrl: 'https://dev-online-gateway.ghn.vn/shiip/public-api',
   token: 'ghn-token',
   shopId: '123456',
   serviceTypeId: 2,
   timeoutMs: 5_000,
 };
+
+/** Cấu hình đọc tại thời điểm gọi, nên client nhận một hàm thay vì object cố định. */
+const options = () => Promise.resolve(OPTIONS);
 
 const validInput = {
   orderId: '9',
@@ -60,7 +63,7 @@ describe('GhnShippingPartnerClient', () => {
       expectedDeliveryAt: '2026-09-18T10:00:00Z',
     });
     const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe(`${options.baseUrl}/v2/shipping-order/create`);
+    expect(url).toBe(`${OPTIONS.baseUrl}/v2/shipping-order/create`);
     const body = sentBody(fetchMock);
     // COD > 0 phải là payment_type_id = 2 (người nhận trả), nếu không GHN thu tiền sai phía.
     expect(body.payment_type_id).toBe(2);
@@ -127,7 +130,7 @@ describe('GhnShippingPartnerClient', () => {
     await client.cancelShipment('LXQ7A9', 'Khách huỷ đơn');
 
     const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe(`${options.baseUrl}/v2/switch-status/cancel`);
+    expect(url).toBe(`${OPTIONS.baseUrl}/v2/switch-status/cancel`);
     expect(sentBody(fetchMock)).toEqual({ order_codes: ['LXQ7A9'] });
   });
 

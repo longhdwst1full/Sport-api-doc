@@ -309,6 +309,7 @@ Table products {
   short_description text
   description text
   status varchar(24) [not null, default: 'DRAFT']
+  is_published boolean [not null, default: false, note: 'Cờ hiển thị trên website, tách khỏi status vòng đời']
   published_at timestamptz
   seo_json jsonb
   version bigint [not null, default: 0]
@@ -439,7 +440,7 @@ Table product_reviews {
   rating smallint [not null]
   title varchar(255)
   content text
-  status varchar(24) [not null, default: 'PENDING']
+  status varchar(24) [not null, default: 'APPROVED', note: 'Hiển thị ngay khi gửi; REJECTED là đã bị Admin gỡ']
   moderated_by bigint
   moderated_at timestamptz
   moderation_reason text
@@ -1176,6 +1177,7 @@ Table posts {
   cover_asset_id bigint
   seo_json jsonb
   status varchar(24) [not null, default: 'DRAFT']
+  is_published boolean [not null, default: true, note: 'Cờ hiển thị trên website, tách khỏi status vòng đời']
   published_at timestamptz
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
@@ -1459,3 +1461,37 @@ Ref: notification_templates.created_by > users.id [delete: restrict]
 Ref: notifications.user_id > users.id [delete: set null]
 Ref: notifications.customer_id > customers.id [delete: set null]
 Ref: notifications.template_id > notification_templates.id [delete: set null]
+
+Table system_parameters {
+  id bigint [pk, increment]
+  code varchar(64) [not null, unique]
+  group_code varchar(32) [not null, note: 'SHIPPING/CHECKOUT/ORDER/PAYMENT/CART/PROMOTION/INTEGRATION']
+  label varchar(255) [not null]
+  description text
+  value_type varchar(16) [not null, note: 'INTEGER/DECIMAL/BOOLEAN/STRING']
+  value text [not null]
+  default_value text [not null]
+  min_value decimal(19,2)
+  max_value decimal(19,2)
+  unit varchar(32)
+  sort_order int [not null, default: 0]
+  status varchar(24) [not null, default: 'ACTIVE']
+  is_public boolean [not null, default: false, note: 'Storefront đọc được qua API công khai']
+  is_system boolean [not null, default: false, note: 'Do catalog trong code định nghĩa']
+  is_secret boolean [not null, default: false, note: 'Bí mật nhà cung cấp: ghi được, không đọc lại được qua API']
+  remarks varchar(500)
+  version bigint [not null, default: 0]
+  created_at timestamptz [not null, default: `now()`]
+  created_by bigint
+  updated_at timestamptz [not null]
+  updated_by bigint
+
+  Indexes {
+    (group_code, sort_order)
+    status
+    is_public
+    is_system
+  }
+
+  Note: '[P1] Tham số hệ thống. Ngưỡng nghiệp vụ (biểu phí, TTL giữ chỗ) và cấu hình tích hợp GHN/VNPay/Mailtrap/Cloudinary/Telegram. Backend đọc tham số trước, biến môi trường là fallback. CHECK: is_secret và is_public loại trừ nhau — bí mật không bao giờ công khai cho Storefront.'
+}

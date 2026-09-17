@@ -25,7 +25,7 @@ const CONTRACT_SLICES: ContractSlice[] = [
   { relativePath: 'storefront/reviews.yaml', tags: ['Storefront Reviews'] },
   { relativePath: 'storefront/cart.yaml', tags: ['Storefront Guest Cart', 'Storefront Account Cart'] },
   { relativePath: 'storefront/customer.yaml', tags: ['Storefront Customer'] },
-  { relativePath: 'storefront/shipping.yaml', tags: ['Storefront Shipping'] },
+  { relativePath: 'storefront/shipping.yaml', tags: ['Storefront Shipping', 'Shipping Areas'] },
   { relativePath: 'storefront/checkout.yaml', tags: ['Storefront Guest Checkout', 'Storefront Account Checkout'] },
   { relativePath: 'admin/checkout.yaml', tags: ['Admin Checkout'] },
   { relativePath: 'storefront/orders.yaml', tags: ['Storefront Guest Orders', 'Storefront Account Orders'] },
@@ -38,6 +38,8 @@ const CONTRACT_SLICES: ContractSlice[] = [
   { relativePath: 'storefront/system.yaml', tags: ['Storefront System'] },
   { relativePath: 'admin/promotions.yaml', tags: ['Admin Promotions'] },
   { relativePath: 'admin/reporting.yaml', tags: ['Admin Reporting'] },
+  // Danh mục địa giới dùng chung: Admin cần khi sửa địa chỉ chi nhánh và lập đơn có giao hàng.
+  { relativePath: 'admin/shipping.yaml', tags: ['Shipping Areas'] },
 ];
 
 function collectReferences(value: unknown, references: Set<string>): void {

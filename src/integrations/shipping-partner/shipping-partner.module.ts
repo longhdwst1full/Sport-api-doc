@@ -1,34 +1,39 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { IntegrationConfigService } from '../../modules/system/parameters/integration-config.service';
+import { SystemModule } from '../../modules/system/system.module';
 import { DisabledShippingPartnerClient } from './disabled-shipping-partner.client';
 import { GhnShippingPartnerClient } from './ghn-shipping-partner.client';
 import { ShippingPartnerClient } from './shipping-partner.client';
 
 @Module({
+  imports: [SystemModule],
   providers: [
     {
       provide: ShippingPartnerClient,
-      inject: [ConfigService],
-      useFactory: (config: ConfigService): ShippingPartnerClient => {
-        const enabled = config.get<boolean>('app.shipping.ghn.enabled') === true;
-        const token = config.get<string>('app.shipping.ghn.token');
-        const shopId = config.get<string>('app.shipping.ghn.shopId');
-        // Điểm lấy hàng không nằm ở đây: nó là địa chỉ của chi nhánh xuất đơn và đi kèm từng
-        // vận đơn. Ở tầng cấu hình chỉ cần đủ thông tin để nói chuyện được với GHN.
-        if (!enabled || !token || !shopId) {
-          return new DisabledShippingPartnerClient();
-        }
-
-        return new GhnShippingPartnerClient({
-          baseUrl: config.getOrThrow<string>('app.shipping.ghn.baseUrl'),
-          token,
-          shopId,
-          serviceTypeId: config.get<number>('app.shipping.ghn.serviceTypeId') ?? 2,
-          timeoutMs: config.get<number>('app.shipping.providerTimeoutMs') ?? 5_000,
-        });
-      },
+      inject: [ConfigService, IntegrationConfigService],
+      useFactory: (
+        config: ConfigService,
+        integrations: IntegrationConfigService,
+      ): ShippingPartnerClient =>
+        // Cấu hình đọc tại thời điểm gọi hãng: bật GHN hoặc xoay token ở màn Admin phải có hiệu
+        // lực ngay. Thiếu cấu hình thì resolver trả undefined và adapter ném 503 rõ ràng.
+        new GhnShippingPartnerClient(async () => {
+          const ghn = await integrations.ghn();
+          if (!ghn.enabled || !ghn.token || !ghn.shopId) return undefined;
+          return {
+            baseUrl: ghn.baseUrl,
+            token: ghn.token,
+            shopId: ghn.shopId,
+            serviceTypeId: ghn.serviceTypeId,
+            timeoutMs: config.get<number>('app.shipping.providerTimeoutMs') ?? 5_000,
+          };
+        }),
     },
   ],
   exports: [ShippingPartnerClient],
 })
 export class ShippingPartnerModule {}
+
+// Giữ export để nơi nào cần một client chắc chắn tắt vẫn dùng được (ví dụ integration test).
+export { DisabledShippingPartnerClient };

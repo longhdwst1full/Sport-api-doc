@@ -67,7 +67,7 @@ export class UserDto {
   @ApiProperty({ example: 'lo***@dctd.vn' }) maskedEmail: string;
   @ApiProperty({ enum: [USER_TYPE.STAFF, USER_TYPE.SYSTEM] })
   userType: typeof USER_TYPE.STAFF | typeof USER_TYPE.SYSTEM;
-  @ApiProperty({ enum: [USER_STATUS.ACTIVE, USER_STATUS.INVITED, USER_STATUS.LOCKED] })
+  @ApiProperty({ enum: [USER_STATUS.ACTIVE, USER_STATUS.LOCKED, USER_STATUS.INACTIVE] })
   status: UserStatus;
   @ApiProperty({ example: 1 }) permissionVersion: number;
   @ApiProperty({ example: 0, minimum: 0 }) failedLoginAttempts: number;

@@ -67,9 +67,9 @@ components:
         status:
           type: string
           enum:
-            - PENDING
             - APPROVED
             - REJECTED
+          description: Đánh giá hiển thị ngay khi gửi; REJECTED là đã bị Admin gỡ khỏi website
         version:
           type: number
           minimum: 0

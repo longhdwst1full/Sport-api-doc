@@ -101,6 +101,14 @@ export class ProductSummaryDto {
   @ApiPropertyOptional() primaryCategory?: string;
   @ApiProperty({ enum: Object.values(PRODUCT_TYPE) }) productType: ProductType;
   @ApiProperty({ enum: Object.values(PRODUCT_STATUS) }) status: ProductStatus;
+
+  @ApiProperty({
+    example: true,
+    description:
+      'Có hiển thị trên website hay không. Tách khỏi status để ẩn tạm một sản phẩm đang bán mà không phải đẩy về DRAFT.',
+  })
+  isPublished: boolean;
+
   @ApiProperty({ example: 0 }) version: number;
   @ApiPropertyOptional({ type: String, example: '18990000.00', nullable: true }) minPrice?: string | null;
   @ApiProperty({ enum: Object.values(PRODUCT_CURRENCY), example: 'VND' }) currency: 'VND';
@@ -197,6 +205,13 @@ export class UpdateProductFieldsDto extends PartialType(
 
 export class UpdateProductDto extends UpdateProductFieldsDto {
   @ApiProperty({ minimum: 0 }) @IsInt() @Min(0) expectedVersion: number;
+
+  @ApiPropertyOptional({
+    description: 'Bật/tắt hiển thị trên website. Không đổi status của sản phẩm.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  isPublished?: boolean;
 }
 
 export class CreateVariantDto {

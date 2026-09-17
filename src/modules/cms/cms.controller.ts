@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -20,6 +20,7 @@ import {
   ContentPostListDto,
   CreateContentPostDto,
   ListContentPostsQueryDto,
+  UpdateContentPostDto,
 } from './cms.dto';
 
 @ApiTags('Storefront Content')
@@ -69,6 +70,22 @@ export class AdminContentController {
   @ApiCreatedResponse({ type: ContentPostDto })
   createAdminPost(@Body() input: CreateContentPostDto): Promise<ContentPostDto> {
     return this.cms.create(input);
+  }
+
+  @Patch(':id')
+  @RequirePermissions('cms.content.manage')
+  @ApiOperation({
+    operationId: 'updateAdminPost',
+    summary: 'Sửa nội dung bài viết đã đăng theo expected version',
+  })
+  @ApiOkResponse({ type: ContentPostDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  updateAdminPost(
+    @Param('id') id: string,
+    @Body() input: UpdateContentPostDto,
+  ): Promise<ContentPostDto> {
+    return this.cms.update(id, input);
   }
 
   @Delete(':id')

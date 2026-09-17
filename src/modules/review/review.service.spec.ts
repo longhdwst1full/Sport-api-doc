@@ -111,16 +111,21 @@ function createPrismaDouble(rows: ReviewRow[]) {
 }
 
 describe('ReviewService', () => {
-  it('storefront chỉ thấy đánh giá đã duyệt', async () => {
+  /**
+   * Đánh giá không còn chờ duyệt: khách viết xong là thấy ngay. Storefront chỉ giấu đúng thứ
+   * Admin đã chủ động gỡ, chứ không giấu mặc định mọi đánh giá mới.
+   */
+  it('storefront thấy đánh giá ngay, chỉ ẩn đánh giá đã bị gỡ', async () => {
     const service = new ReviewService(
-      createPrismaDouble([review(1), review(2, { status: 'PENDING' })]),
+      createPrismaDouble([review(1), review(2, { status: 'REJECTED' })]),
     );
 
-    const approved = await service.listApproved('may-chay-bo-dctd-pro-x1');
+    const visible = await service.listApproved('may-chay-bo-dctd-pro-x1');
 
-    expect(approved.total).toBe(1);
-    expect(approved.averageRating).toBe(5);
-    expect(approved.items[0].comments).toHaveLength(1);
+    expect(visible.total).toBe(1);
+    expect(visible.averageRating).toBe(5);
+    expect(visible.items[0].comments).toHaveLength(1);
+    // Admin vẫn thấy cả đánh giá đã gỡ để đối chiếu lịch sử kiểm duyệt.
     expect(await service.listAdmin()).toMatchObject({ total: 2 });
   });
 
@@ -159,14 +164,16 @@ describe('ReviewService', () => {
     ).rejects.toThrow('Review is already hidden');
   });
 
-  it('duyệt đánh giá không cần gửi version', async () => {
+  // Không còn trạng thái chờ duyệt, nên APPROVED giờ mang nghĩa khôi phục đánh giá đã bị gỡ.
+  it('khôi phục đánh giá đã gỡ, không cần gửi version', async () => {
     const service = new ReviewService(
-      createPrismaDouble([review(1, { status: 'PENDING', moderatedAt: null })]),
+      createPrismaDouble([review(1, { status: 'REJECTED', moderatedAt: null })]),
     );
 
-    const approved = await service.moderate('1', { status: 'APPROVED' });
+    const restored = await service.moderate('1', { status: 'APPROVED' });
 
-    expect(approved).toMatchObject({ status: 'APPROVED', version: 1 });
-    expect(approved.moderatedAt).toBeDefined();
+    expect(restored).toMatchObject({ status: 'APPROVED', version: 1 });
+    expect(restored.moderatedAt).toBeDefined();
+    expect((await service.listApproved(restored.productSlug)).items).toHaveLength(1);
   });
 });

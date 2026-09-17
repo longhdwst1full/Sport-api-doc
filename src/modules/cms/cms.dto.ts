@@ -1,5 +1,6 @@
 import {
   IsArray,
+  IsBoolean,
   IsIn,
   IsInt,
   IsNotEmpty,
@@ -35,6 +36,12 @@ export class ContentPostDto {
   @ApiProperty() slug: string;
   @ApiProperty({ enum: CONTENT_POST_TYPES })
   postType: ContentPostType;
+
+  @ApiProperty({
+    example: true,
+    description: 'Có hiển thị trên website hay không; tách khỏi status để ẩn tạm bài viết',
+  })
+  isPublished: boolean;
   @ApiProperty() title: string;
   @ApiProperty() excerpt: string;
   @ApiProperty() body: string;
@@ -90,4 +97,28 @@ export class ListContentPostsQueryDto {
   @IsOptional()
   @IsIn(CONTENT_POST_TYPES)
   postType?: ContentPostType;
+}
+
+export class UpdateContentPostDto {
+  @ApiProperty({ minimum: 0, description: 'Version bài viết mà Admin đang xem' })
+  @IsInt()
+  @Min(0)
+  expectedVersion: number;
+
+  @ApiPropertyOptional() @IsOptional() @IsString() @IsNotEmpty() title?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @IsNotEmpty() slug?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @IsNotEmpty() excerpt?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @IsNotEmpty() body?: string;
+  @ApiPropertyOptional({ format: 'uri' }) @IsOptional() @IsUrl() coverUrl?: string;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  relatedProductSlugs?: string[];
+
+  @ApiPropertyOptional({ description: 'Bật/tắt hiển thị trên website; không đổi status' })
+  @IsOptional()
+  @IsBoolean()
+  isPublished?: boolean;
 }

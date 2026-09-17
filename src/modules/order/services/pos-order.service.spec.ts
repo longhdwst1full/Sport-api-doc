@@ -7,7 +7,7 @@ import { FulfillmentService } from '../../fulfillment/services/fulfillment.servi
 import { ScopeType } from '../../iam/iam.types';
 import { FlashSaleService } from '../../promotion/services/flash-sale.service';
 import { OrderService } from './order.service';
-import { PosOrderService } from './pos-order.service';
+import { PosOrderService, resolveOrderCreationPlan } from './pos-order.service';
 
 /**
  * Combo không có dòng tồn kho riêng — tồn nằm ở thành phần và bước đặt chỗ cũng nổ combo
@@ -137,5 +137,54 @@ describe('PosOrderService tồn khả dụng', () => {
     ).rejects.toThrow(
       new ConflictException('Kho quầy không đủ hàng cho COMBO-GYM: còn 3, cần 4'),
     );
+  });
+});
+
+describe('Quy tắc lập đơn của nhân viên', () => {
+  const delivery = {
+    recipient: 'Nguyễn Văn An',
+    phone: '0901234567',
+    addressLine: '12 Nguyễn Trãi',
+    province: 'Hà Nội',
+    provinceCode: '201',
+  };
+
+  it('đơn tại quầy: thu tiền ngay và giao ngay', () => {
+    expect(resolveOrderCreationPlan({ paymentMethod: 'CASH' })).toEqual({
+      settleNow: true,
+      handOverNow: true,
+      shippingMethod: 'BRANCH_FREE',
+    });
+  });
+
+  it('đơn giao hàng: không tự giao, để kho xử lý theo luồng thường', () => {
+    expect(resolveOrderCreationPlan({ paymentMethod: 'BANK_TRANSFER', delivery })).toMatchObject({
+      handOverNow: false,
+      shippingMethod: 'STANDARD_DELIVERY',
+    });
+  });
+
+  it('COD không ghi nhận đã thu vì tiền thu lúc giao', () => {
+    expect(resolveOrderCreationPlan({ paymentMethod: 'COD', delivery }).settleNow).toBe(false);
+  });
+
+  it('chuyển khoản tại quầy vẫn ghi nhận đã thu', () => {
+    expect(resolveOrderCreationPlan({ paymentMethod: 'BANK_TRANSFER' }).settleNow).toBe(true);
+  });
+
+  it('nhân viên chọn khách lấy luôn thì đơn giao hàng vẫn chạy hết vòng', () => {
+    expect(
+      resolveOrderCreationPlan({
+        paymentMethod: 'CASH',
+        delivery,
+        handOverImmediately: true,
+      }).handOverNow,
+    ).toBe(true);
+  });
+
+  it('chọn không giao ngay thì đơn tại quầy cũng dừng lại chờ xử lý', () => {
+    expect(
+      resolveOrderCreationPlan({ paymentMethod: 'CASH', handOverImmediately: false }).handOverNow,
+    ).toBe(false);
   });
 });

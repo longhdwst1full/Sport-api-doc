@@ -568,7 +568,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponseDto"
       security:
         - bearer: []
-      summary: Logically delete a leaf category by changing its status to INACTIVE
+      summary: "Gỡ danh mục: chuyển trạng thái INACTIVE và nâng các danh mục con lên làm con của cha nó"
       tags:
         - Admin Catalog
       x-required-permissions:
@@ -627,7 +627,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponseDto"
       security:
         - bearer: []
-      summary: Deactivate a leaf category
+      summary: Ngừng danh mục và nâng danh mục con lên làm con của cha nó
       tags:
         - Admin Catalog
       x-required-permissions:
@@ -2277,6 +2277,10 @@ components:
             - DRAFT
             - PUBLISHED
             - ARCHIVED
+        isPublished:
+          type: boolean
+          example: true
+          description: Có hiển thị trên website hay không. Tách khỏi status để ẩn tạm một sản phẩm đang bán mà không phải đẩy về DRAFT.
         version:
           type: number
           example: 0
@@ -2333,6 +2337,7 @@ components:
         - slug
         - productType
         - status
+        - isPublished
         - version
         - currency
         - variants
@@ -2378,6 +2383,9 @@ components:
         expectedVersion:
           type: number
           minimum: 0
+        isPublished:
+          type: boolean
+          description: Bật/tắt hiển thị trên website. Không đổi status của sản phẩm.
       required:
         - expectedVersion
     ChangeProductStatusDto:
@@ -2716,6 +2724,10 @@ components:
             - DRAFT
             - PUBLISHED
             - ARCHIVED
+        isPublished:
+          type: boolean
+          example: true
+          description: Có hiển thị trên website hay không. Tách khỏi status để ẩn tạm một sản phẩm đang bán mà không phải đẩy về DRAFT.
         version:
           type: number
           example: 0
@@ -2739,6 +2751,7 @@ components:
         - slug
         - productType
         - status
+        - isPublished
         - version
         - currency
     ProductListMetaDto:

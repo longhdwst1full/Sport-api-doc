@@ -20,14 +20,17 @@ async function main(): Promise<void> {
     throw new Error('Không có người nhận: truyền tham số hoặc đặt MAILTRAP_REDIRECT_ALL_TO');
   }
 
-  const client = new MailtrapEmailClient({
-    token,
-    senderEmail,
-    senderName: process.env.MAILTRAP_SENDER_NAME ?? 'Bảo An Sport',
-    ...(process.env.MAILTRAP_REDIRECT_ALL_TO
-      ? { redirectAllTo: process.env.MAILTRAP_REDIRECT_ALL_TO }
-      : {}),
-  });
+  // Script chạy ngoài Nest nên không có bảng tham số; đọc thẳng env như một resolver.
+  const client = new MailtrapEmailClient(() =>
+    Promise.resolve({
+      token,
+      senderEmail,
+      senderName: process.env.MAILTRAP_SENDER_NAME ?? 'Bảo An Sport',
+      ...(process.env.MAILTRAP_REDIRECT_ALL_TO
+        ? { redirectAllTo: process.env.MAILTRAP_REDIRECT_ALL_TO }
+        : {}),
+    }),
+  );
 
   const result = await client.send({
     to: [{ email: recipient }],

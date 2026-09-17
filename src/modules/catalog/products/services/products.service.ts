@@ -155,7 +155,8 @@ export class ProductsService {
     const categoryWhere = await this.resolveCategoryFilter(query.category, storefront);
     const where: Prisma.ProductWhereInput = {
       ...(storefront
-        ? { status: PRODUCT_STATUS.PUBLISHED, ...this.sellableProductWhere(now) }
+        // Storefront nhìn cờ hiển thị: ẩn tạm một sản phẩm không cần đẩy nó về DRAFT.
+        ? { status: PRODUCT_STATUS.PUBLISHED, isPublished: true, ...this.sellableProductWhere(now) }
         : query.status
           ? { status: query.status }
           : {}),
@@ -220,6 +221,7 @@ export class ProductsService {
         ...(storefront
           ? {
               status: PRODUCT_STATUS.PUBLISHED,
+              isPublished: true,
               ...this.sellableProductWhere(now),
             }
           : {}),
@@ -426,6 +428,7 @@ export class ProductsService {
         },
         data: {
           status: PRODUCT_STATUS.PUBLISHED,
+          isPublished: true,
           publishedAt: now,
           version: { increment: 1 },
           updatedBy: toOptionalDatabaseId(context.actorUserId),
@@ -1037,6 +1040,9 @@ export class ProductsService {
         },
         data: {
           status: targetStatus,
+          // Về DRAFT hay ARCHIVED thì đều phải tắt hiển thị, nếu không cờ còn bật sẽ mô tả sai
+          // trạng thái thật của sản phẩm trên màn quản trị.
+          isPublished: false,
           ...(targetStatus === PRODUCT_STATUS.DRAFT ? { publishedAt: null } : {}),
           version: { increment: 1 },
           updatedBy: toOptionalDatabaseId(context.actorUserId),
@@ -1172,6 +1178,7 @@ export class ProductsService {
       ...(row.brand ? { brand: row.brand.name } : {}),
       ...(primaryCategory ? { primaryCategory } : {}),
       status: row.status as ProductSummaryDto['status'],
+      isPublished: row.isPublished,
       version: Number(row.version),
       minPrice: defaultOffer?.amount.toFixed(2) ?? null,
       currency: PRODUCT_CURRENCY.VND,

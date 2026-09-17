@@ -1,16 +1,35 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { toDatabaseId, toEntityId } from '../../common/identifiers/entity-id';
 import type { AuthPrincipal } from '../auth/auth.types';
 import { ScopeType } from '../iam/iam.types';
+import { normalizeVietnamesePhone } from '../auth/phone-normalization';
+import { CUSTOMER_STATUS } from './customer.constants';
 import {
   AdminCustomerDetailDto,
   AdminCustomerListDto,
   AdminCustomerQueryDto,
   AdminCustomerSummaryDto,
+  CreateAdminCustomerDto,
+  CustomerStatusCommandDto,
+  UpdateAdminCustomerDto,
   type CustomerKind,
 } from './admin-customer.dto';
+
+/**
+ * Sau khi tạo, hồ sơ chưa có đơn nào nên bộ lọc phạm vi theo chi nhánh sẽ không tìm thấy nó.
+ * Đọc lại bằng phạm vi toàn hệ thống chỉ để trả kết quả của chính lệnh vừa chạy.
+ */
+const GLOBAL_ACTOR = {
+  scopes: [{ type: ScopeType.GLOBAL }],
+} as AuthPrincipal;
 
 /** Đơn đã huỷ không phải lần mua hàng; không tính vào số đơn lẫn giá trị vòng đời. */
 const CANCELLED_STATUS = 'CANCELLED';
@@ -139,6 +158,199 @@ export class AdminCustomerService {
   }
 
   /**
+   * Tạo hồ sơ khách do nhân viên nhập hộ.
+   *
+   * INVARIANT: khách tạo ở đây không có tài khoản đăng nhập (`userId` rỗng) nên luôn là GUEST.
+   * Muốn thành MEMBER thì khách phải tự đăng ký qua Storefront.
+   */
+  async create(input: CreateAdminCustomerDto): Promise<AdminCustomerDetailDto> {
+    const name = input.name.trim();
+    if (!name) throw new BadRequestException('Tên khách hàng không được để trống');
+    const phone = this.normalizePhone(input.phone);
+    const email = this.normalizeEmail(input.email);
+    if (!phone && !email) {
+      throw new BadRequestException('Cần ít nhất số điện thoại hoặc email để nhận lại khách');
+    }
+    await this.assertContactNotTaken(phone, email);
+
+    const created = await this.prisma.customer.create({
+      data: {
+        // Khách do Admin tạo không gắn với user nào, nên dùng mã ngẫu nhiên như khách vãng lai.
+        customerNo: `CUS-A-${randomUUID().replaceAll('-', '').slice(0, 18).toUpperCase()}`,
+        name,
+        phone: phone?.value ?? null,
+        normalizedPhone: phone?.normalized ?? null,
+        email: email?.value ?? null,
+        normalizedEmail: email?.normalized ?? null,
+        marketingConsent: input.marketingConsent ?? false,
+        status: CUSTOMER_STATUS.ACTIVE,
+      },
+      select: { id: true },
+    });
+    return this.get(toEntityId(created.id), GLOBAL_ACTOR);
+  }
+
+  /**
+   * TRANSACTION: cập nhật theo `expectedVersion`. Hai người sửa cùng lúc thì đúng một người thắng,
+   * người còn lại phải tải lại — nếu không, thay đổi của họ ghi đè im lặng lên nhau.
+   */
+  async update(
+    id: string,
+    input: UpdateAdminCustomerDto,
+    actor: AuthPrincipal,
+  ): Promise<AdminCustomerDetailDto> {
+    const current = await this.loadInScope(id, actor);
+    const phone = input.phone === undefined ? undefined : this.normalizePhone(input.phone);
+    const email = input.email === undefined ? undefined : this.normalizeEmail(input.email);
+    await this.assertContactNotTaken(phone, email, current.id);
+
+    const changed = await this.prisma.customer.updateMany({
+      where: { id: current.id, version: BigInt(input.expectedVersion) },
+      data: {
+        ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+        ...(phone !== undefined
+          ? { phone: phone?.value ?? null, normalizedPhone: phone?.normalized ?? null }
+          : {}),
+        ...(email !== undefined
+          ? { email: email?.value ?? null, normalizedEmail: email?.normalized ?? null }
+          : {}),
+        ...(input.marketingConsent !== undefined
+          ? { marketingConsent: input.marketingConsent }
+          : {}),
+        version: { increment: 1 },
+      },
+    });
+    if (changed.count !== 1) {
+      throw new ConflictException('Hồ sơ khách vừa thay đổi. Vui lòng tải lại rồi thử lại.');
+    }
+    return this.get(id, actor);
+  }
+
+  /** Ngừng hoạt động: giữ nguyên lịch sử mua hàng, chỉ chặn dùng tiếp hồ sơ này. */
+  async deactivate(
+    id: string,
+    input: CustomerStatusCommandDto,
+    actor: AuthPrincipal,
+  ): Promise<AdminCustomerDetailDto> {
+    return this.changeStatus(id, input, actor, CUSTOMER_STATUS.INACTIVE);
+  }
+
+  async activate(
+    id: string,
+    input: CustomerStatusCommandDto,
+    actor: AuthPrincipal,
+  ): Promise<AdminCustomerDetailDto> {
+    return this.changeStatus(id, input, actor, CUSTOMER_STATUS.ACTIVE);
+  }
+
+  /**
+   * Xoá hẳn hồ sơ khách.
+   *
+   * INVARIANT: chỉ xoá được khách chưa phát sinh đơn và không có tài khoản đăng nhập. Khách đã mua
+   * hàng là một phần của lịch sử đơn — xoá đi thì báo cáo doanh thu và truy vết bảo hành mất gốc,
+   * nên trường hợp đó phải dùng "Ngừng hoạt động".
+   */
+  async remove(id: string, input: CustomerStatusCommandDto, actor: AuthPrincipal): Promise<void> {
+    const current = await this.loadInScope(id, actor);
+    if (current.userId !== null) {
+      throw new ConflictException(
+        'Khách có tài khoản đăng nhập nên không xoá được. Hãy dùng Ngừng hoạt động.',
+      );
+    }
+    const orderCount = await this.prisma.order.count({ where: { customerId: current.id } });
+    if (orderCount > 0) {
+      throw new ConflictException(
+        'Khách đã có đơn hàng nên không xoá được. Hãy dùng Ngừng hoạt động.',
+      );
+    }
+
+    await this.prisma.$transaction(async (transaction) => {
+      const deleted = await transaction.customer.deleteMany({
+        where: { id: current.id, version: BigInt(input.expectedVersion) },
+      });
+      if (deleted.count !== 1) {
+        throw new ConflictException('Hồ sơ khách vừa thay đổi. Vui lòng tải lại rồi thử lại.');
+      }
+    });
+  }
+
+  private async changeStatus(
+    id: string,
+    input: CustomerStatusCommandDto,
+    actor: AuthPrincipal,
+    status: string,
+  ): Promise<AdminCustomerDetailDto> {
+    const current = await this.loadInScope(id, actor);
+    if (current.status === status) {
+      throw new ConflictException('Khách hàng đã ở trạng thái này');
+    }
+    const changed = await this.prisma.customer.updateMany({
+      where: { id: current.id, version: BigInt(input.expectedVersion) },
+      data: { status, version: { increment: 1 } },
+    });
+    if (changed.count !== 1) {
+      throw new ConflictException('Hồ sơ khách vừa thay đổi. Vui lòng tải lại rồi thử lại.');
+    }
+    return this.get(id, actor);
+  }
+
+  private async loadInScope(
+    id: string,
+    actor: AuthPrincipal,
+  ): Promise<{ id: bigint; status: string; userId: bigint | null }> {
+    const branchIds = this.visibleBranchIds(actor);
+    const customer = await this.prisma.customer.findFirst({
+      where: { id: toDatabaseId(id), ...this.customerScopeWhere(branchIds) },
+      select: { id: true, status: true, userId: true },
+    });
+    if (!customer) throw new NotFoundException('Không tìm thấy khách hàng');
+    return customer;
+  }
+
+  /** Chuỗi rỗng nghĩa là xoá liên hệ; `undefined` nghĩa là không đụng tới. */
+  private normalizePhone(raw: string | undefined) {
+    const value = raw?.trim();
+    if (!value) return null;
+    try {
+      return { value, normalized: normalizeVietnamesePhone(value) };
+    } catch {
+      throw new BadRequestException('Số điện thoại không hợp lệ');
+    }
+  }
+
+  private normalizeEmail(raw: string | undefined) {
+    const value = raw?.trim();
+    if (!value) return null;
+    return { value, normalized: value.toLowerCase() };
+  }
+
+  /**
+   * INVARIANT: một số điện thoại/email chỉ thuộc về một hồ sơ khách. Trùng nghĩa là lịch sử mua
+   * hàng của cùng một người bị tách làm hai, và lần sau tra bảo hành sẽ thiếu.
+   */
+  private async assertContactNotTaken(
+    phone: { normalized: string } | null | undefined,
+    email: { normalized: string } | null | undefined,
+    exceptId?: bigint,
+  ): Promise<void> {
+    const conditions: Prisma.CustomerWhereInput[] = [];
+    if (phone) conditions.push({ normalizedPhone: phone.normalized });
+    if (email) conditions.push({ normalizedEmail: email.normalized });
+    if (conditions.length === 0) return;
+
+    const existing = await this.prisma.customer.findFirst({
+      where: { OR: conditions, ...(exceptId ? { id: { not: exceptId } } : {}) },
+      select: { normalizedPhone: true, normalizedEmail: true },
+    });
+    if (!existing) return;
+    throw new ConflictException(
+      existing.normalizedPhone === phone?.normalized
+        ? 'Số điện thoại đã thuộc về một khách hàng khác'
+        : 'Email đã thuộc về một khách hàng khác',
+    );
+  }
+
+  /**
    * Số đơn, giá trị vòng đời và lần mua gần nhất cho cả trang trong một lượt truy vấn.
    * Tính từng khách một sẽ là N lượt đi database, mỗi lượt ~450ms trên đường truyền hiện tại.
    */
@@ -194,6 +406,7 @@ export class AdminCustomerService {
       userId: bigint | null;
       marketingConsent: boolean;
       createdAt: Date;
+      version: bigint;
     },
     rollup: OrderRollup | undefined,
   ): AdminCustomerSummaryDto {
@@ -211,6 +424,7 @@ export class AdminCustomerService {
       lifetimeValue: (rollup?.lifetimeValue ?? new Prisma.Decimal(0)).toFixed(2),
       lastOrderAt: rollup?.lastOrderAt?.toISOString() ?? null,
       createdAt: row.createdAt.toISOString(),
+      version: Number(row.version),
     };
   }
 }
