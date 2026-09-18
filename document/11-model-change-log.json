@@ -3345,6 +3345,20 @@
         "test:src/modules/system/parameters/system-parameter.service.spec.ts"
       ],
       "targets": []
+    },
+    {
+      "id": "API-20260918-CUSTOMER-CRUD-HARDENING",
+      "date": "2026-09-18",
+      "scope": "CUSTOMER+PERMISSION+AUDIT+ADMIN",
+      "summary": "Hoàn thiện CRUD khách hàng: foundation seed đồng bộ customer.view/customer.manage theo vai trò; tạo hồ sơ độc lập chỉ cho GLOBAL vì phạm vi chi nhánh được suy ra qua đơn hàng; update luôn giữ ít nhất email hoặc SĐT; mutation và audit redacted chạy atomic; Admin đồng bộ cache list/detail và chặn xóa MEMBER.",
+      "sources": [
+        "OpenAPI:createAdminCustomer/updateAdminCustomer/deactivateAdminCustomer/activateAdminCustomer/deleteAdminCustomer",
+        "source:src/modules/customer/admin-customer.service.ts",
+        "source:src/modules/customer/admin-customer.controller.ts",
+        "source:src/modules/customer/admin-customer.dto.ts",
+        "source:../admin/src/features/customers"
+      ],
+      "targets": []
     }
   ]
 }

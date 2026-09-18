@@ -1,10 +1,10 @@
 # Admin và Storefront API v1 contract integration
 
-> **Document version:** 1.7.0
+> **Document version:** 1.7.1
 >
-> **Last updated:** 2026-09-15
+> **Last updated:** 2026-09-18
 >
-> **Change summary:** Bổ sung CRUD khách hàng, sửa bài viết, cờ hiển thị sản phẩm/bài viết, đơn nhân viên lập có giao hàng, vận đơn GHN và danh mục địa giới.
+> **Change summary:** Siết scope và invariant cho CRUD khách hàng; audit mutation atomic, không lưu PII thô.
 
 ## Nguyên tắc đã áp dụng
 
@@ -49,7 +49,7 @@
 | Xóa logic liên kết ảnh sản phẩm | `DELETE /api/v1/admin/products/{id}/media/{mediaId}` | `deleteAdminProductMedia` | `catalog.product.manage` | Chuyển link `INACTIVE`, không xóa `media_assets` hay asset trên provider |
 | Sửa bài viết đã đăng | `PATCH /api/v1/admin/content/posts/{id}` | `updateAdminPost` | `cms.content.manage` | Chỉ gửi trường được truyền; bài ARCHIVED không sửa được |
 | Bật/tắt hiển thị sản phẩm | `PATCH /api/v1/admin/products/{id}` | `updateAdminProduct` | `catalog.product.manage` | `isPublished` tách khỏi `status`; ẩn tạm không phải đẩy về DRAFT |
-| CRUD khách hàng | `POST/PATCH/DELETE /api/v1/admin/customers...` | `create/update/deleteAdminCustomer` | `customer.manage` | Xoá chỉ khi chưa có đơn và chưa có tài khoản đăng nhập |
+| CRUD khách hàng | `POST/PATCH/DELETE /api/v1/admin/customers...` | `create/update/deleteAdminCustomer` | `customer.manage`; create độc lập cần GLOBAL | Luôn còn email hoặc SĐT; xoá chỉ khi chưa có đơn và chưa có tài khoản đăng nhập; mutation + audit atomic, audit không lưu PII thô |
 | Ngừng/mở lại khách hàng | `POST .../customers/{id}/deactivate\|activate` | `deactivate/activateAdminCustomer` | `customer.manage` | Giữ nguyên lịch sử mua hàng |
 | Nhân viên lập đơn | `POST /api/v1/admin/orders/pos` | `createPosOrder` | `order.manage` | `delivery` bật đơn giao hàng; COD để payment chờ; `handOverImmediately` khi khách lấy ngay |
 | In phiếu giao | `POST /api/v1/admin/fulfillments/{id}/label` | `createAdminFulfillmentLabel` | `fulfillment.pack` | URL do hãng phát hành, sống vài phút, không lưu DB |
@@ -147,6 +147,7 @@ Admin dùng `getApiErrorMessage` cho lỗi form/query và `getApiFieldErrors` đ
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.7.1 | 2026-09-18 | Harden CRUD khách hàng: tạo độc lập chỉ GLOBAL, giữ tối thiểu một kênh liên hệ, audit atomic/redacted và đồng bộ cache Admin. | API-20260918-CUSTOMER-CRUD-HARDENING |
 | 1.7.0 | 2026-09-17 | CRUD khách hàng, sửa bài viết, cờ `isPublished`, đơn nhân viên lập có giao hàng, vận đơn GHN và danh mục địa giới. | API-20260917-STAFF-DELIVERY-ORDER |
 | 1.6.0 | 2026-09-15 | Mỗi operation xuất `x-required-permissions`; Admin kiểm tra độ phủ quyền bằng test đọc contract. | API-20260915-PERMISSION-CONTRACT-EXPORT |
 | 1.5.0 | 2026-09-15 | Permission code CMS/Review đổi về `cms.content.*` và `catalog.review.moderate`; `getAdminCurrentUser`/`getCustomerCurrentUser` trả thêm `permissionVersion`. | DB-20260915-PERMISSION-CODE-ALIGNMENT |

@@ -10,6 +10,7 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateIf,
 } from 'class-validator';
 import { ENTITY_ID_OPENAPI } from '../../common/identifiers/entity-id';
 
@@ -160,7 +161,8 @@ export class UpdateAdminCustomerDto {
   phone?: string;
 
   @ApiPropertyOptional({ maxLength: 255, description: 'Gửi chuỗi rỗng để xoá email' })
-  @IsOptional() @IsString() @MaxLength(255)
+  @IsOptional() @IsString() @ValidateIf((_object, value) => value !== '')
+  @IsEmail({}, { message: 'Email không hợp lệ' }) @MaxLength(255)
   email?: string;
 
   @ApiPropertyOptional()

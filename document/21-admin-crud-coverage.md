@@ -1,10 +1,10 @@
 # Admin CRUD coverage V1
 
-> **Document version:** 1.17.0
+> **Document version:** 1.18.0
 >
-> **Last updated:** 2026-09-15
+> **Last updated:** 2026-09-18
 >
-> **Change summary:** Gỡ nhận định fixture đã lỗi thời; trỏ trạng thái về `36-delivery-status.md`.
+> **Change summary:** Hoàn thiện CRUD khách hàng với permission/scope, optimistic version, audit và cache Admin.
 
 ## Bán tại quầy
 
@@ -78,6 +78,12 @@ câu hỏi khác nhau.
 Hai trường fixture cũ hiển thị — "Xác minh qua" và "Thẻ khách hàng" — không có trong model
 `Customer` nên đã gỡ khỏi màn hình thay vì bịa số liệu. Trạng thái cũng chỉ còn ACTIVE/INACTIVE
 theo `customers_status_check`.
+
+Mutation dùng `customer.manage`; OWNER và BRANCH_MANAGER có quyền này, STAFF chỉ có
+`customer.view`. Vì `customers` không có `branch_id`, khách thuộc phạm vi chi nhánh thông qua đơn
+hàng. Do đó tạo hồ sơ độc lập chỉ dành cho scope GLOBAL; nhân viên chi nhánh tạo khách từ POS/đơn
+hàng. Form và backend đều buộc còn email hoặc SĐT, update dùng `expectedVersion`, và mutation ghi
+audit redacted trong cùng transaction. MEMBER hoặc khách đã có đơn không được xóa vật lý.
 
 ## Chi nhánh đang vận hành
 
@@ -188,6 +194,7 @@ Admin đã chỉnh. Dữ liệu hiện tại gồm 3 chi nhánh/kho, 9 thương 
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.18.0 | 2026-09-18 | Hoàn thiện CRUD khách hàng: matrix quyền, GLOBAL-only create độc lập, contact invariant, optimistic concurrency, audit redacted và cache Admin. | API-20260918-CUSTOMER-CRUD-HARDENING |
 | 1.13.0 | 2026-09-15 | Thêm `createPosOrder` cho bán tại quầy; ghi rõ vì sao không dựng đường trừ kho riêng. | POS-20260915-COUNTER-ORDER |
 | 1.12.0 | 2026-09-15 | Thêm module Admin Reporting với 4 endpoint báo cáo; Dashboard chuyển sang số liệu kinh doanh thật. | REPORT-20260915-DASHBOARD |
 | 1.11.0 | 2026-09-15 | Thương hiệu: DELETE thành xoá thật có ràng buộc tham chiếu. | CRUD-20260915-BRAND-HARD-DELETE |

@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -8,10 +9,12 @@ import { randomUUID } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { toDatabaseId, toEntityId } from '../../common/identifiers/entity-id';
+import type { MutationContext } from '../../common/request/request-context';
 import type { AuthPrincipal } from '../auth/auth.types';
+import { AuditWriter } from '../audit/audit.writer';
 import { ScopeType } from '../iam/iam.types';
 import { normalizeVietnamesePhone } from '../auth/phone-normalization';
-import { CUSTOMER_STATUS } from './customer.constants';
+import { CUSTOMER_AUDIT_ACTION, CUSTOMER_STATUS } from './customer.constants';
 import {
   AdminCustomerDetailDto,
   AdminCustomerListDto,
@@ -52,7 +55,10 @@ interface OrderRollup {
 
 @Injectable()
 export class AdminCustomerService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditWriter,
+  ) {}
 
   /**
    * Chi nhánh mà tài khoản được phép nhìn thấy; `undefined` nghĩa là toàn hệ thống.
@@ -163,7 +169,18 @@ export class AdminCustomerService {
    * INVARIANT: khách tạo ở đây không có tài khoản đăng nhập (`userId` rỗng) nên luôn là GUEST.
    * Muốn thành MEMBER thì khách phải tự đăng ký qua Storefront.
    */
-  async create(input: CreateAdminCustomerDto): Promise<AdminCustomerDetailDto> {
+  async create(
+    input: CreateAdminCustomerDto,
+    actor: AuthPrincipal,
+    context: MutationContext,
+  ): Promise<AdminCustomerDetailDto> {
+    // SECURITY: Customer chưa có đơn không có quan hệ branch để scope. Chỉ GLOBAL được tạo
+    // hồ sơ độc lập; nhân viên chi nhánh tạo khách qua POS/đơn để quan hệ branch hình thành atomic.
+    if (!actor.scopes.some(({ type }) => type === ScopeType.GLOBAL)) {
+      throw new ForbiddenException(
+        'Tài khoản chi nhánh chỉ tạo khách trong luồng bán hàng hoặc đơn hàng.',
+      );
+    }
     const name = input.name.trim();
     if (!name) throw new BadRequestException('Tên khách hàng không được để trống');
     const phone = this.normalizePhone(input.phone);
@@ -173,19 +190,40 @@ export class AdminCustomerService {
     }
     await this.assertContactNotTaken(phone, email);
 
-    const created = await this.prisma.customer.create({
-      data: {
-        // Khách do Admin tạo không gắn với user nào, nên dùng mã ngẫu nhiên như khách vãng lai.
-        customerNo: `CUS-A-${randomUUID().replaceAll('-', '').slice(0, 18).toUpperCase()}`,
-        name,
-        phone: phone?.value ?? null,
-        normalizedPhone: phone?.normalized ?? null,
-        email: email?.value ?? null,
-        normalizedEmail: email?.normalized ?? null,
-        marketingConsent: input.marketingConsent ?? false,
-        status: CUSTOMER_STATUS.ACTIVE,
-      },
-      select: { id: true },
+    const created = await this.prisma.$transaction(async (transaction) => {
+      const row = await transaction.customer.create({
+        data: {
+          // Khách do Admin tạo không gắn với user nào, nên dùng mã ngẫu nhiên như khách vãng lai.
+          customerNo: `CUS-A-${randomUUID().replaceAll('-', '').slice(0, 18).toUpperCase()}`,
+          name,
+          phone: phone?.value ?? null,
+          normalizedPhone: phone?.normalized ?? null,
+          email: email?.value ?? null,
+          normalizedEmail: email?.normalized ?? null,
+          marketingConsent: input.marketingConsent ?? false,
+          status: CUSTOMER_STATUS.ACTIVE,
+        },
+        select: { id: true, customerNo: true },
+      });
+      // SECURITY: Audit chỉ lưu mã khách và trạng thái; không chép email/SĐT/tên vào log PII.
+      await this.audit.write(
+        {
+          requestId: context.requestId,
+          sequenceNo: 1,
+          actorType: 'USER',
+          actorUserId: context.actorUserId,
+          action: CUSTOMER_AUDIT_ACTION.CREATE,
+          entityType: 'CUSTOMER',
+          entityId: toEntityId(row.id),
+          after: {
+            customerNo: row.customerNo,
+            status: CUSTOMER_STATUS.ACTIVE,
+            kind: 'GUEST',
+          },
+        },
+        transaction,
+      );
+      return row;
     });
     return this.get(toEntityId(created.id), GLOBAL_ACTOR);
   }
@@ -198,31 +236,60 @@ export class AdminCustomerService {
     id: string,
     input: UpdateAdminCustomerDto,
     actor: AuthPrincipal,
+    context: MutationContext,
   ): Promise<AdminCustomerDetailDto> {
     const current = await this.loadInScope(id, actor);
+    const name = input.name?.trim();
+    if (input.name !== undefined && !name) {
+      throw new BadRequestException('Tên khách hàng không được để trống');
+    }
     const phone = input.phone === undefined ? undefined : this.normalizePhone(input.phone);
     const email = input.email === undefined ? undefined : this.normalizeEmail(input.email);
+    const effectivePhone = phone === undefined ? current.phone : (phone?.value ?? null);
+    const effectiveEmail = email === undefined ? current.email : (email?.value ?? null);
+    if (!effectivePhone && !effectiveEmail) {
+      throw new BadRequestException('Cần ít nhất số điện thoại hoặc email để nhận lại khách');
+    }
     await this.assertContactNotTaken(phone, email, current.id);
 
-    const changed = await this.prisma.customer.updateMany({
-      where: { id: current.id, version: BigInt(input.expectedVersion) },
-      data: {
-        ...(input.name !== undefined ? { name: input.name.trim() } : {}),
-        ...(phone !== undefined
-          ? { phone: phone?.value ?? null, normalizedPhone: phone?.normalized ?? null }
-          : {}),
-        ...(email !== undefined
-          ? { email: email?.value ?? null, normalizedEmail: email?.normalized ?? null }
-          : {}),
-        ...(input.marketingConsent !== undefined
-          ? { marketingConsent: input.marketingConsent }
-          : {}),
-        version: { increment: 1 },
-      },
+    const changedFields = (['name', 'phone', 'email', 'marketingConsent'] as const).filter(
+      (field) => input[field] !== undefined,
+    );
+    await this.prisma.$transaction(async (transaction) => {
+      const changed = await transaction.customer.updateMany({
+        where: { id: current.id, version: BigInt(input.expectedVersion) },
+        data: {
+          ...(input.name !== undefined ? { name } : {}),
+          ...(phone !== undefined
+            ? { phone: phone?.value ?? null, normalizedPhone: phone?.normalized ?? null }
+            : {}),
+          ...(email !== undefined
+            ? { email: email?.value ?? null, normalizedEmail: email?.normalized ?? null }
+            : {}),
+          ...(input.marketingConsent !== undefined
+            ? { marketingConsent: input.marketingConsent }
+            : {}),
+          version: { increment: 1 },
+        },
+      });
+      if (changed.count !== 1) {
+        throw new ConflictException('Hồ sơ khách vừa thay đổi. Vui lòng tải lại rồi thử lại.');
+      }
+      await this.audit.write(
+        {
+          requestId: context.requestId,
+          sequenceNo: 1,
+          actorType: 'USER',
+          actorUserId: context.actorUserId,
+          action: CUSTOMER_AUDIT_ACTION.UPDATE,
+          entityType: 'CUSTOMER',
+          entityId: id,
+          before: { version: Number(current.version) },
+          after: { changedFields, version: input.expectedVersion + 1 },
+        },
+        transaction,
+      );
     });
-    if (changed.count !== 1) {
-      throw new ConflictException('Hồ sơ khách vừa thay đổi. Vui lòng tải lại rồi thử lại.');
-    }
     return this.get(id, actor);
   }
 
@@ -231,16 +298,18 @@ export class AdminCustomerService {
     id: string,
     input: CustomerStatusCommandDto,
     actor: AuthPrincipal,
+    context: MutationContext,
   ): Promise<AdminCustomerDetailDto> {
-    return this.changeStatus(id, input, actor, CUSTOMER_STATUS.INACTIVE);
+    return this.changeStatus(id, input, actor, context, CUSTOMER_STATUS.INACTIVE);
   }
 
   async activate(
     id: string,
     input: CustomerStatusCommandDto,
     actor: AuthPrincipal,
+    context: MutationContext,
   ): Promise<AdminCustomerDetailDto> {
-    return this.changeStatus(id, input, actor, CUSTOMER_STATUS.ACTIVE);
+    return this.changeStatus(id, input, actor, context, CUSTOMER_STATUS.ACTIVE);
   }
 
   /**
@@ -250,27 +319,46 @@ export class AdminCustomerService {
    * hàng là một phần của lịch sử đơn — xoá đi thì báo cáo doanh thu và truy vết bảo hành mất gốc,
    * nên trường hợp đó phải dùng "Ngừng hoạt động".
    */
-  async remove(id: string, input: CustomerStatusCommandDto, actor: AuthPrincipal): Promise<void> {
+  async remove(
+    id: string,
+    input: CustomerStatusCommandDto,
+    actor: AuthPrincipal,
+    context: MutationContext,
+  ): Promise<void> {
     const current = await this.loadInScope(id, actor);
     if (current.userId !== null) {
       throw new ConflictException(
         'Khách có tài khoản đăng nhập nên không xoá được. Hãy dùng Ngừng hoạt động.',
       );
     }
-    const orderCount = await this.prisma.order.count({ where: { customerId: current.id } });
-    if (orderCount > 0) {
-      throw new ConflictException(
-        'Khách đã có đơn hàng nên không xoá được. Hãy dùng Ngừng hoạt động.',
-      );
-    }
-
     await this.prisma.$transaction(async (transaction) => {
+      const orderCount = await transaction.order.count({ where: { customerId: current.id } });
+      if (orderCount > 0) {
+        throw new ConflictException(
+          'Khách đã có đơn hàng nên không xoá được. Hãy dùng Ngừng hoạt động.',
+        );
+      }
       const deleted = await transaction.customer.deleteMany({
         where: { id: current.id, version: BigInt(input.expectedVersion) },
       });
       if (deleted.count !== 1) {
         throw new ConflictException('Hồ sơ khách vừa thay đổi. Vui lòng tải lại rồi thử lại.');
       }
+      await this.audit.write(
+        {
+          requestId: context.requestId,
+          sequenceNo: 1,
+          actorType: 'USER',
+          actorUserId: context.actorUserId,
+          action: CUSTOMER_AUDIT_ACTION.DELETE,
+          entityType: 'CUSTOMER',
+          entityId: id,
+          before: { status: current.status, version: Number(current.version) },
+          after: { deleted: true },
+          reason: input.reason,
+        },
+        transaction,
+      );
     });
   }
 
@@ -278,30 +366,67 @@ export class AdminCustomerService {
     id: string,
     input: CustomerStatusCommandDto,
     actor: AuthPrincipal,
+    context: MutationContext,
     status: string,
   ): Promise<AdminCustomerDetailDto> {
     const current = await this.loadInScope(id, actor);
     if (current.status === status) {
       throw new ConflictException('Khách hàng đã ở trạng thái này');
     }
-    const changed = await this.prisma.customer.updateMany({
-      where: { id: current.id, version: BigInt(input.expectedVersion) },
-      data: { status, version: { increment: 1 } },
+    await this.prisma.$transaction(async (transaction) => {
+      const changed = await transaction.customer.updateMany({
+        where: { id: current.id, version: BigInt(input.expectedVersion) },
+        data: { status, version: { increment: 1 } },
+      });
+      if (changed.count !== 1) {
+        throw new ConflictException('Hồ sơ khách vừa thay đổi. Vui lòng tải lại rồi thử lại.');
+      }
+      await this.audit.write(
+        {
+          requestId: context.requestId,
+          sequenceNo: 1,
+          actorType: 'USER',
+          actorUserId: context.actorUserId,
+          action:
+            status === CUSTOMER_STATUS.ACTIVE
+              ? CUSTOMER_AUDIT_ACTION.ACTIVATE
+              : CUSTOMER_AUDIT_ACTION.DEACTIVATE,
+          entityType: 'CUSTOMER',
+          entityId: id,
+          before: { status: current.status, version: Number(current.version) },
+          after: { status, version: input.expectedVersion + 1 },
+          reason: input.reason,
+        },
+        transaction,
+      );
     });
-    if (changed.count !== 1) {
-      throw new ConflictException('Hồ sơ khách vừa thay đổi. Vui lòng tải lại rồi thử lại.');
-    }
     return this.get(id, actor);
   }
 
   private async loadInScope(
     id: string,
     actor: AuthPrincipal,
-  ): Promise<{ id: bigint; status: string; userId: bigint | null }> {
+  ): Promise<{
+    id: bigint;
+    status: string;
+    userId: bigint | null;
+    phone: string | null;
+    email: string | null;
+    marketingConsent: boolean;
+    version: bigint;
+  }> {
     const branchIds = this.visibleBranchIds(actor);
     const customer = await this.prisma.customer.findFirst({
       where: { id: toDatabaseId(id), ...this.customerScopeWhere(branchIds) },
-      select: { id: true, status: true, userId: true },
+      select: {
+        id: true,
+        status: true,
+        userId: true,
+        phone: true,
+        email: true,
+        marketingConsent: true,
+        version: true,
+      },
     });
     if (!customer) throw new NotFoundException('Không tìm thấy khách hàng');
     return customer;

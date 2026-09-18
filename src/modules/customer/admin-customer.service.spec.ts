@@ -1,6 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
+import type { AuditWriter } from '../audit/audit.writer';
 import type { AuthPrincipal } from '../auth/auth.types';
 import { ScopeType } from '../iam/iam.types';
 import { AdminCustomerService } from './admin-customer.service';
@@ -28,7 +29,7 @@ describe('AdminCustomerService phạm vi chi nhánh', () => {
     $transaction: jest.fn(async (ops: Promise<unknown>[]) => Promise.all(ops)),
   } as unknown as PrismaService;
 
-  const service = new AdminCustomerService(prisma);
+  const service = new AdminCustomerService(prisma, {} as AuditWriter);
 
   const owner: AuthPrincipal = {
     userId: '1',

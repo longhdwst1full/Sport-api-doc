@@ -25,7 +25,11 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../common/exceptions/error-response.dto';
-import { AuthenticatedRequest, getAuthPrincipal } from '../../common/request/request-context';
+import {
+  AuthenticatedRequest,
+  getAuthPrincipal,
+  getMutationContext,
+} from '../../common/request/request-context';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import {
   AdminCustomerDetailDto,
@@ -78,13 +82,22 @@ export class AdminCustomerController {
   @RequirePermissions('customer.manage')
   @ApiOperation({
     operationId: 'createAdminCustomer',
-    summary: 'Nhân viên tạo hồ sơ khách mua tại quầy hoặc qua điện thoại',
+    summary: 'Quản trị toàn hệ thống tạo hồ sơ khách độc lập',
+    description:
+      'Chỉ principal có phạm vi GLOBAL được tạo hồ sơ độc lập. Nhân viên theo chi nhánh tạo khách qua luồng POS/đơn hàng để hệ thống thiết lập phạm vi dữ liệu đúng chi nhánh.',
   })
   @ApiCreatedResponse({ type: AdminCustomerDetailDto })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   @ApiConflictResponse({ type: ErrorResponseDto, description: 'Số điện thoại hoặc email đã có chủ' })
-  create(@Body() input: CreateAdminCustomerDto): Promise<AdminCustomerDetailDto> {
-    return this.customers.create(input);
+  create(
+    @Body() input: CreateAdminCustomerDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<AdminCustomerDetailDto> {
+    return this.customers.create(
+      input,
+      getAuthPrincipal(request),
+      getMutationContext(request),
+    );
   }
 
   @Patch(':id')
@@ -101,7 +114,12 @@ export class AdminCustomerController {
     @Body() input: UpdateAdminCustomerDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<AdminCustomerDetailDto> {
-    return this.customers.update(id, input, getAuthPrincipal(request));
+    return this.customers.update(
+      id,
+      input,
+      getAuthPrincipal(request),
+      getMutationContext(request),
+    );
   }
 
   @Post(':id/deactivate')
@@ -117,7 +135,12 @@ export class AdminCustomerController {
     @Body() input: CustomerStatusCommandDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<AdminCustomerDetailDto> {
-    return this.customers.deactivate(id, input, getAuthPrincipal(request));
+    return this.customers.deactivate(
+      id,
+      input,
+      getAuthPrincipal(request),
+      getMutationContext(request),
+    );
   }
 
   @Post(':id/activate')
@@ -130,7 +153,12 @@ export class AdminCustomerController {
     @Body() input: CustomerStatusCommandDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<AdminCustomerDetailDto> {
-    return this.customers.activate(id, input, getAuthPrincipal(request));
+    return this.customers.activate(
+      id,
+      input,
+      getAuthPrincipal(request),
+      getMutationContext(request),
+    );
   }
 
   @Delete(':id')
@@ -150,6 +178,11 @@ export class AdminCustomerController {
     @Body() input: CustomerStatusCommandDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<void> {
-    return this.customers.remove(id, input, getAuthPrincipal(request));
+    return this.customers.remove(
+      id,
+      input,
+      getAuthPrincipal(request),
+      getMutationContext(request),
+    );
   }
 }
