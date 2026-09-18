@@ -159,4 +159,21 @@ describe('SystemParameterService với tham số bí mật', () => {
     expect(entry).not.toContain('token-that-cua-ghn');
     expect(entry).not.toContain('token-moi');
   });
+
+  it('cho phép cập nhật không cần lý do nhưng vẫn ghi actor và thay đổi vào audit', async () => {
+    const { service, update, auditWrite } = buildService();
+
+    await service.update(
+      'GHN_TOKEN',
+      { value: 'token-moi', expectedVersion: 3 } as never,
+      { requestId: 'r1', actorUserId: '2' } as never,
+    );
+
+    expect(update.mock.calls[0]?.[0].data.remarks).toBeNull();
+    expect(auditWrite).toHaveBeenCalledWith(
+      expect.objectContaining({ requestId: 'r1', actorUserId: '2', action: 'system.parameter.update' }),
+      expect.anything(),
+    );
+    expect(auditWrite.mock.calls[0]?.[0]).not.toHaveProperty('reason');
+  });
 });

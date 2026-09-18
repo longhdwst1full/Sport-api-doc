@@ -140,8 +140,8 @@ export class DeleteSystemParameterDto {
   @ApiProperty({ type: String, pattern: '^\\d+$' })
   @IsString() expectedVersion: string;
 
-  @ApiProperty({ minLength: 5, maxLength: 500 })
-  @Transform(trimOptional) @IsString() @MinLength(5) @MaxLength(500) reason: string;
+  @ApiPropertyOptional({ minLength: 5, maxLength: 500, description: 'Lý do nếu người thao tác muốn ghi thêm vào audit' })
+  @Transform(trimOptional) @IsString() @MinLength(5) @MaxLength(500) @IsOptional() reason?: string;
 }
 
 export class UpdateSystemParameterDto {
@@ -151,6 +151,6 @@ export class UpdateSystemParameterDto {
   @ApiProperty({ description: 'Giá trị mới ở dạng chuỗi; server kiểm tra kiểu và khoảng hợp lệ' })
   @Transform(trimOptional) @IsString() @MaxLength(500) value: string;
 
-  @ApiProperty({ minLength: 5, maxLength: 500, description: 'Lý do thay đổi, bắt buộc để truy vết' })
-  @Transform(trimOptional) @IsString() @MinLength(5) @MaxLength(500) reason: string;
+  @ApiPropertyOptional({ minLength: 5, maxLength: 500, description: 'Lý do thay đổi (không bắt buộc); actor/time/value vẫn được audit' })
+  @Transform(trimOptional) @IsString() @MinLength(5) @MaxLength(500) @IsOptional() reason?: string;
 }

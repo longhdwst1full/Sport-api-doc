@@ -8736,11 +8736,10 @@ components:
           type: string
           minLength: 5
           maxLength: 500
-          description: Lý do thay đổi, bắt buộc để truy vết
+          description: Lý do thay đổi (không bắt buộc); actor/time/value vẫn được audit
       required:
         - expectedVersion
         - value
-        - reason
     CreateSystemParameterDto:
       type: object
       properties:
@@ -8806,9 +8805,9 @@ components:
           type: string
           minLength: 5
           maxLength: 500
+          description: Lý do nếu người thao tác muốn ghi thêm vào audit
       required:
         - expectedVersion
-        - reason
     AuditLogDto:
       type: object
       properties:

@@ -3347,6 +3347,31 @@
       "targets": []
     },
     {
+      "id": "API-20260918-CATALOG-READ-PARALLEL",
+      "date": "2026-09-18",
+      "scope": "API+PERSISTENCE",
+      "summary": "Hai phép đọc danh sách sản phẩm và SKU (findMany/count) chạy song song thay vì mở transaction đọc; response contract và schema không đổi. Theo dõi TTFB và slow query sau deploy.",
+      "sources": [
+        "OpenAPI:listCatalogProducts/listAdminProducts",
+        "source:src/modules/catalog/products/services/products.service.ts",
+        "test:src/modules/catalog/products/services/products.service.spec.ts",
+        "document:38-api-read-performance-review.md"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260918-PARAMETER-OPTIONAL-REASON",
+      "date": "2026-09-18",
+      "scope": "API+ADMIN",
+      "summary": "Lý do khi sửa/ngừng dùng tham số là tùy chọn; expectedVersion và audit actor/request/thay đổi vẫn bắt buộc. Không thay đổi bảng dữ liệu.",
+      "sources": [
+        "OpenAPI:updateAdminSystemParameter/deleteAdminSystemParameter",
+        "source:src/modules/system/parameters/system-parameter.service.ts",
+        "source:../admin/src/features/system-parameters"
+      ],
+      "targets": []
+    },
+    {
       "id": "API-20260918-CUSTOMER-CRUD-HARDENING",
       "date": "2026-09-18",
       "scope": "CUSTOMER+PERMISSION+AUDIT+ADMIN",

@@ -1,10 +1,10 @@
 # System Parameters — maintenance note
 
-> **Document version:** 1.0.0
+> **Document version:** 1.0.1
 >
-> **Last updated:** 2026-09-14
+> **Last updated:** 2026-09-18
 >
-> **Change summary:** Bảng tham số nghiệp vụ sửa được từ Admin; đảo quyết định D45 của Sprint 4.
+> **Change summary:** Lý do khi sửa/ngừng dùng tham số là tùy chọn; actor, thời điểm và thay đổi vẫn được audit.
 
 ## Vì sao có bảng này
 
@@ -58,6 +58,7 @@ Tham chiếu: `msttparameter`, `ParameterResource` (`/api/v1/broker/mst/paramete
 - Thiếu bản ghi, giá trị hỏng, hoặc database chưa bật ⇒ rơi về `defaultValue` trong catalog. **Cấu hình sai không được làm sập luồng bán hàng.**
 - Kiểm tra kiểu và khoảng min/max **trước khi mở transaction**.
 - `sortBy` đi qua whitelist, không ghép chuỗi từ query vào `orderBy`.
+- Lý do thao tác là tuỳ chọn. Nếu không nhập, `remarks` để trống; audit vẫn lưu actor, request-id và thay đổi (bí mật luôn bị che).
 - Catalog tự đồng bộ lúc khởi động (`onModuleInit`); lỗi chỉ ghi log, không chặn app.
 
 ## Operation
@@ -80,3 +81,4 @@ Tham chiếu: `msttparameter`, `ParameterResource` (`/api/v1/broker/mst/paramete
 | Version | Date | Change summary |
 | --- | --- | --- |
 | 1.0.0 | 2026-09-14 | Tạo bảng tham số, kế thừa pattern `msttparameter` của fund-ops-service. |
+| 1.0.1 | 2026-09-18 | Cho phép bỏ trống lý do khi sửa/ngừng dùng, không bỏ audit. |

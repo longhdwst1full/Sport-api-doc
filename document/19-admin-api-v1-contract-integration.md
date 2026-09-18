@@ -1,10 +1,10 @@
 # Admin và Storefront API v1 contract integration
 
-> **Document version:** 1.7.1
+> **Document version:** 1.7.2
 >
 > **Last updated:** 2026-09-18
 >
-> **Change summary:** Siết scope và invariant cho CRUD khách hàng; audit mutation atomic, không lưu PII thô.
+> **Change summary:** `reason` của thao tác sửa/ngừng dùng tham số chuyển thành tùy chọn; không thay đổi version check hay audit.
 
 ## Nguyên tắc đã áp dụng
 
@@ -147,6 +147,7 @@ Admin dùng `getApiErrorMessage` cho lỗi form/query và `getApiFieldErrors` đ
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.7.2 | 2026-09-18 | `updateAdminSystemParameter` và `deleteAdminSystemParameter` nhận `reason` tùy chọn; vẫn yêu cầu `expectedVersion` và ghi audit actor/request/thay đổi. | API-20260918-PARAMETER-OPTIONAL-REASON |
 | 1.7.1 | 2026-09-18 | Harden CRUD khách hàng: tạo độc lập chỉ GLOBAL, giữ tối thiểu một kênh liên hệ, audit atomic/redacted và đồng bộ cache Admin. | API-20260918-CUSTOMER-CRUD-HARDENING |
 | 1.7.0 | 2026-09-17 | CRUD khách hàng, sửa bài viết, cờ `isPublished`, đơn nhân viên lập có giao hàng, vận đơn GHN và danh mục địa giới. | API-20260917-STAFF-DELIVERY-ORDER |
 | 1.6.0 | 2026-09-15 | Mỗi operation xuất `x-required-permissions`; Admin kiểm tra độ phủ quyền bằng test đọc contract. | API-20260915-PERMISSION-CONTRACT-EXPORT |

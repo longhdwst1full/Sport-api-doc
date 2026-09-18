@@ -182,7 +182,7 @@ export class SystemParameterService implements OnModuleInit {
         where: { code },
         data: {
           value: nextValue,
-          remarks: input.reason,
+          remarks: input.reason?.trim() || null,
           updatedBy: toActorDatabaseId(context.actorUserId),
           version: { increment: 1 },
         },
@@ -200,7 +200,7 @@ export class SystemParameterService implements OnModuleInit {
           // chép token vào audit là nhân bản bí mật sang một bảng giữ 10 năm.
           before: { value: current.isSecret ? SECRET_MASK : current.value },
           after: { value: row.isSecret ? SECRET_MASK : row.value },
-          reason: input.reason,
+          ...(input.reason?.trim() ? { reason: input.reason.trim() } : {}),
         },
         transaction,
       );
@@ -304,7 +304,7 @@ export class SystemParameterService implements OnModuleInit {
         where: { code },
         data: {
           status: PARAMETER_STATUS.INACTIVE,
-          remarks: input.reason,
+          remarks: input.reason?.trim() || null,
           updatedBy: toActorDatabaseId(context.actorUserId),
           version: { increment: 1 },
         },
@@ -319,7 +319,7 @@ export class SystemParameterService implements OnModuleInit {
           entityType: 'SYSTEM_PARAMETER',
           entityId: toEntityId(current.id),
           before: { code: current.code, value: current.value },
-          reason: input.reason,
+          ...(input.reason?.trim() ? { reason: input.reason.trim() } : {}),
         },
         transaction,
       );
@@ -472,4 +472,3 @@ export class SystemParameterService implements OnModuleInit {
     };
   }
 }
-

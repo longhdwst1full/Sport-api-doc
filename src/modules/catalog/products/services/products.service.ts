@@ -88,7 +88,9 @@ export class ProductsService {
         : {}),
     };
     const skip = (query.page - 1) * query.limit;
-    const [rows, total] = await this.prisma.$transaction([
+    // Hai phép đọc độc lập: chạy song song để tránh giữ transaction/connection trên
+    // Supabase pooler. READ COMMITTED trước đây cũng không bảo đảm cùng snapshot.
+    const [rows, total] = await Promise.all([
       this.prisma.productVariant.findMany({
         where,
         orderBy: [{ sku: 'asc' }, { id: 'asc' }],
@@ -187,7 +189,9 @@ export class ProductsService {
       ...(categoryWhere ? { categories: { some: { category: categoryWhere } } } : {}),
     };
     const skip = (query.page - 1) * query.limit;
-    const [rows, total] = await this.prisma.$transaction([
+    // Trang sản phẩm và tổng số là hai phép đọc độc lập: không cần giữ transaction
+    // trên pooler chỉ để đọc, nhất là khi DB ở khác region với API.
+    const [rows, total] = await Promise.all([
       this.prisma.product.findMany({
         where,
         include: this.productInclude(now, storefront),

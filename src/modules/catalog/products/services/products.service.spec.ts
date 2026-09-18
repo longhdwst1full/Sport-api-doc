@@ -231,9 +231,10 @@ describe('ProductsService', () => {
       findMany: jest.fn().mockResolvedValue([row]),
       count: jest.fn().mockResolvedValue(1),
     };
+    const transactionSpy = jest.fn((operations: Promise<unknown>[]) => Promise.all(operations));
     const prisma = {
       product,
-      $transaction: jest.fn((operations: Promise<unknown>[]) => Promise.all(operations)),
+      $transaction: transactionSpy,
     } as unknown as PrismaService;
     const storefront = new ProductsService(prisma, {} as AuditWriter);
 
@@ -241,6 +242,8 @@ describe('ProductsService', () => {
 
     expect(result.items[0]).toMatchObject({ minPrice: '500000.00' });
     expect(product.findMany).toHaveBeenCalledTimes(1);
+    // List đọc độc lập; không giữ transaction của Supabase pooler chỉ để đếm dòng.
+    expect(transactionSpy).not.toHaveBeenCalled();
   });
 
   it('rejects publishing a combo when one component variant is inactive', async () => {
