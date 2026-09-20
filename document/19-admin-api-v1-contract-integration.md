@@ -1,10 +1,10 @@
 # Admin và Storefront API v1 contract integration
 
-> **Document version:** 1.7.2
+> **Document version:** 1.9.0
 >
-> **Last updated:** 2026-09-18
+> **Last updated:** 2026-09-19
 >
-> **Change summary:** `reason` của thao tác sửa/ngừng dùng tham số chuyển thành tùy chọn; không thay đổi version check hay audit.
+> **Change summary:** Bổ sung lifecycle vai trò hệ thống an toàn: OWNER bất biến; BRANCH_MANAGER/STAFF được ngừng dùng hoặc kích hoạt lại mà không mất lịch sử.
 
 ## Nguyên tắc đã áp dụng
 
@@ -28,6 +28,8 @@
 | Search branch active | `GET /api/v1/admin/organization/branches/active` | `searchActiveAdminBranches` | `org.branch.view` | Gán role scope BRANCH |
 | Search warehouse active | `GET /api/v1/admin/organization/warehouses/active` | `searchActiveAdminWarehouses` | `org.warehouse.view` | Gán role scope WAREHOUSE |
 | Danh sách role quản trị | `GET /api/v1/admin/iam/roles` | `listAdminRoles` | `iam.role.view` | Tab Role |
+| Sửa/lifecycle role | `PATCH /api/v1/admin/iam/roles/{roleId}` | `updateAdminRole` | `iam.role.manage` + GLOBAL | Sửa tên/quyền; OWNER không đổi trạng thái; BRANCH_MANAGER/STAFF có thể kích hoạt lại |
+| Xóa/ngừng role | `DELETE /api/v1/admin/iam/roles/{roleId}` | `deleteAdminRole` | `iam.role.manage` + GLOBAL | OWNER bị chặn; system role chuyển `INACTIVE`; custom role chưa gán mới xóa vật lý |
 | Search role active | `GET /api/v1/admin/iam/roles/active` | `searchActiveAdminRoles` | `iam.role.view` | Gán role cho user |
 | Gán role cấp dưới | `POST /api/v1/admin/iam/users/{userId}/role-assignments` | `assignAdminUserRole` | `iam.assignment.manage` — OWNER duy nhất | Chỉ BRANCH_MANAGER/STAFF + branchId |
 | Thu hồi assignment cấp dưới | `POST /api/v1/admin/iam/users/{userId}/role-assignments/{assignmentId}/revoke` | `revokeAdminUserRoleAssignment` | `iam.assignment.manage` — OWNER duy nhất | Cấm thu hồi OWNER |
@@ -75,7 +77,7 @@ API `/active` nhận `search`, `page`, `limit`; warehouse nhận thêm `branchId
 }
 ```
 
-Các operation `DELETE` của Sprint 1 đều nhận request body chứa optimistic version. Lặp lại request với version cũ không làm xóa thêm dữ liệu và trả conflict/invalid transition theo error envelope chuẩn. Các route `POST .../deactivate|archive` cũ vẫn được giữ để tương thích với Admin hiện tại; không có hard delete cho master, transaction, ledger, audit hoặc root IAM.
+Các operation `DELETE` của Sprint 1 đều nhận request body chứa optimistic version. Lặp lại request với version cũ không làm xóa thêm dữ liệu và trả conflict/invalid transition theo error envelope chuẩn. Các route `POST .../deactivate|archive` cũ vẫn được giữ để tương thích với Admin hiện tại. Riêng IAM: OWNER bất biến; BRANCH_MANAGER/STAFF chỉ chuyển `INACTIVE`; custom role chưa có assignment mới được xóa vật lý. Transaction, ledger và audit không hard delete.
 
 ## Error contract duy nhất
 
@@ -147,6 +149,8 @@ Admin dùng `getApiErrorMessage` cho lỗi form/query và `getApiFieldErrors` đ
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.9.0 | 2026-09-19 | OWNER bất biến; DELETE system role chỉ ngừng hoạt động, tăng permissionVersion và giữ lịch sử; seed không ghi đè cấu hình role đã chỉnh. | API-20260919-SYSTEM-ROLE-LIFECYCLE |
+| 1.8.0 | 2026-09-19 | Production refresh cookie dùng `SameSite=None; Secure`; Admin giữ access token in-memory, khôi phục `/me`, dọn cache và báo hết phiên một lần khi refresh thất bại. | API-20260919-ADMIN-REFRESH-RECOVERY |
 | 1.7.2 | 2026-09-18 | `updateAdminSystemParameter` và `deleteAdminSystemParameter` nhận `reason` tùy chọn; vẫn yêu cầu `expectedVersion` và ghi audit actor/request/thay đổi. | API-20260918-PARAMETER-OPTIONAL-REASON |
 | 1.7.1 | 2026-09-18 | Harden CRUD khách hàng: tạo độc lập chỉ GLOBAL, giữ tối thiểu một kênh liên hệ, audit atomic/redacted và đồng bộ cache Admin. | API-20260918-CUSTOMER-CRUD-HARDENING |
 | 1.7.0 | 2026-09-17 | CRUD khách hàng, sửa bài viết, cờ `isPublished`, đơn nhân viên lập có giao hàng, vận đơn GHN và danh mục địa giới. | API-20260917-STAFF-DELIVERY-ORDER |

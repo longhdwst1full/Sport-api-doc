@@ -64,7 +64,7 @@ export class IamService {
 
   async getRole(roleId: string): Promise<RoleDto> {
     const role = await this.iam.findRole(roleId);
-    if (!role) throw new NotFoundException('Role not found');
+    if (!role) throw new NotFoundException('Không tìm thấy vai trò');
     return role;
   }
 
@@ -108,9 +108,13 @@ export class IamService {
   ): Promise<RoleDto> {
     this.authorizeRoleAdministration(actor);
     const role = await this.iam.findRole(roleId);
-    if (!role) throw new NotFoundException('Role not found');
-    if (role.system && input.status !== undefined && input.status !== role.status) {
-      throw new ForbiddenException('Không được đổi trạng thái vai trò hệ thống');
+    if (!role) throw new NotFoundException('Không tìm thấy vai trò');
+    if (
+      role.code === SystemRoleCode.OWNER
+      && input.status !== undefined
+      && input.status !== role.status
+    ) {
+      throw new ForbiddenException('Vai trò OWNER phải luôn hoạt động để tránh khóa toàn hệ thống');
     }
     const permissionCodes = input.permissionCodes
       ? await this.resolvePermissionCodes(input.permissionCodes, actor, role.permissionCodes)
@@ -141,9 +145,29 @@ export class IamService {
   ): Promise<void> {
     this.authorizeRoleAdministration(actor);
     const role = await this.iam.findRole(roleId);
-    if (!role) throw new NotFoundException('Role not found');
+    if (!role) throw new NotFoundException('Không tìm thấy vai trò');
+    if (role.code === SystemRoleCode.OWNER) {
+      throw new ForbiddenException('Không được xoá hoặc ngừng vai trò OWNER');
+    }
     if (role.system) {
-      throw new ForbiddenException('Vai trò hệ thống không được xoá');
+      if (role.status === ROLE_STATUS.INACTIVE) {
+        throw new ConflictException('Vai trò hệ thống này đã ngừng hoạt động');
+      }
+      // Vai trò hệ thống có mã được code tham chiếu nên DELETE chỉ đổi lifecycle.
+      // Repository đồng thời tăng permissionVersion để phiên đang giữ role mất quyền ngay.
+      const deactivated = await this.iam.updateRole(
+        roleId,
+        {
+          status: ROLE_STATUS.INACTIVE,
+          reason: input.reason.trim(),
+          expectedVersion,
+        },
+        context,
+      );
+      if (!deactivated) {
+        throw new ConflictException('Vai trò vừa thay đổi; hãy tải lại danh sách và thử lại');
+      }
+      return;
     }
     if ((await this.iam.countRoleAssignments(roleId)) > 0) {
       throw new ConflictException(
@@ -220,9 +244,9 @@ export class IamService {
     actor: AuthPrincipal,
   ): Promise<UserRoleAssignmentDto> {
     this.authorizeAssignment(actor, input);
-    if (!(await this.iam.hasUser(userId))) throw new NotFoundException('User not found');
+    if (!(await this.iam.hasUser(userId))) throw new NotFoundException('Không tìm thấy tài khoản');
     const role = await this.iam.findActiveRoleByCode(input.roleCode);
-    if (!role) throw new NotFoundException('Role not found');
+    if (!role) throw new NotFoundException('Không tìm thấy vai trò');
 
     await this.validateScope(input);
     if (
@@ -303,7 +327,7 @@ export class IamService {
     this.authorizeAssignment(actor, assignmentInput);
     await this.validateScope(assignmentInput);
     const role = await this.iam.findActiveRoleByCode(input.roleCode);
-    if (!role) throw new NotFoundException('Role not found');
+    if (!role) throw new NotFoundException('Không tìm thấy vai trò');
 
     const normalizedEmail = input.email.trim().toLowerCase();
     if (await this.iam.hasActiveEmail(normalizedEmail)) {

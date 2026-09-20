@@ -115,20 +115,38 @@ describe('IamService role administration', () => {
     ).rejects.toThrow(ConflictException);
   });
 
-  it('never deletes a system role', async () => {
+  it('never deletes or deactivates the OWNER role', async () => {
     const service = createService();
-    const systemRole = (await service.listAllRoles()).items.find(({ system }) => system);
-    expect(systemRole).toBeDefined();
+    const ownerRole = (await service.listAllRoles()).items.find(({ code }) => code === 'OWNER');
+    expect(ownerRole).toBeDefined();
 
     await expect(
       service.deleteRole(
-        systemRole!.id,
-        systemRole!.version,
-        { expectedVersion: systemRole!.version, reason: 'thử xoá' },
+        ownerRole!.id,
+        ownerRole!.version,
+        { expectedVersion: ownerRole!.version, reason: 'thử xoá' },
         context,
         owner,
       ),
     ).rejects.toThrow(ForbiddenException);
+  });
+
+  it('deactivates a non-owner system role instead of deleting it', async () => {
+    const service = createService();
+    const staffRole = (await service.listAllRoles()).items.find(({ code }) => code === 'STAFF');
+    expect(staffRole).toBeDefined();
+
+    await service.deleteRole(
+      staffRole!.id,
+      staffRole!.version,
+      { expectedVersion: staffRole!.version, reason: 'tạm ngừng sử dụng' },
+      context,
+      owner,
+    );
+
+    const persisted = await service.getRole(staffRole!.id);
+    expect(persisted.status).toBe('INACTIVE');
+    expect(persisted.system).toBe(true);
   });
 
   it('refuses to delete a role that is still assigned to a user', async () => {

@@ -31,7 +31,20 @@ describe('AuthTokenTransportService', () => {
     expect(cookie).toHaveBeenCalledWith(
       'dctd_admin_refresh',
       pair.refreshToken,
-      expect.objectContaining({ httpOnly: true, secure: true, path: '/api/v1/admin/auth' }),
+      expect.objectContaining({ httpOnly: true, secure: true, sameSite: 'none', path: '/api/v1/admin/auth' }),
+    );
+  });
+
+  it('keeps development refresh cookie same-site compatible on http', () => {
+    const service = new AuthTokenTransportService(new ConfigService({
+      app: { authTokenTransport: 'COOKIE', environment: 'development' },
+    }));
+    const cookie = jest.fn();
+    service.deliver(pair, { cookie } as unknown as Response, 'customer');
+    expect(cookie).toHaveBeenCalledWith(
+      'dctd_customer_refresh',
+      pair.refreshToken,
+      expect.objectContaining({ secure: false, sameSite: 'lax' }),
     );
   });
 

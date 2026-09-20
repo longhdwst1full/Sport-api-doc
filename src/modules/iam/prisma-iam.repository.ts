@@ -276,6 +276,7 @@ export class PrismaIamRepository extends IamRepository {
               ? { permissionCodes: [...input.permissionCodes].sort() }
               : {}),
           } as unknown as Prisma.InputJsonValue,
+          ...(input.reason ? { reason: input.reason } : {}),
         },
         transaction,
       );

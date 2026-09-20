@@ -3347,6 +3347,36 @@
       "targets": []
     },
     {
+      "id": "API-20260919-ADMIN-REFRESH-RECOVERY",
+      "date": "2026-09-19",
+      "scope": "AUTH+API+ADMIN",
+      "summary": "Production refresh cookie hỗ trợ request cross-site bằng SameSite=None/Secure; Admin giữ access token trong memory, tự dọn phiên/cache, redirect login và toast một lần khi refresh thất bại. Không thay đổi database.",
+      "sources": [
+        "OpenAPI:refreshAdminToken/getAdminCurrentUser",
+        "source:src/modules/auth/auth-token-transport.service.ts",
+        "source:../admin/src/core/auth",
+        "test:src/modules/auth/auth-token-transport.service.spec.ts",
+        "test:../admin/src/lib/api/fetcher.test.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260919-SYSTEM-ROLE-LIFECYCLE",
+      "date": "2026-09-19",
+      "scope": "IAM+API+ADMIN",
+      "summary": "OWNER tiếp tục bất biến. DELETE BRANCH_MANAGER/STAFF chuyển vai trò sang INACTIVE, tăng permission_version của người đang được gán và giữ lịch sử; custom role chưa gán mới xóa vật lý. Foundation seed chỉ bootstrap role còn thiếu và không ghi đè tên, trạng thái hoặc tập quyền do Admin đã chỉnh. Không thay đổi schema database.",
+      "sources": [
+        "OpenAPI:updateAdminRole/deleteAdminRole",
+        "source:src/modules/iam/iam.service.ts",
+        "source:src/modules/iam/prisma-iam.repository.ts",
+        "source:prisma/seed.ts",
+        "source:../admin/src/features/roles",
+        "test:src/modules/iam/iam.role-administration.spec.ts",
+        "test:src/modules/iam/prisma-iam.role-status.spec.ts"
+      ],
+      "targets": []
+    },
+    {
       "id": "API-20260918-CATALOG-READ-PARALLEL",
       "date": "2026-09-18",
       "scope": "API+PERSISTENCE",

@@ -1344,7 +1344,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponseDto"
         "403":
-          description: System role cannot be deleted
+          description: OWNER cannot be deactivated or deleted
           content:
             application/json:
               schema:
@@ -1363,7 +1363,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponseDto"
       security:
         - bearer: []
-      summary: Delete a custom role that is not assigned to any user
+      summary: Deactivate a system role or delete an unassigned custom role
       tags:
         - Admin IAM
       x-required-permissions:

@@ -111,5 +111,7 @@ export interface UpdateRoleInput {
   description?: string;
   status?: RoleStatus;
   permissionCodes?: string[];
+  /** Lý do nghiệp vụ cho thay đổi lifecycle được tái sử dụng từ lệnh DELETE. */
+  reason?: string;
   expectedVersion: number;
 }

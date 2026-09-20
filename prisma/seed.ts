@@ -129,10 +129,36 @@ async function seed(transaction: Prisma.TransactionClient): Promise<void> {
   ];
 
   for (const roleSeed of roleSeeds) {
-    const role = await transaction.role.upsert({
+    const existingRole = await transaction.role.findUnique({
       where: { code: roleSeed.code },
-      update: { name: roleSeed.name, status: 'ACTIVE', isSystem: true },
-      create: {
+      select: { id: true },
+    });
+    if (existingRole) {
+      // Seed chỉ bootstrap. Tên, trạng thái và quyền đã được quản trị viên chỉnh phải được giữ nguyên.
+      await transaction.role.update({
+        where: { id: existingRole.id },
+        data: { isSystem: true },
+      });
+      if (roleSeed.code === 'OWNER') {
+        // SECURITY: OWNER là break-glass account duy nhất; permission mới phải được bổ sung, không được
+        // để seed cũ khiến tài khoản gốc mất khả năng quản trị chức năng mới.
+        const ownerPermissions = await transaction.permission.findMany({
+          where: { code: { in: [...V1_ROLE_PERMISSIONS.OWNER] } },
+          select: { id: true },
+        });
+        await transaction.rolePermission.createMany({
+          data: ownerPermissions.map(({ id: permissionId }) => ({
+            roleId: existingRole.id,
+            permissionId,
+          })),
+          skipDuplicates: true,
+        });
+      }
+      continue;
+    }
+
+    const role = await transaction.role.create({
+      data: {
         code: roleSeed.code,
         name: roleSeed.name,
         status: 'ACTIVE',
@@ -144,12 +170,6 @@ async function seed(transaction: Prisma.TransactionClient): Promise<void> {
       select: { id: true },
     });
     const permissionIds = permissions.map(({ id }) => id);
-    await transaction.rolePermission.deleteMany({
-      where: {
-        roleId: role.id,
-        permissionId: { notIn: permissionIds },
-      },
-    });
     await transaction.rolePermission.createMany({
       data: permissionIds.map((permissionId) => ({ roleId: role.id, permissionId })),
       skipDuplicates: true,

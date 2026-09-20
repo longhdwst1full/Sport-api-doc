@@ -57,7 +57,9 @@ export class AuthTokenTransportService {
     return {
       httpOnly: true,
       secure: production,
-      sameSite: 'lax' as const,
+      // Admin/Storefront và API deploy ở các hostname Vercel khác nhau. Production
+      // cần None + Secure để browser gửi refresh cookie cho request cross-site.
+      sameSite: production ? ('none' as const) : ('lax' as const),
       path: audience === 'admin' ? '/api/v1/admin/auth' : '/api/v1/auth',
       maxAge,
     };

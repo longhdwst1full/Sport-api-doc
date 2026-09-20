@@ -269,12 +269,12 @@ export class IamController {
   @RequirePermissions('iam.role.manage')
   @ApiOperation({
     operationId: 'deleteAdminRole',
-    summary: 'Delete a custom role that is not assigned to any user',
+    summary: 'Deactivate a system role or delete an unassigned custom role',
   })
   @ApiNoContentResponse()
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   @ApiUnauthorizedResponse({ type: ErrorResponseDto })
-  @ApiForbiddenResponse({ type: ErrorResponseDto, description: 'System role cannot be deleted' })
+  @ApiForbiddenResponse({ type: ErrorResponseDto, description: 'OWNER cannot be deactivated or deleted' })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
   @ApiConflictResponse({ type: ErrorResponseDto, description: 'Role is still assigned' })
   deleteRole(
