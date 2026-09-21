@@ -1,10 +1,10 @@
 # Trạng thái bàn giao — nguồn tiến độ duy nhất
 
-> **Document version:** 1.4.0
+> **Document version:** 1.5.0
 >
-> **Last updated:** 2026-09-20
+> **Last updated:** 2026-09-21
 >
-> **Change summary:** Product create hỗ trợ tạo Product + 1–50 initial variants atomic và Admin ghép chung một form.
+> **Change summary:** Điều chỉnh tồn kho retry serialization an toàn, có timeout rõ và trả 503 tiếng Việt khi Supabase tạm bận.
 
 ## Tài liệu này dùng để làm gì
 
@@ -45,7 +45,7 @@ không được gộp làm một.
 | Báo cáo và Dashboard | ✅ | ✅ | 4 endpoint `Admin Reporting` |
 | Quản lý khách hàng | ✅ | ✅ | `Admin Customers`; fixture đã xoá |
 | Vai trò và phân quyền | ✅; OWNER được bảo vệ full permission catalog | ⚠️ Chờ deploy bản IAM mới | CRUD + cây quyền; API 381/381 unit tests pass ngày 2026-09-20 |
-| Tồn kho | ✅ | ✅ | Sổ Hà Nội mở, đã nhập và bán thật |
+| Tồn kho | ✅; adjustment có idempotency, retry serialization và timeout | ✅; cần redeploy bản resilience mới | Transaction rollback-only trên Supabase; unit test P2034/P2010/P2024/P2028 |
 | E2E trình duyệt | ⚠️ Admin 17/17, Storefront 41/41; chưa phủ checkout/Orders/Inventory mutation | ⚠️ Admin đã cấu hình CI, chưa xác minh run trên GitHub; Client chưa gắn CI | `document/37-playwright-e2e-report.md` |
 | PWA Storefront | ⚠️ Icon PNG và manifest đã có, chưa nghiệm thu cài đặt/offline trên HTTPS | Chưa kiểm chứng | `client/public/icon-192.png`, `icon-512.png`, `src/app/manifest.ts`, cache v3 trong `public/sw.js` |
 | Đổi trả và hoàn tiền | ❌ | ❌ | `grep -c "model Return\|model Refund"` → `0` |
@@ -85,7 +85,17 @@ PWA HTTPS acceptance. Ước lượng R2 cũ chỉ bao phủ happy path; estimat
 - Xác nhận 7 cam kết marketing đang hiển thị trên storefront
 - Xác minh pipeline Admin E2E chạy xanh trên GitHub; quyết định môi trường API/DB cô lập trước khi đưa Client E2E vào CI
 
-## Kiểm chứng mới nhất (2026-09-20)
+## Kiểm chứng mới nhất (2026-09-21)
+
+### Kiểm chứng 2026-09-21
+
+- Truy vết `POST /api/v1/admin/inventory/adjustments`: CORRECTION và MANUAL_RECEIPT chạy
+  hết transaction trên đúng Supabase rồi chủ động rollback; không thay đổi tồn hoặc tạo ledger.
+- Production replay một adjustment cũ bằng cùng `Idempotency-Key` thành công; lỗi báo cáo không
+  phải thiếu bảng/contract cố định. Inventory bổ sung retry tối đa 3 lần cho Prisma P2034 và raw
+  SQLSTATE 40001, `maxWait=10s`, `timeout=30s`; P2024/P2028 được trả 503 tiếng Việt.
+- Unit Inventory 10/10 pass, gồm retry và timeout mapping. Full API gate pass: lint, 80 suites/
+  388 tests, Prisma validate, OpenAPI generate và production build.
 
 ### Kiểm chứng 2026-09-20
 
@@ -114,6 +124,7 @@ PWA HTTPS acceptance. Ước lượng R2 cũ chỉ bao phủ happy path; estimat
 
 | Version | Date | Change summary |
 | --- | --- | --- |
+| 1.5.0 | 2026-09-21 | Harden adjustment transaction/retry/timeout và chuẩn hóa lỗi transient thành 503 tiếng Việt. |
 | 1.4.0 | 2026-09-20 | Product + initial SKU aggregate create atomic và Admin form một màn hình. |
 | 1.3.0 | 2026-09-20 | Thêm nguồn kế hoạch V1/production chuẩn, cập nhật blocker và estimate Return/Refund. |
 | 1.2.0 | 2026-09-18 | Cập nhật báo cáo Playwright hai FE và khoảng trống kiểm thử tích hợp. |

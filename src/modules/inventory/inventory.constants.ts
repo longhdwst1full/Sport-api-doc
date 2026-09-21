@@ -22,6 +22,12 @@ export const STOCK_ADJUSTMENT_TYPE = {
   MANUAL_RECEIPT: 'MANUAL_RECEIPT',
 } as const;
 
+export const INVENTORY_TRANSACTION = {
+  MAX_WAIT_MS: 10_000,
+  TIMEOUT_MS: 30_000,
+  MAX_SERIALIZATION_RETRIES: 3,
+} as const;
+
 export type StockAdjustmentType =
   (typeof STOCK_ADJUSTMENT_TYPE)[keyof typeof STOCK_ADJUSTMENT_TYPE];
 

@@ -1460,9 +1460,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponseDto"
+        "503":
+          description: Cloudinary deletion failed and the product media link was restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
       security:
         - bearer: []
-      summary: Logically delete a product media link without deleting its provider asset
+      summary: Delete an unshared product image from the product and Cloudinary
       tags:
         - Admin Products
       x-required-permissions:

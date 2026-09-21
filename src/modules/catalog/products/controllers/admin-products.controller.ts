@@ -8,6 +8,7 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiServiceUnavailableResponse,
   ApiTags,
   ApiUnprocessableEntityResponse,
   ApiUnauthorizedResponse,
@@ -217,12 +218,16 @@ export class AdminProductsController {
   @RequirePermissions('catalog.product.manage')
   @ApiOperation({
     operationId: 'deleteAdminProductMedia',
-    summary: 'Logically delete a product media link without deleting its provider asset',
+    summary: 'Delete an unshared product image from the product and Cloudinary',
   })
   @ApiOkResponse({ type: [ProductMediaDto] })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
   @ApiConflictResponse({ type: ErrorResponseDto })
+  @ApiServiceUnavailableResponse({
+    type: ErrorResponseDto,
+    description: 'Cloudinary deletion failed and the product media link was restored',
+  })
   @ApiUnprocessableEntityResponse({ type: ErrorResponseDto })
   deleteMedia(
     @Param('id', new ParseEntityIdPipe()) id: string,
@@ -230,7 +235,7 @@ export class AdminProductsController {
     @Body() input: ChangeProductMediaStatusDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<ProductMediaDto[]> {
-    return this.productMedia.archive(
+    return this.productMedia.delete(
       id,
       mediaId,
       input.expectedProductVersion,

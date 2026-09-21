@@ -75,13 +75,13 @@ describe('Sprint 1 logical DELETE controllers', () => {
     );
   });
 
-  it('maps Product, Variant and Product Media DELETE to archive lifecycles', async () => {
+  it('maps Product/Variant DELETE to archive and Product Media DELETE to provider deletion', async () => {
     const archiveProduct = jest.fn().mockResolvedValue({ id: 'product-id' });
     const archiveVariant = jest.fn().mockResolvedValue({ id: 'product-id' });
-    const archiveMedia = jest.fn().mockResolvedValue([]);
+    const deleteMedia = jest.fn().mockResolvedValue([]);
     const controller = new AdminProductsController(
       { archiveProduct, archiveVariant } as unknown as ProductsService,
-      { archive: archiveMedia } as unknown as ProductMediaService,
+      { delete: deleteMedia } as unknown as ProductMediaService,
     );
 
     await controller.deleteProduct('product-id', { expectedVersion: 5 }, request);
@@ -103,6 +103,6 @@ describe('Sprint 1 logical DELETE controllers', () => {
       { expectedVersion: 6 },
       context,
     );
-    expect(archiveMedia).toHaveBeenCalledWith('product-id', 'media-id', 7, context);
+    expect(deleteMedia).toHaveBeenCalledWith('product-id', 'media-id', 7, context);
   });
 });

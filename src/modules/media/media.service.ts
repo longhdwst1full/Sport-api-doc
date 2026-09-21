@@ -13,6 +13,7 @@ import {
   MediaAssetDto,
   SignedMediaUploadDto,
 } from './media.dto';
+import { MEDIA_ASSET_STATUS } from './media.constants';
 
 @Injectable()
 export class MediaService {
@@ -49,7 +50,7 @@ export class MediaService {
         },
       });
       if (existing) {
-        if (existing.status !== 'ACTIVE') {
+        if (existing.status !== MEDIA_ASSET_STATUS.ACTIVE) {
           throw new ConflictException('Media asset exists but is inactive');
         }
         return existing;
@@ -70,7 +71,7 @@ export class MediaService {
           sizeBytes: BigInt(verified.sizeBytes),
           folder: verified.publicId.split('/').slice(0, -1).join('/') || null,
           metadataJson: { providerVersion: verified.version },
-          status: 'ACTIVE',
+          status: MEDIA_ASSET_STATUS.ACTIVE,
           uploadedBy: toDatabaseId(context.actorUserId),
         },
       });
@@ -104,7 +105,7 @@ export class MediaService {
             },
           },
         });
-        if (winner.status !== 'ACTIVE') {
+        if (winner.status !== MEDIA_ASSET_STATUS.ACTIVE) {
           throw new ConflictException('Media asset exists but is inactive');
         }
         return winner;
@@ -125,7 +126,7 @@ export class MediaService {
       sizeBytes: Number(asset.sizeBytes ?? verified.sizeBytes),
       format: asset.format ?? verified.format,
       providerVersion: verified.version,
-      status: 'ACTIVE',
+      status: MEDIA_ASSET_STATUS.ACTIVE,
     };
   }
 }

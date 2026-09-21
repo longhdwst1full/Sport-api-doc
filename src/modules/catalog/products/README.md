@@ -1,10 +1,10 @@
 # Catalog Products module maintenance note
 
-> **Document version:** 1.0.0
+> **Document version:** 1.1.0
 >
-> **Last updated:** 2026-09-20
+> **Last updated:** 2026-09-21
 >
-> **Change summary:** Ghi aggregate create Product + initial variants atomic và ranh giới workflow Catalog.
+> **Change summary:** Tách archive liên kết ảnh và DELETE asset Cloudinary có kiểm tra usage, compensation và audit.
 
 ## Phạm vi và entrypoint
 
@@ -39,16 +39,30 @@ bundle use case; `ProductMediaService` sở hữu media link lifecycle.
 - Unique productNo/slug/SKU/barcode trả conflict thống nhất; không để lại SPU dở dang khi
   aggregate create thất bại.
 
+## Xóa ảnh sản phẩm
+
+- `archiveAdminProductMedia` chỉ chuyển liên kết `product_media` sang `INACTIVE` và giữ asset.
+- `deleteAdminProductMedia` chỉ xóa khi asset không còn được Product, Brand, Category, Content
+  Post hoặc Payment Evidence khác sử dụng.
+- DELETE khóa theo thứ tự Product → MediaAsset, chuyển asset sang `DELETE_PENDING`, gỡ link và
+  commit trước khi gọi Cloudinary để không giữ database transaction trong lúc chờ HTTP.
+- Cloudinary `destroy` dùng `invalidate=true`. Thành công chuyển asset sang `INACTIVE`; lỗi provider
+  khôi phục asset/link, tăng Product version và ghi audit để client reload snapshot.
+- `DELETE_PENDING` còn tồn sau process crash là dấu hiệu cần reconciliation/cleanup job; không được
+  tự đổi sang `ACTIVE` nếu chưa xác minh provider asset còn tồn tại.
+
 ## Checklist khi sửa
 
 - Create request phải có ít nhất một variant và tối đa 50.
 - Không đưa `variants` vào generic Product update DTO.
 - Giữ Product/Variant/category/audit cùng transaction create.
 - Regenerate OpenAPI và Admin SDK sau khi đổi DTO/controller.
+- Test provider success, shared-usage conflict và compensation khi provider lỗi.
 - Chạy unit, HTTP E2E catalog và PostgreSQL integration liên quan trước handoff.
 
 ## Revision history
 
 | Version | Date | Change summary |
 | --- | --- | --- |
+| 1.1.0 | 2026-09-21 | DELETE Product Media gọi Cloudinary, chặn asset dùng chung và compensation khi provider lỗi. |
 | 1.0.0 | 2026-09-20 | Tạo note và aggregate create Product + initial variants atomic. |

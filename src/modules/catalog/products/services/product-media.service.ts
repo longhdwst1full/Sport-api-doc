@@ -2,6 +2,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
@@ -12,7 +13,9 @@ import {
 } from '../../../../common/identifiers/entity-id';
 import { MutationContext } from '../../../../common/request/request-context';
 import { PrismaService } from '../../../../database/prisma.service';
+import { ObjectStorageClient } from '../../../../integrations/object-storage/object-storage.client';
 import { AuditWriter } from '../../../audit/audit.writer';
+import { MEDIA_ASSET_STATUS } from '../../../media/media.constants';
 import {
   AttachProductMediaDto,
   ProductMediaDto,
@@ -31,6 +34,7 @@ export class ProductMediaService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditWriter,
+    private readonly objectStorage: ObjectStorageClient,
   ) {}
 
   attach(
@@ -43,9 +47,10 @@ export class ProductMediaService {
     const databaseMediaAssetId = toDatabaseId(input.mediaAssetId);
     return this.prisma.$transaction(async (transaction) => {
       await this.claimProductVersion(transaction, databaseProductId, input.expectedProductVersion);
+      await this.lockMediaAsset(transaction, databaseMediaAssetId);
       const [asset, variant, duplicate, targetMedia, maxSort] = await Promise.all([
         transaction.mediaAsset.findFirst({
-          where: { id: databaseMediaAssetId, status: PRODUCT_MEDIA_STATUS.ACTIVE },
+          where: { id: databaseMediaAssetId, status: MEDIA_ASSET_STATUS.ACTIVE },
         }),
         input.variantId
           ? transaction.productVariant.findFirst({
@@ -239,6 +244,261 @@ export class ProductMediaService {
     });
   }
 
+  /**
+   * Xóa liên kết Product Media và asset Cloudinary khi asset không còn được aggregate khác dùng.
+   * Provider call nằm ngoài DB transaction; trạng thái DELETE_PENDING chặn attach mới và cho phép
+   * compensation khôi phục liên kết nếu Cloudinary trả lỗi.
+   */
+  async delete(
+    productId: string,
+    mediaId: string,
+    expectedProductVersion: number,
+    context: MutationContext,
+  ): Promise<ProductMediaDto[]> {
+    const databaseProductId = toDatabaseId(productId);
+    const databaseMediaId = toDatabaseId(mediaId);
+    const prepared = await this.prepareProviderDeletion(
+      databaseProductId,
+      databaseMediaId,
+      expectedProductVersion,
+      context,
+    );
+
+    try {
+      // PROVIDER: invalidate=true nằm trong Cloudinary adapter để xóa cả bản CDN đã cache.
+      await this.objectStorage.deleteImage(prepared.publicId);
+    } catch (error) {
+      await this.restoreFailedProviderDeletion(prepared, context, error);
+      throw new ServiceUnavailableException({
+        code: 'MEDIA_PROVIDER_DELETE_FAILED',
+        message: 'Không thể xóa ảnh trên Cloudinary. Liên kết ảnh đã được khôi phục, vui lòng thử lại.',
+      });
+    }
+
+    return this.prisma.$transaction(async (transaction) => {
+      const finalized = await transaction.mediaAsset.updateMany({
+        where: {
+          id: prepared.mediaAssetId,
+          status: MEDIA_ASSET_STATUS.DELETE_PENDING,
+        },
+        data: {
+          status: MEDIA_ASSET_STATUS.INACTIVE,
+          version: { increment: 1 },
+        },
+      });
+      if (finalized.count !== 1) {
+        throw new ConflictException('Trạng thái ảnh đã thay đổi trong lúc xóa; vui lòng tải lại.');
+      }
+      await this.writeAudit(
+        transaction,
+        context,
+        PRODUCT_AUDIT_ACTION.MEDIA_DELETE,
+        databaseMediaId,
+        { mediaAssetStatus: MEDIA_ASSET_STATUS.DELETE_PENDING },
+        {
+          mediaAssetId: toEntityId(prepared.mediaAssetId),
+          mediaAssetStatus: MEDIA_ASSET_STATUS.INACTIVE,
+          providerDeleted: true,
+        },
+        2,
+      );
+      return this.listActive(transaction, databaseProductId);
+    });
+  }
+
+  private async prepareProviderDeletion(
+    productId: bigint,
+    mediaId: bigint,
+    expectedProductVersion: number,
+    context: MutationContext,
+  ): Promise<{
+    productId: bigint;
+    mediaId: bigint;
+    mediaAssetId: bigint;
+    publicId: string;
+    variantId: bigint | null;
+    wasPrimary: boolean;
+  }> {
+    return this.prisma.$transaction(async (transaction) => {
+      const candidate = await transaction.productMedia.findFirst({
+        where: { id: mediaId, productId, status: PRODUCT_MEDIA_STATUS.ACTIVE },
+        select: { mediaAssetId: true },
+      });
+      if (!candidate) throw new NotFoundException('Product media not found');
+
+      // TRANSACTION: mọi mutation Product khóa Product trước, MediaAsset sau để tránh deadlock.
+      await this.claimProductVersion(transaction, productId, expectedProductVersion);
+      await this.lockMediaAsset(transaction, candidate.mediaAssetId);
+
+      const current = await transaction.productMedia.findFirst({
+        where: { id: mediaId, productId, status: PRODUCT_MEDIA_STATUS.ACTIVE },
+        include: { mediaAsset: true },
+      });
+      if (!current) throw new ConflictException('Ảnh sản phẩm vừa thay đổi; vui lòng tải lại.');
+      if (current.mediaAsset.status !== MEDIA_ASSET_STATUS.ACTIVE) {
+        throw new ConflictException('Ảnh đang được xử lý bởi một yêu cầu khác.');
+      }
+      await this.assertAssetIsNotShared(transaction, current.mediaAssetId, current.id);
+
+      const claimed = await transaction.mediaAsset.updateMany({
+        where: { id: current.mediaAssetId, status: MEDIA_ASSET_STATUS.ACTIVE },
+        data: {
+          status: MEDIA_ASSET_STATUS.DELETE_PENDING,
+          version: { increment: 1 },
+        },
+      });
+      if (claimed.count !== 1) {
+        throw new ConflictException('Ảnh đang được xử lý bởi một yêu cầu khác.');
+      }
+
+      await transaction.productMedia.update({
+        where: { id: mediaId },
+        data: { status: PRODUCT_MEDIA_STATUS.INACTIVE, isPrimary: false },
+      });
+      if (current.isPrimary) {
+        const replacement = await transaction.productMedia.findFirst({
+          where: {
+            productId,
+            variantId: current.variantId,
+            status: PRODUCT_MEDIA_STATUS.ACTIVE,
+          },
+          orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+        });
+        if (replacement) {
+          await transaction.productMedia.update({
+            where: { id: replacement.id },
+            data: { isPrimary: true },
+          });
+        }
+      }
+
+      await this.writeAudit(
+        transaction,
+        context,
+        PRODUCT_AUDIT_ACTION.MEDIA_DELETE_REQUEST,
+        mediaId,
+        {
+          status: current.status,
+          isPrimary: current.isPrimary,
+          mediaAssetStatus: current.mediaAsset.status,
+        },
+        {
+          status: PRODUCT_MEDIA_STATUS.INACTIVE,
+          isPrimary: false,
+          mediaAssetStatus: MEDIA_ASSET_STATUS.DELETE_PENDING,
+        },
+      );
+      return {
+        productId,
+        mediaId,
+        mediaAssetId: current.mediaAssetId,
+        publicId: current.mediaAsset.publicId,
+        variantId: current.variantId,
+        wasPrimary: current.isPrimary,
+      };
+    });
+  }
+
+  private async restoreFailedProviderDeletion(
+    prepared: {
+      productId: bigint;
+      mediaId: bigint;
+      mediaAssetId: bigint;
+      variantId: bigint | null;
+      wasPrimary: boolean;
+    },
+    context: MutationContext,
+    providerError: unknown,
+  ): Promise<void> {
+    await this.prisma.$transaction(async (transaction) => {
+      await this.lockMediaAsset(transaction, prepared.mediaAssetId);
+      const asset = await transaction.mediaAsset.findUnique({
+        where: { id: prepared.mediaAssetId },
+        select: { status: true },
+      });
+      if (asset?.status !== MEDIA_ASSET_STATUS.DELETE_PENDING) return;
+
+      await transaction.mediaAsset.update({
+        where: { id: prepared.mediaAssetId },
+        data: {
+          status: MEDIA_ASSET_STATUS.ACTIVE,
+          version: { increment: 1 },
+        },
+      });
+      let restorePrimary = false;
+      if (prepared.wasPrimary) {
+        const activePrimary = await transaction.productMedia.count({
+          where: {
+            productId: prepared.productId,
+            variantId: prepared.variantId,
+            status: PRODUCT_MEDIA_STATUS.ACTIVE,
+            isPrimary: true,
+          },
+        });
+        restorePrimary = activePrimary === 0;
+      }
+      await transaction.productMedia.update({
+        where: { id: prepared.mediaId },
+        data: {
+          status: PRODUCT_MEDIA_STATUS.ACTIVE,
+          isPrimary: restorePrimary,
+        },
+      });
+      // CONCURRENCY: compensation cũng tăng version để mọi client đang giữ snapshot cũ phải reload.
+      await transaction.product.update({
+        where: { id: prepared.productId },
+        data: { version: { increment: 1 } },
+      });
+      await this.writeAudit(
+        transaction,
+        context,
+        PRODUCT_AUDIT_ACTION.MEDIA_DELETE_FAILED,
+        prepared.mediaId,
+        { mediaAssetStatus: MEDIA_ASSET_STATUS.DELETE_PENDING },
+        {
+          mediaAssetStatus: MEDIA_ASSET_STATUS.ACTIVE,
+          productMediaStatus: PRODUCT_MEDIA_STATUS.ACTIVE,
+          providerError: providerError instanceof Error ? providerError.name : 'UnknownError',
+        },
+        2,
+      );
+    });
+  }
+
+  private async assertAssetIsNotShared(
+    transaction: Prisma.TransactionClient,
+    mediaAssetId: bigint,
+    currentProductMediaId: bigint,
+  ): Promise<void> {
+    const usages = await Promise.all([
+      transaction.productMedia.count({
+        where: {
+          mediaAssetId,
+          id: { not: currentProductMediaId },
+          status: PRODUCT_MEDIA_STATUS.ACTIVE,
+        },
+      }),
+      transaction.brand.count({ where: { logoAssetId: mediaAssetId } }),
+      transaction.category.count({ where: { imageAssetId: mediaAssetId } }),
+      transaction.contentPost.count({ where: { coverAssetId: mediaAssetId } }),
+      transaction.paymentEvidence.count({ where: { mediaAssetId } }),
+    ]);
+    if (usages.some((count) => count > 0)) {
+      throw new ConflictException(
+        'Ảnh đang được sử dụng ở sản phẩm hoặc nghiệp vụ khác nên không thể xóa khỏi Cloudinary.',
+      );
+    }
+  }
+
+  private async lockMediaAsset(
+    transaction: Prisma.TransactionClient,
+    mediaAssetId: bigint,
+  ): Promise<void> {
+    await transaction.$queryRaw(
+      Prisma.sql`SELECT id FROM media_assets WHERE id = ${mediaAssetId} FOR UPDATE`,
+    );
+  }
+
   private async claimProductVersion(
     transaction: Prisma.TransactionClient,
     productId: bigint,
@@ -306,11 +566,12 @@ export class ProductMediaService {
     entityId: string | bigint,
     before?: Prisma.InputJsonValue,
     after?: Prisma.InputJsonValue,
+    sequenceNo = 1,
   ): Promise<void> {
     await this.audit.write(
       {
         requestId: context.requestId,
-        sequenceNo: 1,
+        sequenceNo,
         actorType: 'USER',
         actorUserId: context.actorUserId,
         action,

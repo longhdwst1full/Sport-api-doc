@@ -1,10 +1,10 @@
 # V1 model và quan hệ — bản review
 
-> **Document version:** 3.5.0
+> **Document version:** 3.6.0
 >
-> **Last updated:** 2026-09-13
+> **Last updated:** 2026-09-21
 >
-> **Change summary:** Áp dụng Fulfillment V1 vật lý, một fulfillment/order/warehouse và history append-only idempotent.
+> **Change summary:** Đồng bộ lifecycle xóa Product Media với Cloudinary, usage guard và compensation.
 
 File nguồn ERD: `09-v1-model.dbml`. Copy toàn bộ nội dung vào dbdiagram.io để xem và kéo thả sơ đồ.
 
@@ -272,7 +272,9 @@ Quy tắc:
 - Secret/API key và parameter vận hành V1 chỉ ở backend environment/secret manager, không gửi ra frontend.
 - Customer upload dùng preset/folder/size/MIME hạn chế; file ở trạng thái pending scan/moderation trước khi public.
 - Không hard-delete provider asset nếu còn `product_media`, `product_review_media` hoặc `media_usages` tham chiếu.
-- Xóa là hai bước: đánh dấu `DELETING` -> job kiểm tra usage -> gọi provider delete -> `DELETED`.
+- Product Media DELETE kiểm tra usage, đánh dấu asset `DELETE_PENDING`, gỡ link rồi gọi provider
+  ngay ngoài DB transaction. Thành công chuyển `INACTIVE`; lỗi provider compensation về `ACTIVE`
+  và tăng Product version. Job reconciliation vẫn cần xử lý `DELETE_PENDING` bị kẹt khi process crash.
 - URL transform/thumbnail sinh từ provider; không lưu nhiều bản ảnh vật lý trong DB.
 - Adapter backend phải che khác biệt Cloudinary/ImageKit/S3-compatible để sau này đổi provider không sửa domain.
 
@@ -280,6 +282,7 @@ Quy tắc:
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 3.6.0 | 2026-09-21 | Product Media DELETE gọi Cloudinary có usage guard, trạng thái DELETE_PENDING và compensation. | API-20260921-PRODUCT-MEDIA-PROVIDER-DELETE |
 | 3.5.0 | 2026-09-13 | Vật lý hóa quan hệ Order–Fulfillment–History và khóa retry-safe cho transition. | DBAPI-20260913-FULFILLMENT-S43 |
 | 3.4.0 | 2026-09-12 | Vật lý hóa Payment aggregate và quan hệ evidence-media asset. | DBAPI-20260912-PAYMENT-S42 |
 | 3.3.0 | 2026-09-11 | Vật lý hóa Order foundation, unique checkout/reservation và snapshot email người nhận. | API-20260911-ORDER-FOUNDATION |

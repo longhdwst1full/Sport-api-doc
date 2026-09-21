@@ -61,7 +61,7 @@ CMS-02,CMS,Admin,Content Editor,P1,Quản lý banner,Có vị trí thời gian v
 CMS-03,CMS,Admin,Content Editor,P1,Quản lý danh mục tag và bài viết liên quan,Taxonomy độc lập product category; một primary category/post,Gắn nhiều tag và sản phẩm liên quan có thứ tự
 MED-01,Media,Storefront/Admin,Customer/Content Editor,P0,Upload trực tiếp lên provider,Backend cấp signed preset/token giới hạn MIME size folder,Finalize xác minh provider asset và không nhận URL tùy ý
 MED-02,Media,Admin,Content Editor,P1,Thư viện và tái sử dụng media,Asset dùng chung không bị xóa khi còn usage,Tìm preview chọn alt text và xem usage
-MED-03,Media,System/Admin,System/Content Editor,P1,Xóa và dọn media,Xóa hai bước qua job; verify provider webhook/signature,Chỉ xóa provider asset khi không còn active reference
+MED-03,Media,System/Admin,System/Content Editor,P1,Xóa và dọn media,"Admin DELETE gọi provider ngay sau khi đánh dấu DELETE_PENDING; lỗi thì compensation, crash cần cleanup reconciliation",Chỉ xóa provider asset khi không còn active reference
 NOT-01,Notification,System,System,P1,Gửi email/SMS/in-app,Từ outbox và retry có backoff,Không gửi trùng theo dedup key
 NOT-02,Notification,Admin,Admin,P1,Quản lý template,Template versioned có preview/test send,Variable được whitelist
 RPT-01,Reporting,Admin,Manager,P0,Dashboard vận hành,Số đơn payment pending low stock theo scope,Dữ liệu gần realtime và drill-down

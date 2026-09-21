@@ -3427,6 +3427,49 @@
         "source:../admin/src/features/products"
       ],
       "targets": []
+    },
+    {
+      "id": "API-20260921-PRODUCT-MEDIA-PROVIDER-DELETE",
+      "date": "2026-09-21",
+      "scope": "DATABASE+MEDIA+CATALOG+API+ADMIN",
+      "summary": "DELETE Product Media không còn là alias archive: Backend khóa Product rồi MediaAsset, chặn mọi asset còn được Product/Brand/Category/Post/Payment Evidence sử dụng, chuyển DELETE_PENDING, gọi Cloudinary destroy với CDN invalidation và giữ metadata row INACTIVE. Provider lỗi sẽ compensation khôi phục link/asset, tăng Product version và ghi audit; Admin dùng generated DELETE operation và refetch detail sau lỗi. Không thêm cột hoặc bảng mới.",
+      "sources": [
+        "migration:20260921120000_media_asset_delete_pending_status",
+        "OpenAPI:deleteAdminProductMedia",
+        "source:src/modules/catalog/products/services/product-media.service.ts",
+        "source:src/integrations/object-storage/cloudinary-object-storage.client.ts",
+        "source:../admin/src/features/products/components/product-media-panel.tsx",
+        "test:src/modules/catalog/products/services/product-media.service.spec.ts"
+      ],
+      "targets": [
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "media_assets",
+            "Tên cột": "status"
+          },
+          "columns": [
+            "Ý nghĩa / trạng thái cho phép"
+          ],
+          "set": {
+            "Ý nghĩa / trạng thái cho phép": "ACTIVE|DELETE_PENDING|INACTIVE; DELETE_PENDING chặn attach mới trong lúc xóa provider, lỗi provider compensation về ACTIVE"
+          }
+        }
+      ]
+    },
+    {
+      "id": "API-20260921-INVENTORY-ADJUSTMENT-RESILIENCE",
+      "date": "2026-09-21",
+      "scope": "INVENTORY+API+CONCURRENCY",
+      "summary": "Điều chỉnh tồn kho cấu hình interactive transaction maxWait 10 giây/timeout 30 giây, retry tối đa 3 lần cho Prisma P2034 và raw PostgreSQL 40001; pool/transaction timeout P2024/P2028 trả HTTP 503 tiếng Việt để client retry bằng cùng Idempotency-Key. Không đổi schema hoặc success contract.",
+      "sources": [
+        "OpenAPI:createStockAdjustment",
+        "source:src/modules/inventory/inventory.service.ts",
+        "source:src/modules/inventory/inventory.constants.ts",
+        "test:src/modules/inventory/inventory.service.spec.ts",
+        "document:src/modules/inventory/README.md"
+      ],
+      "targets": []
     }
   ]
 }

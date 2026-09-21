@@ -20,6 +20,7 @@ import {
 import {
   INVENTORY_MOVEMENT_TYPE,
   INVENTORY_REFERENCE_TYPE,
+  INVENTORY_TRANSACTION,
   STOCK_ADJUSTMENT_REASON,
   STOCK_ADJUSTMENT_TYPE,
   type StockAdjustmentType,
@@ -74,7 +75,7 @@ export class InventoryService {
     if (replay) return replay;
 
     try {
-      return await this.prisma.$transaction(
+      return await this.withSerializationRetry(() => this.prisma.$transaction(
         async (transaction) => {
           const prior = await transaction.stockAdjustment.findUnique({
             where: { idempotencyKey: key },
@@ -257,8 +258,12 @@ export class InventoryService {
           );
           return result;
         },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-      );
+        {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+          maxWait: INVENTORY_TRANSACTION.MAX_WAIT_MS,
+          timeout: INVENTORY_TRANSACTION.TIMEOUT_MS,
+        },
+      ));
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         const racedReplay = await this.findReplay(key, requestHash);
@@ -267,8 +272,13 @@ export class InventoryService {
           throw new ConflictException('Manual receipt reference already exists for this warehouse');
         }
       }
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034') {
+      if (this.isSerializationConflict(error)) {
         throw new ConflictException('Inventory changed concurrently; retry with the same key');
+      }
+      if (this.isTransientDatabaseAvailabilityError(error)) {
+        throw new ServiceUnavailableException(
+          'Kho dữ liệu tồn kho đang bận hoặc tạm thời mất kết nối; vui lòng thử lại với cùng mã yêu cầu',
+        );
       }
       throw error;
     }
@@ -344,6 +354,41 @@ export class InventoryService {
   ): InventoryBalanceDto['status'] {
     if (available === 0) return 'OUT_OF_STOCK';
     return available <= reorderPoint ? 'LOW_STOCK' : 'IN_STOCK';
+  }
+
+  private async withSerializationRetry<T>(operation: () => Promise<T>): Promise<T> {
+    for (let attempt = 0; attempt < INVENTORY_TRANSACTION.MAX_SERIALIZATION_RETRIES; attempt += 1) {
+      try {
+        return await operation();
+      } catch (error) {
+        // IDEMPOTENCY: mỗi lần retry chạy lại từ đầu và kiểm tra stock_adjustments.idempotency_key
+        // trước mọi mutation, nên retry serialization không thể tạo hai phiếu hoặc hai movement.
+        if (
+          this.isSerializationConflict(error)
+          && attempt + 1 < INVENTORY_TRANSACTION.MAX_SERIALIZATION_RETRIES
+        ) {
+          continue;
+        }
+        throw error;
+      }
+    }
+    throw new ServiceUnavailableException(
+      'Không thể điều chỉnh tồn kho do dữ liệu đang được cập nhật đồng thời; vui lòng thử lại',
+    );
+  }
+
+  private isSerializationConflict(error: unknown): boolean {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
+    if (error.code === 'P2034') return true;
+    const postgresCode = error.meta?.code;
+    return error.code === 'P2010'
+      && (typeof postgresCode === 'string' || typeof postgresCode === 'number')
+      && String(postgresCode).toUpperCase() === '40001';
+  }
+
+  private isTransientDatabaseAvailabilityError(error: unknown): boolean {
+    return error instanceof Prisma.PrismaClientKnownRequestError
+      && (error.code === 'P2024' || error.code === 'P2028');
   }
 
   private ensurePersistence(): void {

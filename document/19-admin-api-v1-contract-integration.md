@@ -1,10 +1,10 @@
 # Admin và Storefront API v1 contract integration
 
-> **Document version:** 1.10.0
+> **Document version:** 1.11.0
 >
-> **Last updated:** 2026-09-20
+> **Last updated:** 2026-09-21
 >
-> **Change summary:** `createAdminProduct` tạo Product và 1–50 initial SKU variants atomic để Admin dùng một form duy nhất.
+> **Change summary:** `deleteAdminProductMedia` xóa asset Cloudinary nếu không còn usage và compensation khi provider lỗi.
 
 ## Nguyên tắc đã áp dụng
 
@@ -48,7 +48,7 @@
 | Xóa logic variant/SKU | `DELETE /api/v1/admin/products/variants/{variantId}` | `deleteAdminProductVariant` | `catalog.product.manage` | Chuyển `INACTIVE`; chặn component đang thuộc combo published |
 | Sửa metadata variant | `PATCH /api/v1/admin/products/variants/{variantId}` | `updateAdminProductVariant` | `catalog.product.manage` | Variant edit drawer; SKU bất biến |
 | Product media lifecycle | `POST/PATCH .../products/{id}/media...` | `attach/update/reorder/archiveAdminProductMedia` | `catalog.product.manage` | Product media panel |
-| Xóa logic liên kết ảnh sản phẩm | `DELETE /api/v1/admin/products/{id}/media/{mediaId}` | `deleteAdminProductMedia` | `catalog.product.manage` | Chuyển link `INACTIVE`, không xóa `media_assets` hay asset trên provider |
+| Xóa ảnh sản phẩm và provider asset | `DELETE /api/v1/admin/products/{id}/media/{mediaId}` | `deleteAdminProductMedia` | `catalog.product.manage` | Chặn nếu asset còn usage; link `INACTIVE`, Cloudinary destroy + CDN invalidate, giữ metadata row `INACTIVE`; provider lỗi thì compensation khôi phục link/asset |
 | Sửa bài viết đã đăng | `PATCH /api/v1/admin/content/posts/{id}` | `updateAdminPost` | `cms.content.manage` | Chỉ gửi trường được truyền; bài ARCHIVED không sửa được |
 | Bật/tắt hiển thị sản phẩm | `PATCH /api/v1/admin/products/{id}` | `updateAdminProduct` | `catalog.product.manage` | `isPublished` tách khỏi `status`; ẩn tạm không phải đẩy về DRAFT |
 | CRUD khách hàng | `POST/PATCH/DELETE /api/v1/admin/customers...` | `create/update/deleteAdminCustomer` | `customer.manage`; create độc lập cần GLOBAL | Luôn còn email hoặc SĐT; xoá chỉ khi chưa có đơn và chưa có tài khoản đăng nhập; mutation + audit atomic, audit không lưu PII thô |
@@ -150,6 +150,7 @@ Admin dùng `getApiErrorMessage` cho lỗi form/query và `getApiFieldErrors` đ
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.11.0 | 2026-09-21 | DELETE ảnh sản phẩm gọi Cloudinary, kiểm tra usage, optimistic version và compensation/audit khi provider lỗi. | API-20260921-PRODUCT-MEDIA-PROVIDER-DELETE |
 | 1.10.0 | 2026-09-20 | Product create nhận 1–50 initial variants và persist atomic trong một transaction; Admin ghép Product + SKU trên một form. | API-20260920-PRODUCT-AGGREGATE-CREATE |
 | 1.9.0 | 2026-09-19 | OWNER bất biến; DELETE system role chỉ ngừng hoạt động, tăng permissionVersion và giữ lịch sử; seed không ghi đè cấu hình role đã chỉnh. | API-20260919-SYSTEM-ROLE-LIFECYCLE |
 | 1.8.0 | 2026-09-19 | Production refresh cookie dùng `SameSite=None; Secure`; Admin giữ access token in-memory, khôi phục `/me`, dọn cache và báo hết phiên một lần khi refresh thất bại. | API-20260919-ADMIN-REFRESH-RECOVERY |

@@ -239,14 +239,14 @@ Table media_assets {
   folder varchar(255)
   alt_text varchar(500)
   metadata_json jsonb
-  status varchar(24) [not null, default: 'ACTIVE']
+  status varchar(24) [not null, default: 'ACTIVE', note: 'ACTIVE|DELETE_PENDING|INACTIVE']
   uploaded_by bigint
   provider_created_at timestamptz
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
   indexes { (provider, provider_asset_id) [unique] }
-  Note: '[P0] Chỉ lưu metadata/URL provider; không lưu binary. Status điều phối provider cleanup; DB row được giữ lại.'
+  Note: '[P0] Chỉ lưu metadata/URL provider; không lưu binary. DELETE Product Media kiểm tra mọi usage, đánh dấu DELETE_PENDING trước khi gọi provider; thành công thành INACTIVE, lỗi thì compensation về ACTIVE. DB row được giữ lại.'
 }
 
 Table media_usages {
