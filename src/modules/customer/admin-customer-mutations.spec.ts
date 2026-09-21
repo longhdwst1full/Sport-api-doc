@@ -28,6 +28,8 @@ function buildService(overrides: {
   updatedCount?: number;
   orderCount?: number;
   deletedCount?: number;
+  existingAddresses?: Array<{ id: bigint }>;
+  avatarAsset?: { id: bigint } | null;
 } = {}) {
   const create = jest.fn(
     (args: { data: Record<string, unknown> }): Promise<{ id: bigint }> => {
@@ -51,21 +53,54 @@ function buildService(overrides: {
                   status: 'ACTIVE',
                   userId: null,
                   phone: '0912345678',
-                  email: null,
+                  email: 'khach@example.com',
                   marketingConsent: false,
                   version: 1n,
                 }
               : overrides.loaded,
           ),
     );
+  const addressCreate = jest.fn(
+    (args: { data: Record<string, unknown> }): Promise<{ id: bigint }> => {
+      void args;
+      return Promise.resolve({ id: 11n });
+    },
+  );
+  const addressUpdate = jest.fn().mockResolvedValue({ id: 11n });
+  const addressUpdateMany = jest.fn(
+    (args: {
+      where: { id: { in: bigint[] } };
+      data: Record<string, unknown>;
+    }): Promise<{ count: number }> => {
+      void args;
+      return Promise.resolve({ count: 1 });
+    },
+  );
+  const addressFindMany = jest.fn().mockResolvedValue(overrides.existingAddresses ?? []);
+  const customerAddress = {
+    create: addressCreate,
+    update: addressUpdate,
+    updateMany: addressUpdateMany,
+    findMany: addressFindMany,
+  };
   const prisma = {
     isEnabled: () => true,
     customer: { create, updateMany, deleteMany, findFirst, findMany: jest.fn(), count: jest.fn() },
+    customerAddress,
+    mediaAsset: {
+      findFirst: jest.fn().mockResolvedValue(
+        overrides.avatarAsset === undefined ? { id: 55n } : overrides.avatarAsset,
+      ),
+    },
     order: { count: orderCount },
     $queryRaw: jest.fn().mockResolvedValue([]),
     $transaction: jest.fn((work: (client: unknown) => unknown) =>
       typeof work === 'function'
-        ? work({ customer: { create, updateMany, deleteMany }, order: { count: orderCount } })
+        ? work({
+            customer: { create, updateMany, deleteMany },
+            customerAddress,
+            order: { count: orderCount },
+          })
         : Promise.all(work as unknown as Promise<unknown>[]),
     ),
   } as unknown as PrismaService;
@@ -73,23 +108,35 @@ function buildService(overrides: {
   const service = new AdminCustomerService(prisma, audit);
   // `get` đọc lại hồ sơ sau khi ghi; ở đây chỉ quan tâm nhánh ghi.
   jest.spyOn(service, 'get').mockResolvedValue({ id: '7' } as never);
-  return { service, create, updateMany, deleteMany };
+  return {
+    service,
+    create,
+    updateMany,
+    deleteMany,
+    addressCreate,
+    addressUpdate,
+    addressUpdateMany,
+  };
 }
 
 describe('AdminCustomerService tạo và sửa khách', () => {
-  it('từ chối hồ sơ không có cách nào liên hệ lại', async () => {
+  it('từ chối hồ sơ thiếu email vì liên hệ là bắt buộc', async () => {
     const { service } = buildService();
 
-    await expect(service.create({ name: 'Khách lẻ' }, owner, context)).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
+    await expect(
+      service.create({ name: 'Khách lẻ', phone: '0912345678', email: '  ' }, owner, context),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('không tạo hồ sơ độc lập bằng branch scope vì bản ghi chưa có quan hệ chi nhánh', async () => {
     const { service, create } = buildService();
 
     await expect(
-      service.create({ name: 'Khách chi nhánh', phone: '0912345678' }, branchManager, context),
+      service.create(
+        { name: 'Khách chi nhánh', phone: '0912345678', email: 'a@example.com' },
+        branchManager,
+        context,
+      ),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(create).not.toHaveBeenCalled();
   });
@@ -97,7 +144,11 @@ describe('AdminCustomerService tạo và sửa khách', () => {
   it('chuẩn hoá số điện thoại trước khi lưu để tra lại được khách cũ', async () => {
     const { service, create } = buildService();
 
-    await service.create({ name: 'Nguyễn Minh Anh', phone: '0912 345 678' }, owner, context);
+    await service.create(
+      { name: 'Nguyễn Minh Anh', phone: '0912 345 678', email: 'minh.anh@example.com' },
+      owner,
+      context,
+    );
 
     const data = create.mock.calls[0]?.[0].data ?? {};
     expect(data.phone).toBe('0912 345 678');
@@ -111,8 +162,86 @@ describe('AdminCustomerService tạo và sửa khách', () => {
     });
 
     await expect(
-      service.create({ name: 'Trùng', phone: '0912345678' }, owner, context),
+      service.create(
+        { name: 'Trùng', phone: '0912345678', email: 'trung@example.com' },
+        owner,
+        context,
+      ),
     ).rejects.toBeInstanceOf(ConflictException);
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('chọn địa chỉ đầu tiên làm mặc định khi người nhập không đánh dấu địa chỉ nào', async () => {
+    const { service, addressCreate } = buildService();
+
+    await service.create(
+      {
+        name: 'Khách có địa chỉ',
+        phone: '0912345678',
+        email: 'khach@example.com',
+        addresses: [
+          { recipient: 'A', phone: '0912345678', addressLine: '1 Lê Lợi', provinceCode: '79' },
+          { recipient: 'B', phone: '0912345679', addressLine: '2 Lê Lợi', provinceCode: '79' },
+        ],
+      },
+      owner,
+      context,
+    );
+
+    expect(addressCreate.mock.calls.map(([args]) => args.data.isDefault)).toEqual([true, false]);
+  });
+
+  it('từ chối hai địa chỉ mặc định vì luồng tạo đơn chỉ điền được một địa chỉ', async () => {
+    const { service, addressCreate } = buildService();
+
+    await expect(
+      service.create(
+        {
+          name: 'Khách',
+          phone: '0912345678',
+          email: 'khach@example.com',
+          addresses: [
+            { recipient: 'A', phone: '0912345678', addressLine: '1 Lê Lợi', provinceCode: '79', isDefault: true },
+            { recipient: 'B', phone: '0912345679', addressLine: '2 Lê Lợi', provinceCode: '79', isDefault: true },
+          ],
+        },
+        owner,
+        context,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(addressCreate).not.toHaveBeenCalled();
+  });
+
+  it('ngừng địa chỉ bị bỏ khỏi danh sách thay vì xoá cứng để lịch sử giao hàng còn gốc', async () => {
+    const { service, addressUpdateMany } = buildService({ existingAddresses: [{ id: 11n }, { id: 12n }] });
+
+    await service.update(
+      '7',
+      {
+        expectedVersion: 1,
+        addresses: [
+          { id: '11', recipient: 'A', phone: '0912345678', addressLine: '1 Lê Lợi', provinceCode: '79' },
+        ],
+      },
+      owner,
+      context,
+    );
+
+    const args = addressUpdateMany.mock.calls.at(-1)?.[0];
+    expect(args?.where.id.in.map(String)).toEqual(['12']);
+    expect(args?.data.status).toBe('INACTIVE');
+  });
+
+  it('từ chối ảnh đại diện không tồn tại để hồ sơ không trỏ vào ảnh rỗng', async () => {
+    const { service, create } = buildService({ avatarAsset: null });
+
+    await expect(
+      service.create(
+        { name: 'Khách', phone: '0912345678', email: 'khach@example.com', avatarAssetId: '99' },
+        owner,
+        context,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
     expect(create).not.toHaveBeenCalled();
   });
 

@@ -76,18 +76,38 @@ export class CatalogCategoryListDto {
 }
 
 export class CreateBrandDto {
-  @ApiProperty() @IsString() @Matches(/^[A-Z0-9-]+$/) @MaxLength(32) code: string;
   @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(255) name: string;
-  @ApiProperty() @IsString() @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/) @MaxLength(255) slug: string;
+
+  @ApiPropertyOptional({
+    description: 'Bỏ trống để Backend suy từ tên. Chỉ gửi khi cần giữ mã của hệ thống cũ.',
+  })
+  @IsString() @Matches(/^[A-Z0-9-]+$/) @MaxLength(32) @IsOptional()
+  code?: string;
+
+  @ApiPropertyOptional({
+    description: 'Bỏ trống để Backend suy từ tên và tự thêm hậu tố khi trùng.',
+  })
+  @IsString() @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/) @MaxLength(255) @IsOptional()
+  slug?: string;
   @ApiPropertyOptional() @IsString() @IsOptional() description?: string;
   @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI }) @IsEntityId() @IsOptional() logoAssetId?: string;
 }
 
 export class CreateCategoryDto {
   @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI }) @IsEntityId() @IsOptional() parentId?: string;
-  @ApiProperty() @IsString() @Matches(/^[A-Z0-9-]+$/) @MaxLength(32) code: string;
   @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(255) name: string;
-  @ApiProperty() @IsString() @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/) @MaxLength(255) slug: string;
+
+  @ApiPropertyOptional({
+    description: 'Bỏ trống để Backend suy từ tên. Chỉ gửi khi cần giữ mã của hệ thống cũ.',
+  })
+  @IsString() @Matches(/^[A-Z0-9-]+$/) @MaxLength(32) @IsOptional()
+  code?: string;
+
+  @ApiPropertyOptional({
+    description: 'Bỏ trống để Backend suy từ tên và tự thêm hậu tố khi trùng.',
+  })
+  @IsString() @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/) @MaxLength(255) @IsOptional()
+  slug?: string;
   @ApiPropertyOptional() @IsString() @IsOptional() description?: string;
   @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI }) @IsEntityId() @IsOptional() imageAssetId?: string;
   @ApiPropertyOptional({ minimum: 0, default: 0 }) @IsInt() @Min(0) @IsOptional() sortOrder?: number;

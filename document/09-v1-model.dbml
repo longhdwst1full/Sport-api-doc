@@ -194,10 +194,11 @@ Table customers {
   normalized_phone varchar(32)
   status varchar(24) [not null, default: 'ACTIVE']
   marketing_consent boolean [not null, default: false]
+  avatar_asset_id bigint
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
-  Note: '[P0] Customer tồn tại độc lập; guest có user_id null; bắt buộc có normalized_email hoặc normalized_phone; partial unique từng định danh.'
+  Note: '[P0] Customer tồn tại độc lập; guest có user_id null; bắt buộc có normalized_email hoặc normalized_phone; partial unique từng định danh. Hồ sơ do Admin tạo bắt buộc cả email và phone. avatar_asset_id trỏ media_assets, set null khi ảnh bị xóa.'
 }
 
 Table customer_addresses {
@@ -1318,6 +1319,7 @@ Ref: audit_logs.actor_user_id > users.id [delete: set null]
 Ref: approval_requests.maker_id > users.id [delete: restrict]
 Ref: approval_requests.approver_id > users.id [delete: restrict]
 Ref: customers.user_id > users.id [delete: set null]
+Ref: customers.avatar_asset_id > media_assets.id [delete: set null]
 Ref: customer_addresses.customer_id > customers.id [delete: cascade]
 Ref: media_assets.uploaded_by > users.id [delete: set null]
 Ref: media_usages.media_asset_id > media_assets.id [delete: restrict]

@@ -15754,6 +15754,18 @@
             "type": "boolean",
             "description": "Khách có đồng ý nhận tin khuyến mãi"
           },
+          "avatarAssetId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1",
+            "nullable": true,
+            "description": "Media asset dùng làm ảnh đại diện; null nếu chưa có ảnh"
+          },
+          "avatarUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "URL ảnh đại diện lấy từ media asset, chỉ để hiển thị"
+          },
           "orderCount": {
             "type": "number",
             "description": "Số đơn đã đặt, không tính đơn đã huỷ"
@@ -15786,6 +15798,8 @@
           "status",
           "kind",
           "marketingConsent",
+          "avatarAssetId",
+          "avatarUrl",
           "orderCount",
           "lifetimeValue",
           "lastOrderAt",
@@ -15945,6 +15959,18 @@
             "type": "boolean",
             "description": "Khách có đồng ý nhận tin khuyến mãi"
           },
+          "avatarAssetId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1",
+            "nullable": true,
+            "description": "Media asset dùng làm ảnh đại diện; null nếu chưa có ảnh"
+          },
+          "avatarUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "URL ảnh đại diện lấy từ media asset, chỉ để hiển thị"
+          },
           "orderCount": {
             "type": "number",
             "description": "Số đơn đã đặt, không tính đơn đã huỷ"
@@ -15990,6 +16016,8 @@
           "status",
           "kind",
           "marketingConsent",
+          "avatarAssetId",
+          "avatarUrl",
           "orderCount",
           "lifetimeValue",
           "lastOrderAt",
@@ -15997,6 +16025,59 @@
           "version",
           "addresses",
           "recentOrders"
+        ]
+      },
+      "AdminCustomerAddressInputDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1",
+            "description": "Có id là sửa địa chỉ đang có; bỏ trống là thêm mới"
+          },
+          "recipient": {
+            "type": "string",
+            "example": "Nguyễn Văn An",
+            "maxLength": 255
+          },
+          "phone": {
+            "type": "string",
+            "example": "0912345678",
+            "maxLength": 32
+          },
+          "addressLine": {
+            "type": "string",
+            "example": "12 Nguyễn Trãi",
+            "maxLength": 500
+          },
+          "ward": {
+            "type": "string",
+            "example": "Phường Bến Thành",
+            "maxLength": 255
+          },
+          "district": {
+            "type": "string",
+            "example": "Quận 1",
+            "maxLength": 255
+          },
+          "provinceCode": {
+            "type": "string",
+            "example": "79",
+            "maxLength": 32,
+            "description": "Mã tỉnh/thành theo danh mục hãng vận chuyển"
+          },
+          "isDefault": {
+            "type": "boolean",
+            "default": false,
+            "description": "Đúng một địa chỉ mặc định cho mỗi khách"
+          }
+        },
+        "required": [
+          "recipient",
+          "phone",
+          "addressLine",
+          "provinceCode"
         ]
       },
       "CreateAdminCustomerDto": {
@@ -16010,7 +16091,8 @@
           "phone": {
             "type": "string",
             "example": "0912345678",
-            "maxLength": 32
+            "maxLength": 32,
+            "description": "Bắt buộc: hồ sơ khách phải có cả SĐT và email để nhận lại khách và gửi thông báo đơn."
           },
           "email": {
             "type": "string",
@@ -16021,10 +16103,25 @@
             "type": "boolean",
             "default": false,
             "description": "Khách đồng ý nhận tin khuyến mãi"
+          },
+          "avatarAssetId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1",
+            "description": "Media asset đã upload dùng làm ảnh đại diện"
+          },
+          "addresses": {
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminCustomerAddressInputDto"
+            }
           }
         },
         "required": [
-          "name"
+          "name",
+          "phone",
+          "email"
         ]
       },
       "UpdateAdminCustomerDto": {
@@ -16042,15 +16139,30 @@
           "phone": {
             "type": "string",
             "maxLength": 32,
-            "description": "Gửi chuỗi rỗng để xoá số điện thoại"
+            "description": "SĐT là bắt buộc trên hồ sơ, nên gửi giá trị mới chứ không gửi chuỗi rỗng để xoá."
           },
           "email": {
             "type": "string",
             "maxLength": 255,
-            "description": "Gửi chuỗi rỗng để xoá email"
+            "description": "Email là bắt buộc trên hồ sơ, nên gửi giá trị mới chứ không gửi chuỗi rỗng để xoá."
           },
           "marketingConsent": {
             "type": "boolean"
+          },
+          "avatarAssetId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1",
+            "nullable": true,
+            "description": "Gửi null để gỡ ảnh đại diện; bỏ trống để giữ nguyên"
+          },
+          "addresses": {
+            "maxItems": 10,
+            "description": "Trạng thái địa chỉ mong muốn sau khi lưu; bỏ trống để không đụng tới địa chỉ",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminCustomerAddressInputDto"
+            }
           }
         },
         "required": [
@@ -16141,14 +16253,16 @@
       "CreateBrandDto": {
         "type": "object",
         "properties": {
-          "code": {
-            "type": "string"
-          },
           "name": {
             "type": "string"
           },
+          "code": {
+            "type": "string",
+            "description": "Bỏ trống để Backend suy từ tên. Chỉ gửi khi cần giữ mã của hệ thống cũ."
+          },
           "slug": {
-            "type": "string"
+            "type": "string",
+            "description": "Bỏ trống để Backend suy từ tên và tự thêm hậu tố khi trùng."
           },
           "description": {
             "type": "string"
@@ -16160,9 +16274,7 @@
           }
         },
         "required": [
-          "code",
-          "name",
-          "slug"
+          "name"
         ]
       },
       "UpdateBrandDto": {
@@ -16291,14 +16403,16 @@
             "pattern": "^[1-9][0-9]*$",
             "example": "1"
           },
-          "code": {
-            "type": "string"
-          },
           "name": {
             "type": "string"
           },
+          "code": {
+            "type": "string",
+            "description": "Bỏ trống để Backend suy từ tên. Chỉ gửi khi cần giữ mã của hệ thống cũ."
+          },
           "slug": {
-            "type": "string"
+            "type": "string",
+            "description": "Bỏ trống để Backend suy từ tên và tự thêm hậu tố khi trùng."
           },
           "description": {
             "type": "string"
@@ -16315,9 +16429,7 @@
           }
         },
         "required": [
-          "code",
-          "name",
-          "slug"
+          "name"
         ]
       },
       "UpdateCategoryDto": {

@@ -292,6 +292,7 @@ model MediaAsset {
   productMedia   ProductMedia[]
   paymentEvidence PaymentEvidence?
   contentPostCovers       ContentPost[]          @relation("ContentPostCover")
+  customerAvatars         Customer[]             @relation("CustomerAvatar")
 
   @@unique([provider, providerAssetId])
   @@index([uploadedBy])
@@ -677,11 +678,13 @@ model Customer {
   normalizedPhone  String?  @map("normalized_phone") @db.VarChar(32)
   status           String   @default("ACTIVE") @db.VarChar(24)
   marketingConsent Boolean  @default(false) @map("marketing_consent")
+  avatarAssetId    BigInt?  @map("avatar_asset_id")
   version          BigInt   @default(0)
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   user             User?             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  avatarAsset      MediaAsset?       @relation("CustomerAvatar", fields: [avatarAssetId], references: [id], onDelete: SetNull)
   addresses        CustomerAddress[]
   carts            Cart[]
   checkoutSessions CheckoutSession[]
@@ -691,6 +694,7 @@ model Customer {
   @@index([normalizedEmail])
   @@index([normalizedPhone])
   @@index([status, createdAt])
+  @@index([avatarAssetId])
   @@map("customers")
 }
 

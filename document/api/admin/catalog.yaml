@@ -2024,12 +2024,14 @@ components:
     CreateBrandDto:
       type: object
       properties:
-        code:
-          type: string
         name:
           type: string
+        code:
+          type: string
+          description: Bỏ trống để Backend suy từ tên. Chỉ gửi khi cần giữ mã của hệ thống cũ.
         slug:
           type: string
+          description: Bỏ trống để Backend suy từ tên và tự thêm hậu tố khi trùng.
         description:
           type: string
         logoAssetId:
@@ -2037,9 +2039,7 @@ components:
           pattern: ^[1-9][0-9]*$
           example: "1"
       required:
-        - code
         - name
-        - slug
     BrandDto:
       type: object
       properties:
@@ -2130,12 +2130,14 @@ components:
           type: string
           pattern: ^[1-9][0-9]*$
           example: "1"
-        code:
-          type: string
         name:
           type: string
+        code:
+          type: string
+          description: Bỏ trống để Backend suy từ tên. Chỉ gửi khi cần giữ mã của hệ thống cũ.
         slug:
           type: string
+          description: Bỏ trống để Backend suy từ tên và tự thêm hậu tố khi trùng.
         description:
           type: string
         imageAssetId:
@@ -2147,9 +2149,7 @@ components:
           minimum: 0
           default: 0
       required:
-        - code
         - name
-        - slug
     CategoryDto:
       type: object
       properties:

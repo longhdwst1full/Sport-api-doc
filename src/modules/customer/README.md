@@ -1,10 +1,10 @@
 # Customer module
 
-> **Document version:** 1.0.0
+> **Document version:** 2.0.0
 >
-> **Last updated:** 2026-09-18
+> **Last updated:** 2026-09-21
 >
-> **Change summary:** Mô tả ranh giới nghiệp vụ, quyền, phạm vi dữ liệu và invariant của Customer.
+> **Change summary:** Email và SĐT thành bắt buộc trên hồ sơ; thêm ảnh đại diện (`avatar_asset_id`) và đồng bộ địa chỉ nguyên trạng ngay trong create/update khách.
 
 ## Phạm vi
 
@@ -31,11 +31,25 @@ Khách hàng không có `branch_id`; phạm vi chi nhánh được suy ra qua đ
 độc lập chỉ nhận principal `GLOBAL`. Nhân viên chi nhánh tạo khách qua POS/đơn hàng để hồ sơ và
 chi nhánh được liên kết trong đúng luồng nghiệp vụ, tránh tạo xong nhưng không thể đọc lại.
 
+## Transaction
+
+Địa chỉ ghi trong **cùng transaction** với hồ sơ. Ở `update`, địa chỉ chỉ được ghi sau khi
+`updateMany` đã thắng `expectedVersion` — version của `customers` là khoá chung cho cả hồ sơ lẫn sổ
+địa chỉ, nên hai người sửa song song không trộn địa chỉ vào nhau.
+
 ## Invariant
 
 - `name` sau trim phải có giá trị.
-- Luôn còn ít nhất một kênh liên hệ: email hoặc số điện thoại.
+- Hồ sơ do Admin tạo/sửa phải có **cả** email và số điện thoại. Trước 2026-09-21 chỉ cần một trong
+  hai và gửi chuỗi rỗng là xoá; contract mới không còn xoá liên hệ bằng chuỗi rỗng — đây là thay đổi
+  phá vỡ tương thích, ghi tại `API-20260921-CUSTOMER-AVATAR-ADDRESSES` trong `11-model-change-log.json`.
+- Mỗi khách có đúng một địa chỉ mặc định khi danh sách địa chỉ không rỗng; không đánh dấu thì địa chỉ
+  đầu tiên được chọn.
+- `avatar_asset_id` chỉ nhận media asset đang `ACTIVE`; xoá asset chỉ làm mất ảnh (`ON DELETE SET NULL`).
 - Email/SĐT được chuẩn hóa trước khi kiểm tra unique; SĐT lưu ở dạng E.164.
+- `addresses` gửi kèm create/update là **trạng thái mong muốn cuối cùng**: có `id` là cập nhật, không
+  `id` là thêm mới, địa chỉ cũ vắng mặt chuyển `INACTIVE` (không xoá cứng, vì đơn cũ còn tham chiếu).
+  Bỏ trống trường này nghĩa là không đụng tới địa chỉ.
 - `MEMBER` (đã liên kết tài khoản) không được hard delete.
 - Khách đã có đơn không được hard delete; dùng `INACTIVE` để giữ lịch sử.
 - Update/lifecycle/delete dùng `expectedVersion` để phát hiện hai người sửa cùng lúc.

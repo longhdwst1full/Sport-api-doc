@@ -3483,6 +3483,82 @@
         "test:src/modules/auth/auth-token-transport.service.spec.ts"
       ],
       "targets": []
+    },
+    {
+      "id": "API-20260921-CUSTOMER-AVATAR-ADDRESSES",
+      "date": "2026-09-21",
+      "scope": "DATABASE+CUSTOMER+API+ADMIN",
+      "summary": "customers thêm cột avatar_asset_id (FK media_assets, ON DELETE SET NULL) cho ảnh đại diện. createAdminCustomer/updateAdminCustomer nhận avatarAssetId và mảng addresses đồng bộ nguyên trạng trong cùng transaction với hồ sơ: địa chỉ có id là cập nhật, không id là thêm mới, địa chỉ vắng mặt chuyển INACTIVE thay vì xóa cứng, và luôn còn đúng một địa chỉ mặc định. BREAKING: email và phone trở thành bắt buộc khi tạo khách và không còn xóa được bằng chuỗi rỗng khi sửa.",
+      "sources": [
+        "OpenAPI:createAdminCustomer/updateAdminCustomer",
+        "migration:prisma/migrations/20260921150000_customer_avatar_asset",
+        "source:src/modules/customer/admin-customer.service.ts",
+        "source:src/modules/customer/admin-customer.dto.ts",
+        "test:src/modules/customer/admin-customer-mutations.spec.ts"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": {
+            "Tên bảng": "customers"
+          },
+          "columns": [
+            "Khóa ngoại quan trọng",
+            "Các cột chính"
+          ],
+          "set": {
+            "Khóa ngoại quan trọng": "user_id->users; avatar_asset_id->media_assets",
+            "Các cột chính": "customer_no,name,email,phone,status,marketing_consent,avatar_asset_id,version"
+          }
+        }
+      ],
+      "upsertRows": [
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "customers",
+            "Tên cột": "avatar_asset_id"
+          },
+          "values": {
+            "Tên bảng": "customers",
+            "STT": "13",
+            "Tên cột": "avatar_asset_id",
+            "Kiểu dữ liệu": "bigint",
+            "Cho phép NULL": "YES",
+            "Ý nghĩa / trạng thái cho phép": "Ảnh đại diện khách, trỏ media_assets; NULL khi chưa có ảnh hoặc ảnh đã bị xóa"
+          }
+        },
+        {
+          "sheet": "Relationships",
+          "match": {
+            "Bảng con": "customers",
+            "Cột FK": "avatar_asset_id"
+          },
+          "values": {
+            "Bảng con": "customers",
+            "Cột FK": "avatar_asset_id",
+            "Bảng cha": "media_assets",
+            "Cột PK": "id",
+            "Cardinality": "N → 1",
+            "ON DELETE": "SET NULL",
+            "Điểm cần kiểm tra": "Xóa media asset chỉ được làm mất ảnh đại diện, không chặn hoặc xóa hồ sơ khách"
+          }
+        }
+      ]
+    },
+    {
+      "id": "API-20260921-MASTER-SLUG-AUTOGEN",
+      "date": "2026-09-21",
+      "scope": "CATALOG+API+ADMIN",
+      "summary": "createAdminBrand/createAdminCategory không còn bắt buộc code và slug: Backend suy slug từ tên (bỏ dấu tiếng Việt, tự nối hậu tố -2/-3 khi trùng) và suy code từ slug, đọc slug đã dùng trong cùng transaction với create. Client vẫn gửi được code/slug khi cần giữ mã hệ thống cũ. Admin bỏ ô nhập mã/slug ở form tạo và chỉ cho sửa slug ở form sửa vì đó là URL công khai. Không thay đổi schema database.",
+      "sources": [
+        "OpenAPI:createAdminBrand/createAdminCategory",
+        "source:src/modules/catalog/master-data/catalog-master-identifiers.ts",
+        "source:src/modules/catalog/master-data/catalog-master.service.ts",
+        "test:src/modules/catalog/master-data/catalog-master-identifiers.spec.ts",
+        "source:../admin/src/features/catalog-masters/components/master-data-form-drawers.tsx"
+      ],
+      "targets": []
     }
   ]
 }

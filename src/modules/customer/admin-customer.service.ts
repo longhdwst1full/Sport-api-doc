@@ -14,8 +14,14 @@ import type { AuthPrincipal } from '../auth/auth.types';
 import { AuditWriter } from '../audit/audit.writer';
 import { ScopeType } from '../iam/iam.types';
 import { normalizeVietnamesePhone } from '../auth/phone-normalization';
-import { CUSTOMER_AUDIT_ACTION, CUSTOMER_STATUS } from './customer.constants';
 import {
+  CUSTOMER_ADDRESS_TYPE,
+  CUSTOMER_AUDIT_ACTION,
+  CUSTOMER_COUNTRY,
+  CUSTOMER_STATUS,
+} from './customer.constants';
+import {
+  AdminCustomerAddressInputDto,
   AdminCustomerDetailDto,
   AdminCustomerListDto,
   AdminCustomerQueryDto,
@@ -117,6 +123,7 @@ export class AdminCustomerService {
     const customer = await this.prisma.customer.findFirst({
       where: { id: databaseId, ...this.customerScopeWhere(branchIds) },
       include: {
+        avatarAsset: { select: { id: true, secureUrl: true, thumbnailUrl: true } },
         addresses: {
           where: { status: 'ACTIVE' },
           orderBy: [{ isDefault: 'desc' }, { id: 'asc' }],
@@ -185,10 +192,13 @@ export class AdminCustomerService {
     if (!name) throw new BadRequestException('Tên khách hàng không được để trống');
     const phone = this.normalizePhone(input.phone);
     const email = this.normalizeEmail(input.email);
-    if (!phone && !email) {
-      throw new BadRequestException('Cần ít nhất số điện thoại hoặc email để nhận lại khách');
+    // Contract bắt buộc cả hai, nhưng chuỗi toàn khoảng trắng vượt qua được validator độ dài.
+    if (!phone || !email) {
+      throw new BadRequestException('Hồ sơ khách cần cả số điện thoại và email');
     }
     await this.assertContactNotTaken(phone, email);
+    const avatarAssetId = await this.resolveAvatarAssetId(input.avatarAssetId);
+    const addresses = this.validateAddressInput(input.addresses);
 
     const created = await this.prisma.$transaction(async (transaction) => {
       const row = await transaction.customer.create({
@@ -196,15 +206,19 @@ export class AdminCustomerService {
           // Khách do Admin tạo không gắn với user nào, nên dùng mã ngẫu nhiên như khách vãng lai.
           customerNo: `CUS-A-${randomUUID().replaceAll('-', '').slice(0, 18).toUpperCase()}`,
           name,
-          phone: phone?.value ?? null,
-          normalizedPhone: phone?.normalized ?? null,
-          email: email?.value ?? null,
-          normalizedEmail: email?.normalized ?? null,
+          phone: phone.value,
+          normalizedPhone: phone.normalized,
+          email: email.value,
+          normalizedEmail: email.normalized,
           marketingConsent: input.marketingConsent ?? false,
           status: CUSTOMER_STATUS.ACTIVE,
+          ...(avatarAssetId !== undefined ? { avatarAssetId } : {}),
         },
         select: { id: true, customerNo: true },
       });
+      // TRANSACTION: địa chỉ phải nằm cùng transaction với hồ sơ; tạo khách xong mới lỗi địa chỉ
+      // sẽ để lại hồ sơ thiếu nơi giao hàng mà người nhập tưởng đã lưu đủ.
+      if (addresses) await this.syncAddresses(transaction, row.id, addresses);
       // SECURITY: Audit chỉ lưu mã khách và trạng thái; không chép email/SĐT/tên vào log PII.
       await this.audit.write(
         {
@@ -245,16 +259,29 @@ export class AdminCustomerService {
     }
     const phone = input.phone === undefined ? undefined : this.normalizePhone(input.phone);
     const email = input.email === undefined ? undefined : this.normalizeEmail(input.email);
+    // Liên hệ là bắt buộc trên hồ sơ: gửi lên thì phải có giá trị, không gửi thì giữ nguyên giá trị cũ.
+    if (input.phone !== undefined && !phone) {
+      throw new BadRequestException('Số điện thoại không được để trống');
+    }
+    if (input.email !== undefined && !email) {
+      throw new BadRequestException('Email không được để trống');
+    }
     const effectivePhone = phone === undefined ? current.phone : (phone?.value ?? null);
     const effectiveEmail = email === undefined ? current.email : (email?.value ?? null);
-    if (!effectivePhone && !effectiveEmail) {
-      throw new BadRequestException('Cần ít nhất số điện thoại hoặc email để nhận lại khách');
+    if (!effectivePhone || !effectiveEmail) {
+      throw new BadRequestException('Hồ sơ khách cần cả số điện thoại và email');
     }
     await this.assertContactNotTaken(phone, email, current.id);
+    const avatarAssetId = input.avatarAssetId === undefined
+      ? undefined
+      : input.avatarAssetId === null
+        ? null
+        : await this.resolveAvatarAssetId(input.avatarAssetId);
+    const addresses = this.validateAddressInput(input.addresses);
 
-    const changedFields = (['name', 'phone', 'email', 'marketingConsent'] as const).filter(
-      (field) => input[field] !== undefined,
-    );
+    const changedFields = (
+      ['name', 'phone', 'email', 'marketingConsent', 'avatarAssetId', 'addresses'] as const
+    ).filter((field) => input[field] !== undefined);
     await this.prisma.$transaction(async (transaction) => {
       const changed = await transaction.customer.updateMany({
         where: { id: current.id, version: BigInt(input.expectedVersion) },
@@ -269,12 +296,16 @@ export class AdminCustomerService {
           ...(input.marketingConsent !== undefined
             ? { marketingConsent: input.marketingConsent }
             : {}),
+          ...(avatarAssetId !== undefined ? { avatarAssetId } : {}),
           version: { increment: 1 },
         },
       });
       if (changed.count !== 1) {
         throw new ConflictException('Hồ sơ khách vừa thay đổi. Vui lòng tải lại rồi thử lại.');
       }
+      // TRANSACTION: version của Customer là khoá chung cho cả hồ sơ lẫn địa chỉ. Ghi địa chỉ sau
+      // khi `updateMany` đã thắng version nghĩa là hai người sửa song song không trộn địa chỉ vào nhau.
+      if (addresses) await this.syncAddresses(transaction, current.id, addresses);
       await this.audit.write(
         {
           requestId: context.requestId,
@@ -476,6 +507,111 @@ export class AdminCustomerService {
   }
 
   /**
+   * Ảnh đại diện phải là media asset còn dùng được. Nhận id rác sẽ tạo hồ sơ trỏ vào ảnh không
+   * tồn tại và màn danh sách hiển thị ô ảnh vỡ mà không ai biết tại sao.
+   */
+  private async resolveAvatarAssetId(raw: string | undefined): Promise<bigint | undefined> {
+    if (raw === undefined) return undefined;
+    const id = toDatabaseId(raw);
+    const asset = await this.prisma.mediaAsset.findFirst({
+      where: { id, status: 'ACTIVE' },
+      select: { id: true },
+    });
+    if (!asset) throw new BadRequestException('Ảnh đại diện không tồn tại hoặc đã bị xoá');
+    return asset.id;
+  }
+
+  /**
+   * INVARIANT: mỗi khách có đúng một địa chỉ mặc định. Không ai đánh dấu thì địa chỉ đầu tiên
+   * được chọn, vì luồng tạo đơn luôn cần một địa chỉ giao mặc định để điền sẵn.
+   */
+  private validateAddressInput(
+    addresses: AdminCustomerAddressInputDto[] | undefined,
+  ): AdminCustomerAddressInputDto[] | undefined {
+    if (addresses === undefined) return undefined;
+    const defaults = addresses.filter((address) => address.isDefault === true);
+    if (defaults.length > 1) {
+      throw new BadRequestException('Chỉ được chọn một địa chỉ mặc định');
+    }
+    const ids = addresses.flatMap((address) => (address.id ? [address.id] : []));
+    if (new Set(ids).size !== ids.length) {
+      throw new BadRequestException('Một địa chỉ xuất hiện nhiều lần trong danh sách');
+    }
+    return addresses.map((address, index) => ({
+      ...address,
+      isDefault: defaults.length === 0 ? index === 0 : address.isDefault === true,
+    }));
+  }
+
+  /**
+   * Đồng bộ danh sách địa chỉ về đúng trạng thái client gửi lên.
+   *
+   * Địa chỉ bỏ đi được chuyển INACTIVE chứ không xoá cứng: đơn hàng cũ vẫn tham chiếu địa chỉ giao
+   * tại thời điểm đặt, xoá cứng thì tra lại lịch sử giao hàng sẽ mất gốc.
+   */
+  private async syncAddresses(
+    transaction: Prisma.TransactionClient,
+    customerId: bigint,
+    addresses: AdminCustomerAddressInputDto[],
+  ): Promise<void> {
+    const existing = await transaction.customerAddress.findMany({
+      where: { customerId, status: CUSTOMER_STATUS.ACTIVE },
+      select: { id: true },
+    });
+    const existingIds = new Set(existing.map((row) => row.id.toString()));
+    const keptIds = new Set<string>();
+
+    for (const address of addresses) {
+      const data = {
+        recipient: address.recipient.trim(),
+        phone: this.normalizeAddressPhone(address.phone),
+        addressLine: address.addressLine.trim(),
+        ward: address.ward?.trim() || null,
+        district: address.district?.trim() || null,
+        provinceCode: address.provinceCode.trim(),
+        isDefault: address.isDefault === true,
+      };
+      if (address.id) {
+        // Địa chỉ của khách khác không được kéo sang hồ sơ này chỉ vì client gửi kèm id.
+        if (!existingIds.has(toDatabaseId(address.id).toString())) {
+          throw new BadRequestException('Địa chỉ không thuộc về khách hàng này');
+        }
+        const id = toDatabaseId(address.id);
+        keptIds.add(id.toString());
+        await transaction.customerAddress.update({
+          where: { id },
+          data: { ...data, version: { increment: 1 } },
+        });
+        continue;
+      }
+      await transaction.customerAddress.create({
+        data: {
+          ...data,
+          customerId,
+          addressType: CUSTOMER_ADDRESS_TYPE.SHIPPING,
+          countryCode: CUSTOMER_COUNTRY.VIETNAM,
+        },
+      });
+    }
+
+    const removedIds = [...existingIds].filter((id) => !keptIds.has(id)).map((id) => BigInt(id));
+    if (removedIds.length > 0) {
+      await transaction.customerAddress.updateMany({
+        where: { id: { in: removedIds } },
+        data: { status: CUSTOMER_STATUS.INACTIVE, isDefault: false, version: { increment: 1 } },
+      });
+    }
+  }
+
+  private normalizeAddressPhone(value: string): string {
+    try {
+      return normalizeVietnamesePhone(value);
+    } catch {
+      throw new BadRequestException('Số điện thoại người nhận không hợp lệ');
+    }
+  }
+
+  /**
    * Số đơn, giá trị vòng đời và lần mua gần nhất cho cả trang trong một lượt truy vấn.
    * Tính từng khách một sẽ là N lượt đi database, mỗi lượt ~450ms trên đường truyền hiện tại.
    */
@@ -530,6 +666,8 @@ export class AdminCustomerService {
       status: string;
       userId: bigint | null;
       marketingConsent: boolean;
+      avatarAssetId: bigint | null;
+      avatarAsset?: { secureUrl: string; thumbnailUrl: string | null } | null;
       createdAt: Date;
       version: bigint;
     },
@@ -545,6 +683,9 @@ export class AdminCustomerService {
       status: row.status,
       kind,
       marketingConsent: row.marketingConsent,
+      avatarAssetId: row.avatarAssetId === null ? null : toEntityId(row.avatarAssetId),
+      // Danh sách không join media asset để tránh N+1; ở đó chỉ có id, URL chỉ có ở màn chi tiết.
+      avatarUrl: row.avatarAsset?.thumbnailUrl ?? row.avatarAsset?.secureUrl ?? null,
       orderCount: rollup?.orderCount ?? 0,
       lifetimeValue: (rollup?.lifetimeValue ?? new Prisma.Decimal(0)).toFixed(2),
       lastOrderAt: rollup?.lastOrderAt?.toISOString() ?? null,

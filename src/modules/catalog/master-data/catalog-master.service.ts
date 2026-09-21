@@ -6,6 +6,11 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import {
+  buildUniqueMasterSlug,
+  deriveMasterCode,
+  slugifyMasterName,
+} from './catalog-master-identifiers';
+import {
   toDatabaseId,
   toEntityId,
   toOptionalDatabaseId,
@@ -125,8 +130,13 @@ export class CatalogMasterService {
   async createBrand(input: CreateBrandDto, context: MutationContext): Promise<BrandDto> {
     try {
       const row = await this.prisma.$transaction(async (transaction) => {
+        const identifiers = await this.resolveMasterIdentifiers(transaction, 'brand', input);
         const created = await transaction.brand.create({
-          data: { ...input, logoAssetId: toOptionalDatabaseId(input.logoAssetId) },
+          data: {
+            ...input,
+            ...identifiers,
+            logoAssetId: toOptionalDatabaseId(input.logoAssetId),
+          },
         });
         await this.audit.write(
           {
@@ -162,12 +172,13 @@ export class CatalogMasterService {
             })
           : null;
         if (input.parentId && !parent) throw new UnprocessableEntityException('Parent category is not active');
+        const identifiers = await this.resolveMasterIdentifiers(transaction, 'category', input);
         const created = await transaction.category.create({
           data: {
             parentId,
-            code: input.code,
+            code: identifiers.code,
             name: input.name,
-            slug: input.slug,
+            slug: identifiers.slug,
             description: input.description,
             imageAssetId: toOptionalDatabaseId(input.imageAssetId),
             sortOrder: input.sortOrder ?? 0,
@@ -520,6 +531,36 @@ export class CatalogMasterService {
       status: row.status as CategoryDto['status'],
       version: Number(row.version),
     };
+  }
+
+  /**
+   * Suy `slug` và `code` từ tên khi người nhập không gửi lên.
+   *
+   * Người nhập chỉ biết tên thương hiệu/danh mục; mã và đường dẫn là chuyện của hệ thống. Bắt họ
+   * nghĩ ra hai chuỗi nữa cho cùng một thứ chỉ tạo ra mã lệch slug rồi không ai sửa lại được.
+   * Chạy trong cùng transaction với `create` để danh sách slug đã dùng không bị đọc lệch, và
+   * unique constraint của database vẫn là chốt chặn cuối khi hai người tạo trùng tên cùng lúc.
+   */
+  private async resolveMasterIdentifiers(
+    transaction: Prisma.TransactionClient,
+    entity: 'brand' | 'category',
+    input: { name: string; code?: string; slug?: string },
+  ): Promise<{ code: string; slug: string }> {
+    if (input.slug && input.code) return { code: input.code, slug: input.slug };
+    const base = slugifyMasterName(input.name) || undefined;
+    const rows = base
+      ? entity === 'brand'
+        ? await transaction.brand.findMany({
+            where: { slug: { startsWith: base } },
+            select: { slug: true },
+          })
+        : await transaction.category.findMany({
+            where: { slug: { startsWith: base } },
+            select: { slug: true },
+          })
+      : [];
+    const slug = input.slug ?? buildUniqueMasterSlug(input.name, rows.map((row) => row.slug));
+    return { code: input.code ?? deriveMasterCode(slug), slug };
   }
 
   private rethrowUniqueConstraint(error: unknown, message: string): never {
