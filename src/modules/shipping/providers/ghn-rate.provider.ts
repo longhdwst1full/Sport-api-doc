@@ -1,5 +1,6 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { IntegrationConfigService } from '../../system/parameters/integration-config.service';
 import { ExternalShippingRateQuote, ShippingRateProvider, ShippingRateQuoteInput } from './shipping-rate.provider';
 
 interface GhnFeeResponse {
@@ -12,12 +13,15 @@ interface GhnFeeResponse {
 export class GhnRateProvider extends ShippingRateProvider {
   readonly code = 'GHN' as const;
 
-  constructor(private readonly config: ConfigService) {
+  constructor(
+    private readonly config: ConfigService,
+    private readonly integrations: IntegrationConfigService,
+  ) {
     super();
   }
 
-  isEnabled(): boolean {
-    return this.config.get<boolean>('app.shipping.ghn.enabled') === true;
+  async isEnabled(): Promise<boolean> {
+    return (await this.integrations.ghn()).enabled;
   }
 
   canQuote(input: ShippingRateQuoteInput): boolean {
@@ -28,18 +32,22 @@ export class GhnRateProvider extends ShippingRateProvider {
   }
 
   async quote(input: ShippingRateQuoteInput): Promise<ExternalShippingRateQuote> {
-    if (!this.isEnabled() || !this.canQuote(input)) {
+    const ghn = await this.integrations.ghn();
+    if (!ghn.enabled || !ghn.token || !this.canQuote(input)) {
       throw new ServiceUnavailableException('GHN quote is not configured for this address');
     }
-    const response = await fetch(this.config.getOrThrow<string>('app.shipping.ghn.apiUrl'), {
+    // Endpoint tính phí là đường dẫn con của base URL; giữ ở cấu hình ứng dụng vì nó là chi tiết
+    // kỹ thuật của provider, không phải giá trị người vận hành cần sửa.
+    const feeUrl = this.config.getOrThrow<string>('app.shipping.ghn.apiUrl');
+    const response = await fetch(feeUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Token: this.token,
-        ShopId: this.config.getOrThrow<string>('app.shipping.ghn.shopId'),
+        Token: ghn.token,
+        ShopId: ghn.shopId,
       },
       body: JSON.stringify({
-        service_type_id: 2,
+        service_type_id: ghn.serviceTypeId,
         from_district_id: Number(input.pickup.districtCode),
         from_ward_code: input.pickup.wardCode,
         to_district_id: Number(input.recipient.districtCode),
@@ -58,9 +66,5 @@ export class GhnRateProvider extends ShippingRateProvider {
       throw new ServiceUnavailableException(`GHN quote failed: ${payload.message ?? response.status}`);
     }
     return { provider: this.code, fee: Number(fee), etaMinDays: 1, etaMaxDays: 5 };
-  }
-
-  private get token(): string {
-    return this.config.getOrThrow<string>('app.shipping.ghn.token');
   }
 }

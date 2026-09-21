@@ -53,9 +53,9 @@ export class ShippingQuoteService {
       };
     }
 
-    const enabledProviders = [this.ghn].filter(
-      (provider) => provider.isEnabled() && provider.canQuote(input),
-    );
+    const candidates = [this.ghn].filter((provider) => provider.canQuote(input));
+    const enabledFlags = await Promise.all(candidates.map((provider) => provider.isEnabled()));
+    const enabledProviders = candidates.filter((_provider, index) => enabledFlags[index]);
     const settled = await Promise.allSettled(enabledProviders.map((provider) => provider.quote(input)));
     const external = settled
       .filter((result): result is PromiseFulfilledResult<Awaited<ReturnType<GhnRateProvider['quote']>>> => result.status === 'fulfilled')

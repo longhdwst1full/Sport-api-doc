@@ -1,5 +1,6 @@
 import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { IntegrationConfigService } from '../system/parameters/integration-config.service';
 import { ShippingAreaDto } from './shipping-area.dto';
 
 interface GhnProvince {
@@ -42,7 +43,10 @@ export class ShippingAreaService {
   private readonly logger = new Logger(ShippingAreaService.name);
   private readonly cache = new Map<string, CacheEntry>();
 
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    private readonly integrations: IntegrationConfigService,
+  ) {}
 
   async listProvinces(): Promise<ShippingAreaDto[]> {
     return this.cached('provinces', async () => {
@@ -88,12 +92,15 @@ export class ShippingAreaService {
   }
 
   private async call<TData>(path: string, body?: Record<string, number>): Promise<TData> {
-    const enabled = this.config.get<boolean>('app.shipping.ghn.enabled') === true;
-    const token = this.config.get<string>('app.shipping.ghn.token');
-    if (!enabled || !token) {
+    // Cấu hình đọc từ bảng tham số hệ thống (biến môi trường chỉ còn là fallback). Đọc tại thời
+    // điểm gọi để giá trị vừa sửa ở màn Admin có hiệu lực ngay, không phải chờ restart.
+    const ghn = await this.integrations.ghn();
+    if (!ghn.enabled || !ghn.token) {
       throw new ServiceUnavailableException('Shipping area lookup is not configured');
     }
-    const baseUrl = this.config.getOrThrow<string>('app.shipping.ghn.baseUrl');
+    const baseUrl = ghn.baseUrl;
+    const token = ghn.token;
+    // Timeout là tham số vận hành, không phải bí mật tích hợp, nên vẫn đọc từ cấu hình ứng dụng.
     const timeoutMs = this.config.get<number>('app.shipping.providerTimeoutMs') ?? 5_000;
 
     let response: Response;

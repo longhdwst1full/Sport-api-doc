@@ -33,7 +33,11 @@ export interface ExternalShippingRateQuote {
 
 export abstract class ShippingRateProvider {
   abstract readonly code: ExternalShippingRateQuote['provider'];
-  abstract isEnabled(): boolean;
+  /**
+   * Bật/tắt đọc từ bảng tham số hệ thống nên là thao tác bất đồng bộ; trước đây nó đọc biến môi
+   * trường, khiến bản deploy khai tham số trong màn Admin vẫn coi như hãng đang tắt.
+   */
+  abstract isEnabled(): Promise<boolean>;
   abstract canQuote(input: ShippingRateQuoteInput): boolean;
   abstract quote(input: ShippingRateQuoteInput): Promise<ExternalShippingRateQuote>;
 }

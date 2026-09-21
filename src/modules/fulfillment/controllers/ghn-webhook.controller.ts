@@ -28,13 +28,13 @@ export class GhnWebhookController {
 
   @Post('webhook')
   @HttpCode(HttpStatus.OK)
-  receive(
+  async receive(
     @Headers('x-ghn-webhook-secret') headerSecret: string | undefined,
     @Query('secret') querySecret: string | undefined,
     @Body() payload: GhnWebhookPayload,
     @Req() request: Request,
   ): Promise<CarrierStatusSyncResult> {
-    this.sync.assertSecret(headerSecret ?? querySecret);
+    await this.sync.assertSecret(headerSecret ?? querySecret);
     return this.sync.handle(payload, requestId(request));
   }
 }

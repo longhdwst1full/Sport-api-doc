@@ -8,9 +8,12 @@ const SECRET = 'secret-0123456789abcd';
 function buildController() {
   const handle = jest.fn().mockResolvedValue({ outcome: 'applied' });
   const sync = {
-    assertSecret: jest.fn((provided: string | undefined) => {
-      if (provided !== SECRET) throw new UnauthorizedException('Invalid GHN webhook secret');
-    }),
+    // Secret đọc từ bảng tham số hệ thống nên kiểm tra là bất đồng bộ.
+    assertSecret: jest.fn((provided: string | undefined) =>
+      provided === SECRET
+        ? Promise.resolve()
+        : Promise.reject(new UnauthorizedException('Invalid GHN webhook secret')),
+    ),
     handle,
   } as unknown as CarrierStatusSyncService;
   return { controller: new GhnWebhookController(sync), handle };
@@ -36,12 +39,12 @@ describe('GhnWebhookController', () => {
     expect(handle).toHaveBeenCalled();
   });
 
-  it('rejects a call with neither', () => {
+  it('rejects a call with neither', async () => {
     const { controller, handle } = buildController();
 
-    expect(() => controller.receive(undefined, undefined, payload, request)).toThrow(
-      UnauthorizedException,
-    );
+    await expect(
+      controller.receive(undefined, undefined, payload, request),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
     expect(handle).not.toHaveBeenCalled();
   });
 });

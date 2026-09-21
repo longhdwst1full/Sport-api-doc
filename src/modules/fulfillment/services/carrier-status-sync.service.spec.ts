@@ -1,17 +1,22 @@
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
-import type { ConfigService } from '@nestjs/config';
 import type { PrismaService } from '../../../database/prisma.service';
+import type { IntegrationConfigService } from '../../system/parameters/integration-config.service';
 import { CarrierStatusSyncService } from './carrier-status-sync.service';
 import type { FulfillmentService } from './fulfillment.service';
 
 function buildService(overrides: { fulfillment?: unknown; secret?: string; actorUserId?: string } = {}) {
-  const config = {
-    get: jest.fn((key: string) => {
-      if (key === 'app.shipping.ghn.webhookSecret') return overrides.secret ?? 'secret-0123456789abcd';
-      if (key === 'app.shipping.ghn.webhookActorUserId') return overrides.actorUserId ?? '42';
-      return undefined;
+  // Secret và tài khoản dịch vụ của webhook đọc từ bảng tham số hệ thống, không phải biến môi trường.
+  const integrations = {
+    ghn: jest.fn().mockResolvedValue({
+      enabled: true,
+      baseUrl: 'https://dev-online-gateway.ghn.vn/shiip/public-api',
+      token: 'ghn-token',
+      shopId: '1',
+      serviceTypeId: 2,
+      webhookSecret: overrides.secret ?? 'secret-0123456789abcd',
+      webhookActorUserId: overrides.actorUserId ?? '42',
     }),
-  } as unknown as ConfigService;
+  } as unknown as IntegrationConfigService;
   const prisma = {
     fulfillment: {
       findFirst: jest.fn().mockResolvedValue(
@@ -27,7 +32,7 @@ function buildService(overrides: { fulfillment?: unknown; secret?: string; actor
     void input;
     return Promise.resolve({});
   });
-  const service = new CarrierStatusSyncService(config, prisma, {
+  const service = new CarrierStatusSyncService(integrations, prisma, {
     deliver,
     failDelivery,
   } as unknown as FulfillmentService);
@@ -101,17 +106,17 @@ describe('CarrierStatusSyncService', () => {
     expect(result.outcome).toBe('replayed');
   });
 
-  it('rejects a wrong secret', () => {
+  it('rejects a wrong secret', async () => {
     const { service } = buildService();
 
-    expect(() => service.assertSecret('sai-secret')).toThrow(UnauthorizedException);
-    expect(() => service.assertSecret(undefined)).toThrow(UnauthorizedException);
+    await expect(service.assertSecret('sai-secret')).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(service.assertSecret(undefined)).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
-  it('rejects every call when no secret is configured', () => {
+  it('rejects every call when no secret is configured', async () => {
     const { service } = buildService({ secret: '' });
 
-    expect(() => service.assertSecret('bat-ky')).toThrow(UnauthorizedException);
+    await expect(service.assertSecret('bat-ky')).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
   it('refuses to invent an actor when the service account is missing', async () => {

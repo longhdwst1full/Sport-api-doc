@@ -1,5 +1,5 @@
 import { ConflictException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { IntegrationConfigService } from '../../system/parameters/integration-config.service';
 import { timingSafeEqual } from 'node:crypto';
 import { PrismaService } from '../../../database/prisma.service';
 import { ScopeType } from '../../iam/iam.types';
@@ -32,7 +32,7 @@ export class CarrierStatusSyncService {
   private readonly logger = new Logger(CarrierStatusSyncService.name);
 
   constructor(
-    private readonly config: ConfigService,
+    private readonly integrations: IntegrationConfigService,
     private readonly prisma: PrismaService,
     private readonly fulfillments: FulfillmentService,
   ) {}
@@ -42,8 +42,9 @@ export class CarrierStatusSyncService {
    * URL/header. So sánh constant-time và bắt buộc phải cấu hình; không có secret thì từ chối hết,
    * vì một webhook mở là đường để người lạ đánh dấu đơn đã giao.
    */
-  assertSecret(provided: string | undefined): void {
-    const expected = this.config.get<string>('app.shipping.ghn.webhookSecret');
+  async assertSecret(provided: string | undefined): Promise<void> {
+    // Secret nằm ở bảng tham số hệ thống; đọc lúc nhận webhook để đổi secret không phải restart.
+    const expected = (await this.integrations.ghn()).webhookSecret;
     if (!expected) {
       throw new UnauthorizedException('GHN webhook secret is not configured');
     }
@@ -81,7 +82,7 @@ export class CarrierStatusSyncService {
     }
 
     const key = `ghn-webhook:${trackingNo}:${status}`;
-    const principal = this.systemPrincipal();
+    const principal = await this.systemPrincipal();
     const expectedVersion = fulfillment.version.toString();
     const id = fulfillment.id.toString();
     try {
@@ -119,11 +120,11 @@ export class CarrierStatusSyncService {
 
   /**
    * SECURITY: transition phải gắn được với một user có thật vì audit_logs khoá ngoại tới users.
-   * Vận hành chỉ định sẵn tài khoản dịch vụ qua env; không cấu hình thì webhook từ chối thay vì
-   * bịa ra actor.
+   * Vận hành chỉ định sẵn tài khoản dịch vụ trong tham số hệ thống; không cấu hình thì webhook từ
+   * chối thay vì bịa ra actor.
    */
-  private systemPrincipal(): AuthPrincipal {
-    const actorUserId = this.config.get<string>('app.shipping.ghn.webhookActorUserId');
+  private async systemPrincipal(): Promise<AuthPrincipal> {
+    const actorUserId = (await this.integrations.ghn()).webhookActorUserId;
     if (!actorUserId) {
       throw new UnauthorizedException('GHN webhook actor user is not configured');
     }
