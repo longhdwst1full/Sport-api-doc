@@ -3559,6 +3559,35 @@
         "source:../admin/src/features/catalog-masters/components/master-data-form-drawers.tsx"
       ],
       "targets": []
+    },
+    {
+      "id": "API-20260921-AUTH-CSRF-RATE-LIMIT",
+      "date": "2026-09-21",
+      "scope": "AUTH+SECURITY+API",
+      "summary": "Hardening xác thực: lệnh refresh/logout chạy bằng cookie phải khai Origin (hoặc Referer) thuộc danh sách CORS, vì cookie SameSite=None vẫn được trình duyệt đính vào request do trang lạ khởi tạo và refresh token dùng một lần nên ép xoay là đăng xuất nạn nhân. Thêm biến TRUST_PROXY (production mặc định 1) để rate limit đếm theo IP client thật thay vì IP proxy. Hạ hạn mức login xuống 5 lần/phút cho cả Admin và Storefront. Không thay đổi schema database hay success contract.",
+      "sources": [
+        "source:src/modules/auth/auth-token-transport.service.ts",
+        "source:src/modules/auth/auth.controller.ts",
+        "source:src/platform/app.factory.ts",
+        "source:src/config/app.config.ts",
+        "test:src/modules/auth/auth-token-transport.service.spec.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260921-REPORT-GRANULARITY-TOP-CUSTOMERS",
+      "date": "2026-09-21",
+      "scope": "REPORTING+API+ADMIN",
+      "summary": "getAdminReportRevenue nhận granularity DAY/MONTH/QUARTER/YEAR và trả kèm mức gom đã áp dụng; khoá gom tính theo giờ Việt Nam để đơn lúc 0h-7h sáng không rơi sang kỳ trước. Thêm getAdminReportTopCustomers xếp khách theo tiền đã thực trả trên đơn COMPLETED, cùng phạm vi chi nhánh với các báo cáo khác. Dashboard Admin thêm bộ chọn kỳ, biểu đồ số đơn theo kỳ, bảng khách mua nhiều nhất và bảng màu biểu đồ đạt kiểm tra tương phản/CVD. Không thay đổi schema database.",
+      "sources": [
+        "OpenAPI:getAdminReportRevenue/getAdminReportTopCustomers",
+        "source:src/modules/reporting/reporting.service.ts",
+        "source:src/common/time/vietnam-time.ts",
+        "test:src/modules/reporting/reporting.service.spec.ts",
+        "test:src/common/time/vietnam-time.spec.ts",
+        "source:../admin/src/features/dashboard/pages/dashboard-page.tsx"
+      ],
+      "targets": []
     }
   ]
 }

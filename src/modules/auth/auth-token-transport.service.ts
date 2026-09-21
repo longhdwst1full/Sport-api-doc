@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
 import { AUTH_TOKEN_TRANSPORT } from './auth.constants';
@@ -67,9 +67,45 @@ export class AuthTokenTransportService {
       if (!fromBody) throw new BadRequestException('refreshToken is required');
       return fromBody;
     }
+    this.assertTrustedOrigin(request);
     const fromCookie = this.parseCookies(request.headers.cookie)[REFRESH_COOKIE_NAMES[audience]];
     if (!fromCookie) throw new BadRequestException('Refresh cookie is required');
     return fromCookie;
+  }
+
+  /**
+   * SECURITY: chặn CSRF cho các lệnh chạy bằng cookie.
+   *
+   * Refresh token sống trong cookie `SameSite=None` ở production (Admin/Storefront và API nằm khác
+   * hostname), nên trình duyệt sẽ tự đính cookie vào cả request do trang lạ khởi tạo. Kẻ tấn công
+   * không đọc được phản hồi vì CORS, nhưng vẫn ép xoay được token: refresh token dùng một lần, nên
+   * mỗi lần ép xoay là một lần người dùng bị đăng xuất khỏi phiên đang hợp lệ.
+   *
+   * Vì vậy lệnh dùng cookie phải khai `Origin` (hoặc `Referer`) thuộc danh sách CORS. Trình duyệt
+   * luôn gửi `Origin` cho POST cross-site và không cho trang web tự đặt header này.
+   *
+   * Cho qua khi cấu hình CORS là `*`: đó là chế độ phát triển, và production bị `env.validation`
+   * cấm dùng `*`.
+   */
+  private assertTrustedOrigin(request: Request): void {
+    const allowed = this.config.get<string[]>('app.corsOrigins') ?? ['*'];
+    if (allowed.includes('*')) return;
+    const origin = request.headers.origin ?? this.originOf(request.headers.referer);
+    if (!origin) {
+      throw new ForbiddenException('Yêu cầu thiếu Origin nên không xác định được nguồn gọi');
+    }
+    if (!allowed.includes(origin)) {
+      throw new ForbiddenException('Nguồn gọi không nằm trong danh sách được phép');
+    }
+  }
+
+  private originOf(referer: string | undefined): string | undefined {
+    if (!referer) return undefined;
+    try {
+      return new URL(referer).origin;
+    } catch {
+      return undefined;
+    }
   }
 
   clear(response: Response, audience: AuthAudience): void {

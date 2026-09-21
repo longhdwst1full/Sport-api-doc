@@ -1,7 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
-import { startOfVietnamDay, vietnamDateKey, vietnamDaysAgo } from '../../common/time/vietnam-time';
+import {
+  startOfVietnamDay,
+  vietnamDateKey,
+  vietnamDaysAgo,
+  vietnamMonthKey,
+  vietnamQuarterKey,
+  vietnamYearKey,
+} from '../../common/time/vietnam-time';
 import { toDatabaseId } from '../../common/identifiers/entity-id';
 import type { AuthPrincipal } from '../auth/auth.types';
 import { ScopeType } from '../iam/iam.types';
@@ -10,9 +17,20 @@ import {
   OverviewReportDto,
   ReportRangeQueryDto,
   RevenueReportDto,
+  RevenueReportQueryDto,
+  TopCustomerListDto,
   TopProductListDto,
   TopProductQueryDto,
+  type ReportGranularity,
 } from './reporting.dto';
+
+/** Khoá gom của từng mức; tất cả tính theo giờ Việt Nam. */
+const PERIOD_KEY: Record<ReportGranularity, (value: Date) => string> = {
+  DAY: vietnamDateKey,
+  MONTH: vietnamMonthKey,
+  QUARTER: vietnamQuarterKey,
+  YEAR: vietnamYearKey,
+};
 
 /**
  * Ghi nhận doanh thu theo **vòng đời đơn hàng**, không theo trạng thái thanh toán:
@@ -93,9 +111,11 @@ export class ReportingService {
     };
   }
 
-  async revenue(query: ReportRangeQueryDto, actor: AuthPrincipal): Promise<RevenueReportDto> {
+  async revenue(query: RevenueReportQueryDto, actor: AuthPrincipal): Promise<RevenueReportDto> {
     const { from, to } = this.resolveRange(query);
     const scope = this.scopeWhere(actor);
+    const granularity = query.granularity ?? 'DAY';
+    const periodKey = PERIOD_KEY[granularity];
 
     // Doanh thu cắt theo mốc HOÀN TẤT, không theo mốc đặt hàng: đơn đặt tháng trước mà
     // hoàn tất tháng này thì tiền thuộc về tháng này.
@@ -144,7 +164,7 @@ export class ReportingService {
     const byDate = new Map<string, { amount: Prisma.Decimal; orderCount: number }>();
     for (const row of rows) {
       if (!row.completedAt) continue;
-      const key = vietnamDateKey(row.completedAt);
+      const key = periodKey(row.completedAt);
       const current = byDate.get(key) ?? { amount: new Prisma.Decimal(0), orderCount: 0 };
       byDate.set(key, {
         amount: current.amount.plus(row.grandTotal),
@@ -182,6 +202,7 @@ export class ReportingService {
       inProgressRevenue: (inProgress._sum.grandTotal ?? new Prisma.Decimal(0)).toFixed(2),
       averageOrderValue:
         completedOrderCount > 0 ? completedTotal.dividedBy(completedOrderCount).toFixed(2) : '0.00',
+      granularity,
       series: [...byDate.entries()]
         .sort(([left], [right]) => left.localeCompare(right))
         .map(([date, value]) => ({
@@ -197,6 +218,60 @@ export class ReportingService {
           expectedRevenue: value.expectedRevenue.toFixed(2),
         }))
         .sort((left, right) => Number(right.completedRevenue) - Number(left.completedRevenue)),
+    };
+  }
+
+  /**
+   * Khách mua nhiều nhất theo tiền đã thực trả.
+   *
+   * Cùng chuẩn với doanh thu: chỉ tính đơn `COMPLETED` trong khoảng, cắt theo mốc hoàn tất. Mọi đơn
+   * đều gắn một hồ sơ khách (`orders.customer_id` NOT NULL), kể cả khách mua tại quầy, nên bảng này
+   * phản ánh cả hai kênh.
+   */
+  async topCustomers(query: TopProductQueryDto, actor: AuthPrincipal): Promise<TopCustomerListDto> {
+    const { from, to } = this.resolveRange(query);
+    const scope = this.scopeWhere(actor);
+
+    const orders = await this.prisma.order.findMany({
+      where: {
+        ...scope,
+        status: COMPLETED_STATUS,
+        completedAt: { gte: from, lte: to },
+      },
+      select: {
+        grandTotal: true,
+        customer: { select: { customerNo: true, name: true } },
+      },
+    });
+
+    const byCustomer = new Map<
+      string,
+      { name: string; orderCount: number; revenue: Prisma.Decimal }
+    >();
+    for (const order of orders) {
+      const key = order.customer.customerNo;
+      const current = byCustomer.get(key) ?? {
+        name: order.customer.name,
+        orderCount: 0,
+        revenue: new Prisma.Decimal(0),
+      };
+      byCustomer.set(key, {
+        name: current.name,
+        orderCount: current.orderCount + 1,
+        revenue: current.revenue.plus(order.grandTotal),
+      });
+    }
+
+    return {
+      items: [...byCustomer.entries()]
+        .map(([customerNo, value]) => ({
+          customerNo,
+          name: value.name,
+          orderCount: value.orderCount,
+          revenue: value.revenue.toFixed(2),
+        }))
+        .sort((left, right) => Number(right.revenue) - Number(left.revenue))
+        .slice(0, query.limit),
     };
   }
 

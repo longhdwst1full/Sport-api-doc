@@ -1,6 +1,13 @@
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsISO8601, IsOptional, Max, Min } from 'class-validator';
+import { IsIn, IsInt, IsISO8601, IsOptional, Max, Min } from 'class-validator';
+
+/**
+ * Mức gom nhóm của biểu đồ doanh thu. Khoá gom tính theo giờ Việt Nam, vì gom theo UTC đẩy đơn
+ * đặt lúc 0h–7h sáng sang kỳ trước — đầu tháng, đầu quý và đầu năm đều lệch theo.
+ */
+export const REPORT_GRANULARITIES = ['DAY', 'MONTH', 'QUARTER', 'YEAR'] as const;
+export type ReportGranularity = (typeof REPORT_GRANULARITIES)[number];
 
 export class ReportRangeQueryDto {
   @ApiPropertyOptional({
@@ -15,6 +22,17 @@ export class ReportRangeQueryDto {
   @IsOptional()
   @IsISO8601()
   to?: string;
+}
+
+export class RevenueReportQueryDto extends ReportRangeQueryDto {
+  @ApiPropertyOptional({
+    enum: REPORT_GRANULARITIES,
+    default: 'DAY',
+    description: 'Gom biểu đồ theo ngày, tháng, quý hoặc năm.',
+  })
+  @IsOptional()
+  @IsIn(REPORT_GRANULARITIES)
+  granularity: ReportGranularity = 'DAY';
 }
 
 export class TopProductQueryDto extends ReportRangeQueryDto {
@@ -43,7 +61,11 @@ export class OverviewReportDto {
 }
 
 export class RevenuePointDto {
-  @ApiProperty({ example: '2026-09-15' }) date: string;
+  @ApiProperty({
+    example: '2026-09-15',
+    description: 'Khoá kỳ theo mức gom: YYYY-MM-DD, YYYY-MM, YYYY-Qn hoặc YYYY.',
+  })
+  date: string;
   @ApiProperty({ type: String, example: '15400000.00' }) amount: string;
   @ApiProperty({ example: 3 }) orderCount: number;
 }
@@ -84,7 +106,13 @@ export class RevenueReportDto {
   @ApiProperty({ type: String, description: 'Giá trị trung bình mỗi đơn đã hoàn tất' })
   averageOrderValue: string;
 
-  @ApiProperty({ type: [RevenuePointDto], description: 'Doanh thu thực nhận theo ngày hoàn tất' })
+  @ApiProperty({
+    enum: REPORT_GRANULARITIES,
+    description: 'Mức gom đã áp dụng cho `series`',
+  })
+  granularity: ReportGranularity;
+
+  @ApiProperty({ type: [RevenuePointDto], description: 'Doanh thu thực nhận theo kỳ hoàn tất' })
   series: RevenuePointDto[];
 
   @ApiProperty({ type: [BranchRevenueDto], description: 'Bóc tách theo chi nhánh' })
@@ -118,4 +146,15 @@ export class TopProductDto {
 
 export class TopProductListDto {
   @ApiProperty({ type: [TopProductDto] }) items: TopProductDto[];
+}
+
+export class TopCustomerDto {
+  @ApiProperty({ example: 'KH-000128' }) customerNo: string;
+  @ApiProperty({ example: 'Nguyễn Minh Anh' }) name: string;
+  @ApiProperty({ description: 'Số đơn đã hoàn tất trong khoảng' }) orderCount: number;
+  @ApiProperty({ type: String, description: 'Tổng tiền đã thực trả trong khoảng' }) revenue: string;
+}
+
+export class TopCustomerListDto {
+  @ApiProperty({ type: [TopCustomerDto] }) items: TopCustomerDto[];
 }

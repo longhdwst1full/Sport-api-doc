@@ -109,4 +109,56 @@ describe('AuthTokenTransportService', () => {
       expect.objectContaining({ path: '/api/v1/admin/auth' }),
     );
   });
+
+  describe('chặn CSRF cho lệnh chạy bằng cookie', () => {
+    const cookieService = (corsOrigins: string[]) =>
+      new AuthTokenTransportService(
+        new ConfigService({ app: { authTokenTransport: 'COOKIE', corsOrigins } }),
+      );
+    const requestFrom = (headers: Record<string, string>) =>
+      ({ headers: { cookie: 'dctd_admin_refresh=token-tu-cookie', ...headers } }) as unknown as Request;
+
+    it('nhận request từ origin nằm trong danh sách CORS', () => {
+      const service = cookieService(['https://admin.example.com']);
+
+      expect(
+        service.readRefreshToken(requestFrom({ origin: 'https://admin.example.com' }), {}, 'admin'),
+      ).toBe('token-tu-cookie');
+    });
+
+    it('từ chối request từ origin lạ, vì trình duyệt vẫn đính cookie SameSite=None', () => {
+      const service = cookieService(['https://admin.example.com']);
+
+      expect(() =>
+        service.readRefreshToken(requestFrom({ origin: 'https://ke-tan-cong.example' }), {}, 'admin'),
+      ).toThrow('Nguồn gọi không nằm trong danh sách được phép');
+    });
+
+    it('từ chối request không khai origin lẫn referer', () => {
+      const service = cookieService(['https://admin.example.com']);
+
+      expect(() => service.readRefreshToken(requestFrom({}), {}, 'admin')).toThrow(
+        'Yêu cầu thiếu Origin nên không xác định được nguồn gọi',
+      );
+    });
+
+    it('lấy origin từ referer khi header origin vắng mặt', () => {
+      const service = cookieService(['https://admin.example.com']);
+
+      expect(
+        service.readRefreshToken(
+          requestFrom({ referer: 'https://admin.example.com/products?page=2' }),
+          {},
+          'admin',
+        ),
+      ).toBe('token-tu-cookie');
+    });
+
+    /** CORS `*` chỉ tồn tại ở môi trường phát triển; production bị env.validation cấm. */
+    it('bỏ qua kiểm tra khi CORS mở cho mọi origin', () => {
+      const service = cookieService(['*']);
+
+      expect(service.readRefreshToken(requestFrom({}), {}, 'admin')).toBe('token-tu-cookie');
+    });
+  });
 });

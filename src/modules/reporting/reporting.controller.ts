@@ -13,7 +13,8 @@ import { AuthenticatedRequest, getAuthPrincipal } from '../../common/request/req
 import {
   InventoryReportDto,
   OverviewReportDto,
-  ReportRangeQueryDto,
+  RevenueReportQueryDto,
+  TopCustomerListDto,
   RevenueReportDto,
   TopProductListDto,
   TopProductQueryDto,
@@ -43,11 +44,11 @@ export class ReportingController {
   @RequirePermissions('report.revenue.view')
   @ApiOperation({
     operationId: 'getAdminReportRevenue',
-    summary: 'Doanh thu đã thực nhận theo khoảng thời gian, kèm chuỗi theo ngày',
+    summary: 'Doanh thu đã thực nhận theo khoảng thời gian, gom theo ngày/tháng/quý/năm',
   })
   @ApiOkResponse({ type: RevenueReportDto })
   revenue(
-    @Query() query: ReportRangeQueryDto,
+    @Query() query: RevenueReportQueryDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<RevenueReportDto> {
     return this.reporting.revenue(query, getAuthPrincipal(request));
@@ -76,5 +77,19 @@ export class ReportingController {
     @Req() request: AuthenticatedRequest,
   ): Promise<TopProductListDto> {
     return this.reporting.topProducts(query, getAuthPrincipal(request));
+  }
+
+  @Get('top-customers')
+  @RequirePermissions('report.revenue.view')
+  @ApiOperation({
+    operationId: 'getAdminReportTopCustomers',
+    summary: 'Khách mua nhiều nhất tính trên đơn đã hoàn tất',
+  })
+  @ApiOkResponse({ type: TopCustomerListDto })
+  topCustomers(
+    @Query() query: TopProductQueryDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<TopCustomerListDto> {
+    return this.reporting.topCustomers(query, getAuthPrincipal(request));
   }
 }

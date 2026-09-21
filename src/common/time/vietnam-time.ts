@@ -30,3 +30,19 @@ export function vietnamDateKey(value: Date): string {
   const shifted = new Date(value.getTime() + VIETNAM_OFFSET_MINUTES * MINUTE_IN_MS);
   return shifted.toISOString().slice(0, 10);
 }
+
+/** Khoá tháng `YYYY-MM` theo giờ Việt Nam. */
+export function vietnamMonthKey(value: Date): string {
+  return vietnamDateKey(value).slice(0, 7);
+}
+
+/** Khoá quý `YYYY-Qn` theo giờ Việt Nam. */
+export function vietnamQuarterKey(value: Date): string {
+  const [year, month] = vietnamDateKey(value).split('-');
+  return `${year}-Q${Math.floor((Number(month) - 1) / 3) + 1}`;
+}
+
+/** Khoá năm `YYYY` theo giờ Việt Nam. */
+export function vietnamYearKey(value: Date): string {
+  return vietnamDateKey(value).slice(0, 4);
+}

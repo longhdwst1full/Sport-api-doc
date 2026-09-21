@@ -13772,6 +13772,22 @@
               "format": "date-time",
               "type": "string"
             }
+          },
+          {
+            "name": "granularity",
+            "required": false,
+            "in": "query",
+            "description": "Gom biểu đồ theo ngày, tháng, quý hoặc năm.",
+            "schema": {
+              "default": "DAY",
+              "type": "string",
+              "enum": [
+                "DAY",
+                "MONTH",
+                "QUARTER",
+                "YEAR"
+              ]
+            }
           }
         ],
         "responses": {
@@ -13811,7 +13827,7 @@
             "bearer": []
           }
         ],
-        "summary": "Doanh thu đã thực nhận theo khoảng thời gian, kèm chuỗi theo ngày",
+        "summary": "Doanh thu đã thực nhận theo khoảng thời gian, gom theo ngày/tháng/quý/năm",
         "tags": [
           "Admin Reporting"
         ],
@@ -13944,6 +13960,88 @@
           }
         ],
         "summary": "Sản phẩm bán chạy tính trên đơn đã thu được tiền",
+        "tags": [
+          "Admin Reporting"
+        ],
+        "x-required-permissions": [
+          "report.revenue.view"
+        ]
+      }
+    },
+    "/api/v1/admin/reports/top-customers": {
+      "get": {
+        "operationId": "getAdminReportTopCustomers",
+        "parameters": [
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Mốc đầu khoảng thống kê. Bỏ trống thì lấy 30 ngày gần nhất.",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Mốc cuối; bỏ trống là hiện tại.",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TopCustomerListDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Khách mua nhiều nhất tính trên đơn đã hoàn tất",
         "tags": [
           "Admin Reporting"
         ],
@@ -21846,7 +21944,8 @@
         "properties": {
           "date": {
             "type": "string",
-            "example": "2026-09-15"
+            "example": "2026-09-15",
+            "description": "Khoá kỳ theo mức gom: YYYY-MM-DD, YYYY-MM, YYYY-Qn hoặc YYYY."
           },
           "amount": {
             "type": "string",
@@ -21921,8 +22020,18 @@
             "type": "string",
             "description": "Giá trị trung bình mỗi đơn đã hoàn tất"
           },
+          "granularity": {
+            "type": "string",
+            "enum": [
+              "DAY",
+              "MONTH",
+              "QUARTER",
+              "YEAR"
+            ],
+            "description": "Mức gom đã áp dụng cho `series`"
+          },
           "series": {
-            "description": "Doanh thu thực nhận theo ngày hoàn tất",
+            "description": "Doanh thu thực nhận theo kỳ hoàn tất",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/RevenuePointDto"
@@ -21945,6 +22054,7 @@
           "expectedOrderCount",
           "inProgressRevenue",
           "averageOrderValue",
+          "granularity",
           "series",
           "byBranch"
         ]
@@ -22050,6 +22160,47 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/TopProductDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "TopCustomerDto": {
+        "type": "object",
+        "properties": {
+          "customerNo": {
+            "type": "string",
+            "example": "KH-000128"
+          },
+          "name": {
+            "type": "string",
+            "example": "Nguyễn Minh Anh"
+          },
+          "orderCount": {
+            "type": "number",
+            "description": "Số đơn đã hoàn tất trong khoảng"
+          },
+          "revenue": {
+            "type": "string",
+            "description": "Tổng tiền đã thực trả trong khoảng"
+          }
+        },
+        "required": [
+          "customerNo",
+          "name",
+          "orderCount",
+          "revenue"
+        ]
+      },
+      "TopCustomerListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TopCustomerDto"
             }
           }
         },

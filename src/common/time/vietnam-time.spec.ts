@@ -1,4 +1,8 @@
-import { startOfVietnamDay, vietnamDateKey, vietnamDaysAgo } from './vietnam-time';
+import { startOfVietnamDay, vietnamDateKey, vietnamDaysAgo,
+  vietnamMonthKey,
+  vietnamQuarterKey,
+  vietnamYearKey,
+} from './vietnam-time';
 
 /**
  * Máy chủ chạy ở UTC thì đơn đặt lúc 0h–7h sáng giờ Việt Nam rơi vào ngày hôm trước nếu
@@ -34,3 +38,26 @@ describe('Cắt ngày theo giờ Việt Nam', () => {
     expect(result.toISOString()).toBe('2026-09-08T17:00:00.000Z');
   });
 });
+
+describe('khoá gom nhóm theo tháng/quý/năm', () => {
+  // 00:30 ngày 1/4 giờ Việt Nam là 17:30 ngày 31/3 UTC: gom theo UTC sẽ rơi nhầm sang quý trước.
+  const earlyApril = new Date('2026-03-31T17:30:00.000Z');
+
+  it('gom theo tháng của giờ Việt Nam', () => {
+    expect(vietnamMonthKey(earlyApril)).toBe('2026-04');
+  });
+
+  it('gom theo quý của giờ Việt Nam', () => {
+    expect(vietnamQuarterKey(earlyApril)).toBe('2026-Q2');
+    expect(vietnamQuarterKey(new Date('2026-01-15T03:00:00.000Z'))).toBe('2026-Q1');
+    expect(vietnamQuarterKey(new Date('2026-09-15T03:00:00.000Z'))).toBe('2026-Q3');
+    expect(vietnamQuarterKey(new Date('2026-12-15T03:00:00.000Z'))).toBe('2026-Q4');
+  });
+
+  it('gom theo năm của giờ Việt Nam', () => {
+    // 07:00 ngày 1/1/2027 giờ Việt Nam = 00:00 UTC cùng ngày; nhưng 00:30 ngày 1/1 giờ VN
+    // là 17:30 ngày 31/12 UTC và phải thuộc năm 2027.
+    expect(vietnamYearKey(new Date('2026-12-31T17:30:00.000Z'))).toBe('2027');
+  });
+});
+
