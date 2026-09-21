@@ -1,10 +1,10 @@
 # Kế hoạch Production Readiness và hoàn thiện chức năng V1
 
-> **Document version:** 1.0.0
+> **Document version:** 1.1.0
 >
-> **Last updated:** 2026-09-20
+> **Last updated:** 2026-09-21
 >
-> **Change summary:** Lập critical path trước production, phân tích rủi ro theo dữ liệu/API/vận hành và tái cấu trúc backlog V1 thành các gate có thể kiểm chứng.
+> **Change summary:** Thống nhất phạm vi giỏ hàng đa thiết bị: Owner đã quyết không làm trong V1, nên chuyển khỏi backlog sang mục phạm vi đã loại trừ.
 
 ## 1. Mục tiêu và nguyên tắc
 
@@ -234,10 +234,18 @@ PostgreSQL integration; sau đó OpenAPI → hai SDK → Admin tab Hoàn/Refund 
 | Review | Chỉ account có `COMPLETED` order item được tạo; unique customer+orderItem; Admin moderation/reply | Review giả, reply sửa mất lịch sử | P2 |
 | Profile/password | Update profile có version; change password revoke session; forgot/reset token hash, one-time, TTL | Account enumeration, token reuse | P2 |
 | Notification/email | DB outbox trong cùng transaction; worker `FOR UPDATE SKIP LOCKED`, retry/backoff/dead-letter | Gửi trùng/mất email | P2 |
-| Cart đa thiết bị | Server cart là authority khi login; merge guest→account idempotent, rule conflict rõ | Nhân đôi item/giá cũ | P2 |
 | Export báo cáo | Async/stream cho dữ liệu lớn, filter/scope giống màn hình, audit download | Rò dữ liệu branch/PII, OOM | P2 |
 | CMS | Draft→Published→Archived; publishAt/version/search; preview có quyền | Lộ draft, cache stale | P2 |
 | Warranty | Đề xuất V1.1; nếu buộc V1, dùng orderItem eligibility + claim/history riêng | Phạm vi lớn, phụ thuộc serial/chính sách hãng | P3 |
+
+### Đã loại khỏi phạm vi V1
+
+| Hạng mục | Quyết định | Hệ quả đã chấp nhận |
+| --- | --- | --- |
+| Giỏ hàng đồng bộ đa thiết bị | Owner quyết **không làm** trong V1. Giỏ hiển thị do Redux sở hữu ở Storefront; server chỉ là authority từ bước checkout trở đi. | Thêm hàng trên điện thoại thì máy tính không thấy. Đổi lại không phải xử lý hợp nhất giỏ và xung đột giá giữa hai thiết bị. Mutation `updateGuestCartItem`/`removeGuestCartItem` vì vậy được sinh ra nhưng không dùng — ghi nhận theo `RULE-CTR-06` trong `client/src/features/cart/README.md`. |
+
+Mục này trước đây nằm ở bảng backlog P2 trong khi Storefront đã ghi là chủ động không làm; hai chỗ
+nói ngược nhau nên người đọc kế hoạch tưởng còn việc phải làm.
 
 Outbox DB phù hợp V1 hơn thêm broker mới: dễ giữ atomic với nghiệp vụ và vận hành trên stack
 hiện có. Supabase Queue có thể cân nhắc khi lưu lượng/retry yêu cầu tách worker rõ hơn, không

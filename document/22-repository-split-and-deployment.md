@@ -1,10 +1,10 @@
 # Tách repository và quy trình triển khai
 
-Version: 1.4.2
+Version: 1.5.0
 
-Change summary: Bổ sung log exception nội bộ có request ID và redact header xác thực riêng của Vercel để chẩn đoán lỗi serverless an toàn.
+Change summary: Ghi rõ biến môi trường bắt buộc khi chạy sau proxy (TRUST_PROXY), hệ quả với rate limit, và ràng buộc Origin cho lệnh xác thực bằng cookie.
 
-Ngày cập nhật: 2026-09-06
+Ngày cập nhật: 2026-09-21
 
 ## Phạm vi
 
@@ -75,6 +75,24 @@ Vercel project của API phải trỏ trực tiếp tới repository `longhdwst1
 - Node.js dùng phiên bản tương thích với project và Yarn được nhận diện từ `yarn.lock`;
 - các biến `DATABASE_URL`, `DIRECT_URL` và secret ứng dụng được cấu hình trong Vercel Environment Variables.
 
+### Biến môi trường bắt buộc khi chạy sau proxy
+
+| Biến | Giá trị production | Hỏng gì nếu thiếu |
+| --- | --- | --- |
+| `TRUST_PROXY` | `1` (Vercel đặt đúng một lớp proxy) | Express lấy IP của proxy làm IP client, nên rate limit gom **mọi người dùng vào chung một rổ đếm**: một kẻ tấn công làm cạn hạn mức của tất cả, còn giới hạn theo IP thì vô nghĩa. Phải đặt trước mọi guard đọc `request.ip`. |
+| `CORS_ORIGINS` | danh sách origin thật, **không** `*` | Ngoài CORS, danh sách này còn là danh sách origin được phép gọi các lệnh xác thực bằng cookie (`/refresh`, `/logout`). Để `*` thì kiểm tra Origin bị bỏ qua — `env.validation` đã cấm `*` ở production. |
+| `AUTH_TOKEN_TRANSPORT` | `COOKIE` | Phải khớp với `VITE_AUTH_TOKEN_TRANSPORT` của Admin và `NEXT_PUBLIC_AUTH_TOKEN_TRANSPORT` của Storefront. Lệch nhau thì frontend không cầm được refresh token và mọi lần access token hết hạn là đăng xuất thay vì gia hạn. |
+| `RATE_LIMIT_MAX` / `RATE_LIMIT_TTL_MS` | mặc định 120 / 60s | Hạn mức chung. Riêng login siết còn 5 lần/phút trong code. |
+
+**Các biến này phải khai trong Vercel Environment Variables.** `ConfigModule` chỉ nạp
+`.env.local` và `.env`; file `.env.production` trong repository **không bao giờ được ứng dụng đọc**,
+và Vercel cũng không nạp file env từ source. Đây là nguyên nhân đã từng làm tra cứu địa giới trả 503
+"chưa được cấu hình" dù `.env.production` có đủ giá trị.
+
+Cấu hình tích hợp (GHN, Mailtrap, Cloudinary, Telegram, VNPay) đọc từ bảng `system_parameters` qua
+`IntegrationConfigService`, biến môi trường chỉ còn là fallback. Sửa ở màn Tham số hệ thống có hiệu
+lực trong vòng 30 giây mà không cần deploy lại.
+
 `AUTH_BYPASS` mặc định `false` trong source. Local development chỉ mở bypass khi
 khai báo tường minh `AUTH_BYPASS=true`; production luôn từ chối giá trị `true`.
 
@@ -104,6 +122,7 @@ trong FE là bằng chứng để xác định phiên bản API mà bản build 
 
 | Version | Ngày | Thay đổi |
 | --- | --- | --- |
+| 1.5.0 | 2026-09-21 | Bảng biến môi trường bắt buộc sau proxy: `TRUST_PROXY` cho rate limit theo IP thật, `CORS_ORIGINS` kiêm danh sách origin cho lệnh cookie, transport phải khớp frontend. Ghi rõ `.env.production` không được ứng dụng đọc. |
 | 1.4.2 | 2026-09-06 | Log exception 5xx theo request ID; redact Vercel OIDC token và proxy signature khỏi request log. |
 | 1.4.1 | 2026-09-06 | Chuyển `AUTH_BYPASS` sang deny-by-default; local muốn bypass phải opt-in tường minh. |
 | 1.4.0 | 2026-09-05 | Thêm production deployment migration gate cho Vercel; preview/local build không mutate database. |

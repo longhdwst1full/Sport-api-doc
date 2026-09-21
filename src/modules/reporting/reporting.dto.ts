@@ -2,6 +2,11 @@ import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsIn, IsInt, IsISO8601, IsOptional, Max, Min } from 'class-validator';
 
+import {
+  REPORT_EXPORT_FORMATS,
+  type ReportExportFormat,
+} from './export/tabular-report';
+
 /**
  * Mức gom nhóm của biểu đồ doanh thu. Khoá gom tính theo giờ Việt Nam, vì gom theo UTC đẩy đơn
  * đặt lúc 0h–7h sáng sang kỳ trước — đầu tháng, đầu quý và đầu năm đều lệch theo.
@@ -157,4 +162,35 @@ export class TopCustomerDto {
 
 export class TopCustomerListDto {
   @ApiProperty({ type: [TopCustomerDto] }) items: TopCustomerDto[];
+}
+
+/**
+ * Định dạng file khi xuất báo cáo.
+ *
+ * CSV cho việc nạp lại vào công cụ khác; XLSX cho người đọc trực tiếp (có định dạng số, tiêu đề
+ * đậm, độ rộng cột).
+ */
+export class ReportExportQueryDto extends RevenueReportQueryDto {
+  @ApiPropertyOptional({
+    enum: REPORT_EXPORT_FORMATS,
+    default: 'XLSX',
+    description: 'Định dạng file tải về.',
+  })
+  @IsOptional()
+  @IsIn(REPORT_EXPORT_FORMATS)
+  format: ReportExportFormat = 'XLSX';
+}
+
+export class TopReportExportQueryDto extends TopProductQueryDto {
+  @ApiPropertyOptional({ enum: REPORT_EXPORT_FORMATS, default: 'XLSX' })
+  @IsOptional()
+  @IsIn(REPORT_EXPORT_FORMATS)
+  format: ReportExportFormat = 'XLSX';
+}
+
+export class InventoryExportQueryDto {
+  @ApiPropertyOptional({ enum: REPORT_EXPORT_FORMATS, default: 'XLSX' })
+  @IsOptional()
+  @IsIn(REPORT_EXPORT_FORMATS)
+  format: ReportExportFormat = 'XLSX';
 }

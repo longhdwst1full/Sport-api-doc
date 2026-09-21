@@ -229,6 +229,324 @@ paths:
         - Admin Reporting
       x-required-permissions:
         - report.revenue.view
+  /api/v1/admin/reports/revenue/export:
+    get:
+      operationId: exportAdminReportRevenue
+      parameters:
+        - name: from
+          required: false
+          in: query
+          description: Mốc đầu khoảng thống kê. Bỏ trống thì lấy 30 ngày gần nhất.
+          schema:
+            format: date-time
+            type: string
+        - name: to
+          required: false
+          in: query
+          description: Mốc cuối; bỏ trống là hiện tại.
+          schema:
+            format: date-time
+            type: string
+        - name: granularity
+          required: false
+          in: query
+          description: Gom biểu đồ theo ngày, tháng, quý hoặc năm.
+          schema:
+            default: DAY
+            type: string
+            enum:
+              - DAY
+              - MONTH
+              - QUARTER
+              - YEAR
+        - name: format
+          required: false
+          in: query
+          description: Định dạng file tải về.
+          schema:
+            default: XLSX
+            type: string
+            enum:
+              - CSV
+              - XLSX
+      responses:
+        "200":
+          description: File báo cáo, tên file nằm trong header Content-Disposition.
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Tải doanh thu theo kỳ ra file CSV hoặc XLSX
+      tags:
+        - Admin Reporting
+      x-required-permissions:
+        - report.revenue.view
+  /api/v1/admin/reports/revenue/by-branch/export:
+    get:
+      operationId: exportAdminReportRevenueByBranch
+      parameters:
+        - name: from
+          required: false
+          in: query
+          description: Mốc đầu khoảng thống kê. Bỏ trống thì lấy 30 ngày gần nhất.
+          schema:
+            format: date-time
+            type: string
+        - name: to
+          required: false
+          in: query
+          description: Mốc cuối; bỏ trống là hiện tại.
+          schema:
+            format: date-time
+            type: string
+        - name: granularity
+          required: false
+          in: query
+          description: Gom biểu đồ theo ngày, tháng, quý hoặc năm.
+          schema:
+            default: DAY
+            type: string
+            enum:
+              - DAY
+              - MONTH
+              - QUARTER
+              - YEAR
+        - name: format
+          required: false
+          in: query
+          description: Định dạng file tải về.
+          schema:
+            default: XLSX
+            type: string
+            enum:
+              - CSV
+              - XLSX
+      responses:
+        "200":
+          description: File báo cáo, tên file nằm trong header Content-Disposition.
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Tải bóc tách doanh thu theo chi nhánh ra file CSV hoặc XLSX
+      tags:
+        - Admin Reporting
+      x-required-permissions:
+        - report.revenue.view
+  /api/v1/admin/reports/top-products/export:
+    get:
+      operationId: exportAdminReportTopProducts
+      parameters:
+        - name: from
+          required: false
+          in: query
+          description: Mốc đầu khoảng thống kê. Bỏ trống thì lấy 30 ngày gần nhất.
+          schema:
+            format: date-time
+            type: string
+        - name: to
+          required: false
+          in: query
+          description: Mốc cuối; bỏ trống là hiện tại.
+          schema:
+            format: date-time
+            type: string
+        - name: limit
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            maximum: 50
+            default: 10
+            type: number
+        - name: format
+          required: false
+          in: query
+          schema:
+            default: XLSX
+            type: string
+            enum:
+              - CSV
+              - XLSX
+      responses:
+        "200":
+          description: File báo cáo, tên file nằm trong header Content-Disposition.
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Tải danh sách sản phẩm bán chạy ra file CSV hoặc XLSX
+      tags:
+        - Admin Reporting
+      x-required-permissions:
+        - report.revenue.view
+  /api/v1/admin/reports/top-customers/export:
+    get:
+      operationId: exportAdminReportTopCustomers
+      parameters:
+        - name: from
+          required: false
+          in: query
+          description: Mốc đầu khoảng thống kê. Bỏ trống thì lấy 30 ngày gần nhất.
+          schema:
+            format: date-time
+            type: string
+        - name: to
+          required: false
+          in: query
+          description: Mốc cuối; bỏ trống là hiện tại.
+          schema:
+            format: date-time
+            type: string
+        - name: limit
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            maximum: 50
+            default: 10
+            type: number
+        - name: format
+          required: false
+          in: query
+          schema:
+            default: XLSX
+            type: string
+            enum:
+              - CSV
+              - XLSX
+      responses:
+        "200":
+          description: File báo cáo, tên file nằm trong header Content-Disposition.
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Tải danh sách khách mua nhiều nhất ra file CSV hoặc XLSX
+      tags:
+        - Admin Reporting
+      x-required-permissions:
+        - report.revenue.view
+  /api/v1/admin/reports/inventory/export:
+    get:
+      operationId: exportAdminReportInventory
+      parameters:
+        - name: format
+          required: false
+          in: query
+          schema:
+            default: XLSX
+            type: string
+            enum:
+              - CSV
+              - XLSX
+      responses:
+        "200":
+          description: File báo cáo, tên file nằm trong header Content-Disposition.
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Tải danh sách tồn kho cần nhập thêm ra file CSV hoặc XLSX
+      tags:
+        - Admin Reporting
+      x-required-permissions:
+        - report.inventory.view
 components:
   schemas:
     OverviewReportDto:

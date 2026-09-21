@@ -381,7 +381,13 @@ export class ReportingService {
     return { warehouse: { branchId: { in: branchIds } } };
   }
 
-  private resolveRange(query: ReportRangeQueryDto): { from: Date; to: Date } {
+  /**
+   * Khoảng thời gian thực tế của một báo cáo, kể cả khi client bỏ trống.
+   *
+   * Công khai vì phần xuất file phải đặt đúng khoảng này vào tên file; tự suy diễn lại mặc định ở
+   * chỗ khác là cách để tên file và nội dung file nói hai khoảng khác nhau.
+   */
+  resolveRange(query: ReportRangeQueryDto): { from: Date; to: Date } {
     const to = query.to ? new Date(query.to) : new Date();
     const from = query.from ? new Date(query.from) : this.daysAgo(to, DEFAULT_RANGE_DAYS);
     return { from, to };
