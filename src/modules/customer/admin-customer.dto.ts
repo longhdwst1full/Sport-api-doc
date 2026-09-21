@@ -22,6 +22,15 @@ import { ENTITY_ID_OPENAPI, ENTITY_ID_PATTERN } from '../../common/identifiers/e
 /** Một hồ sơ khách không giữ quá số địa chỉ này; nhiều hơn là dấu hiệu nhập nhầm, không phải nhu cầu thật. */
 export const CUSTOMER_ADDRESS_LIMIT = 10;
 
+/**
+ * Hãng vận chuyển cấp bộ mã địa giới.
+ *
+ * Mã quận/phường chỉ có nghĩa trong hệ thống của hãng cấp ra nó. Không ghi lại hãng nào thì khi
+ * chạy song song hoặc đổi hãng, mã cũ vẫn được gửi đi và hãng mới nhận nhầm một địa bàn khác.
+ */
+export const ADDRESS_CODE_PROVIDERS = ['GHN'] as const;
+export type AddressCodeProvider = (typeof ADDRESS_CODE_PROVIDERS)[number];
+
 /** Khách có tài khoản đăng nhập là MEMBER; khách mua không đăng ký là GUEST. */
 export const CUSTOMER_KINDS = ['MEMBER', 'GUEST'] as const;
 export type CustomerKind = (typeof CUSTOMER_KINDS)[number];
@@ -125,13 +134,41 @@ export class AdminCustomerAddressDto {
   @ApiProperty() phone: string;
   @ApiProperty() addressLine: string;
   @ApiProperty({ type: String, nullable: true }) ward: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: '21012',
+    description: 'Mã phường/xã của hãng vận chuyển; thiếu thì không tạo được vận đơn.',
+  })
+  wardCode: string | null;
+
   @ApiProperty({ type: String, nullable: true }) district: string | null;
 
   @ApiProperty({
-    example: '01',
-    description: 'Mã tỉnh/thành. Bảng địa chỉ chỉ lưu mã, không lưu tên.',
+    type: String,
+    nullable: true,
+    example: '1442',
+    description: 'Mã quận/huyện của hãng vận chuyển; thiếu thì không tạo được vận đơn.',
   })
+  districtCode: string | null;
+
+  @ApiProperty({ type: String, nullable: true, example: 'Hà Nội' })
+  province: string | null;
+
+  @ApiProperty({ example: '201', description: 'Mã tỉnh/thành của hãng vận chuyển.' })
   provinceCode: string;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    enum: ADDRESS_CODE_PROVIDERS,
+    description:
+      'Hãng đã cấp bộ mã địa giới này. Mã của hãng khác không dùng lẫn được, nên địa chỉ lưu từ '
+      + 'hãng cũ phải chọn lại khi đổi hãng.',
+  })
+  codeProvider: string | null;
+
   @ApiProperty() isDefault: boolean;
 }
 
@@ -166,13 +203,41 @@ export class AdminCustomerAddressInputDto {
   @IsOptional() @IsString() @MaxLength(255)
   ward?: string;
 
+  @ApiPropertyOptional({
+    example: '21012',
+    maxLength: 32,
+    description: 'Mã phường/xã theo danh mục hãng vận chuyển. Thiếu thì địa chỉ không tạo được vận đơn.',
+  })
+  @IsOptional() @IsString() @MaxLength(32)
+  wardCode?: string;
+
   @ApiPropertyOptional({ example: 'Quận 1', maxLength: 255 })
   @IsOptional() @IsString() @MaxLength(255)
   district?: string;
 
-  @ApiProperty({ example: '79', maxLength: 32, description: 'Mã tỉnh/thành theo danh mục hãng vận chuyển' })
+  @ApiPropertyOptional({
+    example: '1442',
+    maxLength: 32,
+    description: 'Mã quận/huyện theo danh mục hãng vận chuyển. Thiếu thì địa chỉ không tạo được vận đơn.',
+  })
+  @IsOptional() @IsString() @MaxLength(32)
+  districtCode?: string;
+
+  @ApiPropertyOptional({ example: 'Hà Nội', maxLength: 255 })
+  @IsOptional() @IsString() @MaxLength(255)
+  province?: string;
+
+  @ApiProperty({ example: '201', maxLength: 32, description: 'Mã tỉnh/thành theo danh mục hãng vận chuyển' })
   @IsString() @Length(1, 32)
   provinceCode: string;
+
+  @ApiPropertyOptional({
+    enum: ADDRESS_CODE_PROVIDERS,
+    default: 'GHN',
+    description: 'Hãng đã cấp bộ mã gửi kèm. Bỏ trống thì hiểu là hãng mặc định của hệ thống.',
+  })
+  @IsOptional() @IsIn(ADDRESS_CODE_PROVIDERS)
+  codeProvider?: AddressCodeProvider;
 
   @ApiPropertyOptional({ default: false, description: 'Đúng một địa chỉ mặc định cho mỗi khách' })
   @IsOptional() @IsBoolean()

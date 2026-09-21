@@ -5,7 +5,11 @@ import { PrismaService } from '../../database/prisma.service';
 import { USER_STATUS, USER_TYPE } from '../iam/iam.constants';
 import { InvalidVietnamesePhoneNumberError, normalizeVietnamesePhone } from '../auth/phone-normalization';
 import { CUSTOMER_ADDRESS_TYPE, CUSTOMER_COUNTRY, CUSTOMER_STATUS } from './customer.constants';
+import { ADDRESS_CODE_PROVIDERS } from './admin-customer.dto';
 import { CreateCustomerAddressDto, CustomerAddressDto, UpdateCustomerAddressDto } from './customer-address.dto';
+
+/** Hãng mặc định khi client gửi mã địa giới mà không nói của hãng nào. */
+const DEFAULT_ADDRESS_CODE_PROVIDER = ADDRESS_CODE_PROVIDERS[0];
 
 @Injectable()
 export class CustomerAddressService {
@@ -43,8 +47,16 @@ export class CustomerAddressService {
           phone,
           addressLine: input.addressLine.trim(),
           ward: input.ward?.trim() || null,
+          wardCode: input.wardCode?.trim() || null,
           district: input.district?.trim() || null,
+          districtCode: input.districtCode?.trim() || null,
+          province: input.province?.trim() || null,
           provinceCode: input.provinceCode.trim(),
+          // Mã địa giới chỉ có nghĩa kèm hãng đã cấp nó; không có mã thì cũng không ghi hãng.
+          codeProvider:
+            input.districtCode?.trim() || input.wardCode?.trim()
+              ? (input.codeProvider ?? DEFAULT_ADDRESS_CODE_PROVIDER)
+              : null,
           postalCode: input.postalCode?.trim() || null,
           countryCode: CUSTOMER_COUNTRY.VIETNAM,
           isDefault: makeDefault,
@@ -78,8 +90,16 @@ export class CustomerAddressService {
           phone: input.phone ? this.normalizePhone(input.phone) : undefined,
           addressLine: input.addressLine?.trim(),
           ward: input.ward === undefined ? undefined : input.ward.trim() || null,
+          wardCode: input.wardCode === undefined ? undefined : input.wardCode.trim() || null,
           district: input.district === undefined ? undefined : input.district.trim() || null,
+          districtCode:
+            input.districtCode === undefined ? undefined : input.districtCode.trim() || null,
+          province: input.province === undefined ? undefined : input.province.trim() || null,
           provinceCode: input.provinceCode?.trim(),
+          codeProvider:
+            input.districtCode?.trim() || input.wardCode?.trim()
+              ? (input.codeProvider ?? DEFAULT_ADDRESS_CODE_PROVIDER)
+              : undefined,
           postalCode: input.postalCode === undefined ? undefined : input.postalCode.trim() || null,
           isDefault: input.isDefault,
           version: { increment: 1 },
@@ -146,7 +166,23 @@ export class CustomerAddressService {
     }
   }
 
-  private toDto(row: { id: bigint; recipient: string; phone: string; addressLine: string; ward: string | null; district: string | null; provinceCode: string; postalCode: string | null; countryCode: string; isDefault: boolean; version: bigint }): CustomerAddressDto {
+  private toDto(row: {
+    id: bigint;
+    recipient: string;
+    phone: string;
+    addressLine: string;
+    ward: string | null;
+    wardCode: string | null;
+    district: string | null;
+    districtCode: string | null;
+    province: string | null;
+    provinceCode: string;
+    codeProvider: string | null;
+    postalCode: string | null;
+    countryCode: string;
+    isDefault: boolean;
+    version: bigint;
+  }): CustomerAddressDto {
     return { ...row, id: toEntityId(row.id), version: Number(row.version) };
   }
 }

@@ -3588,6 +3588,104 @@
         "source:../admin/src/features/dashboard/pages/dashboard-page.tsx"
       ],
       "targets": []
+    },
+    {
+      "id": "API-20260921-GHN-CONFIG-FROM-PARAMETERS",
+      "date": "2026-09-21",
+      "scope": "SHIPPING+FULFILLMENT+CONFIG+API",
+      "summary": "Ba nơi còn đọc cấu hình GHN từ biến môi trường chuyển sang IntegrationConfigService (bảng system_parameters, env chỉ còn fallback): proxy danh mục địa giới, provider tính phí và webhook trạng thái giao hàng. Trước đó bản deploy khai tham số trong màn Admin vẫn nhận 503 'Tra cứu địa giới hành chính chưa được cấu hình' vì .env.production không nằm trong envFilePath và Vercel không nạp file env từ repo. ShippingRateProvider.isEnabled trở thành bất đồng bộ do cấu hình đọc từ database. Không thay đổi schema hay contract.",
+      "sources": [
+        "source:src/modules/shipping/shipping-area.service.ts",
+        "source:src/modules/shipping/providers/ghn-rate.provider.ts",
+        "source:src/modules/fulfillment/services/carrier-status-sync.service.ts",
+        "test:src/modules/shipping/shipping-area.service.spec.ts",
+        "test:src/modules/shipping/providers/carrier-rate.providers.spec.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260921-CUSTOMER-ADDRESS-CARRIER-CODES",
+      "date": "2026-09-21",
+      "scope": "DATABASE+CUSTOMER+SHIPPING+API+ADMIN+STOREFRONT",
+      "summary": "customer_addresses thêm ward_code, district_code, province và code_provider. Trước đó sổ địa chỉ chỉ lưu province_code còn quận/huyện và phường/xã là tên chữ, nên địa chỉ đã lưu không khôi phục được selector, không tạo được vận đơn và không tính được phí giao. code_provider ghi lại hãng đã cấp bộ mã vì mã địa giới chỉ có nghĩa trong hệ thống của hãng đó. DTO Admin và Storefront nhận/trả đủ bộ mã; dữ liệu cũ để NULL thay vì đoán.",
+      "sources": [
+        "OpenAPI:createAdminCustomer/updateAdminCustomer/createCustomerAddress/updateCustomerAddress",
+        "migration:prisma/migrations/20260921180000_customer_address_carrier_codes",
+        "source:src/modules/customer/admin-customer.service.ts",
+        "source:src/modules/customer/customer-address.service.ts"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": {
+            "Tên bảng": "customer_addresses"
+          },
+          "columns": [
+            "Các cột chính"
+          ],
+          "set": {
+            "Các cột chính": "type,recipient,phone,address_line,ward,ward_code,district,district_code,province,province_code,code_provider,postal_code,is_default"
+          }
+        }
+      ],
+      "upsertRows": [
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "customer_addresses",
+            "Tên cột": "ward_code"
+          },
+          "values": {
+            "Tên bảng": "customer_addresses",
+            "Tên cột": "ward_code",
+            "Kiểu dữ liệu": "varchar(32)",
+            "Cho phép NULL": "YES",
+            "Ý nghĩa / trạng thái cho phép": "Mã phường/xã của hãng vận chuyển; NULL với địa chỉ lưu trước khi có cột này"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "customer_addresses",
+            "Tên cột": "district_code"
+          },
+          "values": {
+            "Tên bảng": "customer_addresses",
+            "Tên cột": "district_code",
+            "Kiểu dữ liệu": "varchar(32)",
+            "Cho phép NULL": "YES",
+            "Ý nghĩa / trạng thái cho phép": "Mã quận/huyện của hãng vận chuyển; thiếu thì không tạo được vận đơn"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "customer_addresses",
+            "Tên cột": "province"
+          },
+          "values": {
+            "Tên bảng": "customer_addresses",
+            "Tên cột": "province",
+            "Kiểu dữ liệu": "varchar(255)",
+            "Cho phép NULL": "YES",
+            "Ý nghĩa / trạng thái cho phép": "Tên tỉnh/thành để hiển thị; mã vẫn là province_code"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "customer_addresses",
+            "Tên cột": "code_provider"
+          },
+          "values": {
+            "Tên bảng": "customer_addresses",
+            "Tên cột": "code_provider",
+            "Kiểu dữ liệu": "varchar(32)",
+            "Cho phép NULL": "YES",
+            "Ý nghĩa / trạng thái cho phép": "Hãng cấp bộ mã địa giới (GHN); mã của hãng khác không dùng lẫn được"
+          }
+        }
+      ]
     }
   ]
 }

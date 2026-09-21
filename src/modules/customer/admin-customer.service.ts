@@ -21,6 +21,7 @@ import {
   CUSTOMER_STATUS,
 } from './customer.constants';
 import {
+  ADDRESS_CODE_PROVIDERS,
   AdminCustomerAddressInputDto,
   AdminCustomerDetailDto,
   AdminCustomerListDto,
@@ -52,6 +53,9 @@ const CANCELLED_STATUS = 'CANCELLED';
  * dự thu — vì hai chỗ trả lời hai câu hỏi khác nhau.
  */
 const PAID_STATUS = 'SUCCESS';
+
+/** Hãng mặc định khi client gửi mã địa giới mà không nói của hãng nào. */
+const DEFAULT_ADDRESS_CODE_PROVIDER = ADDRESS_CODE_PROVIDERS[0];
 
 interface OrderRollup {
   orderCount: number;
@@ -155,8 +159,12 @@ export class AdminCustomerService {
         phone: address.phone,
         addressLine: address.addressLine,
         ward: address.ward,
+        wardCode: address.wardCode,
         district: address.district,
+        districtCode: address.districtCode,
+        province: address.province,
         provinceCode: address.provinceCode,
+        codeProvider: address.codeProvider,
         isDefault: address.isDefault,
       })),
       recentOrders: customer.orders.map((order) => ({
@@ -567,8 +575,17 @@ export class AdminCustomerService {
         phone: this.normalizeAddressPhone(address.phone),
         addressLine: address.addressLine.trim(),
         ward: address.ward?.trim() || null,
+        wardCode: address.wardCode?.trim() || null,
         district: address.district?.trim() || null,
+        districtCode: address.districtCode?.trim() || null,
+        province: address.province?.trim() || null,
         provinceCode: address.provinceCode.trim(),
+        // Mã địa giới chỉ có nghĩa kèm hãng đã cấp nó. Có mã mà không khai hãng thì mặc định là
+        // hãng đang dùng; không có mã nào thì cũng không ghi hãng để khỏi hứa một thứ không có.
+        codeProvider:
+          address.districtCode?.trim() || address.wardCode?.trim()
+            ? (address.codeProvider ?? DEFAULT_ADDRESS_CODE_PROVIDER)
+            : null,
         isDefault: address.isDefault === true,
       };
       if (address.id) {

@@ -209,8 +209,12 @@ Table customer_addresses {
   phone varchar(32) [not null]
   address_line varchar(500) [not null]
   ward varchar(255)
+  ward_code varchar(32)
   district varchar(255)
+  district_code varchar(32)
+  province varchar(255)
   province_code varchar(32) [not null]
+  code_provider varchar(32) [note: 'Hãng vận chuyển cấp bộ mã địa giới; mã của hãng khác không dùng lẫn được']
   postal_code varchar(20)
   country_code char(2) [not null, default: 'VN']
   is_default boolean [not null, default: false]

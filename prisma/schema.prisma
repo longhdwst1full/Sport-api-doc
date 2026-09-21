@@ -706,8 +706,13 @@ model CustomerAddress {
   phone        String   @db.VarChar(32)
   addressLine  String   @map("address_line") @db.VarChar(500)
   ward         String?  @db.VarChar(255)
+  wardCode     String?  @map("ward_code") @db.VarChar(32)
   district     String?  @db.VarChar(255)
+  districtCode String?  @map("district_code") @db.VarChar(32)
+  province     String?  @db.VarChar(255)
   provinceCode String   @map("province_code") @db.VarChar(32)
+  /// Hãng vận chuyển đã cấp bộ mã địa giới này; mã của hãng khác không dùng lẫn được.
+  codeProvider String?  @map("code_provider") @db.VarChar(32)
   postalCode   String?  @map("postal_code") @db.VarChar(20)
   countryCode  String   @default("VN") @map("country_code") @db.Char(2)
   isDefault    Boolean  @default(false) @map("is_default")

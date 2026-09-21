@@ -15625,12 +15625,34 @@
             "type": "string",
             "nullable": true
           },
+          "wardCode": {
+            "type": "string",
+            "nullable": true,
+            "example": "21012"
+          },
           "district": {
+            "type": "string",
+            "nullable": true
+          },
+          "districtCode": {
+            "type": "string",
+            "nullable": true,
+            "example": "1442"
+          },
+          "province": {
             "type": "string",
             "nullable": true
           },
           "provinceCode": {
             "type": "string"
+          },
+          "codeProvider": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "GHN"
+            ],
+            "description": "Hãng đã cấp bộ mã địa giới của địa chỉ này."
           },
           "postalCode": {
             "type": "string",
@@ -15684,15 +15706,40 @@
             "example": "Phường Bến Thành",
             "maxLength": 255
           },
+          "wardCode": {
+            "type": "string",
+            "example": "21012",
+            "maxLength": 32,
+            "description": "Mã phường/xã của hãng vận chuyển; thiếu thì địa chỉ không tạo được vận đơn."
+          },
           "district": {
             "type": "string",
             "example": "Quận 1",
+            "maxLength": 255
+          },
+          "districtCode": {
+            "type": "string",
+            "example": "1442",
+            "maxLength": 32,
+            "description": "Mã quận/huyện của hãng vận chuyển; thiếu thì địa chỉ không tạo được vận đơn."
+          },
+          "province": {
+            "type": "string",
+            "example": "TP. Hồ Chí Minh",
             "maxLength": 255
           },
           "provinceCode": {
             "type": "string",
             "example": "79",
             "maxLength": 32
+          },
+          "codeProvider": {
+            "type": "string",
+            "enum": [
+              "GHN"
+            ],
+            "default": "GHN",
+            "description": "Hãng đã cấp bộ mã gửi kèm; bỏ trống thì hiểu là hãng mặc định của hệ thống."
           },
           "postalCode": {
             "type": "string",
@@ -15734,15 +15781,40 @@
             "example": "Phường Bến Thành",
             "maxLength": 255
           },
+          "wardCode": {
+            "type": "string",
+            "example": "21012",
+            "maxLength": 32,
+            "description": "Mã phường/xã của hãng vận chuyển; thiếu thì địa chỉ không tạo được vận đơn."
+          },
           "district": {
             "type": "string",
             "example": "Quận 1",
+            "maxLength": 255
+          },
+          "districtCode": {
+            "type": "string",
+            "example": "1442",
+            "maxLength": 32,
+            "description": "Mã quận/huyện của hãng vận chuyển; thiếu thì địa chỉ không tạo được vận đơn."
+          },
+          "province": {
+            "type": "string",
+            "example": "TP. Hồ Chí Minh",
             "maxLength": 255
           },
           "provinceCode": {
             "type": "string",
             "example": "79",
             "maxLength": 32
+          },
+          "codeProvider": {
+            "type": "string",
+            "enum": [
+              "GHN"
+            ],
+            "default": "GHN",
+            "description": "Hãng đã cấp bộ mã gửi kèm; bỏ trống thì hiểu là hãng mặc định của hệ thống."
           },
           "postalCode": {
             "type": "string",
@@ -15955,14 +16027,39 @@
             "type": "string",
             "nullable": true
           },
+          "wardCode": {
+            "type": "string",
+            "nullable": true,
+            "example": "21012",
+            "description": "Mã phường/xã của hãng vận chuyển; thiếu thì không tạo được vận đơn."
+          },
           "district": {
             "type": "string",
             "nullable": true
           },
+          "districtCode": {
+            "type": "string",
+            "nullable": true,
+            "example": "1442",
+            "description": "Mã quận/huyện của hãng vận chuyển; thiếu thì không tạo được vận đơn."
+          },
+          "province": {
+            "type": "string",
+            "nullable": true,
+            "example": "Hà Nội"
+          },
           "provinceCode": {
             "type": "string",
-            "example": "01",
-            "description": "Mã tỉnh/thành. Bảng địa chỉ chỉ lưu mã, không lưu tên."
+            "example": "201",
+            "description": "Mã tỉnh/thành của hãng vận chuyển."
+          },
+          "codeProvider": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "GHN"
+            ],
+            "description": "Hãng đã cấp bộ mã địa giới này. Mã của hãng khác không dùng lẫn được, nên địa chỉ lưu từ hãng cũ phải chọn lại khi đổi hãng."
           },
           "isDefault": {
             "type": "boolean"
@@ -15974,8 +16071,12 @@
           "phone",
           "addressLine",
           "ward",
+          "wardCode",
           "district",
+          "districtCode",
+          "province",
           "provinceCode",
+          "codeProvider",
           "isDefault"
         ]
       },
@@ -16154,16 +16255,41 @@
             "example": "Phường Bến Thành",
             "maxLength": 255
           },
+          "wardCode": {
+            "type": "string",
+            "example": "21012",
+            "maxLength": 32,
+            "description": "Mã phường/xã theo danh mục hãng vận chuyển. Thiếu thì địa chỉ không tạo được vận đơn."
+          },
           "district": {
             "type": "string",
             "example": "Quận 1",
             "maxLength": 255
           },
+          "districtCode": {
+            "type": "string",
+            "example": "1442",
+            "maxLength": 32,
+            "description": "Mã quận/huyện theo danh mục hãng vận chuyển. Thiếu thì địa chỉ không tạo được vận đơn."
+          },
+          "province": {
+            "type": "string",
+            "example": "Hà Nội",
+            "maxLength": 255
+          },
           "provinceCode": {
             "type": "string",
-            "example": "79",
+            "example": "201",
             "maxLength": 32,
             "description": "Mã tỉnh/thành theo danh mục hãng vận chuyển"
+          },
+          "codeProvider": {
+            "type": "string",
+            "enum": [
+              "GHN"
+            ],
+            "default": "GHN",
+            "description": "Hãng đã cấp bộ mã gửi kèm. Bỏ trống thì hiểu là hãng mặc định của hệ thống."
           },
           "isDefault": {
             "type": "boolean",

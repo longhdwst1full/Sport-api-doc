@@ -1,7 +1,8 @@
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { IsBoolean, IsInt, IsOptional, IsString, Length, MaxLength, Min } from 'class-validator';
+import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Length, MaxLength, Min } from 'class-validator';
 import { ENTITY_ID_OPENAPI } from '../../common/identifiers/entity-id';
+import { ADDRESS_CODE_PROVIDERS, type AddressCodeProvider } from './admin-customer.dto';
 
 export class CreateCustomerAddressDto {
   @ApiProperty({ example: 'Nguyễn Văn An', maxLength: 255 })
@@ -25,16 +26,51 @@ export class CreateCustomerAddressDto {
   @MaxLength(255)
   ward?: string;
 
+  @ApiPropertyOptional({
+    example: '21012',
+    maxLength: 32,
+    description: 'Mã phường/xã của hãng vận chuyển; thiếu thì địa chỉ không tạo được vận đơn.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  wardCode?: string;
+
   @ApiPropertyOptional({ example: 'Quận 1', maxLength: 255 })
   @IsOptional()
   @IsString()
   @MaxLength(255)
   district?: string;
 
+  @ApiPropertyOptional({
+    example: '1442',
+    maxLength: 32,
+    description: 'Mã quận/huyện của hãng vận chuyển; thiếu thì địa chỉ không tạo được vận đơn.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  districtCode?: string;
+
+  @ApiPropertyOptional({ example: 'TP. Hồ Chí Minh', maxLength: 255 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  province?: string;
+
   @ApiProperty({ example: '79', maxLength: 32 })
   @IsString()
   @Length(1, 32)
   provinceCode: string;
+
+  @ApiPropertyOptional({
+    enum: ADDRESS_CODE_PROVIDERS,
+    default: 'GHN',
+    description: 'Hãng đã cấp bộ mã gửi kèm; bỏ trống thì hiểu là hãng mặc định của hệ thống.',
+  })
+  @IsOptional()
+  @IsIn(ADDRESS_CODE_PROVIDERS)
+  codeProvider?: AddressCodeProvider;
 
   @ApiPropertyOptional({ example: '700000', maxLength: 20 })
   @IsOptional()
@@ -62,8 +98,19 @@ export class CustomerAddressDto {
   @ApiProperty() phone: string;
   @ApiProperty() addressLine: string;
   @ApiPropertyOptional({ type: String, nullable: true }) ward: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, example: '21012' }) wardCode: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) district: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, example: '1442' }) districtCode: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) province: string | null;
   @ApiProperty() provinceCode: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    enum: ADDRESS_CODE_PROVIDERS,
+    description: 'Hãng đã cấp bộ mã địa giới của địa chỉ này.',
+  })
+  codeProvider: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) postalCode: string | null;
   @ApiProperty({ enum: ['VN'] }) countryCode: string;
   @ApiProperty() isDefault: boolean;
