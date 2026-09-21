@@ -1,10 +1,10 @@
 # Auth module — maintenance note
 
-> **Document version:** 1.2.0
+> **Document version:** 1.3.0
 >
-> **Last updated:** 2026-09-15
+> **Last updated:** 2026-09-21
 >
-> **Change summary:** Cache không nhận assignment có `valid_to` tương lai; bổ sung `x-required-permissions` trong OpenAPI.
+> **Change summary:** Hoàn thiện remember-me cho COOKIE transport và giữ lựa chọn qua refresh rotation.
 
 ## Trách nhiệm
 
@@ -36,6 +36,7 @@ Source of truth của quyền là `modules/iam`. Auth chỉ **chiếu** (project
 - `users.permission_version` được nhúng vào access token claim `pv`. Token có `pv` khác giá trị hiện tại bị từ chối ngay — đây là cơ chế thu hồi quyền tức thì, thay cho TTL.
 - Session bị revoke hoặc hết hạn bị loại ở **mọi** request; không bao giờ cache session.
 - Assignment chỉ có hiệu lực khi `status = ACTIVE`, `valid_from <= now`, `valid_to` null hoặc tương lai, và `role.status = ACTIVE`.
+- `rememberMe=false` tạo refresh cookie theo phiên trình duyệt; `rememberMe=true` mới có `Max-Age` bằng `JWT_REFRESH_TTL_SECONDS`. Refresh rotation giữ lựa chọn ban đầu và logout xóa cả refresh/remember cookie.
 
 ## Cache permission
 
@@ -67,10 +68,17 @@ thay vì chép tay permission code.
 
 ## Test
 
-`auth.service.spec.ts` phủ khoá tài khoản, reset sau login thành công, cache grant theo version, rebuild khi version đổi và từ chối `pv` lệch. Đây là unit test với Prisma mock — **chưa** có bằng chứng PostgreSQL integration cho khoá atomic.
+`auth.service.spec.ts` phủ khoá tài khoản, reset sau login thành công, cache grant theo version, rebuild khi version đổi và từ chối `pv` lệch. `auth-token-transport.service.spec.ts` phủ session/persistent cookie, giữ preference khi rotate và xóa cookie khi logout. Đây là unit test với Prisma/HTTP mock — **chưa** có bằng chứng PostgreSQL integration cho khoá atomic.
 
 ## Checklist khi sửa
 
 1. Đổi `AuthPrincipal`/`CurrentUserDto` ⇒ chạy `yarn openapi:generate` và đồng bộ SDK FE.
 2. Đổi cách resolve quyền ⇒ kiểm tra `PermissionGuard` và mọi service đang đọc `request.auth.scopes`.
 3. Thêm scope type ⇒ cập nhật cả `AuthScopeDto`, `ScopeType` và tài liệu DB theo rule `08`.
+
+## Revision history
+
+| Version | Date | Change summary | Source / Change ID |
+| --- | --- | --- | --- |
+| 1.3.0 | 2026-09-21 | Phân biệt session/persistent refresh cookie và giữ preference qua rotation. | API-20260921-AUTH-REMEMBER-ME |
+| 1.2.0 | 2026-09-15 | Không cache assignment có `valid_to` tương lai; OpenAPI xuất permission requirement. | Auth permission cache hardening |

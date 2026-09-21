@@ -24,15 +24,22 @@ describe('AuthTokenTransportService', () => {
       app: { authTokenTransport: 'COOKIE', environment: 'production', jwt: { refreshTtlSeconds: 3600 } },
     }));
     const cookie = jest.fn();
-    const response = { cookie } as unknown as Response;
-    expect(service.deliver(pair, response, 'admin')).toEqual({
+    const clearCookie = jest.fn();
+    const response = { cookie, clearCookie } as unknown as Response;
+    expect(service.deliver(pair, response, 'admin', true)).toEqual({
       accessToken: 'access', tokenType: 'Bearer', expiresIn: 900, mustChangePassword: true,
     });
     expect(cookie).toHaveBeenCalledWith(
       'dctd_admin_refresh',
       pair.refreshToken,
-      expect.objectContaining({ httpOnly: true, secure: true, sameSite: 'none', path: '/api/v1/admin/auth' }),
+      expect.objectContaining({ httpOnly: true, secure: true, sameSite: 'none', path: '/api/v1/admin/auth', maxAge: 3_600_000 }),
     );
+    expect(cookie).toHaveBeenCalledWith(
+      'dctd_admin_refresh_remember',
+      '1',
+      expect.objectContaining({ httpOnly: true, maxAge: 3_600_000 }),
+    );
+    expect(clearCookie).not.toHaveBeenCalled();
   });
 
   it('keeps development refresh cookie same-site compatible on http', () => {
@@ -40,11 +47,21 @@ describe('AuthTokenTransportService', () => {
       app: { authTokenTransport: 'COOKIE', environment: 'development' },
     }));
     const cookie = jest.fn();
-    service.deliver(pair, { cookie } as unknown as Response, 'customer');
+    const clearCookie = jest.fn();
+    service.deliver(pair, { cookie, clearCookie } as unknown as Response, 'customer');
     expect(cookie).toHaveBeenCalledWith(
       'dctd_customer_refresh',
       pair.refreshToken,
-      expect.objectContaining({ secure: false, sameSite: 'lax' }),
+      {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'lax',
+        path: '/api/v1/auth',
+      },
+    );
+    expect(clearCookie).toHaveBeenCalledWith(
+      'dctd_customer_refresh_remember',
+      expect.objectContaining({ path: '/api/v1/auth' }),
     );
   });
 
@@ -52,5 +69,44 @@ describe('AuthTokenTransportService', () => {
     const service = new AuthTokenTransportService(new ConfigService({ app: { authTokenTransport: 'COOKIE' } }));
     const request = { headers: { cookie: 'other=x; dctd_customer_refresh=abc%2B123' } } as Request;
     expect(service.readRefreshToken(request, {}, 'customer')).toBe('abc+123');
+  });
+
+  it('preserves the remembered choice during refresh rotation', () => {
+    const service = new AuthTokenTransportService(new ConfigService({
+      app: { authTokenTransport: 'COOKIE', environment: 'production' },
+    }));
+    const remembered = {
+      headers: { cookie: 'dctd_admin_refresh=token; dctd_admin_refresh_remember=1' },
+    } as Request;
+    const sessionOnly = {
+      headers: { cookie: 'dctd_admin_refresh=token' },
+    } as Request;
+
+    expect(service.isRemembered(remembered, 'admin')).toBe(true);
+    expect(service.isRemembered(sessionOnly, 'admin')).toBe(false);
+  });
+
+  it('clears both the refresh and remember cookies on logout', () => {
+    const service = new AuthTokenTransportService(new ConfigService({
+      app: { authTokenTransport: 'COOKIE', environment: 'production' },
+    }));
+    const clearCookie = jest.fn();
+    service.clear({ clearCookie } as unknown as Response, 'admin');
+
+    expect(clearCookie).toHaveBeenNthCalledWith(
+      1,
+      'dctd_admin_refresh',
+      {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
+        path: '/api/v1/admin/auth',
+      },
+    );
+    expect(clearCookie).toHaveBeenNthCalledWith(
+      2,
+      'dctd_admin_refresh_remember',
+      expect.objectContaining({ path: '/api/v1/admin/auth' }),
+    );
   });
 });

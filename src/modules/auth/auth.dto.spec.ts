@@ -39,4 +39,20 @@ describe('Auth DTO whitespace normalization', () => {
 
     expect(dto.identifier).toBe('bootstrap-admin@example.invalid');
   });
+
+  it('accepts only a boolean remember-me preference', async () => {
+    const accepted = plainToInstance(LoginDto, {
+      identifier: 'admin@example.com',
+      password: 'Aa@123456',
+      rememberMe: true,
+    });
+    const rejected = plainToInstance(LoginDto, {
+      identifier: 'admin@example.com',
+      password: 'Aa@123456',
+      rememberMe: 'true',
+    });
+
+    await expect(validate(accepted)).resolves.toEqual([]);
+    await expect(validate(rejected)).resolves.not.toEqual([]);
+  });
 });

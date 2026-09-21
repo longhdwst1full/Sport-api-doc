@@ -11,20 +11,50 @@ const REFRESH_COOKIE_NAMES: Record<AuthAudience, string> = {
   customer: 'dctd_customer_refresh',
 };
 
+const REMEMBER_COOKIE_NAMES: Record<AuthAudience, string> = {
+  admin: 'dctd_admin_refresh_remember',
+  customer: 'dctd_customer_refresh_remember',
+};
+
 @Injectable()
 export class AuthTokenTransportService {
   constructor(private readonly config: ConfigService) {}
 
-  deliver(pair: TokenPairDto, response: Response, audience: AuthAudience): TokenPairDto {
+  deliver(
+    pair: TokenPairDto,
+    response: Response,
+    audience: AuthAudience,
+    rememberMe = false,
+  ): TokenPairDto {
     if (!this.usesCookie()) return pair;
     if (!pair.refreshToken) throw new Error('Auth service did not issue a refresh token');
-    response.cookie(REFRESH_COOKIE_NAMES[audience], pair.refreshToken, this.cookieOptions(audience));
+    response.cookie(
+      REFRESH_COOKIE_NAMES[audience],
+      pair.refreshToken,
+      this.refreshCookieOptions(audience, rememberMe),
+    );
+    if (rememberMe) {
+      // CONTRACT: Request không cho đọc thuộc tính Max-Age của cookie cũ. Cookie HttpOnly
+      // này giữ lựa chọn ban đầu để refresh rotation không đổi cookie dài hạn thành session.
+      response.cookie(
+        REMEMBER_COOKIE_NAMES[audience],
+        '1',
+        this.refreshCookieOptions(audience, true),
+      );
+    } else {
+      response.clearCookie(REMEMBER_COOKIE_NAMES[audience], this.baseCookieOptions(audience));
+    }
     return {
       accessToken: pair.accessToken,
       tokenType: pair.tokenType,
       expiresIn: pair.expiresIn,
       mustChangePassword: pair.mustChangePassword,
     };
+  }
+
+  isRemembered(request: Request, audience: AuthAudience): boolean {
+    if (!this.usesCookie()) return false;
+    return this.parseCookies(request.headers.cookie)[REMEMBER_COOKIE_NAMES[audience]] === '1';
   }
 
   readRefreshToken(
@@ -44,16 +74,17 @@ export class AuthTokenTransportService {
 
   clear(response: Response, audience: AuthAudience): void {
     if (!this.usesCookie()) return;
-    response.clearCookie(REFRESH_COOKIE_NAMES[audience], this.cookieOptions(audience));
+    const options = this.baseCookieOptions(audience);
+    response.clearCookie(REFRESH_COOKIE_NAMES[audience], options);
+    response.clearCookie(REMEMBER_COOKIE_NAMES[audience], options);
   }
 
   private usesCookie(): boolean {
     return this.config.get<string>('app.authTokenTransport') === AUTH_TOKEN_TRANSPORT.COOKIE;
   }
 
-  private cookieOptions(audience: AuthAudience) {
+  private baseCookieOptions(audience: AuthAudience) {
     const production = this.config.get<string>('app.environment') === 'production';
-    const maxAge = (this.config.get<number>('app.jwt.refreshTtlSeconds') ?? 2_592_000) * 1_000;
     return {
       httpOnly: true,
       secure: production,
@@ -61,7 +92,15 @@ export class AuthTokenTransportService {
       // cần None + Secure để browser gửi refresh cookie cho request cross-site.
       sameSite: production ? ('none' as const) : ('lax' as const),
       path: audience === 'admin' ? '/api/v1/admin/auth' : '/api/v1/auth',
-      maxAge,
+    };
+  }
+
+  private refreshCookieOptions(audience: AuthAudience, rememberMe: boolean) {
+    const options = this.baseCookieOptions(audience);
+    if (!rememberMe) return options;
+    return {
+      ...options,
+      maxAge: (this.config.get<number>('app.jwt.refreshTtlSeconds') ?? 2_592_000) * 1_000,
     };
   }
 

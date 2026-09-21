@@ -3470,6 +3470,19 @@
         "document:src/modules/inventory/README.md"
       ],
       "targets": []
+    },
+    {
+      "id": "API-20260921-AUTH-REMEMBER-ME",
+      "date": "2026-09-21",
+      "scope": "AUTH+API+ADMIN+STOREFRONT",
+      "summary": "Login contract nhận rememberMe. COOKIE transport tạo session refresh cookie khi false và persistent refresh cookie theo JWT_REFRESH_TTL_SECONDS khi true; preference HttpOnly theo audience giữ semantics qua refresh rotation và được xóa khi logout. Không thay đổi schema database hoặc thời hạn auth_sessions.",
+      "sources": [
+        "OpenAPI:loginAdmin",
+        "OpenAPI:loginCustomer",
+        "source:src/modules/auth/auth-token-transport.service.ts",
+        "test:src/modules/auth/auth-token-transport.service.spec.ts"
+      ],
+      "targets": []
     }
   ]
 }

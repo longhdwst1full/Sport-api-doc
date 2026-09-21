@@ -15337,6 +15337,12 @@
             "minLength": 8,
             "maxLength": 128,
             "description": "Leading and trailing whitespace is ignored"
+          },
+          "rememberMe": {
+            "type": "boolean",
+            "example": false,
+            "default": false,
+            "description": "Keep the refresh cookie after the browser closes. Omitted or false creates a session cookie."
           }
         },
         "required": [

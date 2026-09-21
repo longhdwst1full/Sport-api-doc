@@ -55,7 +55,7 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response,
   ): Promise<TokenPairDto> {
     const pair = await this.auth.login(input, USER_TYPE.STAFF, this.requestId(request));
-    return this.transport.deliver(pair, response, 'admin');
+    return this.transport.deliver(pair, response, 'admin', input.rememberMe ?? false);
   }
 
   @Post('refresh')
@@ -69,7 +69,12 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response,
   ): Promise<TokenPairDto> {
     const pair = await this.auth.refresh(this.transport.readRefreshToken(request, input, 'admin'));
-    return this.transport.deliver(pair, response, 'admin');
+    return this.transport.deliver(
+      pair,
+      response,
+      'admin',
+      this.transport.isRemembered(request, 'admin'),
+    );
   }
 
   @Post('logout')
@@ -177,7 +182,7 @@ export class StorefrontAuthController {
       ? String(request.id)
       : (request.header('x-request-id') ?? `auth-${randomUUID()}`);
     const pair = await this.auth.login(input, USER_TYPE.CUSTOMER, requestId);
-    return this.transport.deliver(pair, response, 'customer');
+    return this.transport.deliver(pair, response, 'customer', input.rememberMe ?? false);
   }
 
   @Post('refresh')
@@ -193,7 +198,12 @@ export class StorefrontAuthController {
     const pair = await this.auth.refresh(
       this.transport.readRefreshToken(request, input, 'customer'),
     );
-    return this.transport.deliver(pair, response, 'customer');
+    return this.transport.deliver(
+      pair,
+      response,
+      'customer',
+      this.transport.isRemembered(request, 'customer'),
+    );
   }
 
   @Post('logout')

@@ -1,10 +1,10 @@
 # Trạng thái bàn giao — nguồn tiến độ duy nhất
 
-> **Document version:** 1.5.0
+> **Document version:** 1.6.0
 >
 > **Last updated:** 2026-09-21
 >
-> **Change summary:** Điều chỉnh tồn kho retry serialization an toàn, có timeout rõ và trả 503 tiếng Việt khi Supabase tạm bận.
+> **Change summary:** Hoàn thiện remember-me phía Backend cho cookie phiên/cookie lưu dài hạn và refresh rotation.
 
 ## Tài liệu này dùng để làm gì
 
@@ -46,6 +46,7 @@ không được gộp làm một.
 | Quản lý khách hàng | ✅ | ✅ | `Admin Customers`; fixture đã xoá |
 | Vai trò và phân quyền | ✅; OWNER được bảo vệ full permission catalog | ⚠️ Chờ deploy bản IAM mới | CRUD + cây quyền; API 381/381 unit tests pass ngày 2026-09-20 |
 | Tồn kho | ✅; adjustment có idempotency, retry serialization và timeout | ✅; cần redeploy bản resilience mới | Transaction rollback-only trên Supabase; unit test P2034/P2010/P2024/P2028 |
+| Ghi nhớ đăng nhập | ✅; Backend phân biệt session/persistent refresh cookie và giữ lựa chọn khi rotate | ⚠️ Chờ deploy API/Admin mới | `LoginDto.rememberMe`; `auth-token-transport.service.spec.ts` |
 | E2E trình duyệt | ⚠️ Admin 17/17, Storefront 41/41; chưa phủ checkout/Orders/Inventory mutation | ⚠️ Admin đã cấu hình CI, chưa xác minh run trên GitHub; Client chưa gắn CI | `document/37-playwright-e2e-report.md` |
 | PWA Storefront | ⚠️ Icon PNG và manifest đã có, chưa nghiệm thu cài đặt/offline trên HTTPS | Chưa kiểm chứng | `client/public/icon-192.png`, `icon-512.png`, `src/app/manifest.ts`, cache v3 trong `public/sw.js` |
 | Đổi trả và hoàn tiền | ❌ | ❌ | `grep -c "model Return\|model Refund"` → `0` |
@@ -89,6 +90,14 @@ PWA HTTPS acceptance. Ước lượng R2 cũ chỉ bao phủ happy path; estimat
 
 ### Kiểm chứng 2026-09-21
 
+- Backend nhận `rememberMe` từ login contract. Không chọn ghi nhớ thì refresh token chỉ nằm trong
+  session cookie; có chọn thì cookie tồn tại tối đa `JWT_REFRESH_TTL_SECONDS`. Refresh rotation
+  giữ nguyên lựa chọn bằng cookie HttpOnly theo audience; logout xóa cả hai cookie.
+- Full API gate pass: 81 suite/393 test, Prisma validate, OpenAPI export và build. Admin lint,
+  23 file/70 unit test, production build, Storybook build và Auth Playwright 6/6 pass. Storefront
+  lint, 6 file/18 test và production build pass; `/category` prerender phải retry một lần do
+  network quá 60 giây, là rủi ro build-time đã biết và không phát sinh từ Auth.
+
 - Truy vết `POST /api/v1/admin/inventory/adjustments`: CORRECTION và MANUAL_RECEIPT chạy
   hết transaction trên đúng Supabase rồi chủ động rollback; không thay đổi tồn hoặc tạo ledger.
 - Production replay một adjustment cũ bằng cùng `Idempotency-Key` thành công; lỗi báo cáo không
@@ -124,6 +133,7 @@ PWA HTTPS acceptance. Ước lượng R2 cũ chỉ bao phủ happy path; estimat
 
 | Version | Date | Change summary |
 | --- | --- | --- |
+| 1.6.0 | 2026-09-21 | Hoàn thiện remember-me Backend và trace trạng thái triển khai. |
 | 1.5.0 | 2026-09-21 | Harden adjustment transaction/retry/timeout và chuẩn hóa lỗi transient thành 503 tiếng Việt. |
 | 1.4.0 | 2026-09-20 | Product + initial SKU aggregate create atomic và Admin form một màn hình. |
 | 1.3.0 | 2026-09-20 | Thêm nguồn kế hoạch V1/production chuẩn, cập nhật blocker và estimate Return/Refund. |
