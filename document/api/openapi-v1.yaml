@@ -3089,6 +3089,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ProductDetailDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
         "401":
           description: ""
           content:
@@ -3101,9 +3107,21 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "422":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
       security:
         - bearer: []
-      summary: Create product
+      summary: Create product and its initial SKU variants atomically
       tags:
         - Admin Products
       x-required-permissions:
@@ -10647,6 +10665,24 @@ components:
         - media
         - categories
         - categoryIds
+    CreateVariantDto:
+      type: object
+      properties:
+        barcode:
+          type: string
+        name:
+          type: string
+        weightGrams:
+          type: number
+          default: 0
+        lengthMm:
+          type: number
+        widthMm:
+          type: number
+        heightMm:
+          type: number
+      required:
+        - name
     CreateProductDto:
       type: object
       properties:
@@ -10677,10 +10713,18 @@ components:
           type: string
           pattern: ^[1-9][0-9]*$
           example: "1"
+        variants:
+          minItems: 1
+          maxItems: 50
+          description: Danh sách SKU ban đầu được tạo atomic cùng sản phẩm
+          type: array
+          items:
+            $ref: "#/components/schemas/CreateVariantDto"
       required:
         - name
         - categoryIds
         - primaryCategoryId
+        - variants
     UpdateProductDto:
       type: object
       properties:
@@ -10725,24 +10769,6 @@ components:
           description: Bật/tắt hiển thị trên website. Không đổi status của sản phẩm.
       required:
         - expectedVersion
-    CreateVariantDto:
-      type: object
-      properties:
-        barcode:
-          type: string
-        name:
-          type: string
-        weightGrams:
-          type: object
-          default: 0
-        lengthMm:
-          type: number
-        widthMm:
-          type: number
-        heightMm:
-          type: number
-      required:
-        - name
     UpdateVariantDto:
       type: object
       properties:

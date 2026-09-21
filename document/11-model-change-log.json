@@ -3414,6 +3414,19 @@
         "source:../admin/src/features/customers"
       ],
       "targets": []
+    },
+    {
+      "id": "API-20260920-PRODUCT-AGGREGATE-CREATE",
+      "date": "2026-09-20",
+      "scope": "CATALOG+API+ADMIN",
+      "summary": "createAdminProduct bắt buộc nhận 1-50 initial variants và tạo Product, category links, SKU cùng audit trong một Prisma transaction. Admin dùng một form Product + biến thể; endpoint thêm SKU riêng vẫn giữ cho chỉnh sửa sau create. Không thay đổi schema database.",
+      "sources": [
+        "OpenAPI:createAdminProduct",
+        "source:src/modules/catalog/products/dto/product.dto.ts",
+        "source:src/modules/catalog/products/services/products.service.ts",
+        "source:../admin/src/features/products"
+      ],
+      "targets": []
     }
   ]
 }

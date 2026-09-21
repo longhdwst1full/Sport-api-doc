@@ -1,10 +1,10 @@
 # Sprint 6 — Return, Refund & Flash Sale execution plan
 
-> **Document version:** 1.2.0
+> **Document version:** 1.3.0
 >
-> **Last updated:** 2026-09-15
+> **Last updated:** 2026-09-20
 >
-> **Change summary:** Ghi rõ S6.1–S6.3 **chưa bắt đầu** và còn 4 câu hỏi treo đang chặn; S6.4 Flash Sale đã xong.
+> **Change summary:** Đồng bộ quyết định đã chốt: combo được trả nhưng bắt buộc trả nguyên dòng combo; cập nhật schema V1 tận dụng `system_parameters`.
 
 ## Trạng thái tại 2026-09-15
 
@@ -15,9 +15,9 @@
 | S6.2 Receive & inspection | ⛔ Chưa bắt đầu | Chưa có bảng |
 | S6.3 Refund | ⛔ Chưa bắt đầu | `grep -c "model Refund" prisma/schema.prisma` → `0` |
 
-**Không nên bắt đầu migration S6.1 khi Q1, Q3, Q4, Q5 còn treo.** Q1 quyết luôn cấu trúc
-`return_items`, Q4 quyết có cần bảng riêng cho hoàn tiền không kèm trả hàng. Chọn sai ở hai
-câu này là phải migrate lại bảng đã có dữ liệu.
+**Chưa bắt đầu migration S6.1.** Q1 đã được chốt lại theo baseline: combo được trả nhưng phải
+trả nguyên dòng combo. Q3–Q5 là các policy có thể thiết kế nullable/configurable và không còn
+chặn physical schema tối thiểu; Q4 chỉ triển khai sau khi được xác nhận.
 
 Hệ quả kéo theo: Dashboard **chưa báo được số lượng đơn hoàn** vì chưa có bảng nào lưu.
 
@@ -45,12 +45,15 @@ Sprint 6 không tạo đồng loạt bảng. Triển khai theo bốn wave có mi
 
 | Bảng | Vai trò | Invariant chính |
 | --- | --- | --- |
-| `return_policies` | Version chính sách theo thời gian | Version active bất biến; effective range không overlap cùng code |
 | `return_requests` | Aggregate yêu cầu trả | Return number unique; ownership/scope; một active request trên cùng order theo rule chốt |
 | `return_items` | Item/quantity trả | Thuộc OrderItem của cùng Order; quantity cộng dồn không vượt purchased; combo nguyên dòng |
 | `return_status_history` | Append-only transition | Sequence/idempotency unique; actor/reason rõ |
 | `refunds` | Aggregate hoàn tiền | Một refund/return; amount > 0; tổng SUCCESS không vượt Payment received amount |
 | `refund_transactions` | Thực thi/attempt append-only | External reference/event/idempotency unique; `SUCCESS` chỉ từ execution thật |
+
+V1 không tạo `return_policies`: dùng `system_parameters` hiện có cho cửa sổ 7 ngày và thêm
+`categories.returnable`. Chỉ thêm bảng policy versioned khi thực sự có nhiều policy/effective
+range cần truy hồi theo thời gian.
 
 Không lưu evidence bằng URL tự do; tái sử dụng `media_assets` qua bảng liên kết nếu V1 cần nhiều ảnh. Approval không nhét cột boolean vào Refund; nếu maker-checker được chốt thì dùng aggregate `approval_requests` riêng để tái sử dụng.
 
@@ -96,7 +99,7 @@ Owner đã yêu cầu **hoãn nhóm câu hỏi này để ưu tiên chức năng
 
 | # | Câu hỏi | Trạng thái |
 | --- | --- | --- |
-| Q1 | **Combo cho trả hay không?** Baseline cũ ghi *"combo phải trả nguyên dòng"* (cho trả, phải trả cả bộ); Owner sau đó nói *"combo không cho trả"*. Hai cách hiểu khác nhau và quyết định luôn cấu trúc `return_items` | ⏸ Treo |
+| Q1 | **Combo cho trả hay không?** | ✅ Chốt: được trả nhưng bắt buộc trả nguyên dòng combo; không trả riêng component |
 | Q2 | Danh sách nhóm hàng cụ thể bị loại trừ (găng tay, băng quấn, thảm đã bóc tem, hàng đặt riêng) | ⏸ Treo — mặc định dùng cờ `returnable` ở Category |
 | Q3 | Khách gửi ảnh khi yêu cầu trả — bắt buộc hay tuỳ chọn? Shopee bắt buộc ảnh/video | ⏸ Treo |
 | Q4 | Có hỗ trợ **hoàn một phần mà không cần trả hàng** không? Shopee có và dùng nhiều, tiết kiệm phí vận chuyển hai chiều | ⏸ Treo |
@@ -123,5 +126,6 @@ Owner đã yêu cầu **hoãn nhóm câu hỏi này để ưu tiên chức năng
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.3.0 | 2026-09-20 | Đồng bộ quyết định combo và rút schema V1 còn 5 bảng bằng cách dùng `system_parameters`. | PLAN-20260920-V1-READINESS |
 | 1.1.0 | 2026-09-14 | Đóng S6.4 Flash Sale; chốt 5 decision gate thành D54–D58. | PLAN-20260913-SPRINT6 S6.4 |
 | 1.0.0 | 2026-09-13 | Tạo kế hoạch Sprint 6, schema proposal và năm decision gate trước migration. | PLAN-20260913-SPRINT6 |

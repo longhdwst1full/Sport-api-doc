@@ -2,6 +2,7 @@ import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional, OmitType, PartialType } from '@nestjs/swagger';
 import {
   ArrayNotEmpty,
+  ArrayMaxSize,
   IsArray,
   IsBoolean,
   IsDateString,
@@ -175,10 +176,23 @@ export class CreateProductDto {
   @ApiPropertyOptional() @IsString() @IsOptional() description?: string;
   @ApiProperty({ ...ENTITY_ID_OPENAPI, type: [String], example: ['1'] }) @IsArray() @ArrayNotEmpty() @IsEntityId({ each: true }) categoryIds: string[];
   @ApiProperty({ ...ENTITY_ID_OPENAPI }) @IsEntityId() primaryCategoryId: string;
+
+  @ApiProperty({
+    type: () => [CreateVariantDto],
+    minItems: 1,
+    maxItems: 50,
+    description: 'Danh sách SKU ban đầu được tạo atomic cùng sản phẩm',
+  })
+  @IsArray()
+  @ArrayNotEmpty()
+  @ArrayMaxSize(50)
+  @ValidateNested({ each: true })
+  @Type(() => CreateVariantDto)
+  variants: CreateVariantDto[];
 }
 
 export class UpdateProductFieldsDto extends PartialType(
-  OmitType(CreateProductDto, ['brandId', 'shortDescription', 'description'] as const),
+  OmitType(CreateProductDto, ['brandId', 'shortDescription', 'description', 'variants'] as const),
 ) {
   @ApiPropertyOptional({ description: 'Only mutable while the product is DRAFT' })
   @IsString()
@@ -217,7 +231,7 @@ export class UpdateProductDto extends UpdateProductFieldsDto {
 export class CreateVariantDto {
   @ApiPropertyOptional() @IsString() @MaxLength(64) @IsOptional() barcode?: string;
   @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(255) name: string;
-  @ApiPropertyOptional({ default: 0 }) @IsInt() @Min(0) @IsOptional() weightGrams = 0;
+  @ApiPropertyOptional({ default: 0 }) @IsInt() @Min(0) @IsOptional() weightGrams?: number = 0;
   @ApiPropertyOptional() @IsInt() @Min(1) @IsOptional() lengthMm?: number;
   @ApiPropertyOptional() @IsInt() @Min(1) @IsOptional() widthMm?: number;
   @ApiPropertyOptional() @IsInt() @Min(1) @IsOptional() heightMm?: number;

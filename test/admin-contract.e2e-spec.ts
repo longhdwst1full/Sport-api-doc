@@ -477,22 +477,21 @@ describe('Admin v1 contract', () => {
         brandId: catalogFixture.brandId,
         categoryIds: [catalogFixture.categoryId],
         primaryCategoryId: catalogFixture.categoryId,
+        variants: [{ name: 'Default SKU' }],
       })
       .expect(201);
-    const createdProduct = productResponse.body as { id: string; productNo: string; slug: string };
+    const createdProduct = productResponse.body as {
+      id: string;
+      productNo: string;
+      slug: string;
+      variants: Array<{ id: string; name: string; sku: string }>;
+    };
     catalogFixture.productId = createdProduct.id;
     const slug = createdProduct.slug;
     expect(createdProduct.productNo).toMatch(/^PRD-[A-F0-9]{24}$/);
     expect(slug).toMatch(/^e2e-product-prd-[a-f0-9]{24}$/);
 
-    const variantResponse = await request(server())
-      .post(`/api/v1/admin/products/${catalogFixture.productId}/variants`)
-      .set(authorization)
-      .send({ name: 'Default SKU' })
-      .expect(201);
-    const createdVariant = (
-      variantResponse.body as { variants: Array<{ id: string; name: string; sku: string }> }
-    ).variants.find(({ name }) => name === 'Default SKU');
+    const createdVariant = createdProduct.variants.find(({ name }) => name === 'Default SKU');
     expect(createdVariant?.sku).toMatch(new RegExp(`^${createdProduct.productNo}-SKU-[A-F0-9]{20}$`));
     catalogFixture.variantId = createdVariant!.id;
 
@@ -691,44 +690,36 @@ describe('Admin v1 contract', () => {
           name: `${label} ${kind}`,
           categoryIds: [concurrencyCategoryId],
           primaryCategoryId: concurrencyCategoryId,
+          variants: [{ name: `${label} SKU` }],
         })
         .expect(201);
-      const id = (response.body as { id: string }).id;
+      const created = response.body as {
+        id: string;
+        variants: Array<{ id: string; name: string; sku: string }>;
+      };
+      const id = created.id;
       concurrencyProductIds.push(id);
-      return id;
+      return { id, variant: created.variants[0] };
     };
 
-    const componentProductId = await createProduct('STANDARD', 'COMPONENT');
-    const componentResponse = await request(server())
-      .post(`/api/v1/admin/products/${componentProductId}/variants`)
-      .set(authorization)
-      .send({ name: 'Component SKU' })
-      .expect(201);
-    const componentVariant = (
-      componentResponse.body as { variants: Array<{ id: string; name: string; sku: string }> }
-    ).variants.find(({ name }) => name === 'Component SKU');
-    const componentVariantId = componentVariant!.id;
+    const componentProduct = await createProduct('STANDARD', 'COMPONENT');
+    const componentVariant = componentProduct.variant;
+    const componentVariantId = componentVariant.id;
 
-    const comboProductId = await createProduct('BUNDLE', 'COMBO');
-    const comboVariantResponse = await request(server())
-      .post(`/api/v1/admin/products/${comboProductId}/variants`)
-      .set(authorization)
-      .send({ name: 'Combo SKU' })
-      .expect(201);
-    const comboVariant = (
-      comboVariantResponse.body as { variants: Array<{ id: string; name: string; sku: string }> }
-    ).variants.find(({ name }) => name === 'Combo SKU');
-    const comboVariantId = comboVariant!.id;
+    const comboProduct = await createProduct('BUNDLE', 'COMBO');
+    const comboProductId = comboProduct.id;
+    const comboVariant = comboProduct.variant;
+    const comboVariantId = comboVariant.id;
     const activeVariants = await request(server())
-      .get(`/api/v1/admin/products/variants/active?search=${componentVariant!.sku}&page=1&limit=20`)
+      .get(`/api/v1/admin/products/variants/active?search=${componentVariant.sku}&page=1&limit=20`)
       .set(authorization)
       .expect(200);
     expect(
       (activeVariants.body as LookupBody).items.map(({ code }) => code),
-    ).toContain(componentVariant!.sku);
+    ).toContain(componentVariant.sku);
     expect(
       (activeVariants.body as LookupBody).items.map(({ code }) => code),
-    ).not.toContain(comboVariant!.sku);
+    ).not.toContain(comboVariant.sku);
     await request(server())
       .post(`/api/v1/admin/products/variants/${comboVariantId}/prices`)
       .set(authorization)

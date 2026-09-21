@@ -1,10 +1,10 @@
 # Admin và Storefront API v1 contract integration
 
-> **Document version:** 1.9.0
+> **Document version:** 1.10.0
 >
-> **Last updated:** 2026-09-19
+> **Last updated:** 2026-09-20
 >
-> **Change summary:** Bổ sung lifecycle vai trò hệ thống an toàn: OWNER bất biến; BRANCH_MANAGER/STAFF được ngừng dùng hoặc kích hoạt lại mà không mất lịch sử.
+> **Change summary:** `createAdminProduct` tạo Product và 1–50 initial SKU variants atomic để Admin dùng một form duy nhất.
 
 ## Nguyên tắc đã áp dụng
 
@@ -37,7 +37,7 @@
 | Xóa logic account cấp dưới | `DELETE /api/v1/admin/iam/users/{userId}` | `deleteAdminStaffUser` | `iam.user.manage` — OWNER duy nhất | Chuyển LOCKED, revoke session và audit; cấm OWNER |
 | CRUD lifecycle brand | `GET/POST/PATCH/DELETE` + `POST .../{id}/activate|deactivate` | `list/create/update/delete/activate/deactivateAdminBrand` | `catalog.brand.view/manage` | `DELETE` chuyển `INACTIVE`; không xóa row |
 | CRUD lifecycle category | `GET/POST/PATCH/DELETE` + `POST .../{id}/activate|deactivate` | `list/create/update/delete/activate/deactivateAdminCategory` | `catalog.category.view/manage` | `DELETE` chuyển `INACTIVE` và nâng danh mục con lên cha; danh mục gốc bị gỡ thì con thành gốc |
-| Product SPU create/update/detail | `POST/PATCH/GET /api/v1/admin/products...` | `create/update/getAdminProduct` | `catalog.product.manage/view` | Product create/edit drawer + workflow detail |
+| Product SPU create/update/detail | `POST/PATCH/GET /api/v1/admin/products...` | `create/update/getAdminProduct` | `catalog.product.manage/view` | Create nhận Product + 1–50 initial variants atomic; edit metadata và workflow detail giữ tách biệt |
 | Điều chỉnh kho | `POST /api/v1/admin/inventory/adjustments` | `createStockAdjustment` | `inventory.stock.adjust` | Inventory drawer; generated request option truyền Idempotency-Key |
 | Ẩn/hiện lại đánh giá | `PATCH /api/v1/admin/reviews/{id}/moderation` | `moderateAdminReview` | `catalog.review.moderate` | Hậu kiểm: đánh giá hiển thị ngay khi gửi, `APPROVED` nghĩa là hiện lại |
 | Xóa/ẩn đánh giá | `DELETE /api/v1/admin/reviews/{id}` | `deleteAdminReview` | `catalog.review.moderate` | Chuyển REJECTED theo expected version; giữ lịch sử Admin |
@@ -126,6 +126,7 @@ Admin dùng `getApiErrorMessage` cho lỗi form/query và `getApiFieldErrors` đ
 - [x] Storefront/cart chốt theo `variantId`/SKU; hai SKU cùng Product là hai dòng giỏ riêng.
 - [x] Variant metadata update dùng expected version; SKU không nằm trong update contract và không thể đổi.
 - [x] Product Admin hỗ trợ create/update/detail/lifecycle; danh sách dùng search debounce và server pagination thay vì khóa page đầu.
+- [x] Product create bắt buộc 1–50 initial variants; Product/category/SKU/audit commit hoặc rollback cùng Prisma transaction và Admin hiển thị chung một form.
 - [x] Cloudinary finalize verify provider rồi persist `media_assets` idempotent; Product Media attach/update alt/primary/reorder/archive qua generated SDK.
 - [x] Revoke assignment giữ row `REVOKED`, ghi `valid_to`, tăng permission version và audit atomic; OWNER assignment không thể revoke.
 - [x] Storefront Auth contract được tách theo tag `Storefront Auth`; Client Orval sinh SDK riêng từ `document/api/storefront/auth.yaml`.
@@ -149,6 +150,7 @@ Admin dùng `getApiErrorMessage` cho lỗi form/query và `getApiFieldErrors` đ
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.10.0 | 2026-09-20 | Product create nhận 1–50 initial variants và persist atomic trong một transaction; Admin ghép Product + SKU trên một form. | API-20260920-PRODUCT-AGGREGATE-CREATE |
 | 1.9.0 | 2026-09-19 | OWNER bất biến; DELETE system role chỉ ngừng hoạt động, tăng permissionVersion và giữ lịch sử; seed không ghi đè cấu hình role đã chỉnh. | API-20260919-SYSTEM-ROLE-LIFECYCLE |
 | 1.8.0 | 2026-09-19 | Production refresh cookie dùng `SameSite=None; Secure`; Admin giữ access token in-memory, khôi phục `/me`, dọn cache và báo hết phiên một lần khi refresh thất bại. | API-20260919-ADMIN-REFRESH-RECOVERY |
 | 1.7.2 | 2026-09-18 | `updateAdminSystemParameter` và `deleteAdminSystemParameter` nhận `reason` tùy chọn; vẫn yêu cầu `expectedVersion` và ghi audit actor/request/thay đổi. | API-20260918-PARAMETER-OPTIONAL-REASON |

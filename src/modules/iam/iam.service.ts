@@ -24,7 +24,7 @@ import {
   UserListDto,
   UserRoleAssignmentDto,
 } from './iam.dto';
-import { PERMISSION_CATALOG } from './iam.permissions';
+import { PERMISSION_CATALOG, V1_ROLE_PERMISSIONS } from './iam.permissions';
 import { IamRepository } from './iam.repository';
 import {
   ASSIGNABLE_STAFF_ROLE_CODES,
@@ -116,8 +116,19 @@ export class IamService {
     ) {
       throw new ForbiddenException('Vai trò OWNER phải luôn hoạt động để tránh khóa toàn hệ thống');
     }
+    if (
+      role.code === SystemRoleCode.OWNER
+      && input.permissionCodes
+      && !this.hasExactlyAllOwnerPermissions(input.permissionCodes)
+    ) {
+      throw new ForbiddenException(
+        'Vai trò OWNER phải giữ toàn bộ quyền hệ thống để tránh mất quyền quản trị',
+      );
+    }
     const permissionCodes = input.permissionCodes
-      ? await this.resolvePermissionCodes(input.permissionCodes, actor, role.permissionCodes)
+      ? role.code === SystemRoleCode.OWNER
+        ? [...V1_ROLE_PERMISSIONS.OWNER]
+        : await this.resolvePermissionCodes(input.permissionCodes, actor, role.permissionCodes)
       : undefined;
     const updated = await this.iam.updateRole(
       roleId,
@@ -134,6 +145,13 @@ export class IamService {
       throw new ConflictException('Vai trò vừa được người khác sửa; hãy tải lại và thử lại');
     }
     return updated;
+  }
+
+  /** SECURITY: OWNER là tài khoản break-glass duy nhất nên tập quyền không được phép bị thu hẹp. */
+  private hasExactlyAllOwnerPermissions(permissionCodes: readonly string[]): boolean {
+    const requested = new Set(permissionCodes);
+    return requested.size === V1_ROLE_PERMISSIONS.OWNER.length
+      && V1_ROLE_PERMISSIONS.OWNER.every((permissionCode) => requested.has(permissionCode));
   }
 
   async deleteRole(

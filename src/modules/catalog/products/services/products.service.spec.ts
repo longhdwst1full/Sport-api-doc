@@ -47,10 +47,67 @@ describe('ProductsService', () => {
           name: 'Tạ tay',
           categoryIds: ['1'],
           primaryCategoryId: '2',
+          variants: [{ name: 'Mặc định' }],
         },
         { requestId: 'unit-request', actorUserId: '10' },
       ),
     ).rejects.toBeInstanceOf(UnprocessableEntityException);
+  });
+
+  it('creates product, category links and every initial SKU in one transaction', async () => {
+    const productCreate = jest.fn().mockResolvedValue({ id: 1n });
+    const productCategoryCreateMany = jest.fn().mockResolvedValue({ count: 1 });
+    const productVariantCreate = jest.fn()
+      .mockResolvedValueOnce({ id: 11n })
+      .mockResolvedValueOnce({ id: 12n });
+    const transaction = {
+      brand: { count: jest.fn() },
+      category: { count: jest.fn().mockResolvedValue(1) },
+      product: { create: productCreate },
+      productCategory: { createMany: productCategoryCreateMany },
+      productVariant: { create: productVariantCreate },
+    };
+    const prismaTransaction = jest.fn(
+      (work: (client: typeof transaction) => unknown) => work(transaction),
+    );
+    const prisma = {
+      $transaction: prismaTransaction,
+    } as unknown as PrismaService;
+    const auditWrite = jest.fn().mockResolvedValue(undefined);
+    const audit = { write: auditWrite } as unknown as AuditWriter;
+    const catalog = new ProductsService(prisma, audit);
+    const catalogInternals = catalog as unknown as {
+      getById(id: bigint): Promise<unknown>;
+    };
+    jest.spyOn(catalogInternals, 'getById').mockResolvedValue({
+      id: '1',
+      variants: [{ id: '11' }, { id: '12' }],
+    });
+
+    await catalog.create(
+      {
+        name: 'Giày chạy bộ',
+        categoryIds: ['1'],
+        primaryCategoryId: '1',
+        variants: [
+          { name: 'Đen - 40', weightGrams: 850 },
+          { name: 'Đen - 41', lengthMm: 300 },
+        ],
+      },
+      { requestId: 'request-create-product', actorUserId: '2' },
+    );
+
+    expect(prismaTransaction).toHaveBeenCalledTimes(1);
+    expect(productCreate).toHaveBeenCalledTimes(1);
+    expect(productCategoryCreateMany).toHaveBeenCalledTimes(1);
+    expect(productVariantCreate).toHaveBeenCalledTimes(2);
+    const variantCreateCalls = productVariantCreate.mock.calls as unknown as Array<[
+      { data: { productId: bigint; name: string; weightGrams?: number } },
+    ]>;
+    expect(variantCreateCalls[0]?.[0]).toMatchObject({
+      data: { productId: 1n, name: 'Đen - 40', weightGrams: 850 },
+    });
+    expect(auditWrite).toHaveBeenCalledTimes(3);
   });
 
   it('keeps a published product slug immutable', async () => {

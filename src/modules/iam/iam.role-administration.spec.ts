@@ -131,6 +131,46 @@ describe('IamService role administration', () => {
     ).rejects.toThrow(ForbiddenException);
   });
 
+  it('never allows the OWNER permission catalog to be reduced', async () => {
+    const service = createService();
+    const ownerRole = (await service.listAllRoles()).items.find(({ code }) => code === 'OWNER');
+    expect(ownerRole).toBeDefined();
+
+    await expect(
+      service.updateRole(
+        ownerRole!.id,
+        {
+          permissionCodes: ['iam.role.manage'],
+          expectedVersion: ownerRole!.version,
+        },
+        context,
+        owner,
+      ),
+    ).rejects.toThrow(
+      'Vai trò OWNER phải giữ toàn bộ quyền hệ thống để tránh mất quyền quản trị',
+    );
+  });
+
+  it('still allows OWNER metadata updates when the full permission catalog is retained', async () => {
+    const service = createService();
+    const ownerRole = (await service.listAllRoles()).items.find(({ code }) => code === 'OWNER');
+    expect(ownerRole).toBeDefined();
+
+    const updated = await service.updateRole(
+      ownerRole!.id,
+      {
+        name: 'Chủ hệ thống',
+        permissionCodes: [...allPermissions].reverse(),
+        expectedVersion: ownerRole!.version,
+      },
+      context,
+      owner,
+    );
+
+    expect(updated.name).toBe('Chủ hệ thống');
+    expect([...updated.permissionCodes].sort()).toEqual([...allPermissions].sort());
+  });
+
   it('deactivates a non-owner system role instead of deleting it', async () => {
     const service = createService();
     const staffRole = (await service.listAllRoles()).items.find(({ code }) => code === 'STAFF');

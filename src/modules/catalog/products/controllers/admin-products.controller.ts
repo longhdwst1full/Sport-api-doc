@@ -84,8 +84,14 @@ export class AdminProductsController {
 
   @Post()
   @RequirePermissions('catalog.product.manage')
-  @ApiOperation({ operationId: 'createAdminProduct', summary: 'Create product' })
+  @ApiOperation({
+    operationId: 'createAdminProduct',
+    summary: 'Create product and its initial SKU variants atomically',
+  })
   @ApiCreatedResponse({ type: ProductDetailDto })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  @ApiUnprocessableEntityResponse({ type: ErrorResponseDto })
   createAdminProduct(
     @Body() input: CreateProductDto,
     @Req() request: AuthenticatedRequest,

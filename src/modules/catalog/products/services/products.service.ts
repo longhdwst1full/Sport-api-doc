@@ -240,6 +240,7 @@ export class ProductsService {
     this.validateCategorySelection(input.categoryIds, input.primaryCategoryId);
     const productNo = generateProductNo();
     const slug = generateProductSlug(input.name, productNo);
+    const { variants, ...productInput } = input;
     try {
       const productId = await this.prisma.$transaction(async (transaction) => {
         await this.validateReferences(transaction, input.brandId, input.categoryIds);
@@ -264,6 +265,27 @@ export class ProductsService {
             sortOrder,
           })),
         });
+        // TRANSACTION: Product, category links và toàn bộ SKU ban đầu là một aggregate create;
+        // barcode/SKU lỗi phải rollback tất cả để Admin không nhận một SPU dở dang.
+        for (const [variantIndex, variantInput] of variants.entries()) {
+          const sku = generateSku(productNo);
+          const variant = await transaction.productVariant.create({
+            data: { productId: product.id, sku, ...variantInput },
+          });
+          await this.audit.write(
+            {
+              requestId: context.requestId,
+              sequenceNo: variantIndex + 2,
+              actorType: 'USER',
+              actorUserId: context.actorUserId,
+              action: PRODUCT_AUDIT_ACTION.VARIANT_CREATE,
+              entityType: 'PRODUCT_VARIANT',
+              entityId: toEntityId(variant.id),
+              after: { ...variantInput, sku } as unknown as Prisma.InputJsonValue,
+            },
+            transaction,
+          );
+        }
         await this.audit.write(
           {
             requestId: context.requestId,
@@ -273,7 +295,12 @@ export class ProductsService {
             action: PRODUCT_AUDIT_ACTION.CREATE,
             entityType: 'PRODUCT',
             entityId: toEntityId(product.id),
-            after: { ...input, productNo, slug } as unknown as Prisma.InputJsonValue,
+            after: {
+              ...productInput,
+              productNo,
+              slug,
+              variantCount: variants.length,
+            } as unknown as Prisma.InputJsonValue,
           },
           transaction,
         );
@@ -281,7 +308,7 @@ export class ProductsService {
       });
       return this.getById(productId);
     } catch (error) {
-      this.rethrowConstraint(error, 'Product number or slug already exists');
+      this.rethrowConstraint(error, 'Mã sản phẩm, slug, SKU hoặc barcode đã tồn tại');
     }
   }
 
