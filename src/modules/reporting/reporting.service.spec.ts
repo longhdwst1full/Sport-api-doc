@@ -122,3 +122,49 @@ describe('ReportingService gom doanh thu theo kỳ', () => {
   });
 });
 
+describe('ReportingService phạm vi khách hàng trong overview', () => {
+  function principal(scopes: AuthPrincipal['scopes']): AuthPrincipal {
+    return {
+      userId: '1',
+      sessionId: 's',
+      displayName: 'Tester',
+      permissionVersion: '1',
+      permissions: [],
+      scopes,
+      mustChangePassword: false,
+    };
+  }
+
+  function createService() {
+    const customerCount = jest.fn().mockResolvedValue(0);
+    const prisma = {
+      $queryRaw: jest.fn().mockResolvedValue([{}]),
+      product: { count: jest.fn().mockResolvedValue(0) },
+      customer: { count: customerCount },
+      order: { groupBy: jest.fn().mockResolvedValue([]) },
+    } as unknown as PrismaService;
+    return { service: new ReportingService(prisma), customerCount };
+  }
+
+  /**
+   * Hồi quy: `overview` từng đếm toàn bộ bảng khách, nên quản lý chi nhánh thấy tổng số khách
+   * toàn hệ thống dù danh sách khách của họ đã bị thu hẹp.
+   */
+  it('đếm khách theo chi nhánh mà principal được xem', async () => {
+    const { service, customerCount } = createService();
+
+    await service.overview(principal([{ type: ScopeType.BRANCH, branchId: '2' }]));
+
+    expect(customerCount).toHaveBeenCalledWith({
+      where: { orders: { some: { branchId: { in: [2n] } } } },
+    });
+  });
+
+  it('phạm vi GLOBAL đếm toàn bộ khách', async () => {
+    const { service, customerCount } = createService();
+
+    await service.overview(principal([{ type: ScopeType.GLOBAL }]));
+
+    expect(customerCount).toHaveBeenCalledWith({ where: {} });
+  });
+});

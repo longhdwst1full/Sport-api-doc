@@ -64,7 +64,18 @@ export class CreateContentPostDto {
   @IsIn(CONTENT_POST_TYPES)
   postType: ContentPostType;
   @ApiProperty() @IsString() @IsNotEmpty() title: string;
-  @ApiProperty() @IsString() @IsNotEmpty() slug: string;
+  /**
+   * Bỏ trống thì backend tự sinh từ tiêu đề (bỏ dấu, nối `-`, trùng thì thêm `-2`). Chỉ gửi lên khi
+   * cần giữ nguyên một đường dẫn đã công bố ở nơi khác.
+   */
+  @ApiPropertyOptional({
+    description: 'Đường dẫn bài viết. Bỏ trống để backend sinh từ tiêu đề.',
+    example: 'huong-dan-chon-ta-tay',
+  })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  slug?: string;
   @ApiProperty() @IsString() @IsNotEmpty() excerpt: string;
   @ApiProperty() @IsString() @IsNotEmpty() body: string;
   @ApiProperty({ format: 'uri' }) @IsUrl() coverUrl: string;

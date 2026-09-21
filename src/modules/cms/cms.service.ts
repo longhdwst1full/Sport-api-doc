@@ -3,6 +3,7 @@ import { Prisma, type ContentPost } from '@prisma/client';
 
 import { PrismaService } from '../../database/prisma.service';
 import { toDatabaseId, toEntityId } from '../../common/identifiers/entity-id';
+import { buildUniqueSlug, slugifyVietnamese } from '../../common/text/slug';
 import {
   ArchiveContentPostDto,
   CONTENT_POST_STATUS,
@@ -12,6 +13,12 @@ import {
   CreateContentPostDto,
   UpdateContentPostDto,
 } from './cms.dto';
+
+/** Giới hạn cột `slug` của bảng `posts` trong Prisma schema. */
+const CONTENT_SLUG_MAX_LENGTH = 255;
+
+/** Slug thay thế khi tiêu đề không còn ký tự nào tạo được slug. */
+const CONTENT_SLUG_FALLBACK = 'bai-viet';
 
 @Injectable()
 export class CmsService {
@@ -46,20 +53,31 @@ export class CmsService {
     return this.toPost(row);
   }
 
+  /**
+   * Tạo và xuất bản bài viết.
+   *
+   * Slug do backend sinh từ tiêu đề khi người soạn không gửi lên. Đọc slug đã dùng và ghi bài mới
+   * nằm trong cùng một transaction, nên hai người soạn hai bài trùng tiêu đề cùng lúc không đọc
+   * phải danh sách đã cũ. Trường hợp vẫn chen được vào giữa thì ràng buộc unique ở database bắt
+   * lại và trả 409 — transaction là để thu hẹp cửa sổ, không phải để thay ràng buộc.
+   */
   async create(input: CreateContentPostDto): Promise<ContentPostDto> {
     try {
-      const row = await this.prisma.contentPost.create({
-        data: {
-          postType: input.postType,
-          slug: input.slug.trim(),
-          title: input.title.trim(),
-          excerpt: input.excerpt.trim(),
-          body: input.body,
-          coverUrl: input.coverUrl.trim(),
-          relatedProductSlugs: input.relatedProductSlugs ?? [],
-          status: CONTENT_POST_STATUS.PUBLISHED,
-          publishedAt: new Date(),
-        },
+      const row = await this.prisma.$transaction(async (transaction) => {
+        const slug = input.slug?.trim() || (await this.deriveSlug(transaction, input.title));
+        return transaction.contentPost.create({
+          data: {
+            postType: input.postType,
+            slug,
+            title: input.title.trim(),
+            excerpt: input.excerpt.trim(),
+            body: input.body,
+            coverUrl: input.coverUrl.trim(),
+            relatedProductSlugs: input.relatedProductSlugs ?? [],
+            status: CONTENT_POST_STATUS.PUBLISHED,
+            publishedAt: new Date(),
+          },
+        });
       });
       return this.toPost(row);
     } catch (error) {
@@ -149,6 +167,27 @@ export class CmsService {
         throw new ConflictException('Post was changed by another request');
       }
       return this.toPost(row);
+    });
+  }
+
+  /**
+   * Slug chưa ai dùng, suy từ tiêu đề.
+   *
+   * Chỉ đọc những slug bắt đầu bằng phần gốc thay vì cả bảng: đó là tập duy nhất có thể va chạm.
+   * Tiêu đề không còn ký tự tạo được slug (toàn emoji) rơi về `bai-viet`.
+   */
+  private async deriveSlug(
+    transaction: Prisma.TransactionClient,
+    title: string,
+  ): Promise<string> {
+    const base = slugifyVietnamese(title) || CONTENT_SLUG_FALLBACK;
+    const rows = await transaction.contentPost.findMany({
+      where: { slug: { startsWith: base } },
+      select: { slug: true },
+    });
+    return buildUniqueSlug(title, rows.map((row) => row.slug), {
+      fallback: CONTENT_SLUG_FALLBACK,
+      maxLength: CONTENT_SLUG_MAX_LENGTH,
     });
   }
 

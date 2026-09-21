@@ -89,7 +89,7 @@ export class ReportingService {
 
     const [publishedProducts, customers, grouped] = await Promise.all([
       this.prisma.product.count({ where: { status: 'PUBLISHED' } }),
-      this.prisma.customer.count(),
+      this.prisma.customer.count({ where: this.customerScopeWhere(branchIds) }),
       this.prisma.order.groupBy({
         by: ['status'],
         where: { ...this.scopeWhere(actor), placedAt: { gte: since } },
@@ -355,6 +355,19 @@ export class ReportingService {
         .sort((left, right) => right.quantitySold - left.quantitySold)
         .slice(0, query.limit),
     };
+  }
+
+  /**
+   * Khách hàng thuộc phạm vi một chi nhánh khi đã từng đặt đơn ở chi nhánh đó — cùng quy tắc với
+   * `AdminCustomerService`. Trước đây `overview` đếm toàn bộ bảng khách, nên quản lý chi nhánh nhìn
+   * thấy tổng số khách toàn hệ thống trong khi danh sách khách của họ chỉ hiện một phần.
+   *
+   * SECURITY: quy tắc này phải trùng với quy tắc của màn hình danh sách khách; lệch nhau là rò rỉ
+   * quy mô dữ liệu của chi nhánh khác qua con số tổng.
+   */
+  private customerScopeWhere(branchIds: bigint[] | undefined): Prisma.CustomerWhereInput {
+    if (!branchIds) return {};
+    return { orders: { some: { branchId: { in: branchIds } } } };
   }
 
   /** Quản lý chi nhánh chỉ thấy số của chi nhánh mình, không thấy doanh thu toàn hệ thống. */

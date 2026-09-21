@@ -13167,6 +13167,8 @@ components:
           type: string
         slug:
           type: string
+          description: Đường dẫn bài viết. Bỏ trống để backend sinh từ tiêu đề.
+          example: huong-dan-chon-ta-tay
         excerpt:
           type: string
         body:
@@ -13181,7 +13183,6 @@ components:
       required:
         - postType
         - title
-        - slug
         - excerpt
         - body
         - coverUrl

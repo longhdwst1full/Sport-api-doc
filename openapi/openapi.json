@@ -20325,7 +20325,9 @@
             "type": "string"
           },
           "slug": {
-            "type": "string"
+            "type": "string",
+            "description": "Đường dẫn bài viết. Bỏ trống để backend sinh từ tiêu đề.",
+            "example": "huong-dan-chon-ta-tay"
           },
           "excerpt": {
             "type": "string"
@@ -20347,7 +20349,6 @@
         "required": [
           "postType",
           "title",
-          "slug",
           "excerpt",
           "body",
           "coverUrl"

@@ -3686,6 +3686,45 @@
           }
         }
       ]
+    },
+    {
+      "id": "API-20260921-REPORTING-EXPORT",
+      "date": "2026-09-21",
+      "scope": "REPORTING+API+ADMIN",
+      "summary": "Năm endpoint tải báo cáo ra CSV/XLSX: doanh thu theo kỳ, doanh thu theo chi nhánh, sản phẩm bán chạy, khách mua nhiều nhất và tồn kho cần nhập. Số liệu lấy lại từ chính các hàm đang phục vụ màn hình báo cáo, không truy vấn riêng, nên file và màn hình không thể lệch nhau. Mỗi endpoint giữ đúng quyền của báo cáo gốc (report.revenue.view hoặc report.inventory.view) thay vì gộp vào một endpoint dùng chung một quyền. CSV có BOM UTF-8 và vô hiệu hoá ô bị Excel hiểu là công thức; XLSX giữ tiền/số lượng ở kiểu số để còn cộng được. Không thay đổi schema.",
+      "sources": [
+        "OpenAPI:exportAdminReportRevenue/exportAdminReportRevenueByBranch/exportAdminReportTopProducts/exportAdminReportTopCustomers/exportAdminReportInventory",
+        "source:src/modules/reporting/report-export.service.ts",
+        "source:src/modules/reporting/export/tabular-report.ts",
+        "test:src/modules/reporting/export/tabular-report.spec.ts",
+        "test:src/modules/reporting/report-export.service.spec.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260921-REPORTING-OVERVIEW-CUSTOMER-SCOPE",
+      "date": "2026-09-21",
+      "scope": "REPORTING+SECURITY+API",
+      "summary": "getAdminReportOverview đếm khách hàng theo phạm vi chi nhánh của principal, cùng quy tắc với danh sách khách (khách thuộc chi nhánh khi đã từng đặt đơn ở đó). Trước đó phép đếm chạy trên toàn bảng, nên quản lý chi nhánh thấy tổng số khách toàn hệ thống trong khi danh sách khách của họ chỉ hiện một phần — con số tổng làm lộ quy mô dữ liệu của chi nhánh khác. Không thay đổi schema hay hình dạng response.",
+      "sources": [
+        "OpenAPI:getAdminReportOverview",
+        "source:src/modules/reporting/reporting.service.ts",
+        "test:src/modules/reporting/reporting.service.spec.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260921-CMS-POST-SLUG-AUTO",
+      "date": "2026-09-21",
+      "scope": "CMS+API+ADMIN",
+      "summary": "createAdminPost nhận slug tuỳ chọn; bỏ trống thì backend sinh từ tiêu đề (bỏ dấu tiếng Việt, nối bằng -, trùng thì thêm -2, -3…), cùng quy tắc đang dùng cho thương hiệu và danh mục. Đọc slug đã dùng và ghi bài mới nằm trong cùng transaction; ràng buộc unique ở database vẫn là chốt cuối và trả 409. Slug KHÔNG tự đổi khi sửa tiêu đề, vì đường dẫn đã công bố đổi theo sẽ làm hỏng link cũ. Form soạn bài của Admin bỏ ô nhập slug. Không thay đổi schema.",
+      "sources": [
+        "OpenAPI:createAdminPost",
+        "source:src/modules/cms/cms.service.ts",
+        "source:src/common/text/slug.ts",
+        "test:src/modules/cms/cms-slug.spec.ts"
+      ],
+      "targets": []
     }
   ]
 }
