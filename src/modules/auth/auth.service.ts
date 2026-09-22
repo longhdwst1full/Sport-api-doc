@@ -13,6 +13,9 @@ import { v7 as uuidv7 } from 'uuid';
 import { toDatabaseId, toEntityId } from '../../common/identifiers/entity-id';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditWriter } from '../audit/audit.writer';
+import { OutboxWriter } from '../notification/outbox.writer';
+import { OUTBOX_EVENT_TYPE } from '../notification/notification.constants';
+import { VIETNAM_TIME_ZONE } from '../../common/time/vietnam-time';
 import {
   ROLE_ASSIGNMENT_STATUS,
   ROLE_STATUS,
@@ -47,6 +50,7 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
     private readonly audit: AuditWriter,
+    private readonly outbox: OutboxWriter,
   ) {}
 
   private readonly grantCache = new Map<string, CachedGrants>();
@@ -143,6 +147,26 @@ export class AuthService {
       if (changed.count !== 1) {
         throw new ConflictException('Account changed; retry password change');
       }
+
+      /**
+       * SECURITY: đổi mật khẩu phải đá mọi phiên khác ra ngoài.
+       *
+       * Lý do người ta đổi mật khẩu thường là nghi có người khác đang dùng tài khoản của mình. Giữ
+       * nguyên các phiên đang mở nghĩa là kẻ đó vẫn ở trong hệ thống với refresh token cũ cho tới
+       * khi nó hết hạn — đúng thứ mà thao tác đổi mật khẩu lẽ ra phải chặn.
+       *
+       * Phiên hiện tại được giữ lại để người dùng không bị đăng xuất khỏi chính thiết bị họ vừa
+       * thao tác.
+       */
+      const revokedSessions = await transaction.authSession.updateMany({
+        where: {
+          userId: user.id,
+          revokedAt: null,
+          ...(principal.sessionId ? { id: { not: toDatabaseId(principal.sessionId) } } : {}),
+        },
+        data: { revokedAt: new Date(), revokeReason: 'PASSWORD_CHANGED' },
+      });
+
       await this.audit.write(
         {
           requestId,
@@ -153,10 +177,35 @@ export class AuthService {
           entityType: 'USER',
           entityId: toEntityId(user.id),
           before: { mustChangePassword: user.mustChangePassword },
-          after: { mustChangePassword: false },
+          // SECURITY: audit không chép mật khẩu; chỉ ghi số phiên bị thu hồi để tra lại về sau.
+          after: { mustChangePassword: false, revokedSessions: revokedSessions.count },
         },
         transaction,
       );
+
+      /**
+       * Báo cho chủ tài khoản biết mật khẩu vừa đổi — nếu không phải họ làm thì đây là tín hiệu
+       * duy nhất họ nhận được.
+       *
+       * TRANSACTION: ghi ý định trong cùng transaction với việc đổi mật khẩu. Đổi mật khẩu hỏng thì
+       * email cũng không gửi; email hỏng thì worker thử lại, không ai phải đổi mật khẩu lần nữa.
+       */
+      if (user.email) {
+        await this.outbox.append(
+          {
+            aggregateType: 'USER',
+            aggregateId: toEntityId(user.id),
+            eventType: OUTBOX_EVENT_TYPE.PASSWORD_CHANGED,
+            payload: {
+              recipientEmail: user.email,
+              recipientName: user.displayName,
+              changedAt: new Date().toLocaleString('vi-VN', { timeZone: VIETNAM_TIME_ZONE }),
+              revokedSessions: revokedSessions.count,
+            },
+          },
+          transaction,
+        );
+      }
     });
   }
 

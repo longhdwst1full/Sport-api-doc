@@ -137,6 +137,45 @@ paths:
       summary: "Hồ sơ của khách đang đăng nhập: tên, email, số điện thoại"
       tags:
         - Storefront Customer
+    patch:
+      operationId: updateCustomerProfile
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCustomerProfileDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerProfileDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: Version không khớp, hoặc email/SĐT đã thuộc về tài khoản khác
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Khách tự cập nhật tên, email, số điện thoại và tuỳ chọn nhận tin
+      tags:
+        - Storefront Customer
 components:
   schemas:
     CustomerAddressDto:
@@ -379,6 +418,10 @@ components:
         createdAt:
           type: string
           description: Thời điểm tạo tài khoản
+        version:
+          type: number
+          example: 3
+          description: Gửi lại làm expectedVersion khi cập nhật hồ sơ
       required:
         - id
         - customerNo
@@ -387,6 +430,33 @@ components:
         - phone
         - marketingConsent
         - createdAt
+        - version
+    UpdateCustomerProfileDto:
+      type: object
+      properties:
+        expectedVersion:
+          type: number
+          minimum: 0
+          description: Version hồ sơ mà khách đang xem
+        name:
+          type: string
+          example: Nguyễn Minh Anh
+          maxLength: 255
+        phone:
+          type: string
+          example: "0903456789"
+          maxLength: 32
+          description: Cũng là định danh đăng nhập; đổi xong phải dùng số mới để đăng nhập.
+        email:
+          type: string
+          example: minhanh@example.com
+          maxLength: 255
+          description: Cũng là định danh đăng nhập; đổi xong phải dùng email mới để đăng nhập.
+        marketingConsent:
+          type: boolean
+          description: Khách có đồng ý nhận tin khuyến mãi
+      required:
+        - expectedVersion
     ErrorDetailDto:
       type: object
       properties:

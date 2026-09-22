@@ -5,10 +5,15 @@ import { AuditModule } from '../audit/audit.module';
 import { AuthController, StorefrontAuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { AuthTokenTransportService } from './auth-token-transport.service';
+import { NotificationModule } from '../notification/notification.module';
+import { SystemModule } from '../system/system.module';
+import { PasswordResetService } from './password-reset.service';
 
 @Module({
   imports: [
     AuditModule,
+    NotificationModule,
+    SystemModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -18,7 +23,7 @@ import { AuthTokenTransportService } from './auth-token-transport.service';
     }),
   ],
   controllers: [AuthController, StorefrontAuthController],
-  providers: [AuthService, AuthTokenTransportService],
+  providers: [AuthService, AuthTokenTransportService, PasswordResetService],
   exports: [AuthService],
 })
 export class AuthModule {}

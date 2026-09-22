@@ -280,7 +280,6 @@ async function importDemoData(
         branchId: branch.id,
         name: item.warehouseName,
         status: 'ACTIVE',
-        isPrimary: true,
         updatedBy: bootstrapUser.id,
       }),
       create: {
@@ -288,7 +287,6 @@ async function importDemoData(
         code: item.warehouseCode,
         name: item.warehouseName,
         status: 'ACTIVE',
-        isPrimary: true,
         createdBy: bootstrapUser.id,
         updatedBy: bootstrapUser.id,
       },

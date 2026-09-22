@@ -148,3 +148,38 @@ export class CurrentUserDto {
   permissionVersion: string;
   @ApiProperty({ example: false }) mustChangePassword: boolean;
 }
+
+/**
+ * Yêu cầu đặt lại mật khẩu.
+ *
+ * SECURITY: phản hồi luôn như nhau dù email có tồn tại hay không — trả lời khác nhau biến endpoint
+ * này thành công cụ dò xem ai có tài khoản ở đây.
+ */
+export class ForgotPasswordDto {
+  @ApiProperty({ example: 'minh.anh@example.com', maxLength: 255 })
+  @IsEmail({}, { message: 'Email không hợp lệ' })
+  @MaxLength(255)
+  email: string;
+}
+
+export class ResetPasswordDto {
+  @ApiProperty({
+    description: 'Token lấy từ đường dẫn trong email; dùng một lần và có hạn.',
+    minLength: 32,
+  })
+  @IsString()
+  @MinLength(32)
+  token: string;
+
+  @ApiProperty({
+    format: 'password',
+    minLength: 8,
+    maxLength: 128,
+    description: 'Leading and trailing whitespace is ignored',
+  })
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @MinLength(8)
+  @MaxLength(128)
+  newPassword: string;
+}

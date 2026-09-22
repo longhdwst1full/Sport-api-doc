@@ -17,6 +17,8 @@ export const AUTH_ERROR = {
 export const AUTH_AUDIT_ACTION = {
   ACCOUNT_AUTO_LOCK: 'auth.account.auto_lock',
   PASSWORD_CHANGE: 'auth.password.change',
+  PASSWORD_RESET_REQUESTED: 'auth.password.reset_requested',
+  PASSWORD_RESET_COMPLETED: 'auth.password.reset_completed',
 } as const;
 
 export const AUTH_TOKEN_TRANSPORT = {

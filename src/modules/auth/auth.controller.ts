@@ -2,6 +2,7 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Res } from '@ne
 import {
   ApiBearerAuth,
   ApiNoContentResponse,
+  ApiAcceptedResponse,
   ApiBadRequestResponse,
   ApiConflictResponse,
   ApiCreatedResponse,
@@ -19,6 +20,8 @@ import { USER_TYPE } from '../iam/iam.constants';
 import { AuthService } from './auth.service';
 import {
   ChangePasswordDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
   CurrentUserDto,
   LoginDto,
   RefreshTokenDto,
@@ -27,6 +30,7 @@ import {
 } from './auth.dto';
 import type { AuthPrincipal } from './auth.types';
 import { AuthTokenTransportService } from './auth-token-transport.service';
+import { PasswordResetService } from './password-reset.service';
 
 interface AuthenticatedRequest extends Request {
   auth?: AuthPrincipal;
@@ -42,7 +46,13 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  /**
+   * SECURITY: khóa tài khoản sau 5 lần sai chỉ chặn tấn công vào MỘT tài khoản. Hạn mức theo IP
+   * chặn hướng còn lại — rải mật khẩu phổ biến qua nhiều tài khoản khác nhau, nơi không tài khoản
+   * nào đủ số lần sai để bị khóa. Hạn mức này chỉ có tác dụng khi `TRUST_PROXY` được đặt đúng,
+   * nếu không mọi người dùng chung một rổ đếm là IP của proxy.
+   */
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @ApiOperation({ operationId: 'loginAdmin', summary: 'Authenticate staff by email or phone' })
   @ApiOkResponse({ type: TokenPairDto })
   @ApiUnauthorizedResponse({
@@ -140,6 +150,7 @@ export class StorefrontAuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly transport: AuthTokenTransportService,
+    private readonly passwordReset: PasswordResetService,
   ) {}
 
   @Post('register')
@@ -156,17 +167,19 @@ export class StorefrontAuthController {
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ): Promise<TokenPairDto> {
-    const requestId =
-      typeof request.id === 'string' || typeof request.id === 'number'
-        ? String(request.id)
-        : (request.header('x-request-id') ?? `registration-${randomUUID()}`);
-    const pair = await this.auth.registerCustomer(input, requestId);
+    const pair = await this.auth.registerCustomer(input, this.requestId(request, 'registration'));
     return this.transport.deliver(pair, response, 'customer');
   }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  /**
+   * SECURITY: khóa tài khoản sau 5 lần sai chỉ chặn tấn công vào MỘT tài khoản. Hạn mức theo IP
+   * chặn hướng còn lại — rải mật khẩu phổ biến qua nhiều tài khoản khác nhau, nơi không tài khoản
+   * nào đủ số lần sai để bị khóa. Hạn mức này chỉ có tác dụng khi `TRUST_PROXY` được đặt đúng,
+   * nếu không mọi người dùng chung một rổ đếm là IP của proxy.
+   */
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @ApiOperation({ operationId: 'loginCustomer', summary: 'Authenticate customer by email or phone' })
   @ApiOkResponse({ type: TokenPairDto })
   @ApiUnauthorizedResponse({
@@ -178,10 +191,7 @@ export class StorefrontAuthController {
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ): Promise<TokenPairDto> {
-    const requestId = typeof request.id === 'string' || typeof request.id === 'number'
-      ? String(request.id)
-      : (request.header('x-request-id') ?? `auth-${randomUUID()}`);
-    const pair = await this.auth.login(input, USER_TYPE.CUSTOMER, requestId);
+    const pair = await this.auth.login(input, USER_TYPE.CUSTOMER, this.requestId(request));
     return this.transport.deliver(pair, response, 'customer', input.rememberMe ?? false);
   }
 
@@ -219,6 +229,68 @@ export class StorefrontAuthController {
     this.transport.clear(response, 'customer');
   }
 
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  @ApiOperation({
+    operationId: 'requestCustomerPasswordReset',
+    summary: 'Gửi email đặt lại mật khẩu',
+    description:
+      'Luôn trả 202 dù email có tồn tại hay không: trả lời khác nhau biến endpoint này thành công '
+      + 'cụ dò xem ai có tài khoản ở đây.',
+  })
+  @ApiAcceptedResponse()
+  async forgotPassword(
+    @Body() input: ForgotPasswordDto,
+    @Req() request: Request,
+  ): Promise<void> {
+    await this.passwordReset.requestReset(
+      input,
+      this.requestId(request, 'password-reset'),
+      PasswordResetService.hashIp(request.ip),
+    );
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiOperation({
+    operationId: 'resetCustomerPassword',
+    summary: 'Đặt lại mật khẩu bằng token trong email',
+  })
+  @ApiNoContentResponse()
+  @ApiBadRequestResponse({
+    type: ErrorResponseDto,
+    description: 'Token sai, đã dùng hoặc hết hạn — cả ba trả về cùng một thông báo',
+  })
+  async resetPassword(@Body() input: ResetPasswordDto, @Req() request: Request): Promise<void> {
+    await this.passwordReset.resetPassword(input, this.requestId(request, 'password-reset'));
+  }
+
+  @Post('change-password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @RequireAuthentication()
+  @ApiBearerAuth()
+  @ApiOperation({
+    operationId: 'changeCustomerPassword',
+    summary: 'Khách đang đăng nhập tự đổi mật khẩu',
+  })
+  @ApiNoContentResponse()
+  @ApiBadRequestResponse({
+    type: ErrorResponseDto,
+    description: 'Mật khẩu hiện tại sai, hoặc mật khẩu mới trùng mật khẩu cũ',
+  })
+  @ApiUnauthorizedResponse({ type: ErrorResponseDto })
+  async changePassword(
+    @Body() input: ChangePasswordDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<void> {
+    if (!request.auth) throw new Error('Authentication guard did not attach a principal');
+    // Dùng chung use case với nhân viên: quy tắc mật khẩu, khoá tài khoản và thu hồi phiên phải
+    // giống nhau cho mọi loại tài khoản, nếu không sẽ có một đường yếu hơn đường kia.
+    await this.auth.changePassword(request.auth, input, this.requestId(request));
+  }
+
   @Get('me')
   @RequireAuthentication()
   @ApiBearerAuth()
@@ -235,5 +307,16 @@ export class StorefrontAuthController {
       permissionVersion: request.auth.permissionVersion,
       mustChangePassword: request.auth.mustChangePassword,
     };
+  }
+
+  /**
+   * Request ID để nối audit với một lượt gọi cụ thể; thiếu thì sinh tạm để audit không rỗng.
+   *
+   * Ba chỗ trong controller này từng lặp lại đúng đoạn trên, mỗi chỗ một tiền tố khác nhau.
+   */
+  private requestId(request: Request, prefix = 'auth'): string {
+    return typeof request.id === 'string' || typeof request.id === 'number'
+      ? String(request.id)
+      : (request.header('x-request-id') ?? `${prefix}-${randomUUID()}`);
   }
 }

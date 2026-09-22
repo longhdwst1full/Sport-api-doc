@@ -7,6 +7,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { AuditWriter } from '../audit/audit.writer';
 import { AUTH_ERROR } from './auth.constants';
 import { AuthService } from './auth.service';
+import type { OutboxWriter } from '../notification/outbox.writer';
 
 describe('AuthService login protection', () => {
   it('locks atomically on the fifth consecutive wrong password and revokes sessions', async () => {
@@ -42,6 +43,7 @@ describe('AuthService login protection', () => {
       {} as JwtService,
       new ConfigService(),
       audit,
+      { append: jest.fn().mockResolvedValue(undefined) } as unknown as OutboxWriter,
     );
 
     for (let attempt = 1; attempt < 5; attempt += 1) {
@@ -82,6 +84,7 @@ describe('AuthService login protection', () => {
       {} as JwtService,
       new ConfigService(),
       { write: jest.fn() } as unknown as AuditWriter,
+      { append: jest.fn().mockResolvedValue(undefined) } as unknown as OutboxWriter,
     );
 
     await expect(
@@ -121,6 +124,7 @@ describe('AuthService login protection', () => {
       jwt,
       new ConfigService({ app: { jwt: { accessTtlSeconds: 900, refreshTtlSeconds: 3600 } } }),
       { write: jest.fn() } as unknown as AuditWriter,
+      { append: jest.fn().mockResolvedValue(undefined) } as unknown as OutboxWriter,
     );
 
     await expect(
@@ -171,9 +175,13 @@ describe('AuthService permission grant cache', () => {
     const jwt = {
       verifyAsync: jest.fn().mockResolvedValue({ sub: '101', sid: '9', pv: '3', typ: 'access' }),
     } as unknown as JwtService;
-    const service = new AuthService(prisma, jwt, new ConfigService(), {
-      write: jest.fn(),
-    } as unknown as AuditWriter);
+    const service = new AuthService(
+      prisma,
+      jwt,
+      new ConfigService(),
+      { write: jest.fn() } as unknown as AuditWriter,
+      { append: jest.fn().mockResolvedValue(undefined) } as unknown as OutboxWriter,
+    );
     return { service, session, findManyAssignments, jwt };
   };
 

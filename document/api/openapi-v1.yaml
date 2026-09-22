@@ -1691,6 +1691,75 @@ paths:
       summary: Revoke a customer refresh token
       tags:
         - Storefront Auth
+  /api/v1/auth/forgot-password:
+    post:
+      description: "Luôn trả 202 dù email có tồn tại hay không: trả lời khác nhau biến endpoint này thành công cụ dò xem ai có tài khoản ở đây."
+      operationId: requestCustomerPasswordReset
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordDto"
+      responses:
+        "202":
+          description: ""
+      summary: Gửi email đặt lại mật khẩu
+      tags:
+        - Storefront Auth
+  /api/v1/auth/reset-password:
+    post:
+      operationId: resetCustomerPassword
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordDto"
+      responses:
+        "204":
+          description: ""
+        "400":
+          description: Token sai, đã dùng hoặc hết hạn — cả ba trả về cùng một thông báo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      summary: Đặt lại mật khẩu bằng token trong email
+      tags:
+        - Storefront Auth
+  /api/v1/auth/change-password:
+    post:
+      operationId: changeCustomerPassword
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordDto"
+      responses:
+        "204":
+          description: ""
+        "400":
+          description: Mật khẩu hiện tại sai, hoặc mật khẩu mới trùng mật khẩu cũ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Khách đang đăng nhập tự đổi mật khẩu
+      tags:
+        - Storefront Auth
   /api/v1/auth/me:
     get:
       operationId: getCustomerCurrentUser

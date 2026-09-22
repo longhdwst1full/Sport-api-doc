@@ -94,6 +94,8 @@ model User {
   updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   sessions                  AuthSession[]
+  passwordResetTokens       PasswordResetToken[]
+  notifications             Notification[]
   roleAssignments           UserRoleAssignment[] @relation("AssignedUser")
   assignedRoleAssignments   UserRoleAssignment[] @relation("AssignmentActor")
   permissionGrants          RolePermission[]     @relation("PermissionGrantActor")
@@ -687,6 +689,7 @@ model Customer {
   avatarAsset      MediaAsset?       @relation("CustomerAvatar", fields: [avatarAssetId], references: [id], onDelete: SetNull)
   addresses        CustomerAddress[]
   carts            Cart[]
+  notifications    Notification[]
   checkoutSessions CheckoutSession[]
   orders           Order[]
   reviews          ProductReview[]
@@ -1418,4 +1421,85 @@ model SystemParameter {
   @@index([isPublic])
   @@index([isSystem])
   @@map("system_parameters")
+}
+
+/// Hàng đợi việc-cần-làm-sau, ghi cùng transaction với nghiệp vụ sinh ra nó.
+///
+/// Gửi email ngay trong transaction đặt hàng là buộc đơn hàng vào tình trạng của Mailtrap: nhà cung
+/// cấp chậm thì đơn chậm theo, nhà cung cấp lỗi thì hoặc mất email hoặc rollback cả đơn. Ghi ý định
+/// xuống bảng này thì transaction nghiệp vụ đóng ngay, còn worker lo việc gửi và có quyền thử lại.
+model OutboxEvent {
+  id            BigInt    @id @default(autoincrement())
+  aggregateType String    @map("aggregate_type") @db.VarChar(100)
+  aggregateId   BigInt    @map("aggregate_id")
+  eventType     String    @map("event_type") @db.VarChar(150)
+  eventVersion  Int       @default(1) @map("event_version")
+  payloadJson   Json      @map("payload_json") @db.JsonB
+  status        String    @default("PENDING") @db.VarChar(24)
+  attempts      Int       @default(0)
+  /// Thời điểm sớm nhất được lấy ra xử lý; backoff đẩy mốc này về tương lai.
+  availableAt   DateTime  @default(now()) @map("available_at") @db.Timestamptz(6)
+  lockedAt      DateTime? @map("locked_at") @db.Timestamptz(6)
+  lockedBy      String?   @map("locked_by") @db.VarChar(100)
+  processedAt   DateTime? @map("processed_at") @db.Timestamptz(6)
+  lastError     String?   @map("last_error")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([status, availableAt, id])
+  @@index([aggregateType, aggregateId])
+  @@map("outbox_events")
+}
+
+/// Nhật ký gửi thông báo: mỗi dòng là một lần gửi tới một người nhận.
+///
+/// `dedup_key` unique theo kênh là chốt chặn gửi trùng: worker chạy lại, hoặc hai replica cùng lấy
+/// một event, thì lần thứ hai vi phạm unique và dừng thay vì gửi thêm một email nữa cho khách.
+model Notification {
+  id              BigInt    @id @default(autoincrement())
+  userId          BigInt?   @map("user_id")
+  customerId      BigInt?   @map("customer_id")
+  /// Mã template nằm trong mã nguồn (`notification.templates.ts`), không phải bảng riêng — V1 chưa
+  /// có nhu cầu cho người ngoài team sửa nội dung email.
+  templateCode    String    @map("template_code") @db.VarChar(64)
+  channel         String    @db.VarChar(24)
+  dedupKey        String    @map("dedup_key") @db.VarChar(150)
+  /// SECURITY: chỉ lưu bản che (a***@example.com); nhật ký không phải chỗ giữ PII đầy đủ.
+  recipientMasked String    @map("recipient_masked") @db.VarChar(255)
+  payloadJson     Json      @map("payload_json") @db.JsonB
+  status          String    @default("PENDING") @db.VarChar(24)
+  attemptCount    Int       @default(0) @map("attempt_count")
+  nextAttemptAt   DateTime? @map("next_attempt_at") @db.Timestamptz(6)
+  sentAt          DateTime? @map("sent_at") @db.Timestamptz(6)
+  providerMessageId String? @map("provider_message_id") @db.VarChar(255)
+  errorCode       String?   @map("error_code") @db.VarChar(100)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user     User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@unique([channel, dedupKey])
+  @@index([status, nextAttemptAt])
+  @@map("notifications")
+}
+
+/// Token đặt lại mật khẩu: một lần dùng, có hạn.
+///
+/// SECURITY: chỉ lưu hash. Rò database thì kẻ tấn công không dựng lại được link trong email, đúng
+/// cách `auth_sessions` đang làm với refresh token. `used_at` là chốt một-lần: ai đọc được email cũ
+/// (máy dùng chung, hộp thư bị chuyển tiếp) cũng không đổi lại mật khẩu lần nữa.
+model PasswordResetToken {
+  id            BigInt    @id @default(autoincrement())
+  userId        BigInt    @map("user_id")
+  tokenHash     String    @unique @map("token_hash") @db.VarChar(128)
+  expiresAt     DateTime  @map("expires_at") @db.Timestamptz(6)
+  usedAt        DateTime? @map("used_at") @db.Timestamptz(6)
+  /// Hash IP của lần yêu cầu, để điều tra lạm dụng mà không lưu IP thô.
+  requestIpHash String?   @map("request_ip_hash") @db.VarChar(128)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
 }
