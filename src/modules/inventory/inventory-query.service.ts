@@ -10,7 +10,8 @@ import { toDatabaseId, toEntityId } from '../../common/identifiers/entity-id';
 import { PrismaService } from '../../database/prisma.service';
 import type { AuthPrincipal } from '../auth/auth.types';
 import { ScopeType } from '../iam/iam.types';
-import { InventoryBalanceListDto } from './inventory.dto';
+import { InventoryBalanceListDto, InventoryBalanceSummaryDto } from './inventory.dto';
+import { classifyInventoryBalance } from './inventory.constants';
 import {
   InventoryBalanceQueryDto,
   InventoryMovementListDto,
@@ -35,23 +36,7 @@ export class InventoryQueryService {
     principal: AuthPrincipal,
   ): Promise<InventoryBalanceListDto> {
     this.ensurePersistence();
-    const scope = this.scopeWhere(principal);
-    const where: Prisma.InventoryBalanceWhereInput = {
-      ...scope,
-      ...(query.warehouseCode
-        ? { warehouse: { ...scope.warehouse, code: query.warehouseCode.toUpperCase() } }
-        : {}),
-      ...(query.search
-        ? {
-            productVariant: {
-              OR: [
-                { sku: { contains: query.search, mode: 'insensitive' } },
-                { product: { name: { contains: query.search, mode: 'insensitive' } } },
-              ],
-            },
-          }
-        : {}),
-    };
+    const where = this.balanceWhere(query, principal);
     const [rows, total] = await Promise.all([
       this.prisma.inventoryBalance.findMany({
         where,
@@ -74,14 +59,83 @@ export class InventoryQueryService {
           reserved: row.reserved,
           available,
           reorderPoint: row.reorderPoint,
-          status: available === 0
-            ? 'OUT_OF_STOCK'
-            : available <= row.reorderPoint ? 'LOW_STOCK' : 'IN_STOCK',
+          status: classifyInventoryBalance(row),
         };
       }),
       total,
       page: query.page,
       limit: query.limit,
+    };
+  }
+
+  /**
+   * Số liệu tổng hợp của toàn bộ dòng tồn khớp bộ lọc.
+   *
+   * Đọc cả tập khớp bộ lọc rồi gộp ở tầng ứng dụng, KHÔNG gộp bằng SQL: `LOW_STOCK` và
+   * `OUT_OF_STOCK` là so sánh giữa ba cột (`on_hand - reserved` với `reorder_point`), mà Prisma
+   * không diễn đạt được so sánh cột-với-cột trong `where`. Viết lại bộ lọc bằng raw SQL là cách
+   * để bộ lọc của thẻ số liệu và của bảng bên dưới lệch nhau dần theo thời gian.
+   *
+   * `select` chỉ lấy ba cột số nên một lượt đi database là đủ; ở quy mô hiện tại chi phí nằm ở
+   * đường truyền (~450ms/lượt), không ở số dòng.
+   */
+  async summarizeBalances(
+    query: InventoryBalanceQueryDto,
+    principal: AuthPrincipal,
+  ): Promise<InventoryBalanceSummaryDto> {
+    this.ensurePersistence();
+    const rows = await this.prisma.inventoryBalance.findMany({
+      where: this.balanceWhere(query, principal),
+      select: { onHand: true, reserved: true, reorderPoint: true },
+    });
+
+    const summary: InventoryBalanceSummaryDto = {
+      trackedBalances: rows.length,
+      inStock: 0,
+      lowStock: 0,
+      outOfStock: 0,
+      totalOnHand: 0,
+      totalReserved: 0,
+      totalAvailable: 0,
+    };
+    for (const row of rows) {
+      const status = classifyInventoryBalance(row);
+      if (status === 'IN_STOCK') summary.inStock += 1;
+      if (status === 'LOW_STOCK') summary.lowStock += 1;
+      if (status === 'OUT_OF_STOCK') summary.outOfStock += 1;
+      summary.totalOnHand += row.onHand;
+      summary.totalReserved += row.reserved;
+      summary.totalAvailable += row.onHand - row.reserved;
+    }
+    return summary;
+  }
+
+  /**
+   * Bộ lọc dùng chung cho danh sách và số liệu tổng hợp.
+   *
+   * Phải là một hàm duy nhất: hai bản sao của cùng bộ lọc là cách để thẻ "12 dòng sắp hết" không
+   * còn ứng với bảng đang hiện bên dưới.
+   */
+  private balanceWhere(
+    query: InventoryBalanceQueryDto,
+    principal: AuthPrincipal,
+  ): Prisma.InventoryBalanceWhereInput {
+    const scope = this.scopeWhere(principal);
+    return {
+      ...scope,
+      ...(query.warehouseCode
+        ? { warehouse: { ...scope.warehouse, code: query.warehouseCode.toUpperCase() } }
+        : {}),
+      ...(query.search
+        ? {
+            productVariant: {
+              OR: [
+                { sku: { contains: query.search, mode: 'insensitive' } },
+                { product: { name: { contains: query.search, mode: 'insensitive' } } },
+              ],
+            },
+          }
+        : {}),
     };
   }
 

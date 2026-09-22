@@ -37,5 +37,24 @@ export const FLASH_SALE_CAMPAIGN_TRANSITIONS: Record<string, readonly string[]> 
   CANCELLED: [],
 };
 
-/** Quota chỉ được giữ trong thời gian ngắn; hết hạn thì worker/checkout trả lại. */
-export const FLASH_SALE_QUOTA_TTL_MINUTES = 15;
+/**
+ * Mã lỗi suất flash, trả trong `ErrorResponseDto.code`.
+ *
+ * Người gọi cần phân biệt được hai tình huống để xử lý khác nhau: campaign kết thúc thì giá quay
+ * về giá gốc cho mọi khách, còn hết suất thì chỉ dòng đó mất giá giảm. Bắt theo chuỗi thông báo là
+ * cách để một lần sửa câu chữ làm hỏng cả Admin và Storefront.
+ *
+ * `details[].field` mang **entity id của biến thể** bị ảnh hưởng, để màn hình quầy và giỏ hàng chỉ
+ * đúng dòng cần cập nhật thay vì bắt dựng lại toàn bộ.
+ */
+export const FLASH_SALE_ERROR_CODE = {
+  CAMPAIGN_ENDED: 'FLASH_SALE_CAMPAIGN_ENDED',
+  QUOTA_EXHAUSTED: 'FLASH_SALE_QUOTA_EXHAUSTED',
+  PER_CUSTOMER_LIMIT: 'FLASH_SALE_PER_CUSTOMER_LIMIT_REACHED',
+  /** Riêng quầy: đã dọn phiên bán và trả kèm giá gốc để nhân viên xác nhận lại. */
+  POS_REPRICED: 'POS_FLASH_SALE_REPRICED',
+} as const;
+
+export type FlashSaleErrorCode =
+  (typeof FLASH_SALE_ERROR_CODE)[keyof typeof FLASH_SALE_ERROR_CODE];
+

@@ -1,6 +1,7 @@
 import { ServiceUnavailableException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../database/prisma.service';
+import { SYSTEM_PARAMETER_CODE } from '../../system/parameters/system-parameter.catalog';
+import { SystemParameterService } from '../../system/parameters/system-parameter.service';
 import { FlashSaleQuotaExpiryService } from './flash-sale-quota-expiry.service';
 
 const FIXTURE = {
@@ -41,12 +42,19 @@ function buildService(
     isEnabled: () => prismaEnabled,
     $transaction: jest.fn((callback: (client: typeof transaction) => unknown) => callback(transaction)),
   } as unknown as PrismaService;
-  const config = {
-    get: jest.fn().mockReturnValue(enabled),
-    getOrThrow: jest.fn().mockReturnValue(FIXTURE.BATCH_SIZE),
-  } as unknown as ConfigService;
+  // Cấu hình worker đọc từ system_parameters, nên test giả lập theo mã tham số chứ không theo
+  // khoá config — sai mã tham số phải làm test đỏ.
+  const getBoolean = jest.fn().mockResolvedValue(enabled);
+  const getInteger = jest.fn().mockResolvedValue(FIXTURE.BATCH_SIZE);
+  const parameters = { getBoolean, getInteger } as unknown as SystemParameterService;
 
-  return { service: new FlashSaleQuotaExpiryService(prisma, config), itemUpdate, updateMany };
+  return {
+    service: new FlashSaleQuotaExpiryService(prisma, parameters),
+    itemUpdate,
+    updateMany,
+    getBoolean,
+    getInteger,
+  };
 }
 
 describe('FlashSaleQuotaExpiryService', () => {
@@ -121,5 +129,26 @@ describe('FlashSaleQuotaExpiryService', () => {
     const result = await service.run();
 
     expect(result.hasMore).toBe(true);
+  });
+
+  it('đọc cờ bật và kích thước batch từ tham số hệ thống', async () => {
+    const { service, getBoolean, getInteger } = buildService([], []);
+
+    await service.run();
+
+    expect(getBoolean).toHaveBeenCalledWith(
+      SYSTEM_PARAMETER_CODE.FLASH_SALE_QUOTA_EXPIRY_JOB_ENABLED,
+    );
+    expect(getInteger).toHaveBeenCalledWith(
+      SYSTEM_PARAMETER_CODE.FLASH_SALE_QUOTA_EXPIRY_JOB_BATCH_SIZE,
+    );
+  });
+
+  it('không đọc kích thước batch khi job bị tắt', async () => {
+    const { service, getInteger } = buildService([], [], 0, { enabled: false });
+
+    await service.run();
+
+    expect(getInteger).not.toHaveBeenCalled();
   });
 });

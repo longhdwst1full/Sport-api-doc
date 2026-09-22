@@ -1,7 +1,8 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma.service';
+import { SYSTEM_PARAMETER_CODE } from '../../system/parameters/system-parameter.catalog';
+import { SystemParameterService } from '../../system/parameters/system-parameter.service';
 import { FLASH_SALE_QUOTA_STATUS } from '../promotion.constants';
 
 interface LockedReservationId {
@@ -29,21 +30,26 @@ export interface FlashSaleQuotaExpiryRunResult {
  * - `flash_sale_items.reserved_quantity` và trạng thái reservation đổi trong cùng
  *   transaction; chạy lặp hoặc chạy song song không trả suất hai lần.
  * - Không đụng `sold_quantity`: hết hạn nghĩa là chưa bán được, không phải hoàn bán.
+ *
+ * Cấu hình đọc từ `system_parameters` để vận hành tắt worker ngay khi có sự cố mà không cần
+ * redeploy; biến môi trường cùng tên vẫn là fallback khi tham số còn trống hoặc database chưa bật.
  */
 @Injectable()
 export class FlashSaleQuotaExpiryService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly config: ConfigService,
+    private readonly parameters: SystemParameterService,
   ) {}
 
   async run(): Promise<FlashSaleQuotaExpiryRunResult> {
-    const enabled = this.config.get<boolean>('app.jobs.flashSaleQuotaExpiry.enabled') ?? false;
+    const enabled = await this.isEnabled();
     if (!enabled) return this.emptyResult(false);
     if (!this.prisma.isEnabled()) {
       throw new ServiceUnavailableException('Kho dữ liệu khuyến mãi chưa được bật');
     }
-    const batchSize = this.config.getOrThrow<number>('app.jobs.flashSaleQuotaExpiry.batchSize');
+    const batchSize = await this.parameters.getInteger(
+      SYSTEM_PARAMETER_CODE.FLASH_SALE_QUOTA_EXPIRY_JOB_BATCH_SIZE,
+    );
     // Một cutoff duy nhất để cả batch được đánh giá tại cùng thời điểm.
     const completedAt = new Date();
 
@@ -111,6 +117,11 @@ export class FlashSaleQuotaExpiryService {
       hasMore: claimed === batchSize,
       completedAt: completedAt.toISOString(),
     };
+  }
+
+  /** Cho controller hỏi trạng thái mà không phải lặp lại mã tham số. */
+  async isEnabled(): Promise<boolean> {
+    return this.parameters.getBoolean(SYSTEM_PARAMETER_CODE.FLASH_SALE_QUOTA_EXPIRY_JOB_ENABLED);
   }
 
   private emptyResult(enabled: boolean): FlashSaleQuotaExpiryRunResult {

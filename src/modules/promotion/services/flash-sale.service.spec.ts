@@ -2,6 +2,8 @@ import { ConflictException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma.service';
 import { AuditWriter } from '../../audit/audit.writer';
+import { SYSTEM_PARAMETER_CODE } from '../../system/parameters/system-parameter.catalog';
+import { SystemParameterService } from '../../system/parameters/system-parameter.service';
 import { FLASH_SALE_ITEM_STATUS } from '../promotion.constants';
 import { FlashSaleService } from './flash-sale.service';
 
@@ -140,10 +142,15 @@ function buildHarness(items: ItemRow[], updateManyCount = 1, reservations: Reser
   };
 }
 
+/** TTL giữ suất lấy từ system_parameters; test chọn giá trị khác mặc định để lộ hằng số chết. */
+const TTL_MINUTES = 20;
+
 describe('FlashSaleService quota', () => {
   const prisma = { isEnabled: () => true } as unknown as PrismaService;
   const audit = { write: jest.fn() } as unknown as AuditWriter;
-  const service = new FlashSaleService(prisma, audit);
+  const getInteger = jest.fn().mockResolvedValue(TTL_MINUTES);
+  const parameters = { getInteger } as unknown as SystemParameterService;
+  const service = new FlashSaleService(prisma, audit, parameters);
   const now = new Date('2026-09-13T10:00:00.000Z');
 
   beforeEach(() => jest.clearAllMocks());
@@ -165,6 +172,22 @@ describe('FlashSaleService quota', () => {
     const where = harness.itemUpdateMany.mock.calls[0][0].where;
     expect(where.version).toBe(FIXTURE.ITEM_VERSION);
     expect(where.quota.gte).toBe(FIXTURE.SOLD + FIXTURE.RESERVED + FIXTURE.REQUESTED_QUANTITY);
+  });
+
+  it('hạn giữ suất tính theo TTL trong tham số hệ thống, không theo hằng số biên dịch', async () => {
+    const harness = buildHarness([buildItem()]);
+
+    await service.reserveQuota(
+      harness.transaction,
+      FIXTURE.CHECKOUT_SESSION_ID,
+      FIXTURE.CUSTOMER_KEY,
+      [{ productVariantId: FIXTURE.VARIANT_ID, quantity: FIXTURE.REQUESTED_QUANTITY, flashSaleItemId: FIXTURE.ITEM_ID }],
+      now,
+    );
+
+    expect(getInteger).toHaveBeenCalledWith(SYSTEM_PARAMETER_CODE.FLASH_SALE_QUOTA_TTL_MINUTES);
+    const created = harness.reservationCreate.mock.calls[0][0] as { data: { expiresAt: Date } };
+    expect(created.data.expiresAt).toEqual(new Date(now.getTime() + TTL_MINUTES * 60_000));
   });
 
   it('từ chối khi request song song thắng trước (updateMany không khớp hàng nào)', async () => {
@@ -360,7 +383,10 @@ describe('FlashSaleService quota', () => {
 describe('FlashSaleService resolveActiveDeals', () => {
   const prisma = { isEnabled: () => true } as unknown as PrismaService;
   const audit = { write: jest.fn() } as unknown as AuditWriter;
-  const service = new FlashSaleService(prisma, audit);
+  const parameters = {
+    getInteger: jest.fn().mockResolvedValue(TTL_MINUTES),
+  } as unknown as SystemParameterService;
+  const service = new FlashSaleService(prisma, audit, parameters);
   const now = new Date('2026-09-13T10:00:00.000Z');
 
   function clientWith(items: ItemRow[]) {

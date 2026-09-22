@@ -33,6 +33,10 @@ export interface TelegramConfig {
   webhookSecret: string;
 }
 
+export interface StorefrontConfig {
+  baseUrl: string;
+}
+
 export interface VnpayConfig {
   tmnCode: string;
   hashSecret: string;
@@ -73,6 +77,12 @@ export class IntegrationConfigService {
       webhookSecret: webhookSecret.trim(),
       webhookActorUserId: webhookActorUserId.trim(),
     };
+  }
+
+  /** Gốc đường dẫn để dựng link trong email; bỏ dấu gạch chéo cuối để ghép không sinh ra `//`. */
+  async storefront(): Promise<StorefrontConfig> {
+    const baseUrl = await this.parameters.getString(SYSTEM_PARAMETER_CODE.STOREFRONT_BASE_URL);
+    return { baseUrl: baseUrl.trim().replace(/\/+$/, '') };
   }
 
   async mailtrap(): Promise<MailtrapConfig> {

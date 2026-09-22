@@ -3725,6 +3725,161 @@
         "test:src/modules/cms/cms-slug.spec.ts"
       ],
       "targets": []
+    },
+    {
+      "id": "API-20260922-POS-FLASH-SALE-PRICE-VISIBILITY",
+      "date": "2026-09-22",
+      "scope": "ORDER+PROMOTION+API+ADMIN",
+      "summary": "Đơn tại quầy vốn ĐÃ trừ suất flash (create → buildCheckout snapshot flash_sale_item_id → reservations.confirm giữ suất → orders.place chốt suất), nhưng getPosCatalog chỉ trả giá gốc: nhân viên đọc giá gốc cho khách còn hoá đơn in ra giá flash thấp hơn. PosCatalogItemDto thêm flashPrice và flashSaleAvailableQuantity để màn quầy hiện đúng giá sẽ thu. Các nhánh từ chối suất trong reserveQuota nay trả mã lỗi ổn định FLASH_SALE_QUOTA_EXHAUSTED / FLASH_SALE_CAMPAIGN_ENDED / FLASH_SALE_PER_CUSTOMER_LIMIT_REACHED kèm entity id biến thể trong details[].field, thay vì chỉ có câu thông báo. Khi suất hết giữa lúc lập đơn, createPosOrder dọn phiên bán (checkout_sessions → CANCELLED, carts → ABANDONED) rồi trả 409 POS_FLASH_SALE_REPRICED kèm giá gốc; màn quầy hạ giá dòng đó về giá gốc, đổi Idempotency-Key và bắt nhân viên xác nhận lại với khách thay vì âm thầm lưu đơn ở giá khác giá vừa đọc. Không thay đổi schema.",
+      "sources": [
+        "OpenAPI:getPosCatalog/createPosOrder",
+        "source:src/modules/order/services/pos-order.service.ts",
+        "source:src/modules/promotion/services/flash-sale.service.ts",
+        "source:src/modules/promotion/promotion.constants.ts",
+        "test:src/modules/order/services/pos-order.service.spec.ts",
+        "test:src/modules/order/services/pos-flash-sale-reprice.spec.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260922-CUSTOMER-PROFILE-AND-PASSWORD",
+      "date": "2026-09-22",
+      "scope": "CUSTOMER+AUTH+API+STOREFRONT",
+      "summary": "Khách tự cập nhật hồ sơ (updateCustomerProfile, PATCH /account/profile) với expectedVersion trong điều kiện WHERE; email/SĐT ghi đồng thời sang users và customers trong một transaction vì đó cũng là định danh đăng nhập, và kiểm trùng trên cả hai bảng. Thêm changeCustomerPassword dùng chung use case với nhân viên. Đổi mật khẩu nay thu hồi mọi phiên khác (revoke_reason PASSWORD_CHANGED), giữ lại phiên đang thao tác; audit ghi số phiên bị thu hồi, không chép mật khẩu. Không thay đổi schema database.",
+      "sources": [
+        "OpenAPI:updateCustomerProfile/changeCustomerPassword",
+        "source:src/modules/customer/customer-profile.service.ts",
+        "source:src/modules/auth/auth.service.ts",
+        "test:src/modules/customer/customer-profile.service.spec.ts",
+        "test:src/modules/auth/password-change-session-revoke.spec.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260922-INVENTORY-BALANCE-SUMMARY",
+      "date": "2026-09-22",
+      "scope": "INVENTORY+API+ADMIN",
+      "summary": "Thêm summarizeInventoryBalances: tổng hợp tồn kho trên TOÀN BỘ dòng khớp bộ lọc. Ba thẻ trên màn tồn kho trước đây đếm trên items của trang hiện tại (25 dòng), nên 'sắp hết hàng: 12' thực chất là '12 trong 25 dòng đang hiện' và đổi trang là số đổi theo. Bộ lọc và phạm vi chi nhánh dùng chung một hàm balanceWhere với danh sách để hai con số không lệch. Phân loại tồn rút về classifyInventoryBalance dùng chung. Gộp ở tầng ứng dụng vì LOW_STOCK/OUT_OF_STOCK là so sánh giữa ba cột mà Prisma không diễn đạt được trong where. Không thay đổi schema.",
+      "sources": [
+        "OpenAPI:summarizeInventoryBalances",
+        "source:src/modules/inventory/inventory-query.service.ts",
+        "source:src/modules/inventory/inventory.constants.ts",
+        "test:src/modules/inventory/inventory-query.service.spec.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260922-CONFIG-READINESS-HEALTH",
+      "date": "2026-09-22",
+      "scope": "SYSTEM+CONFIG+API",
+      "summary": "Thêm getConfigReadiness (GET health/config, quyền system.parameter.view): liệt kê tham số bắt buộc còn thiếu của từng tích hợp và cảnh báo ngay lúc khởi động. Lý do: hai sự cố production (GHN trả 503, phiên đăng nhập bị đá) cùng một gốc là tham số khai ở nơi ứng dụng không đọc, và lỗi chỉ hiện ra ở một endpoint ngẫu nhiên nhiều giờ sau. Trạng thái tách DISABLED (cố ý tắt, không phải lỗi) khỏi MISCONFIGURED (đang bật mà thiếu tham số) và UNKNOWN (chưa đọc được, không được báo READY). Chỉ trả TÊN tham số, không bao giờ trả giá trị. Không thay đổi schema.",
+      "sources": [
+        "OpenAPI:getConfigReadiness",
+        "source:src/modules/health/config-readiness.service.ts",
+        "test:src/modules/health/config-readiness.service.spec.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260922-CRON-HTTP-EVIDENCE",
+      "date": "2026-09-22",
+      "scope": "OPERATIONS+JOBS",
+      "summary": "Ba script cron:*:status nay đọc thêm net._http_response. cron.job_run_details báo 'succeeded' ngay khi pg_cron xếp hàng xong net.http_get, không phải khi API trả 200 — API chết hẳn thì bảng đó vẫn đều đặn 'succeeded' mỗi 5 phút. Bằng chứng mới lộ ra 3/20 lượt gọi bị timeout ở mốc 10s (cold start serverless) trong khi mọi lượt chạy đều báo thành công, nên timeout_milliseconds của lệnh cron nâng lên 30000. Ghép phản hồi với job theo thời gian vì pg_net không lưu URL và cron không lưu request_id; kết quả luôn kèm note nói rõ giới hạn đó. Không thay đổi schema hay contract.",
+      "sources": [
+        "source:scripts/lib/cron-http-status.cjs",
+        "source:scripts/configure-reservation-expiry-cron.cjs",
+        "source:scripts/configure-order-maintenance-cron.cjs",
+        "source:scripts/configure-flash-sale-quota-expiry-cron.cjs"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260922-PARAMETER-SYNC-ROUNDTRIPS",
+      "date": "2026-09-22",
+      "scope": "SYSTEM+PERFORMANCE",
+      "summary": "SystemParameterService.syncCatalog chuyển từ findUnique + update tuần tự cho TỪNG tham số sang ba lượt đi database cho cả catalog (findMany codes, createMany phần thiếu với skipDuplicates, một batch transaction cho update metadata). Bản cũ là ~78 lượt cho 39 tham số, mỗi lượt ~450ms tới Supabase Seoul, cộng vào mỗi lần khởi động và mỗi cold start. value vẫn do vận hành sở hữu: đồng bộ chỉ ghi metadata. Không thay đổi schema hay contract.",
+      "sources": [
+        "source:src/modules/system/parameters/system-parameter.service.ts",
+        "test:src/modules/system/parameters/system-parameter.service.spec.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260922-OUTBOX-NOTIFICATION-PASSWORD-RESET",
+      "date": "2026-09-22",
+      "scope": "DATABASE+NOTIFICATION+AUTH+ORDER+FULFILLMENT+API+STOREFRONT",
+      "summary": "Hiện thực outbox_events và notifications theo model đã review, thêm password_reset_tokens (bảng phát sinh sau review: mô hình V1 không có chỗ lưu token đặt lại mật khẩu). notification_templates CHƯA tạo — nội dung email nằm trong mã nguồn, cột notifications.template_id đổi thành template_code và thêm provider_message_id. Nghiệp vụ ghi ý định vào outbox trong cùng transaction; worker lấy việc bằng FOR UPDATE SKIP LOCKED, backoff 30s/2p/10p/1h, 5 lượt rồi chuyển DEAD và không xoá dòng. Thêm requestCustomerPasswordReset (luôn trả 202 để không lộ email nào có tài khoản) và resetCustomerPassword (token một lần, còn hạn, thu hồi toàn bộ phiên). Email: xác nhận đơn, cập nhật giao vận (chỉ SHIPPED/DELIVERED/DELIVERY_FAILED), đặt lại mật khẩu, đổi mật khẩu thành công. Thêm tham số hệ thống STOREFRONT_BASE_URL để dựng link trong email.",
+      "sources": [
+        "OpenAPI:requestCustomerPasswordReset/resetCustomerPassword",
+        "migration:prisma/migrations/20260922100000_outbox_notifications_password_reset",
+        "source:src/modules/notification/outbox-dispatcher.service.ts",
+        "source:src/modules/auth/password-reset.service.ts",
+        "test:src/modules/notification/outbox-dispatcher.service.spec.ts",
+        "test:src/modules/auth/password-reset.service.spec.ts"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": {
+            "Tên bảng": "notifications"
+          },
+          "columns": [
+            "Các cột chính"
+          ],
+          "set": {
+            "Các cột chính": "template_code,channel,dedup_key,recipient_masked,payload_json,status,attempt_count,next_attempt_at,sent_at,provider_message_id,error_code"
+          }
+        }
+      ],
+      "upsertRows": [
+        {
+          "sheet": "Tables",
+          "match": {
+            "Tên bảng": "password_reset_tokens"
+          },
+          "values": {
+            "ID": "T76",
+            "Module": "IAM",
+            "Tên bảng": "password_reset_tokens",
+            "Priority": "P0",
+            "Ý nghĩa": "Token đặt lại mật khẩu",
+            "Khóa chính": "id",
+            "Khóa ngoại quan trọng": "user_id->users",
+            "Unique / CHECK": "token_hash UQ; một lần qua used_at",
+            "Các cột chính": "user_id,token_hash,expires_at,used_at,request_ip_hash",
+            "Retention": "xoá theo user (CASCADE); dọn token hết hạn theo lịch"
+          }
+        },
+        {
+          "sheet": "Relationships",
+          "match": {
+            "Bảng con": "password_reset_tokens",
+            "Cột FK": "user_id"
+          },
+          "values": {
+            "Bảng con": "password_reset_tokens",
+            "Cột FK": "user_id",
+            "Bảng cha": "users",
+            "Cột PK": "id",
+            "Cardinality": "N → 1",
+            "ON DELETE": "CASCADE",
+            "Điểm cần kiểm tra": "Xoá tài khoản thì token đặt lại mật khẩu của tài khoản đó không còn nghĩa"
+          }
+        }
+      ]
+    },
+    {
+      "id": "API-20260922-IAM-ASSIGNMENT-ESCALATION",
+      "date": "2026-09-22",
+      "scope": "IAM+SECURITY+API",
+      "summary": "Chặn leo thang đặc quyền qua đường GÁN vai trò. resolvePermissionCodes đã chặn việc SỬA vai trò để thêm quyền mình không có, nhưng authorizeAssignment chỉ kiểm role thuộc nhóm gán được và actor có phạm vi GLOBAL: một tài khoản chỉ có iam.assignment.manage gán được BRANCH_MANAGER (32 quyền) cho bất kỳ nhân viên nào, kể cả chính mình, và nhận đủ 32 quyền ở lần làm mới phiên kế tiếp. Thêm assertCanGrantRole áp cùng quy tắc với bên sửa vai trò (tập quyền của role phải nằm trong tập quyền của actor), gọi ở cả assignRole và createStaffUser. Đã xác minh bằng probe trước khi sửa; đồng thời ghi nhận giả thuyết cũ 'bỏ quyền rồi gán lại khi sửa role' KHÔNG tái hiện được vì currentCodes đọc lại theo từng request. Fixture ownerActor trong iam.service.spec đổi từ permissions: [] sang toàn bộ catalog vì fixture cũ làm mọi kiểm tra chống leo thang trôi qua. Không thay đổi schema hay hình dạng contract; thêm nhánh lỗi 403.",
+      "sources": [
+        "OpenAPI:assignAdminUserRole/createAdminStaffUser",
+        "source:src/modules/iam/iam.service.ts",
+        "doc:src/modules/iam/README.md",
+        "test:src/modules/iam/iam.role-administration.spec.ts"
+      ],
+      "targets": []
     }
   ]
 }

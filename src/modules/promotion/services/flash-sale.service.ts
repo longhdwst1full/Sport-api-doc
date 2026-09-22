@@ -10,6 +10,8 @@ import { toActorDatabaseId, toDatabaseId, toEntityId } from '../../../common/ide
 import { MutationContext } from '../../../common/request/request-context';
 import { PrismaService } from '../../../database/prisma.service';
 import { AuditWriter } from '../../audit/audit.writer';
+import { SYSTEM_PARAMETER_CODE } from '../../system/parameters/system-parameter.catalog';
+import { SystemParameterService } from '../../system/parameters/system-parameter.service';
 import {
   AdminFlashSaleQueryDto,
   ChangeFlashSaleCampaignStatusDto,
@@ -25,9 +27,10 @@ import {
 import {
   FLASH_SALE_CAMPAIGN_STATUS,
   FLASH_SALE_CAMPAIGN_TRANSITIONS,
+  FLASH_SALE_ERROR_CODE,
   FLASH_SALE_ITEM_STATUS,
+  type FlashSaleErrorCode,
   FLASH_SALE_QUOTA_STATUS,
-  FLASH_SALE_QUOTA_TTL_MINUTES,
 } from '../promotion.constants';
 
 const campaignInclude = {
@@ -83,11 +86,31 @@ export interface FlashSaleQuotaGrant {
   salePrice: Prisma.Decimal;
 }
 
+/**
+ * Từ chối suất flash kèm mã lỗi ổn định và biến thể bị ảnh hưởng.
+ *
+ * CONTRACT: `code` là thứ Admin/Storefront bắt để biết phải làm gì; `details[0].field` là entity id
+ * của biến thể, đủ để màn hình cập nhật đúng một dòng thay vì dựng lại cả giỏ. Trả 409 chứ không
+ * âm thầm hạ giá: giá đã đọc cho khách nghe mà tự đổi thì tới lúc in hoá đơn mới lộ.
+ */
+function flashSaleConflict(
+  code: FlashSaleErrorCode,
+  message: string,
+  productVariantId: bigint,
+): ConflictException {
+  return new ConflictException({
+    code,
+    message,
+    details: [{ field: toEntityId(productVariantId), code, message }],
+  });
+}
+
 @Injectable()
 export class FlashSaleService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditWriter,
+    private readonly parameters: SystemParameterService,
   ) {}
 
   // ─── Storefront ────────────────────────────────────────────────────────────
@@ -517,7 +540,13 @@ export class FlashSaleService {
     });
     const itemById = new Map(items.map((item) => [item.id, item]));
 
-    const expiresAt = new Date(now.getTime() + FLASH_SALE_QUOTA_TTL_MINUTES * 60_000);
+    // TTL đọc từ `system_parameters` (cache 30s trong tiến trình) chứ không phải hằng số biên dịch:
+    // vận hành cần kéo dài/rút ngắn cửa sổ giữ suất giữa chiến dịch mà không redeploy. Đọc ngoài
+    // `transaction` là cố ý — đây là cấu hình, không phải dữ liệu tham gia bất biến của quota.
+    const ttlMinutes = await this.parameters.getInteger(
+      SYSTEM_PARAMETER_CODE.FLASH_SALE_QUOTA_TTL_MINUTES,
+    );
+    const expiresAt = new Date(now.getTime() + ttlMinutes * 60_000);
     const grants: FlashSaleQuotaGrant[] = [];
 
     // Duyệt theo DÒNG CHECKOUT, không duyệt theo danh sách suất: mỗi dòng đúng
@@ -533,8 +562,10 @@ export class FlashSaleService {
         item.campaign.startsAt > now ||
         item.campaign.endsAt <= now
       ) {
-        throw new ConflictException(
-          'Chương trình khuyến mãi đã kết thúc; vui lòng tải lại giỏ hàng để xem giá mới',
+        throw flashSaleConflict(
+          FLASH_SALE_ERROR_CODE.CAMPAIGN_ENDED,
+          'Chương trình khuyến mãi đã kết thúc; giá quay về giá gốc',
+          item?.productVariantId ?? line.productVariantId,
         );
       }
 
@@ -549,7 +580,11 @@ export class FlashSaleService {
         data: { reservedQuantity: { increment: line.quantity }, version: { increment: 1 } },
       });
       if (claimed.count === 0) {
-        throw new ConflictException('Suất flash sale vừa hết; vui lòng tải lại giỏ hàng');
+        throw flashSaleConflict(
+          FLASH_SALE_ERROR_CODE.QUOTA_EXHAUSTED,
+          'Suất flash sale vừa hết; giá quay về giá gốc',
+          item.productVariantId,
+        );
       }
 
       await transaction.flashSaleQuotaReservation.create({
@@ -588,15 +623,17 @@ export class FlashSaleService {
    */
   private async assertPerCustomerLimit(
     transaction: Prisma.TransactionClient,
-    item: { id: bigint; perCustomerLimit: number | null },
+    item: { id: bigint; perCustomerLimit: number | null; productVariantId: bigint },
     customerKey: string,
     requestedQuantity: number,
     checkoutSessionId: bigint,
   ): Promise<void> {
     if (item.perCustomerLimit === null) return;
     if (requestedQuantity > item.perCustomerLimit) {
-      throw new ConflictException(
+      throw flashSaleConflict(
+        FLASH_SALE_ERROR_CODE.PER_CUSTOMER_LIMIT,
         `Mỗi khách chỉ mua tối đa ${item.perCustomerLimit} sản phẩm trong chương trình flash sale`,
+        item.productVariantId,
       );
     }
 
@@ -614,8 +651,10 @@ export class FlashSaleService {
     });
     const alreadyHeld = held._sum.quantity ?? 0;
     if (alreadyHeld + requestedQuantity > item.perCustomerLimit) {
-      throw new ConflictException(
+      throw flashSaleConflict(
+        FLASH_SALE_ERROR_CODE.PER_CUSTOMER_LIMIT,
         `Bạn đã mua ${alreadyHeld} sản phẩm trong chương trình này; giới hạn là ${item.perCustomerLimit}`,
+        item.productVariantId,
       );
     }
   }

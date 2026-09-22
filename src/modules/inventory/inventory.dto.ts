@@ -36,6 +36,22 @@ export class InventoryBalanceDto {
   status: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK';
 }
 
+/**
+ * Số liệu tổng hợp của TOÀN BỘ dòng tồn khớp bộ lọc, không chỉ trang đang xem.
+ *
+ * Ba thẻ trên màn tồn kho trước đây đếm trên `items` của trang hiện tại (25 dòng), nên "12 dòng
+ * sắp hết" thực chất là "12 dòng sắp hết trong 25 dòng đang hiện".
+ */
+export class InventoryBalanceSummaryDto {
+  @ApiProperty({ description: 'Số dòng tồn khớp bộ lọc' }) trackedBalances: number;
+  @ApiProperty({ description: 'Số dòng còn bán bình thường' }) inStock: number;
+  @ApiProperty({ description: 'Số dòng chạm hoặc dưới ngưỡng đặt lại' }) lowStock: number;
+  @ApiProperty({ description: 'Số dòng hết hàng bán (available = 0)' }) outOfStock: number;
+  @ApiProperty({ description: 'Tổng tồn vật lý' }) totalOnHand: number;
+  @ApiProperty({ description: 'Tổng đang giữ cho đơn chưa xuất' }) totalReserved: number;
+  @ApiProperty({ description: 'Tổng còn bán được = onHand - reserved' }) totalAvailable: number;
+}
+
 export class InventoryBalanceListDto {
   @ApiProperty({ type: [InventoryBalanceDto] }) items: InventoryBalanceDto[];
   @ApiProperty() total: number;

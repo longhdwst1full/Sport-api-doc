@@ -30,6 +30,8 @@ import {
   OrderDetailDto,
   OrderRecipientDto,
 } from '../dto/order.dto';
+import { OutboxWriter } from '../../notification/outbox.writer';
+import { OUTBOX_EVENT_TYPE } from '../../notification/notification.constants';
 import {
   ORDER_AUDIT_ACTION,
   ORDER_CHANNEL,
@@ -89,6 +91,7 @@ export class OrderService {
     private readonly audit: AuditWriter,
     private readonly config: ConfigService,
     private readonly flashSales: FlashSaleService,
+    private readonly outbox: OutboxWriter,
   ) {}
 
   async placeGuest(
@@ -905,6 +908,37 @@ export class OrderService {
               grandTotal: created.grandTotal.toFixed(2),
             },
           }, transaction);
+
+          /**
+           * Báo cho khách biết đơn đã vào hệ thống.
+           *
+           * TRANSACTION: ghi ý định cùng transaction đặt đơn. Gửi thẳng ở đây là buộc đơn hàng vào
+           * tình trạng của nhà cung cấp email — họ chậm thì đơn chậm theo, họ lỗi thì hoặc mất email
+           * hoặc rollback cả đơn vì một việc phụ.
+           *
+           * Không có email người nhận thì không gửi: đơn tại quầy thường chỉ có số điện thoại.
+           */
+          const address = this.readRecipient(checkout.recipientSnapshot);
+          const recipientEmail = typeof address.email === 'string' ? address.email.trim() : '';
+          if (recipientEmail) {
+            await this.outbox.append(
+              {
+                aggregateType: 'ORDER',
+                aggregateId: toEntityId(created.id),
+                eventType: OUTBOX_EVENT_TYPE.ORDER_PLACED,
+                payload: {
+                  recipientEmail,
+                  recipientName:
+                    typeof address.recipient === 'string' ? address.recipient : 'Quý khách',
+                  orderNo: created.orderNo,
+                  grandTotal: created.grandTotal.toFixed(2),
+                  itemCount: created.items.length,
+                },
+              },
+              transaction,
+            );
+          }
+
           return this.toDetail(created);
         }, {
           isolationLevel: Prisma.TransactionIsolationLevel.Serializable,

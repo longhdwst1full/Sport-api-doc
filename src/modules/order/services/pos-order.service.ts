@@ -9,6 +9,7 @@ import { ScopeType } from '../../iam/iam.types';
 import { InventoryReservationService } from '../../checkout/inventory-reservation.service';
 import { FulfillmentService } from '../../fulfillment/services/fulfillment.service';
 import { FlashSaleService } from '../../promotion/services/flash-sale.service';
+import { FLASH_SALE_ERROR_CODE } from '../../promotion/promotion.constants';
 import type { OrderDetailDto } from '../dto/order.dto';
 import type {
   CreatePosOrderDto,
@@ -22,6 +23,20 @@ const POS_SHIPPING_METHOD = 'BRANCH_FREE';
 /** Đơn nhân viên lập hộ có giao hàng đi theo phương thức giao tiêu chuẩn như đơn của khách. */
 const DELIVERY_SHIPPING_METHOD = 'STANDARD_DELIVERY';
 const POS_CHANNEL = 'STORE';
+
+/** Giá đã báo cho khách của một dòng, giữ lại để báo lại khi suất flash biến mất giữa đường. */
+interface PosQuoteLine {
+  productVariantId: string;
+  sku: string;
+  regularPrice: string;
+  /** `null` khi dòng đó vốn không có giá flash. */
+  flashPrice: string | null;
+}
+
+interface PosQuote {
+  checkoutToken: string;
+  lines: PosQuoteLine[];
+}
 
 /** Hình dạng tối thiểu để tính tồn: hàng lẻ có `components` rỗng, combo thì không. */
 interface SellableVariant {
@@ -50,6 +65,49 @@ export function resolveOrderCreationPlan(input: {
     handOverNow: input.handOverImmediately ?? !isDelivery,
     shippingMethod: isDelivery ? DELIVERY_SHIPPING_METHOD : POS_SHIPPING_METHOD,
   };
+}
+
+/**
+ * Đọc biến thể bị mất suất từ lỗi của `reserveQuota`.
+ *
+ * `undefined` = lỗi không liên quan flash sale (hết tồn kho, tranh chấp version…) và phải để nguyên
+ * cho caller. Mảng rỗng = đúng là lỗi flash sale nhưng không xác định được biến thể nào.
+ */
+export function flashSaleLossVariantIds(error: unknown): string[] | undefined {
+  if (!(error instanceof ConflictException)) return undefined;
+  const body = error.getResponse();
+  if (!body || typeof body !== 'object') return undefined;
+  const { code, details } = body as { code?: unknown; details?: unknown };
+  if (typeof code !== 'string' || !code.startsWith('FLASH_SALE_')) return undefined;
+  if (!Array.isArray(details)) return [];
+  return details.flatMap((detail) => {
+    const field = (detail as { field?: unknown }).field;
+    return typeof field === 'string' ? [field] : [];
+  });
+}
+
+/**
+ * Lỗi 409 báo lại giá cho quầy.
+ *
+ * Không nhận ra biến thể nào thì báo lại toàn bộ dòng có giá flash: thà nhân viên xem lại nhiều
+ * dòng hơn là cập nhật sai một dòng rồi thu sai tiền.
+ */
+export function buildRepricedConflict(lostVariantIds: string[], quote: PosQuote): ConflictException {
+  const affected = quote.lines.filter(
+    (line) =>
+      line.flashPrice !== null &&
+      (lostVariantIds.length === 0 || lostVariantIds.includes(line.productVariantId)),
+  );
+
+  return new ConflictException({
+    code: FLASH_SALE_ERROR_CODE.POS_REPRICED,
+    message: 'Suất flash sale vừa hết. Giá đã quay về giá gốc, vui lòng xác nhận lại với khách.',
+    details: affected.map((line) => ({
+      field: line.productVariantId,
+      code: FLASH_SALE_ERROR_CODE.POS_REPRICED,
+      message: `${line.sku}: giá flash ${line.flashPrice} không còn, giá gốc là ${line.regularPrice}`,
+    })),
+  });
 }
 
 @Injectable()
@@ -90,11 +148,17 @@ export class PosOrderService {
     // bản ghi mồ côi không ai dọn.
     await this.assertAvailable(input, warehouse.id);
     const customerId = await this.resolveCustomer(input, requestId, principal);
-    const checkoutToken = await this.buildCheckout(input, warehouse, customerId, key, requestId, principal);
+    const quote = await this.buildCheckout(input, warehouse, customerId, key, requestId, principal);
+    const checkoutToken = quote.checkoutToken;
 
-    await this.reservations.confirm(checkoutToken, `${key}:reserve`, requestId, {
-      actorType: 'SYSTEM',
-    });
+    try {
+      await this.reservations.confirm(checkoutToken, `${key}:reserve`, requestId, {
+        actorType: 'SYSTEM',
+      });
+    } catch (error) {
+      await this.repriceOnFlashSaleLoss(error, quote);
+      throw error;
+    }
 
     const placed = await this.orders.place(checkoutToken, key, requestId, {
       type: 'STAFF',
@@ -183,9 +247,17 @@ export class PosOrderService {
       variants,
       await this.availableOf(variants, warehouse.id),
     );
+    // Giá flash của đúng trang đang xem. Màn quầy phải thấy cùng giá với web, nếu không nhân viên
+    // đọc giá gốc cho khách rồi hoá đơn ra số thấp hơn và không ai giải thích được chênh lệch.
+    const deals = await this.flashSales.resolveActiveDeals(
+      this.prisma,
+      rows.map((row) => row.id),
+      new Date(),
+    );
 
     return {
       items: rows.map((row) => {
+        const deal = deals.get(row.id);
         const components = row.bundleDefinition?.items ?? [];
         return {
           id: toEntityId(row.id),
@@ -200,6 +272,8 @@ export class PosOrderService {
             quantity: component.quantity,
           })),
           availableQuantity: availability.get(row.id.toString())?.available ?? 0,
+          flashPrice: deal?.salePrice.toFixed(2) ?? null,
+          flashSaleAvailableQuantity: deal?.availableQuantity ?? null,
         };
       }),
       page: query.page,
@@ -387,7 +461,7 @@ export class PosOrderService {
     key: string,
     requestId: string,
     principal: AuthPrincipal,
-  ): Promise<string> {
+  ): Promise<PosQuote> {
     const variantIds = input.items.map((item) => toDatabaseId(item.productVariantId));
     const variants = await this.prisma.productVariant.findMany({
       where: { id: { in: variantIds }, status: 'ACTIVE' },
@@ -561,7 +635,54 @@ export class PosOrderService {
       );
     });
 
-    return checkoutToken;
+    return {
+      checkoutToken,
+      lines: lines.map((line) => ({
+        productVariantId: toEntityId(line.variant.id),
+        sku: line.variant.sku,
+        regularPrice: line.variant.prices[0].amount.toFixed(2),
+        flashPrice: line.flashSaleItemId ? line.unitPrice.toFixed(2) : null,
+      })),
+    };
+  }
+
+  /**
+   * Suất flash biến mất giữa lúc nhân viên đang lập đơn.
+   *
+   * Khách đang đứng ở quầy và nhân viên đã đọc giá giảm cho khách nghe, nên KHÔNG tự hạ về giá gốc
+   * rồi lưu đơn: đơn sẽ lưu một con số khác con số vừa nói, và chỉ lộ ra lúc in hoá đơn. Thay vào
+   * đó dọn phiên bán vừa tạo rồi trả 409 kèm giá gốc, để màn hình quầy cập nhật dòng đó và bắt
+   * nhân viên xác nhận lại.
+   *
+   * Dọn phiên là bắt buộc: `buildCheckout` đã ghi cart + checkout session trước khi bước giữ chỗ
+   * chạy, để lại thì mỗi lần thử hỏng đẻ ra một phiên QUOTED treo tới lúc hết hạn.
+   */
+  private async repriceOnFlashSaleLoss(error: unknown, quote: PosQuote): Promise<void> {
+    const lost = flashSaleLossVariantIds(error);
+    if (lost === undefined) return;
+
+    await this.abandonQuote(quote.checkoutToken);
+
+    throw buildRepricedConflict(lost, quote);
+  }
+
+  /** Huỷ phiên bán và giỏ giao dịch của nó; hai bảng phải cùng đổi hoặc cùng giữ nguyên. */
+  private async abandonQuote(checkoutToken: string): Promise<void> {
+    await this.prisma.$transaction(async (transaction) => {
+      const session = await transaction.checkoutSession.findUnique({
+        where: { checkoutToken },
+        select: { id: true, cartId: true, status: true },
+      });
+      if (!session || session.status !== 'QUOTED') return;
+      await transaction.checkoutSession.update({
+        where: { id: session.id },
+        data: { status: 'CANCELLED' },
+      });
+      await transaction.cart.update({
+        where: { id: session.cartId },
+        data: { status: 'ABANDONED' },
+      });
+    });
   }
 
   /** Tiền đã cầm trên tay nên ghi nhận ngay, kèm người thu để đối soát ca. */

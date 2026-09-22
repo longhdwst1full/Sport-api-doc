@@ -31,6 +31,7 @@ export const BUSINESS_MODEL_REGISTRY: BusinessModuleDefinition[] = [
     models: [
       model('users', 'P0'),
       model('auth_sessions', 'P0'),
+      model('password_reset_tokens', 'P0'),
       model('roles', 'P0'),
       model('permissions', 'P0'),
       model('role_permissions', 'P0'),

@@ -1,5 +1,9 @@
 import { PrismaService } from '../../database/prisma.service';
+import type { ConfigReadinessService } from './config-readiness.service';
 import { HealthController } from './health.controller';
+
+/** `/health` không đọc cấu hình tích hợp; endpoint `/health/config` mới là nơi dùng service này. */
+const readiness = {} as ConfigReadinessService;
 
 describe('HealthController', () => {
   it('reports disabled database without degrading local contract tooling', async () => {
@@ -8,7 +12,7 @@ describe('HealthController', () => {
       getConnectionStatus: () => Promise.resolve<'disabled'>('disabled'),
     } as Pick<PrismaService, 'isEnabled' | 'getConnectionStatus'> as PrismaService;
 
-    await expect(new HealthController(prisma).getHealth()).resolves.toMatchObject({
+    await expect(new HealthController(prisma, readiness).getHealth()).resolves.toMatchObject({
       status: 'ok',
       database: { enabled: false, status: 'disabled' },
     });
@@ -20,7 +24,7 @@ describe('HealthController', () => {
       getConnectionStatus: () => Promise.resolve<'down'>('down'),
     } as Pick<PrismaService, 'isEnabled' | 'getConnectionStatus'> as PrismaService;
 
-    await expect(new HealthController(prisma).getHealth()).resolves.toMatchObject({
+    await expect(new HealthController(prisma, readiness).getHealth()).resolves.toMatchObject({
       status: 'degraded',
       database: { enabled: true, status: 'down' },
     });

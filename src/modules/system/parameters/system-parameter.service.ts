@@ -332,57 +332,74 @@ export class SystemParameterService implements OnModuleInit {
     this.cacheExpiresAt = 0;
   }
 
-  /** Đồng bộ catalog vào database: thêm tham số mới, không ghi đè giá trị đang dùng. */
+  /**
+   * Đồng bộ catalog vào database: thêm tham số mới, không ghi đè giá trị đang dùng.
+   *
+   * Ba lượt đi database cho cả catalog, không phải hai lượt cho MỖI tham số. Bản cũ chạy
+   * `findUnique` rồi `update` tuần tự trong vòng lặp: với 39 tham số là ~78 lượt, mà database ở
+   * Seoul nên mỗi lượt ~450ms — cộng lại là hàng chục giây cộng vào mỗi lần khởi động (và mỗi lần
+   * serverless cold start).
+   *
+   * `value` vẫn do vận hành sở hữu: bản ghi đã có chỉ được cập nhật metadata mô tả.
+   */
   async syncCatalog(): Promise<number> {
     if (!this.prisma.isEnabled()) return 0;
-    let created = 0;
-    for (const definition of SYSTEM_PARAMETER_CATALOG) {
-      const existing = await this.prisma.systemParameter.findUnique({
-        where: { code: definition.code },
-      });
-      if (existing) {
-        // Metadata mô tả có thể cập nhật; `value` do vận hành sở hữu nên giữ nguyên.
-        await this.prisma.systemParameter.update({
-          where: { code: definition.code },
-          data: {
-            groupCode: definition.groupCode,
-            label: definition.label,
-            description: definition.description,
-            valueType: definition.valueType,
-            defaultValue: definition.defaultValue,
-            minValue: definition.minValue === undefined ? null : new Prisma.Decimal(definition.minValue),
-            maxValue: definition.maxValue === undefined ? null : new Prisma.Decimal(definition.maxValue),
-            unit: definition.unit ?? null,
-            sortOrder: definition.sortOrder,
-            isPublic: definition.isPublic ?? false,
-            isSecret: definition.isSecret ?? false,
-            isSystem: true,
-          },
-        });
-        continue;
-      }
-      await this.prisma.systemParameter.create({
-        data: {
+
+    const existingRows = await this.prisma.systemParameter.findMany({
+      where: { code: { in: SYSTEM_PARAMETER_CATALOG.map((definition) => definition.code) } },
+      select: { code: true },
+    });
+    const existing = new Set(existingRows.map((row) => row.code));
+    const missing = SYSTEM_PARAMETER_CATALOG.filter(
+      (definition) => !existing.has(definition.code),
+    );
+
+    if (missing.length > 0) {
+      await this.prisma.systemParameter.createMany({
+        data: missing.map((definition) => ({
+          ...this.catalogMetadata(definition),
           code: definition.code,
-          groupCode: definition.groupCode,
-          label: definition.label,
-          description: definition.description,
-          valueType: definition.valueType,
           value: definition.defaultValue,
-          defaultValue: definition.defaultValue,
-          minValue: definition.minValue === undefined ? null : new Prisma.Decimal(definition.minValue),
-          maxValue: definition.maxValue === undefined ? null : new Prisma.Decimal(definition.maxValue),
-          unit: definition.unit ?? null,
-          sortOrder: definition.sortOrder,
-          isPublic: definition.isPublic ?? false,
-          isSecret: definition.isSecret ?? false,
-          isSystem: true,
-        },
+        })),
+        // Hai instance khởi động cùng lúc thì cả hai đều thấy "chưa có"; bỏ qua trùng thay vì
+        // để một instance chết ở bước đồng bộ tham số.
+        skipDuplicates: true,
       });
-      created += 1;
     }
+
+    // Một batch transaction = một lượt đi database cho toàn bộ update metadata.
+    await this.prisma.$transaction(
+      SYSTEM_PARAMETER_CATALOG.filter((definition) => existing.has(definition.code)).map(
+        (definition) =>
+          this.prisma.systemParameter.update({
+            where: { code: definition.code },
+            data: this.catalogMetadata(definition),
+          }),
+      ),
+    );
+
     this.invalidateCache();
-    return created;
+    return missing.length;
+  }
+
+  /** Phần metadata do code sở hữu. Không chứa `value` — giá trị là của vận hành. */
+  private catalogMetadata(definition: (typeof SYSTEM_PARAMETER_CATALOG)[number]) {
+    return {
+      groupCode: definition.groupCode,
+      label: definition.label,
+      description: definition.description,
+      valueType: definition.valueType,
+      defaultValue: definition.defaultValue,
+      minValue:
+        definition.minValue === undefined ? null : new Prisma.Decimal(definition.minValue),
+      maxValue:
+        definition.maxValue === undefined ? null : new Prisma.Decimal(definition.maxValue),
+      unit: definition.unit ?? null,
+      sortOrder: definition.sortOrder,
+      isPublic: definition.isPublic ?? false,
+      isSecret: definition.isSecret ?? false,
+      isSystem: true,
+    };
   }
 
   private async readValue(code: string): Promise<string | undefined> {

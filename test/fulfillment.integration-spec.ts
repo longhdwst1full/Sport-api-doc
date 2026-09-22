@@ -7,6 +7,7 @@ import { AuditWriter } from '../src/modules/audit/audit.writer';
 import type { AuthPrincipal } from '../src/modules/auth/auth.types';
 import { FulfillmentService } from '../src/modules/fulfillment/services/fulfillment.service';
 import { ScopeType } from '../src/modules/iam/iam.types';
+import { OutboxWriter } from '../src/modules/notification/outbox.writer';
 
 jest.setTimeout(120_000);
 
@@ -26,6 +27,7 @@ describe('Fulfillment stock commit and delivery return', () => {
     { write: jest.fn().mockResolvedValue({ id: '1', createdAt: new Date().toISOString() }) } as unknown as AuditWriter,
     // Không gọi hãng giao hàng trong integration test: mã vận đơn do Admin nhập tay.
     new DisabledShippingPartnerClient(),
+    new OutboxWriter(prisma),
   );
   let branchId = 0n;
   let warehouseId = 0n;

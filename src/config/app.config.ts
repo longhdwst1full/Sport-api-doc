@@ -13,6 +13,14 @@ export default registerAs('app', () => ({
   environment: process.env.NODE_ENV ?? 'development',
   port: Number(process.env.PORT ?? 4000),
   corsOrigins: splitCsv(process.env.CORS_ORIGINS, ['*']),
+  /**
+   * Số lớp proxy tin cậy trước ứng dụng.
+   *
+   * Không đặt thì Express lấy IP của proxy làm IP client, nên rate limit gom mọi người dùng vào
+   * chung một rổ: một kẻ tấn công làm cạn hạn mức của tất cả, còn giới hạn theo IP thì vô nghĩa.
+   * Vercel đặt đúng một lớp proxy trước ứng dụng.
+   */
+  trustProxy: Number(process.env.TRUST_PROXY ?? ((process.env.NODE_ENV ?? 'development') === 'production' ? 1 : 0)),
   authBypass:
     (process.env.NODE_ENV ?? 'development') === 'development' &&
     (process.env.AUTH_BYPASS ?? 'false') === 'true',
@@ -47,10 +55,6 @@ export default registerAs('app', () => ({
     paymentExpiry: {
       enabled: process.env.PAYMENT_EXPIRY_JOB_ENABLED === 'true',
       batchSize: Number(process.env.PAYMENT_EXPIRY_JOB_BATCH_SIZE ?? 50),
-    },
-    flashSaleQuotaExpiry: {
-      enabled: process.env.FLASH_SALE_QUOTA_EXPIRY_JOB_ENABLED === 'true',
-      batchSize: Number(process.env.FLASH_SALE_QUOTA_EXPIRY_JOB_BATCH_SIZE ?? 50),
     },
     orderCompletion: {
       enabled: process.env.ORDER_COMPLETION_JOB_ENABLED === 'true',

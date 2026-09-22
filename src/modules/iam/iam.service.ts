@@ -265,6 +265,7 @@ export class IamService {
     if (!(await this.iam.hasUser(userId))) throw new NotFoundException('Không tìm thấy tài khoản');
     const role = await this.iam.findActiveRoleByCode(input.roleCode);
     if (!role) throw new NotFoundException('Không tìm thấy vai trò');
+    this.assertCanGrantRole(actor, role);
 
     await this.validateScope(input);
     if (
@@ -346,6 +347,7 @@ export class IamService {
     await this.validateScope(assignmentInput);
     const role = await this.iam.findActiveRoleByCode(input.roleCode);
     if (!role) throw new NotFoundException('Không tìm thấy vai trò');
+    this.assertCanGrantRole(actor, role);
 
     const normalizedEmail = input.email.trim().toLowerCase();
     if (await this.iam.hasActiveEmail(normalizedEmail)) {
@@ -428,6 +430,31 @@ export class IamService {
     }
     if (!this.hasGlobalScope(actor)) {
       throw new ForbiddenException('Only the root administrator can assign staff roles');
+    }
+  }
+
+  /**
+   * Không cho leo thang đặc quyền qua đường GÁN vai trò.
+   *
+   * SECURITY: `resolvePermissionCodes` chặn việc SỬA vai trò để thêm quyền mình không có, nhưng
+   * gán vai trò là cánh cửa thứ hai vào cùng chỗ đó: một tài khoản chỉ có `iam.assignment.manage`
+   * và phạm vi GLOBAL trước đây gán được BRANCH_MANAGER (32 quyền) cho bất kỳ nhân viên nào —
+   * kể cả chính mình — và nhận đủ 32 quyền đó ở lần làm mới phiên kế tiếp.
+   *
+   * Quy tắc đặt giống hệt bên sửa vai trò để hai đường không lệch nhau: chỉ gán được vai trò có
+   * tập quyền nằm trong tập quyền của chính người gán. Quản trị viên gốc giữ toàn bộ quyền nên
+   * không bị ảnh hưởng.
+   */
+  private assertCanGrantRole(
+    actor: AuthPrincipal,
+    role: { code: string; permissionCodes: readonly string[] },
+  ): void {
+    const held = new Set(actor.permissions);
+    const escalated = role.permissionCodes.filter((code) => !held.has(code));
+    if (escalated.length > 0) {
+      throw new ForbiddenException(
+        `Bạn không thể gán vai trò ${role.code} vì nó chứa quyền bạn không có: ${escalated.join(', ')}`,
+      );
     }
   }
 

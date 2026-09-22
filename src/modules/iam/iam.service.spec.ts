@@ -3,14 +3,20 @@ import { InMemoryOrganizationRepository } from '../organization/in-memory-organi
 import { OrganizationService } from '../organization/organization.service';
 import { InMemoryIamRepository } from './in-memory-iam.repository';
 import { IamService } from './iam.service';
+import { PERMISSION_CATALOG } from './iam.permissions';
 import { ScopeType, SystemRoleCode } from './iam.types';
 import { AuthPrincipal } from '../auth/auth.types';
 
 describe('IamService', () => {
   const context = { requestId: 'unit-request', actorUserId: 'unit-actor' };
+  /**
+   * Quản trị viên gốc giữ TOÀN BỘ quyền. Fixture cũ để `permissions: []` nên không phản ánh được
+   * người dùng thật, và làm mọi kiểm tra chống leo thang đặc quyền trôi qua mà không ai thấy.
+   */
   const ownerActor: AuthPrincipal = {
     userId: 'owner', sessionId: 'session', displayName: 'Owner', permissionVersion: '1',
-    permissions: [], scopes: [{ type: ScopeType.GLOBAL }], mustChangePassword: false,
+    permissions: PERMISSION_CATALOG.map(({ code }) => code),
+    scopes: [{ type: ScopeType.GLOBAL }], mustChangePassword: false,
   };
   const createService = () => {
     const organization = new OrganizationService(new InMemoryOrganizationRepository());

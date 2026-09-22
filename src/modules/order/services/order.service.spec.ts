@@ -7,6 +7,7 @@ import { FlashSaleService } from '../../promotion/services/flash-sale.service';
 import { CartService } from '../../cart/cart.service';
 import { ScopeType } from '../../iam/iam.types';
 import { OrderService } from './order.service';
+import type { OutboxWriter } from '../../notification/outbox.writer';
 
 describe('OrderService admin query', () => {
   const findMany = jest.fn<Promise<never[]>, [Prisma.OrderFindManyArgs]>().mockResolvedValue([]);
@@ -21,6 +22,7 @@ describe('OrderService admin query', () => {
     {} as AuditWriter,
     { get: jest.fn().mockReturnValue(30) } as unknown as ConfigService,
     {} as FlashSaleService,
+    { append: jest.fn().mockResolvedValue(undefined) } as unknown as OutboxWriter,
   );
   const principal = (scopes: AuthPrincipal['scopes']): AuthPrincipal => ({
     userId: '1',

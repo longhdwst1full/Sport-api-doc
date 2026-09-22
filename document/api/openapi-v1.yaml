@@ -15,6 +15,36 @@ paths:
       summary: Service health
       tags:
         - System
+  /api/v1/health/config:
+    get:
+      operationId: getConfigReadiness
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigReadinessDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Tham số bắt buộc còn thiếu của từng tích hợp (chỉ tên tham số, không có giá trị)
+      tags:
+        - System
+      x-required-permissions:
+        - system.parameter.view
   /api/v1/admin/system/modules:
     get:
       operationId: listSystemModules
@@ -1908,6 +1938,45 @@ paths:
       security:
         - bearer: []
       summary: "Hồ sơ của khách đang đăng nhập: tên, email, số điện thoại"
+      tags:
+        - Storefront Customer
+    patch:
+      operationId: updateCustomerProfile
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCustomerProfileDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerProfileDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: Version không khớp, hoặc email/SĐT đã thuộc về tài khoản khác
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Khách tự cập nhật tên, email, số điện thoại và tuỳ chọn nhận tin
       tags:
         - Storefront Customer
   /api/v1/admin/customers:
@@ -4406,6 +4475,76 @@ paths:
       security:
         - bearer: []
       summary: List warehouse balances
+      tags:
+        - Admin Inventory
+      x-required-permissions:
+        - inventory.stock.view
+  /api/v1/admin/inventory/balances/summary:
+    get:
+      operationId: summarizeInventoryBalances
+      parameters:
+        - name: page
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            default: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 25
+            type: number
+        - name: search
+          required: false
+          in: query
+          description: Search SKU or product name
+          schema:
+            maxLength: 100
+            type: string
+        - name: warehouseCode
+          required: false
+          in: query
+          schema:
+            maxLength: 32
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryBalanceSummaryDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "503":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Tổng hợp tồn kho trên toàn bộ dòng khớp bộ lọc, không chỉ trang đang xem
       tags:
         - Admin Inventory
       x-required-permissions:
@@ -8997,54 +9136,54 @@ components:
         - version
         - timestamp
         - database
-    SystemModuleDto:
+    CapabilityReadinessDto:
       type: object
       properties:
-        key:
-          type: string
         name:
           type: string
+          example: SHIPPING_GHN
+        enabled:
+          type: boolean
+          description: Năng lực có đang được bật hay không
         status:
           type: string
           enum:
-            - ACTIVE
-            - SCAFFOLDED
-        tables:
+            - READY
+            - DISABLED
+            - MISCONFIGURED
+            - UNKNOWN
+          description: "READY: đủ tham số. DISABLED: cố tình tắt, không phải lỗi. MISCONFIGURED: đang bật nhưng thiếu tham số — đây là thứ cần sửa. UNKNOWN: chưa đọc được tham số để kết luận."
+        missing:
+          example:
+            - GHN_TOKEN
+          description: TÊN tham số còn thiếu. Không bao giờ chứa giá trị tham số.
           type: array
           items:
             type: string
-        p0Count:
-          type: number
-        p1Count:
-          type: number
       required:
-        - key
         - name
+        - enabled
         - status
-        - tables
-        - p0Count
-        - p1Count
-    SystemModuleListDto:
+        - missing
+    ConfigReadinessDto:
       type: object
       properties:
-        items:
+        status:
+          type: string
+          enum:
+            - ok
+            - degraded
+        capabilities:
           type: array
           items:
-            $ref: "#/components/schemas/SystemModuleDto"
-        totalModels:
-          type: number
-          example: 74
-        p0Models:
-          type: number
-          example: 43
-        p1Models:
-          type: number
-          example: 31
+            $ref: "#/components/schemas/CapabilityReadinessDto"
+        timestamp:
+          type: string
+          format: date-time
       required:
-        - items
-        - totalModels
-        - p0Models
-        - p1Models
+        - status
+        - capabilities
+        - timestamp
     ErrorDetailDto:
       type: object
       properties:
@@ -9094,6 +9233,54 @@ components:
         - path
         - method
         - timestamp
+    SystemModuleDto:
+      type: object
+      properties:
+        key:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - SCAFFOLDED
+        tables:
+          type: array
+          items:
+            type: string
+        p0Count:
+          type: number
+        p1Count:
+          type: number
+      required:
+        - key
+        - name
+        - status
+        - tables
+        - p0Count
+        - p1Count
+    SystemModuleListDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SystemModuleDto"
+        totalModels:
+          type: number
+          example: 74
+        p0Models:
+          type: number
+          example: 43
+        p1Models:
+          type: number
+          example: 31
+      required:
+        - items
+        - totalModels
+        - p0Models
+        - p1Models
     SystemParameterDto:
       type: object
       properties:
@@ -10089,6 +10276,31 @@ components:
       required:
         - displayName
         - password
+    ForgotPasswordDto:
+      type: object
+      properties:
+        email:
+          type: string
+          example: minh.anh@example.com
+          maxLength: 255
+      required:
+        - email
+    ResetPasswordDto:
+      type: object
+      properties:
+        token:
+          type: string
+          description: Token lấy từ đường dẫn trong email; dùng một lần và có hạn.
+          minLength: 32
+        newPassword:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 128
+          description: Leading and trailing whitespace is ignored
+      required:
+        - token
+        - newPassword
     CustomerAddressDto:
       type: object
       properties:
@@ -10295,6 +10507,10 @@ components:
         createdAt:
           type: string
           description: Thời điểm tạo tài khoản
+        version:
+          type: number
+          example: 3
+          description: Gửi lại làm expectedVersion khi cập nhật hồ sơ
       required:
         - id
         - customerNo
@@ -10303,6 +10519,33 @@ components:
         - phone
         - marketingConsent
         - createdAt
+        - version
+    UpdateCustomerProfileDto:
+      type: object
+      properties:
+        expectedVersion:
+          type: number
+          minimum: 0
+          description: Version hồ sơ mà khách đang xem
+        name:
+          type: string
+          example: Nguyễn Minh Anh
+          maxLength: 255
+        phone:
+          type: string
+          example: "0903456789"
+          maxLength: 32
+          description: Cũng là định danh đăng nhập; đổi xong phải dùng số mới để đăng nhập.
+        email:
+          type: string
+          example: minhanh@example.com
+          maxLength: 255
+          description: Cũng là định danh đăng nhập; đổi xong phải dùng email mới để đăng nhập.
+        marketingConsent:
+          type: boolean
+          description: Khách có đồng ý nhận tin khuyến mãi
+      required:
+        - expectedVersion
     AdminCustomerSummaryDto:
       type: object
       properties:
@@ -11715,6 +11958,38 @@ components:
         - total
         - page
         - limit
+    InventoryBalanceSummaryDto:
+      type: object
+      properties:
+        trackedBalances:
+          type: number
+          description: Số dòng tồn khớp bộ lọc
+        inStock:
+          type: number
+          description: Số dòng còn bán bình thường
+        lowStock:
+          type: number
+          description: Số dòng chạm hoặc dưới ngưỡng đặt lại
+        outOfStock:
+          type: number
+          description: Số dòng hết hàng bán (available = 0)
+        totalOnHand:
+          type: number
+          description: Tổng tồn vật lý
+        totalReserved:
+          type: number
+          description: Tổng đang giữ cho đơn chưa xuất
+        totalAvailable:
+          type: number
+          description: Tổng còn bán được = onHand - reserved
+      required:
+        - trackedBalances
+        - inStock
+        - lowStock
+        - outOfStock
+        - totalOnHand
+        - totalReserved
+        - totalAvailable
     InventoryMovementDto:
       type: object
       properties:
@@ -13815,6 +14090,16 @@ components:
           type: number
           example: 3
           description: Tồn khả dụng tại kho của chi nhánh bán (đã trừ hàng đang giữ). Combo lấy theo thành phần thiếu nhất vì combo không có tồn riêng.
+        flashPrice:
+          type: string
+          nullable: true
+          example: "13900000.00"
+          description: Giá flash sale đang hiệu lực; null khi không có chương trình nào áp cho SKU này. Giá cuối vẫn do Backend chốt lúc tạo đơn.
+        flashSaleAvailableQuantity:
+          type: number
+          nullable: true
+          example: 4
+          description: Số suất flash còn lại. null khi không có chương trình. Suất có thể hết giữa lúc lập đơn, khi đó tạo đơn trả 409 POS_FLASH_SALE_REPRICED kèm giá gốc.
       required:
         - id
         - sku
@@ -13823,6 +14108,8 @@ components:
         - isBundle
         - components
         - availableQuantity
+        - flashPrice
+        - flashSaleAvailableQuantity
     PosCatalogResponseDto:
       type: object
       properties:

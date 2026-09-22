@@ -1,0 +1,180 @@
+import { OUTBOX_EVENT_TYPE, type OutboxEventType } from './notification.constants';
+
+export interface RenderedEmail {
+  subject: string;
+  text: string;
+  html: string;
+  /** Nhãn phân loại của provider, dùng để lọc trong email log. */
+  category: string;
+}
+
+const money = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' });
+
+function layout(title: string, body: string): string {
+  return [
+    '<div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;color:#0f172a">',
+    `<h1 style="font-size:18px;margin:0 0 12px">${title}</h1>`,
+    body,
+    '<p style="margin-top:24px;font-size:12px;color:#64748b">Email tự động, vui lòng không trả lời thư này.</p>',
+    '</div>',
+  ].join('');
+}
+
+/**
+ * Nội dung email nằm trong mã nguồn, không phải bảng `notification_templates`.
+ *
+ * V1 chưa có ai ngoài team cần sửa nội dung email, mà một bảng template kéo theo màn quản trị,
+ * versioning và kiểm tra biến được phép dùng. Khi có nhu cầu đó thì tạo bảng và đọc từ đó; chỗ gọi
+ * không đổi vì worker chỉ biết tới hàm `renderEmail`.
+ *
+ * Mỗi hàm nhận payload đã lưu trong outbox — **không đọc lại database**. Email phải mô tả sự việc
+ * tại thời điểm nó xảy ra; đọc lại lúc gửi sẽ mô tả trạng thái hiện giờ, có thể đã khác.
+ */
+export interface OrderPlacedPayload {
+  orderNo: string;
+  recipientEmail: string;
+  recipientName: string;
+  grandTotal: string;
+  itemCount: number;
+}
+
+export interface FulfillmentUpdatedPayload {
+  orderNo: string;
+  recipientEmail: string;
+  recipientName: string;
+  status: string;
+  trackingCode?: string | null;
+}
+
+export interface PasswordResetPayload {
+  recipientEmail: string;
+  recipientName: string;
+  resetUrl: string;
+  expiresInMinutes: number;
+}
+
+export interface PasswordChangedPayload {
+  recipientEmail: string;
+  recipientName: string;
+  changedAt: string;
+  revokedSessions: number;
+}
+
+const FULFILLMENT_LABELS: Record<string, string> = {
+  PICKING: 'đang được soạn hàng',
+  PACKED: 'đã đóng gói xong',
+  SHIPPED: 'đã bàn giao cho đơn vị vận chuyển',
+  DELIVERED: 'đã giao thành công',
+  FAILED: 'giao không thành công',
+};
+
+export function renderEmail(eventType: OutboxEventType, payload: unknown): RenderedEmail {
+  switch (eventType) {
+    case OUTBOX_EVENT_TYPE.ORDER_PLACED: {
+      const data = payload as OrderPlacedPayload;
+      return {
+        subject: `Đã nhận đơn hàng ${data.orderNo}`,
+        text: [
+          `Chào ${data.recipientName},`,
+          '',
+          `Chúng tôi đã nhận đơn hàng ${data.orderNo} gồm ${data.itemCount} sản phẩm.`,
+          `Tổng tiền: ${money.format(Number(data.grandTotal))} (đã gồm VAT).`,
+          '',
+          'Chúng tôi sẽ báo lại khi đơn được giao cho đơn vị vận chuyển.',
+        ].join('\n'),
+        html: layout(
+          `Đã nhận đơn hàng ${data.orderNo}`,
+          `<p>Chào ${data.recipientName},</p>
+           <p>Chúng tôi đã nhận đơn hàng <strong>${data.orderNo}</strong> gồm ${data.itemCount} sản phẩm.</p>
+           <p>Tổng tiền: <strong>${money.format(Number(data.grandTotal))}</strong> (đã gồm VAT).</p>
+           <p>Chúng tôi sẽ báo lại khi đơn được giao cho đơn vị vận chuyển.</p>`,
+        ),
+        category: 'order-placed',
+      };
+    }
+    case OUTBOX_EVENT_TYPE.ORDER_FULFILLMENT_UPDATED: {
+      const data = payload as FulfillmentUpdatedPayload;
+      const label = FULFILLMENT_LABELS[data.status] ?? `chuyển sang trạng thái ${data.status}`;
+      const tracking = data.trackingCode ? `Mã vận đơn: ${data.trackingCode}.` : '';
+      return {
+        subject: `Đơn ${data.orderNo} ${label}`,
+        text: [
+          `Chào ${data.recipientName},`,
+          '',
+          `Đơn hàng ${data.orderNo} ${label}.`,
+          tracking,
+        ].filter(Boolean).join('\n'),
+        html: layout(
+          `Đơn ${data.orderNo} ${label}`,
+          `<p>Chào ${data.recipientName},</p>
+           <p>Đơn hàng <strong>${data.orderNo}</strong> ${label}.</p>
+           ${tracking ? `<p>${tracking}</p>` : ''}`,
+        ),
+        category: 'fulfillment-update',
+      };
+    }
+    case OUTBOX_EVENT_TYPE.PASSWORD_RESET_REQUESTED: {
+      const data = payload as PasswordResetPayload;
+      return {
+        subject: 'Đặt lại mật khẩu',
+        text: [
+          `Chào ${data.recipientName},`,
+          '',
+          'Mở đường dẫn dưới đây để đặt lại mật khẩu:',
+          data.resetUrl,
+          '',
+          `Đường dẫn hết hạn sau ${data.expiresInMinutes} phút và chỉ dùng được một lần.`,
+          'Nếu bạn không yêu cầu đặt lại mật khẩu, bỏ qua email này; mật khẩu hiện tại vẫn nguyên.',
+        ].join('\n'),
+        html: layout(
+          'Đặt lại mật khẩu',
+          `<p>Chào ${data.recipientName},</p>
+           <p><a href="${data.resetUrl}" style="display:inline-block;background:#047857;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none">Đặt lại mật khẩu</a></p>
+           <p>Đường dẫn hết hạn sau ${data.expiresInMinutes} phút và chỉ dùng được một lần.</p>
+           <p>Nếu bạn không yêu cầu đặt lại mật khẩu, bỏ qua email này; mật khẩu hiện tại vẫn nguyên.</p>`,
+        ),
+        category: 'password-reset',
+      };
+    }
+    case OUTBOX_EVENT_TYPE.PASSWORD_CHANGED: {
+      const data = payload as PasswordChangedPayload;
+      const revoked =
+        data.revokedSessions > 0
+          ? `${data.revokedSessions} phiên đăng nhập trên thiết bị khác đã bị đăng xuất.`
+          : '';
+      return {
+        subject: 'Mật khẩu của bạn vừa được thay đổi',
+        text: [
+          `Chào ${data.recipientName},`,
+          '',
+          `Mật khẩu tài khoản của bạn vừa được thay đổi lúc ${data.changedAt}.`,
+          revoked,
+          '',
+          'Nếu không phải bạn thực hiện, hãy liên hệ ngay với chúng tôi.',
+        ].filter(Boolean).join('\n'),
+        html: layout(
+          'Mật khẩu của bạn vừa được thay đổi',
+          `<p>Chào ${data.recipientName},</p>
+           <p>Mật khẩu tài khoản của bạn vừa được thay đổi lúc <strong>${data.changedAt}</strong>.</p>
+           ${revoked ? `<p>${revoked}</p>` : ''}
+           <p>Nếu không phải bạn thực hiện, hãy liên hệ ngay với chúng tôi.</p>`,
+        ),
+        category: 'password-changed',
+      };
+    }
+  }
+}
+
+/** Người nhận nằm trong payload; worker không đọc lại database để biết gửi cho ai. */
+export function recipientOf(payload: unknown): { email: string; name: string } {
+  const data = payload as { recipientEmail?: string; recipientName?: string };
+  return { email: data.recipientEmail ?? '', name: data.recipientName ?? '' };
+}
+
+/** SECURITY: nhật ký chỉ giữ bản che, không giữ địa chỉ email đầy đủ. */
+export function maskEmail(email: string): string {
+  const [name, domain] = email.split('@');
+  if (!domain) return '***';
+  const head = name.slice(0, 1);
+  return `${head}${'*'.repeat(Math.max(name.length - 1, 1))}@${domain}`;
+}

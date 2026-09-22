@@ -3,6 +3,7 @@ import type { PrismaService } from '../../../database/prisma.service';
 import type { AuditWriter } from '../../audit/audit.writer';
 import type { AuthPrincipal } from '../../auth/auth.types';
 import type { ShippingPartnerClient } from '../../../integrations/shipping-partner/shipping-partner.client';
+import type { OutboxWriter } from '../../notification/outbox.writer';
 import { ScopeType } from '../../iam/iam.types';
 import { FulfillmentService } from './fulfillment.service';
 
@@ -82,6 +83,7 @@ function buildService(overrides: {
     prisma,
     { write: jest.fn() } as unknown as AuditWriter,
     partner,
+    { append: jest.fn().mockResolvedValue(undefined) } as unknown as OutboxWriter,
   );
   return { service, createShipment, cancelShipment };
 }

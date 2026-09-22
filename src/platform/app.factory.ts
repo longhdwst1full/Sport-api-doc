@@ -49,6 +49,15 @@ export async function configureApplication(
   const corsOrigins = config.get<string[]>('app.corsOrigins') ?? ['*'];
   const allowAnyOrigin = corsOrigins.includes('*');
 
+  // SECURITY: phải đặt trước mọi guard đọc `request.ip`. Xem chú thích ở `app.trustProxy`.
+  const trustProxy = config.get<number>('app.trustProxy') ?? 0;
+  if (trustProxy > 0) {
+    (app.getHttpAdapter().getInstance() as { set: (key: string, value: unknown) => void }).set(
+      'trust proxy',
+      trustProxy,
+    );
+  }
+
   app.setGlobalPrefix('api/v1');
   app.use(helmet({ contentSecurityPolicy: false }));
   app.use(compression());

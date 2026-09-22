@@ -13,9 +13,21 @@ import {
   CODEX_TASK_STATUS,
   type CodexRepository,
   type CodexTask,
+  type CodexTaskStatus,
 } from '../src/integrations/telegram/codex-bridge/codex-task.types';
 import { TelegramPollingClient } from '../src/integrations/telegram/codex-bridge/telegram-polling.client';
 import type { TelegramUpdate } from '../src/integrations/telegram/telegram.types';
+
+/**
+ * Trạng thái còn hủy được.
+ *
+ * Khai kiểu tường minh `CodexTaskStatus[]`: mảng literal suy ra kiểu hẹp (`'RUNNING' |
+ * 'PENDING_CONFIRMATION'`), nên `includes(task.status)` với `status` kiểu rộng hơn không biên dịch.
+ */
+const CANCELLABLE_STATUSES: readonly CodexTaskStatus[] = [
+  CODEX_TASK_STATUS.PENDING_CONFIRMATION,
+  CODEX_TASK_STATUS.RUNNING,
+];
 
 for (const environmentFile of ['.env', '.env.local']) {
   const environmentPath = resolve(process.cwd(), environmentFile);
@@ -196,7 +208,7 @@ class TelegramCodexWorker {
     }
     if (command.type === 'CANCEL') {
       if (task.status === CODEX_TASK_STATUS.RUNNING) this.runner.cancel(task.id);
-      if (![CODEX_TASK_STATUS.PENDING_CONFIRMATION, CODEX_TASK_STATUS.RUNNING].includes(task.status)) {
+      if (!CANCELLABLE_STATUSES.includes(task.status)) {
         return this.telegram.sendMessage(chatId, `Task ${task.id} không thể hủy ở trạng thái ${task.status}.`);
       }
       await this.updateTask(task.id, {

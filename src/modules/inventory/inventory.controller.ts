@@ -18,6 +18,7 @@ import { AuthenticatedRequest, getAuthPrincipal } from '../../common/request/req
 import {
   CreateStockAdjustmentDto,
   InventoryBalanceListDto,
+  InventoryBalanceSummaryDto,
   StockAdjustmentResultDto,
 } from './inventory.dto';
 import {
@@ -55,6 +56,27 @@ export class InventoryController {
     @Req() request: AuthenticatedRequest,
   ): Promise<InventoryBalanceListDto> {
     return this.queries.listBalances(query, getAuthPrincipal(request));
+  }
+
+  /**
+   * Số liệu tổng hợp cho các thẻ trên màn tồn kho.
+   *
+   * Tách khỏi `listInventoryBalances` thay vì nhồi vào response phân trang: thẻ số liệu và bảng
+   * dùng bộ lọc giống nhau nhưng nhịp tải lại khác nhau (đổi trang không cần tính lại tổng).
+   */
+  @Get('balances/summary')
+  @RequirePermissions('inventory.stock.view')
+  @ApiOperation({
+    operationId: 'summarizeInventoryBalances',
+    summary: 'Tổng hợp tồn kho trên toàn bộ dòng khớp bộ lọc, không chỉ trang đang xem',
+  })
+  @ApiOkResponse({ type: InventoryBalanceSummaryDto })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  summarizeInventoryBalances(
+    @Query() query: InventoryBalanceQueryDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<InventoryBalanceSummaryDto> {
+    return this.queries.summarizeBalances(query, getAuthPrincipal(request));
   }
 
   @Get('movements')

@@ -163,3 +163,84 @@ describe('InventoryQueryService', () => {
     }));
   });
 });
+
+/**
+ * Ba thẻ trên màn tồn kho trước đây đếm trên `items` của trang hiện tại (25 dòng), nên "12 dòng
+ * sắp hết" thực chất là "12 dòng sắp hết trong 25 dòng đang hiện".
+ */
+describe('InventoryQueryService tổng hợp tồn kho', () => {
+  const branchManager: AuthPrincipal = {
+    ...owner,
+    scopes: [{ type: ScopeType.BRANCH, branchId: '7' }],
+  };
+
+  function createService(rows: Array<{ onHand: number; reserved: number; reorderPoint: number }>) {
+    const findMany = jest
+      .fn<Promise<unknown[]>, [Record<string, unknown>]>()
+      .mockResolvedValue(rows);
+    const prisma = {
+      isEnabled: jest.fn().mockReturnValue(true),
+      inventoryBalance: { findMany, count: jest.fn().mockResolvedValue(rows.length) },
+    } as unknown as PrismaService;
+    return { service: new InventoryQueryService(prisma), findMany };
+  }
+
+  it('đếm theo toàn bộ dòng khớp bộ lọc và cộng đúng ba tổng', async () => {
+    const { service } = createService([
+      { onHand: 12, reserved: 2, reorderPoint: 3 }, // available 10 → IN_STOCK
+      { onHand: 5, reserved: 2, reorderPoint: 3 }, // available 3 → LOW_STOCK (chạm ngưỡng)
+      { onHand: 4, reserved: 4, reorderPoint: 3 }, // available 0 → OUT_OF_STOCK
+      { onHand: 9, reserved: 0, reorderPoint: 0 }, // available 9 → IN_STOCK
+    ]);
+
+    await expect(service.summarizeBalances({ page: 1, limit: 25 }, owner)).resolves.toEqual({
+      trackedBalances: 4,
+      inStock: 2,
+      lowStock: 1,
+      outOfStock: 1,
+      totalOnHand: 30,
+      totalReserved: 8,
+      totalAvailable: 22,
+    });
+  });
+
+  /** Hết hàng bán là `available = 0`, không phải `onHand = 0`: hàng đang giữ vẫn nằm trong kho. */
+  it('phân loại hết hàng theo tồn khả dụng, không theo tồn vật lý', async () => {
+    const { service } = createService([{ onHand: 20, reserved: 20, reorderPoint: 5 }]);
+
+    const summary = await service.summarizeBalances({ page: 1, limit: 25 }, owner);
+
+    expect(summary.outOfStock).toBe(1);
+    expect(summary.totalOnHand).toBe(20);
+    expect(summary.totalAvailable).toBe(0);
+  });
+
+  /** Thẻ số liệu và bảng bên dưới phải dùng CÙNG bộ lọc, kể cả phạm vi chi nhánh. */
+  it('áp cùng bộ lọc và phạm vi chi nhánh như danh sách', async () => {
+    const { service, findMany } = createService([]);
+
+    await service.summarizeBalances(
+      { page: 1, limit: 25, search: 'run', warehouseCode: 'kho-hcm-01' },
+      branchManager,
+    );
+
+    const where = findMany.mock.calls[0]?.[0].where as Record<string, unknown>;
+    expect(where.warehouse).toEqual({ branchId: { in: [7n] }, code: 'KHO-HCM-01' });
+    expect(where.productVariant).toEqual({
+      OR: [
+        { sku: { contains: 'run', mode: 'insensitive' } },
+        { product: { name: { contains: 'run', mode: 'insensitive' } } },
+      ],
+    });
+  });
+
+  it('không phân trang: tổng không được phụ thuộc trang đang xem', async () => {
+    const { service, findMany } = createService([]);
+
+    await service.summarizeBalances({ page: 3, limit: 25 }, owner);
+
+    const call = findMany.mock.calls[0]?.[0];
+    expect(call.skip).toBeUndefined();
+    expect(call.take).toBeUndefined();
+  });
+});

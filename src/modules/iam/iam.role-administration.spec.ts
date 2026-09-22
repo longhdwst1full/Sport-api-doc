@@ -4,7 +4,7 @@ import { OrganizationService } from '../organization/organization.service';
 import { InMemoryIamRepository } from './in-memory-iam.repository';
 import { IamService } from './iam.service';
 import { PERMISSION_CATALOG } from './iam.permissions';
-import { ScopeType } from './iam.types';
+import { ScopeType, SystemRoleCode } from './iam.types';
 import { AuthPrincipal } from '../auth/auth.types';
 
 describe('IamService role administration', () => {
@@ -219,6 +219,110 @@ describe('IamService role administration', () => {
         { code: 'BRANCH_MADE', name: 'Chi nhánh tạo', permissionCodes: ['order.view'] },
         context,
         branchOnly,
+      ),
+    ).rejects.toThrow(ForbiddenException);
+  });
+});
+
+/**
+ * Leo thang đặc quyền qua đường GÁN vai trò.
+ *
+ * `resolvePermissionCodes` chặn việc sửa vai trò để thêm quyền mình không có. Nhưng gán vai trò là
+ * cánh cửa thứ hai vào cùng chỗ đó: tài khoản chỉ có `iam.assignment.manage` + phạm vi GLOBAL
+ * trước đây gán được BRANCH_MANAGER (32 quyền) cho bất kỳ nhân viên nào, kể cả chính mình, và
+ * nhận đủ 32 quyền ở lần làm mới phiên kế tiếp.
+ */
+describe('IamService chống leo thang qua gán vai trò', () => {
+  const context = { requestId: 'unit-request', actorUserId: 'unit-actor' };
+  const allPermissions = PERMISSION_CATALOG.map(({ code }) => code);
+
+  const principal = (permissions: string[]): AuthPrincipal => ({
+    userId: '4',
+    sessionId: 'session',
+    displayName: 'Actor',
+    permissionVersion: '1',
+    permissions,
+    scopes: [{ type: ScopeType.GLOBAL }],
+    mustChangePassword: false,
+  });
+
+  const createService = () => {
+    const organization = new OrganizationService(new InMemoryOrganizationRepository());
+    return { organization, service: new IamService(new InMemoryIamRepository(), organization) };
+  };
+
+  async function branchId(organization: OrganizationService): Promise<string> {
+    return (await organization.listBranches()).items[0].id;
+  }
+
+  it('chặn gán vai trò chứa quyền mà người gán không có', async () => {
+    const { organization, service } = createService();
+    const limited = principal(['iam.assignment.manage']);
+
+    await expect(
+      service.assignRole(
+        '6',
+        {
+          roleCode: SystemRoleCode.BRANCH_MANAGER,
+          scopeType: ScopeType.BRANCH,
+          branchId: await branchId(organization),
+        },
+        context,
+        limited,
+      ),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  /** Tự gán cho chính mình là đường leo thang trực tiếp nhất và phải chặn cùng một chỗ. */
+  it('chặn cả khi người gán tự gán cho chính mình', async () => {
+    const { organization, service } = createService();
+    const limited = principal(['iam.assignment.manage']);
+
+    await expect(
+      service.assignRole(
+        limited.userId,
+        {
+          roleCode: SystemRoleCode.STAFF,
+          scopeType: ScopeType.BRANCH,
+          branchId: await branchId(organization),
+        },
+        context,
+        limited,
+      ),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it('quản trị viên gốc giữ toàn bộ quyền nên vẫn gán được', async () => {
+    const { organization, service } = createService();
+
+    const assignment = await service.assignRole(
+      '6',
+      {
+        roleCode: SystemRoleCode.BRANCH_MANAGER,
+        scopeType: ScopeType.BRANCH,
+        branchId: await branchId(organization),
+      },
+      context,
+      principal(allPermissions),
+    );
+
+    expect(assignment.roleCode).toBe(SystemRoleCode.BRANCH_MANAGER);
+  });
+
+  /** Tạo nhân viên mới cũng cấp vai trò, nên phải chặn ở cùng một quy tắc. */
+  it('chặn tạo nhân viên mới với vai trò vượt quyền người tạo', async () => {
+    const { organization, service } = createService();
+
+    await expect(
+      service.createStaffUser(
+        {
+          displayName: 'Nhân viên mới',
+          email: 'nv-moi@dctd.vn',
+          roleCode: SystemRoleCode.BRANCH_MANAGER,
+          branchId: await branchId(organization),
+        },
+        context,
+        principal(['iam.assignment.manage']),
       ),
     ).rejects.toThrow(ForbiddenException);
   });

@@ -203,6 +203,31 @@ export class PosCatalogItemDto {
       + 'phần thiếu nhất vì combo không có tồn riêng.',
   })
   availableQuantity: number;
+
+  /**
+   * Giá flash sale đang chạy, nếu có. Khách tới quầy được cùng giá với web, nên màn quầy phải
+   * hiện được giá này — trước đây chỉ Backend biết, nhân viên đọc giá gốc cho khách rồi hoá đơn
+   * lại ra số thấp hơn.
+   */
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: '13900000.00',
+    description:
+      'Giá flash sale đang hiệu lực; null khi không có chương trình nào áp cho SKU này. '
+      + 'Giá cuối vẫn do Backend chốt lúc tạo đơn.',
+  })
+  flashPrice: string | null;
+
+  @ApiProperty({
+    type: Number,
+    nullable: true,
+    example: 4,
+    description:
+      'Số suất flash còn lại. null khi không có chương trình. Suất có thể hết giữa lúc lập đơn, '
+      + 'khi đó tạo đơn trả 409 POS_FLASH_SALE_REPRICED kèm giá gốc.',
+  })
+  flashSaleAvailableQuantity: number | null;
 }
 
 export class PosCatalogResponseDto {

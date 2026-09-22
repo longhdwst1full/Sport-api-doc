@@ -28,14 +28,18 @@ export class FlashSaleQuotaExpiryController {
   ) {}
 
   @Get('expire-quota')
-  run(
+  async run(
     @Headers('authorization') authorization: string | undefined,
   ): Promise<FlashSaleQuotaExpiryRunResult> {
-    const enabled = this.config.get<boolean>('app.jobs.flashSaleQuotaExpiry.enabled') ?? false;
-    // Job tắt thì trả no-op mà không chạm database và không đòi secret.
+    // Cờ bật/tắt nằm ở `system_parameters` (fallback env), nên vận hành dừng worker ngay được.
+    const enabled = await this.expiry.isEnabled();
+    // Job tắt thì trả no-op mà không đụng bảng quota và không đòi secret.
     if (!enabled) return this.expiry.run();
-    const secret = this.config.getOrThrow<string>('app.jobs.cronSecret');
-    if (!authorization || !secretsMatch(authorization, `Bearer ${secret}`)) {
+    // SECURITY: cờ bật nằm ở database nên `CRON_SECRET` có thể chưa được khai khi ai đó bật tham
+    // số. Thiếu secret phải là TỪ CHỐI, không phải 500 — 500 là lỗi máy chủ và dễ bị bỏ qua khi
+    // đọc log, còn 401 nói đúng rằng endpoint đang đóng.
+    const secret = this.config.get<string>('app.jobs.cronSecret');
+    if (!secret || !authorization || !secretsMatch(authorization, `Bearer ${secret}`)) {
       throw new UnauthorizedException('Valid cron authorization is required');
     }
     return this.expiry.run();

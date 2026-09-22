@@ -6,9 +6,10 @@ import { AdminFulfillmentController } from './controllers/fulfillment.controller
 import { GhnWebhookController } from './controllers/ghn-webhook.controller';
 import { CarrierStatusSyncService } from './services/carrier-status-sync.service';
 import { FulfillmentService } from './services/fulfillment.service';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
-  imports: [AuditModule, ShippingPartnerModule, SystemModule],
+  imports: [AuditModule, ShippingPartnerModule, SystemModule, NotificationModule],
   controllers: [AdminFulfillmentController, GhnWebhookController],
   providers: [FulfillmentService, CarrierStatusSyncService],
   exports: [FulfillmentService],

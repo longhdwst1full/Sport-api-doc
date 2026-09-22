@@ -40,3 +40,24 @@ export const STOCK_ADJUSTMENT_REASON = {
 
 export type StockAdjustmentReason =
   (typeof STOCK_ADJUSTMENT_REASON)[keyof typeof STOCK_ADJUSTMENT_REASON];
+
+/** Trạng thái tồn của một dòng cân đối, suy từ `onHand - reserved` so với ngưỡng đặt lại. */
+export const INVENTORY_BALANCE_STATUSES = ['IN_STOCK', 'LOW_STOCK', 'OUT_OF_STOCK'] as const;
+export type InventoryBalanceStatus = (typeof INVENTORY_BALANCE_STATUSES)[number];
+
+/**
+ * Phân loại một dòng tồn.
+ *
+ * Hàm thuần và là NGUỒN DUY NHẤT của quy tắc này: danh sách và endpoint tổng hợp phải phân loại
+ * giống nhau, nếu không thẻ số liệu và bảng bên dưới nói hai con số khác nhau cho cùng một kho.
+ */
+export function classifyInventoryBalance(input: {
+  onHand: number;
+  reserved: number;
+  reorderPoint: number;
+}): InventoryBalanceStatus {
+  const available = input.onHand - input.reserved;
+  if (available === 0) return 'OUT_OF_STOCK';
+  return available <= input.reorderPoint ? 'LOW_STOCK' : 'IN_STOCK';
+}
+

@@ -7,6 +7,7 @@ import { v7 as uuidv7 } from 'uuid';
 import { PrismaService } from '../src/database/prisma.service';
 import { AuthService } from '../src/modules/auth/auth.service';
 import { PrismaAuditWriter } from '../src/modules/audit/audit.writer';
+import { OutboxWriter } from '../src/modules/notification/outbox.writer';
 
 describe('Admin authentication', () => {
   const secret = 'integration-test-jwt-secret-at-least-32-chars';
@@ -24,6 +25,7 @@ describe('Admin authentication', () => {
     new JwtService({ secret }),
     config,
     new PrismaAuditWriter(prisma),
+    new OutboxWriter(prisma),
   );
   const suffix = uuidv7();
   let userId: bigint;

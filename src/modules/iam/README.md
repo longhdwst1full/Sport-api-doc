@@ -1,10 +1,10 @@
 # IAM module maintenance note
 
-> **Document version:** 1.0.0
+> **Document version:** 1.1.0
 >
-> **Last updated:** 2026-09-20
+> **Last updated:** 2026-09-22
 >
-> **Change summary:** Ghi nguồn quyền, scope và invariant bảo vệ quản trị viên OWNER duy nhất.
+> **Change summary:** Bổ sung hai cửa leo thang đặc quyền và quy tắc chung chặn cả hai.
 
 ## Trách nhiệm và entrypoint
 
@@ -41,9 +41,30 @@ Entrypoint HTTP nằm tại `iam.controller.ts`; `IamService` giữ authorizatio
 - Custom role chỉ được physical delete khi không còn assignment. Các thay đổi nhạy cảm phải
   có audit context/request id.
 
+## Hai cửa leo thang đặc quyền
+
+Quyền có thể đi vào tay một người qua **hai** đường, và cả hai phải áp cùng một quy tắc:
+
+| Cửa | Chốt | Nơi kiểm |
+| --- | --- | --- |
+| **Sửa vai trò** — thêm quyền vào tập quyền của role | Chỉ cấp được quyền chính actor đang có; quyền role đã có sẵn được giữ lại để sửa tên không cần toàn quyền | `resolvePermissionCodes` |
+| **Gán vai trò** — gắn một role sẵn có cho một tài khoản | Chỉ gán được role có tập quyền nằm trong tập quyền của actor | `assertCanGrantRole` |
+
+Cửa thứ hai từng bỏ trống: `authorizeAssignment` chỉ kiểm role có thuộc nhóm gán được và actor có
+phạm vi GLOBAL. Một tài khoản chỉ có `iam.assignment.manage` gán được `BRANCH_MANAGER` (32 quyền)
+cho bất kỳ nhân viên nào — **kể cả chính mình** — và nhận đủ 32 quyền ở lần làm mới phiên kế tiếp.
+`createStaffUser` cũng cấp vai trò nên chịu cùng chốt.
+
+Quản trị viên gốc giữ toàn bộ catalog quyền nên không bị ảnh hưởng.
+
+Hai chốt phải giữ **cùng** quy tắc. Siết một bên và để bên kia rộng hơn là cách để cửa còn lại
+thành đường đi mặc định.
+
 ## Checklist khi sửa
 
-- Kiểm tra privilege escalation: actor không được cấp quyền mình không có.
+- Kiểm tra privilege escalation ở **cả hai** cửa: sửa vai trò VÀ gán vai trò (gồm tự gán).
+- Fixture test của quản trị viên gốc phải giữ toàn bộ catalog quyền. Để `permissions: []` sẽ làm
+  mọi kiểm tra chống leo thang trôi qua mà không ai thấy.
 - Kiểm tra OWNER full catalog, ACTIVE, assignment và account lifecycle.
 - Kiểm tra GLOBAL/BRANCH scope và token invalidation.
 - Chạy role administration, permission matrix, auth/session test và PostgreSQL integration
@@ -55,4 +76,5 @@ Entrypoint HTTP nằm tại `iam.controller.ts`; `IamService` giữ authorizatio
 
 | Version | Date | Change summary |
 | --- | --- | --- |
+| 1.1.0 | 2026-09-22 | Ghi hai cửa leo thang đặc quyền và chốt `assertCanGrantRole` cho đường gán vai trò. |
 | 1.0.0 | 2026-09-20 | Tạo maintenance note và invariant OWNER full permission catalog. |

@@ -47,6 +47,8 @@ export const SYSTEM_PARAMETER_CODE = {
   PAYMENT_TIMEOUT_MINUTES: 'PAYMENT_TIMEOUT_MINUTES',
   GUEST_CART_TTL_DAYS: 'GUEST_CART_TTL_DAYS',
   FLASH_SALE_QUOTA_TTL_MINUTES: 'FLASH_SALE_QUOTA_TTL_MINUTES',
+  FLASH_SALE_QUOTA_EXPIRY_JOB_ENABLED: 'FLASH_SALE_QUOTA_EXPIRY_JOB_ENABLED',
+  FLASH_SALE_QUOTA_EXPIRY_JOB_BATCH_SIZE: 'FLASH_SALE_QUOTA_EXPIRY_JOB_BATCH_SIZE',
 
   // --- Tích hợp vận chuyển GHN ---
   GHN_ENABLED: 'GHN_ENABLED',
@@ -62,6 +64,7 @@ export const SYSTEM_PARAMETER_CODE = {
   VNPAY_HASH_SECRET: 'VNPAY_HASH_SECRET',
   VNPAY_PAYMENT_URL: 'VNPAY_PAYMENT_URL',
   VNPAY_RETURN_URL: 'VNPAY_RETURN_URL',
+  STOREFRONT_BASE_URL: 'STOREFRONT_BASE_URL',
   VNPAY_EXPIRE_MINUTES: 'VNPAY_EXPIRE_MINUTES',
 
   // --- Tích hợp email Mailtrap ---
@@ -197,6 +200,26 @@ export const SYSTEM_PARAMETER_CATALOG: readonly SystemParameterDefinition[] = [
     valueType: SYSTEM_PARAMETER_VALUE_TYPE.INTEGER,
     defaultValue: '15', minValue: 1, maxValue: 1440, unit: 'phút', sortOrder: 10,
   },
+  {
+    code: SYSTEM_PARAMETER_CODE.FLASH_SALE_QUOTA_EXPIRY_JOB_ENABLED,
+    groupCode: SYSTEM_PARAMETER_GROUP.PROMOTION,
+    label: 'Bật worker trả suất flash sale quá hạn',
+    description:
+      'Tắt thì endpoint cron trả no-op và suất đã giữ sẽ không được trả lại pool. Chỉ tắt khi đang xử lý sự cố.',
+    valueType: SYSTEM_PARAMETER_VALUE_TYPE.BOOLEAN,
+    defaultValue: 'false', sortOrder: 20,
+    envFallback: 'FLASH_SALE_QUOTA_EXPIRY_JOB_ENABLED',
+  },
+  {
+    code: SYSTEM_PARAMETER_CODE.FLASH_SALE_QUOTA_EXPIRY_JOB_BATCH_SIZE,
+    groupCode: SYSTEM_PARAMETER_GROUP.PROMOTION,
+    label: 'Số reservation xử lý mỗi lần chạy worker',
+    description:
+      'Giới hạn của một lần gọi cron. Đặt quá lớn thì transaction giữ lock lâu; kết quả trả về `hasMore` để vận hành biết còn tồn đọng.',
+    valueType: SYSTEM_PARAMETER_VALUE_TYPE.INTEGER,
+    defaultValue: '50', minValue: 1, maxValue: 500, unit: 'bản ghi', sortOrder: 30,
+    envFallback: 'FLASH_SALE_QUOTA_EXPIRY_JOB_BATCH_SIZE',
+  },
   // --- Tích hợp vận chuyển GHN ---
   {
     code: SYSTEM_PARAMETER_CODE.GHN_ENABLED,
@@ -290,6 +313,16 @@ export const SYSTEM_PARAMETER_CATALOG: readonly SystemParameterDefinition[] = [
     description: 'Trang Storefront nhận kết quả thanh toán.',
     valueType: SYSTEM_PARAMETER_VALUE_TYPE.STRING,
     defaultValue: '', sortOrder: 140, envFallback: 'VNPAY_RETURN_URL',
+  },
+  {
+    code: SYSTEM_PARAMETER_CODE.STOREFRONT_BASE_URL,
+    groupCode: SYSTEM_PARAMETER_GROUP.INTEGRATION,
+    label: 'Địa chỉ Storefront',
+    description:
+      'Gốc đường dẫn dựng link trong email, ví dụ link đặt lại mật khẩu. Sai giá trị này thì link '
+      + 'trong email trỏ về nơi khác.',
+    valueType: SYSTEM_PARAMETER_VALUE_TYPE.STRING,
+    defaultValue: 'http://localhost:3000', sortOrder: 150, envFallback: 'STOREFRONT_BASE_URL',
   },
   {
     code: SYSTEM_PARAMETER_CODE.VNPAY_EXPIRE_MINUTES,

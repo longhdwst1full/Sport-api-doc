@@ -33,6 +33,8 @@ import {
   ReceiveReturnDto,
   ShipFulfillmentDto,
 } from '../dto/fulfillment.dto';
+import { OutboxWriter } from '../../notification/outbox.writer';
+import { OUTBOX_EVENT_TYPE } from '../../notification/notification.constants';
 import {
   FULFILLMENT_ACTION,
   FULFILLMENT_STATUS,
@@ -42,6 +44,18 @@ import {
 
 /** Khối lượng quy ước cho mỗi sản phẩm khi kiện hàng chưa được cân thật. */
 const DEFAULT_ITEM_WEIGHT_GRAMS = 500;
+
+/**
+ * Trạng thái đáng gửi email cho khách.
+ *
+ * `PICKING` và `PACKED` là việc nội bộ của kho: khách không làm gì với thông tin đó, còn hộp thư
+ * của họ thì đầy thêm bốn email cho mỗi đơn.
+ */
+const CUSTOMER_VISIBLE_FULFILLMENT_STATUSES = new Set<string>([
+  FULFILLMENT_STATUS.SHIPPED,
+  FULFILLMENT_STATUS.DELIVERED,
+  FULFILLMENT_STATUS.DELIVERY_FAILED,
+]);
 
 const fulfillmentInclude = {
   warehouse: {
@@ -80,6 +94,7 @@ export class FulfillmentService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditWriter,
     private readonly shippingPartner: ShippingPartnerClient,
+    private readonly outbox: OutboxWriter,
   ) {}
 
   async list(query: AdminFulfillmentQueryDto, principal: AuthPrincipal): Promise<AdminFulfillmentListDto> {
@@ -577,7 +592,48 @@ export class FulfillmentService {
       },
     });
     await this.writeAudit(transaction, fulfillment, `fulfillment.${nextStatus.toLowerCase()}`, requestId, principal, reason, nextStatus);
+    await this.notifyCustomer(transaction, fulfillment, nextStatus);
     return this.reload(transaction, updated.id);
+  }
+
+  /**
+   * Báo cho khách khi đơn đổi trạng thái giao vận.
+   *
+   * Đặt ở `persistTransition` vì đây là chỗ duy nhất mọi chuyển trạng thái đi qua: thêm một hành
+   * động mới sau này tự có email, không phải nhớ nối lại.
+   *
+   * TRANSACTION: ghi ý định cùng transaction chuyển trạng thái. Chuyển trạng thái rollback thì email
+   * cũng không gửi — khách không nhận tin "đã giao" cho một đơn thực ra chưa giao.
+   *
+   * Chỉ báo những mốc khách thật sự quan tâm. `PICKING`/`PACKED` là việc nội bộ của kho; gửi email
+   * cho từng bước biến hộp thư của khách thành nhật ký vận hành của cửa hàng.
+   */
+  private async notifyCustomer(
+    transaction: Prisma.TransactionClient,
+    fulfillment: LoadedFulfillment,
+    nextStatus: string,
+  ): Promise<void> {
+    if (!CUSTOMER_VISIBLE_FULFILLMENT_STATUSES.has(nextStatus)) return;
+    const address = fulfillment.order.addresses[0];
+    const recipientEmail = address?.recipientEmail?.trim();
+    // Đơn tại quầy thường chỉ có số điện thoại; không có email thì không gửi.
+    if (!recipientEmail) return;
+
+    await this.outbox.append(
+      {
+        aggregateType: 'FULFILLMENT',
+        aggregateId: toEntityId(fulfillment.id),
+        eventType: OUTBOX_EVENT_TYPE.ORDER_FULFILLMENT_UPDATED,
+        payload: {
+          recipientEmail,
+          recipientName: address.recipientName,
+          orderNo: fulfillment.order.orderNo,
+          status: nextStatus,
+          trackingCode: fulfillment.trackingNo ?? null,
+        },
+      },
+      transaction,
+    );
   }
 
   private historyInput(

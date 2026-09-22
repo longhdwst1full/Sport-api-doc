@@ -80,6 +80,17 @@ Table auth_sessions {
   Note: '[P0] Refresh-token rotation; rotated_from_id unique để một session chỉ rotate một lần; không lưu raw token.'
 }
 
+Table password_reset_tokens {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  token_hash varchar(128) [not null, unique]
+  expires_at timestamptz [not null]
+  used_at timestamptz
+  request_ip_hash varchar(128)
+  created_at timestamptz [not null]
+  Note: '[P0] Thêm sau bản review V1 khi làm quên mật khẩu. Chỉ lưu hash; dùng một lần (used_at) và có hạn. Yêu cầu mới huỷ token cũ chưa dùng của cùng user.'
+}
+
 Table roles {
   id bigint [pk, increment]
   legacy_id uuid [unique, note: 'UUID lịch sử; NULL cho bản ghi mới']
@@ -1256,7 +1267,7 @@ Table notifications {
   id bigint [pk, increment]
   user_id bigint
   customer_id bigint
-  template_id bigint
+  template_code varchar(64) [not null, note: 'Mã template nằm trong mã nguồn; notification_templates chưa được tạo ở V1']
   channel varchar(24) [not null]
   dedup_key varchar(150) [not null]
   recipient_masked varchar(255) [not null]
@@ -1265,6 +1276,7 @@ Table notifications {
   attempt_count int [not null, default: 0]
   next_attempt_at timestamptz
   sent_at timestamptz
+  provider_message_id varchar(255)
   error_code varchar(100)
   created_at timestamptz [not null]
   indexes { (channel, dedup_key) [unique] }
@@ -1322,6 +1334,7 @@ Ref: user_role_assignments.assigned_by > users.id [delete: restrict]
 Ref: audit_logs.actor_user_id > users.id [delete: set null]
 Ref: approval_requests.maker_id > users.id [delete: restrict]
 Ref: approval_requests.approver_id > users.id [delete: restrict]
+Ref: password_reset_tokens.user_id > users.id [delete: cascade]
 Ref: customers.user_id > users.id [delete: set null]
 Ref: customers.avatar_asset_id > media_assets.id [delete: set null]
 Ref: customer_addresses.customer_id > customers.id [delete: cascade]

@@ -10,9 +10,11 @@ import { OrderCompletionService } from './services/order-completion.service';
 import { PosOrderService } from './services/pos-order.service';
 import { CheckoutModule } from '../checkout/checkout.module';
 import { FulfillmentModule } from '../fulfillment/fulfillment.module';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
-  imports: [AuditModule, CartModule, PaymentModule, PromotionModule, CheckoutModule, FulfillmentModule],
+  imports: [
+    NotificationModule,AuditModule, CartModule, PaymentModule, PromotionModule, CheckoutModule, FulfillmentModule],
   controllers: [GuestOrderController, AccountOrderController, AdminOrderController, OrderMaintenanceController],
   providers: [OrderService, OrderCompletionService, PosOrderService],
   exports: [OrderService, PosOrderService],

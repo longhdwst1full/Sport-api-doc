@@ -86,6 +86,16 @@ class EnvironmentVariables {
   @Min(1)
   RATE_LIMIT_MAX = 120;
 
+  /**
+   * Số lớp proxy tin cậy; 0 nghĩa là ứng dụng nhận thẳng kết nối từ client. Bỏ trống thì
+   * `app.config.ts` tự dùng 1 ở production (Vercel đặt đúng một lớp proxy).
+   */
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(5)
+  TRUST_PROXY = 0;
+
   @Type(() => Number)
   @IsInt()
   @Min(5)
@@ -134,10 +144,25 @@ class EnvironmentVariables {
   @Max(500)
   ORDER_COMPLETION_JOB_BATCH_SIZE = 50;
 
+  /**
+   * Fallback cho tham số cùng tên trong `system_parameters`. Giá trị hiệu lực do tham số quyết
+   * định; env chỉ dùng khi tham số còn trống hoặc database chưa bật.
+   */
+  @Transform(toBoolean)
+  @IsBoolean()
+  FLASH_SALE_QUOTA_EXPIRY_JOB_ENABLED = false;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(500)
+  FLASH_SALE_QUOTA_EXPIRY_JOB_BATCH_SIZE = 50;
+
   @ValidateIf((environment: EnvironmentVariables) =>
     environment.RESERVATION_EXPIRY_JOB_ENABLED ||
     environment.PAYMENT_EXPIRY_JOB_ENABLED ||
-    environment.ORDER_COMPLETION_JOB_ENABLED)
+    environment.ORDER_COMPLETION_JOB_ENABLED ||
+    environment.FLASH_SALE_QUOTA_EXPIRY_JOB_ENABLED)
   @IsString()
   @MinLength(32)
   CRON_SECRET?: string;

@@ -1,10 +1,10 @@
 # Promotion (Flash Sale) — maintenance note
 
-> **Document version:** 1.1.0
+> **Document version:** 1.2.0
 >
-> **Last updated:** 2026-09-13
+> **Last updated:** 2026-09-22
 >
-> **Change summary:** Wave S6.4 — campaign, quota item và quota reservation.
+> **Change summary:** Bổ sung mã lỗi suất flash và đường trừ suất của đơn bán tại quầy.
 
 ## Phạm vi
 
@@ -45,6 +45,40 @@ Kích hoạt `ACTIVE` bị chặn nếu campaign chưa có suất bán nào.
 | FLS-01 | `listAdminFlashSales`, `getAdminFlashSale` | `catalog.flash_sale.view` |
 | FLS-01 | `createAdminFlashSale`, `updateAdminFlashSale`, `changeAdminFlashSaleStatus`, `upsertAdminFlashSaleItem`, `removeAdminFlashSaleItem` | `catalog.flash_sale.manage` |
 | FLS-03 | `reserveQuota` / `releaseQuota` / `commitQuota` | Nội bộ, gọi từ checkout workflow |
+
+## Bán tại quầy cũng trừ suất
+
+Đơn quầy KHÔNG có đường trừ suất riêng. Nó đi đúng đường của đơn online:
+
+```
+PosOrderService.create
+  → buildCheckout        tạo CheckoutSession thật, snapshot flash_sale_item_id vào từng dòng
+  → reservations.confirm  reserveQuota trong CÙNG transaction với tồn kho vật lý
+  → orders.place          commitQuota: reserved → sold
+```
+
+Vì vậy `soldQuantity` phản ánh cả hai kênh, và `getPosCatalog` trả `flashPrice` +
+`flashSaleAvailableQuantity` để nhân viên đọc đúng con số sẽ thu.
+
+**Hết suất giữa lúc nhân viên đang lập đơn** (đã báo giá cho khách nhưng chưa giữ được suất):
+`reserveQuota` trả 409 với mã `FLASH_SALE_QUOTA_EXHAUSTED`; `createPosOrder` dọn phiên bán vừa tạo
+(`checkout_sessions → CANCELLED`, `carts → ABANDONED`) rồi trả `409 POS_FLASH_SALE_REPRICED` kèm giá
+gốc của các dòng bị ảnh hưởng. Màn quầy hạ giá dòng đó về giá gốc và bắt nhân viên **xác nhận lại**.
+
+Không tự hạ giá rồi lưu đơn: đơn sẽ lưu một con số khác con số nhân viên vừa đọc cho khách, và chỉ
+lộ ra lúc in hoá đơn.
+
+## Mã lỗi
+
+| Mã | Khi nào | `details[].field` |
+| --- | --- | --- |
+| `FLASH_SALE_QUOTA_EXHAUSTED` | Hết suất giữa báo giá và giữ suất | entity id biến thể |
+| `FLASH_SALE_CAMPAIGN_ENDED` | Campaign kết thúc/chưa tới giờ/suất bị gỡ | entity id biến thể |
+| `FLASH_SALE_PER_CUSTOMER_LIMIT_REACHED` | Vượt `perCustomerLimit` | entity id biến thể |
+| `POS_FLASH_SALE_REPRICED` | Riêng quầy: đã dọn phiên, kèm giá gốc để xác nhận lại | entity id biến thể |
+
+Bắt theo chuỗi thông báo thay vì theo mã là cách để một lần sửa câu chữ làm hỏng cả Admin và
+Storefront.
 
 ## Nguyên tắc: một nguồn quyết định duy nhất
 

@@ -79,6 +79,76 @@ paths:
         - Admin Inventory
       x-required-permissions:
         - inventory.stock.view
+  /api/v1/admin/inventory/balances/summary:
+    get:
+      operationId: summarizeInventoryBalances
+      parameters:
+        - name: page
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            default: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 25
+            type: number
+        - name: search
+          required: false
+          in: query
+          description: Search SKU or product name
+          schema:
+            maxLength: 100
+            type: string
+        - name: warehouseCode
+          required: false
+          in: query
+          schema:
+            maxLength: 32
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryBalanceSummaryDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "503":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Tổng hợp tồn kho trên toàn bộ dòng khớp bộ lọc, không chỉ trang đang xem
+      tags:
+        - Admin Inventory
+      x-required-permissions:
+        - inventory.stock.view
   /api/v1/admin/inventory/movements:
     get:
       operationId: listInventoryMovements
@@ -801,6 +871,38 @@ components:
         - path
         - method
         - timestamp
+    InventoryBalanceSummaryDto:
+      type: object
+      properties:
+        trackedBalances:
+          type: number
+          description: Số dòng tồn khớp bộ lọc
+        inStock:
+          type: number
+          description: Số dòng còn bán bình thường
+        lowStock:
+          type: number
+          description: Số dòng chạm hoặc dưới ngưỡng đặt lại
+        outOfStock:
+          type: number
+          description: Số dòng hết hàng bán (available = 0)
+        totalOnHand:
+          type: number
+          description: Tổng tồn vật lý
+        totalReserved:
+          type: number
+          description: Tổng đang giữ cho đơn chưa xuất
+        totalAvailable:
+          type: number
+          description: Tổng còn bán được = onHand - reserved
+      required:
+        - trackedBalances
+        - inStock
+        - lowStock
+        - outOfStock
+        - totalOnHand
+        - totalReserved
+        - totalAvailable
     InventoryMovementListDto:
       type: object
       properties:

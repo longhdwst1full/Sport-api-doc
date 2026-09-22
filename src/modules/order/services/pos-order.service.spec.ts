@@ -30,6 +30,8 @@ describe('PosOrderService tồn khả dụng', () => {
   function buildService(options: {
     variants: unknown[];
     balances: Array<{ productVariantId: bigint; onHand: number; reserved: number }>;
+    /** Suất flash đang chạy, khoá theo id biến thể. Bỏ trống là không có chương trình nào. */
+    deals?: Map<bigint, { salePrice: { toFixed: () => string }; availableQuantity: number }>;
   }) {
     const prisma = {
       isEnabled: jest.fn().mockReturnValue(true),
@@ -47,7 +49,9 @@ describe('PosOrderService tồn khả dụng', () => {
       {} as OrderService,
       {} as InventoryReservationService,
       {} as FulfillmentService,
-      {} as FlashSaleService,
+      {
+        resolveActiveDeals: jest.fn().mockResolvedValue(options.deals ?? new Map()),
+      } as unknown as FlashSaleService,
       {} as AuditWriter,
     );
   }
@@ -111,6 +115,42 @@ describe('PosOrderService tồn khả dụng', () => {
     const result = await service.searchCatalog({ page: 1, limit: 20 }, principal);
 
     expect(result.items[0].availableQuantity).toBe(0);
+  });
+
+  /**
+   * Khách tới quầy được cùng giá với web. Trước đây chỉ Backend biết giá flash: nhân viên đọc giá
+   * gốc cho khách, hoá đơn in ra số thấp hơn và không ai giải thích được chênh lệch.
+   */
+  it('danh mục quầy trả kèm giá flash và số suất còn lại', async () => {
+    const service = buildService({
+      variants: [
+        { ...GIAN_TA, name: 'Giàn tạ', prices: [{ amount: { toFixed: () => '16000000.00' } }] },
+      ],
+      balances: [{ productVariantId: 10n, onHand: 25, reserved: 4 }],
+      deals: new Map([
+        [10n, { salePrice: { toFixed: () => '13900000.00' }, availableQuantity: 4 }],
+      ]),
+    });
+
+    const result = await service.searchCatalog({ page: 1, limit: 20 }, principal);
+
+    expect(result.items[0].unitPrice).toBe('16000000.00');
+    expect(result.items[0].flashPrice).toBe('13900000.00');
+    expect(result.items[0].flashSaleAvailableQuantity).toBe(4);
+  });
+
+  it('không có chương trình nào thì hai trường flash để null, không phải 0', async () => {
+    const service = buildService({
+      variants: [
+        { ...GIAN_TA, name: 'Giàn tạ', prices: [{ amount: { toFixed: () => '16000000.00' } }] },
+      ],
+      balances: [{ productVariantId: 10n, onHand: 25, reserved: 4 }],
+    });
+
+    const result = await service.searchCatalog({ page: 1, limit: 20 }, principal);
+
+    expect(result.items[0].flashPrice).toBeNull();
+    expect(result.items[0].flashSaleAvailableQuantity).toBeNull();
   });
 
   it('kiểm tồn sớm khi tạo đơn từ chối combo vượt số cụm ghép được', async () => {

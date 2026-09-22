@@ -9,6 +9,8 @@ import { CartService } from '../src/modules/cart/cart.service';
 import { ScopeType } from '../src/modules/iam/iam.types';
 import { BankTransferPaymentProvider } from '../src/modules/payment/providers/bank-transfer.provider';
 import { CodPaymentProvider } from '../src/modules/payment/providers/cod.provider';
+import { VnpayPaymentProvider } from '../src/modules/payment/providers/vnpay.provider';
+import { VnpayGateway } from '../src/modules/payment/services/vnpay.gateway';
 import { PaymentProviderRegistry } from '../src/modules/payment/services/payment-provider.registry';
 import { PaymentService } from '../src/modules/payment/services/payment.service';
 
@@ -28,7 +30,13 @@ describe('Payment review persistence and idempotency', () => {
     prisma,
     {} as CartService,
     {} as ObjectStorageClient,
-    new PaymentProviderRegistry(new CodPaymentProvider(), new BankTransferPaymentProvider()),
+    // VNPay chưa cấu hình trong môi trường test nên gateway tự tắt; registry vẫn cần đủ ba
+    // provider vì nó dựng map theo phương thức thanh toán ngay trong constructor.
+    new PaymentProviderRegistry(
+      new CodPaymentProvider(),
+      new BankTransferPaymentProvider(),
+      new VnpayPaymentProvider(new VnpayGateway(config)),
+    ),
     config,
     audit,
   );

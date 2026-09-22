@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
+const { printCronStatus } = require('./lib/cron-http-status.cjs');
 
 const action = process.argv[2] ?? 'status';
 const jobName = 'dctd-reservation-expiry';
@@ -69,11 +70,7 @@ async function status(prisma) {
         jobs[0].jobid,
       )
     : [];
-  console.log(JSON.stringify(
-    { job: jobs[0] ?? null, recentRuns: runs },
-    (_, value) => typeof value === 'bigint' ? value.toString() : value,
-    2,
-  ));
+  await printCronStatus(prisma, { jobName, job: jobs[0], runs });
 }
 
 async function set(prisma) {
@@ -108,7 +105,10 @@ async function set(prisma) {
         'Authorization',
         'Bearer ' || (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = '${authSecretName}' LIMIT 1)
       ),
-      timeout_milliseconds := 10000
+      -- 30s, không phải 10s: bản deploy serverless có cold start, và `net._http_response` cho
+      -- thấy 3/20 lượt gọi bị timeout ở mốc 10s trong khi `cron.job_run_details` vẫn báo
+      -- `succeeded` — lượt đó bị bỏ lặng lẽ.
+      timeout_milliseconds := 30000
     ) AS request_id;
   `;
   await prisma.$queryRawUnsafe('SELECT cron.schedule($1, $2, $3)', jobName, schedule, command);

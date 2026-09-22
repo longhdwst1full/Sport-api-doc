@@ -177,3 +177,85 @@ describe('SystemParameterService với tham số bí mật', () => {
     expect(auditWrite.mock.calls[0]?.[0]).not.toHaveProperty('reason');
   });
 });
+
+/**
+ * `syncCatalog` chạy ở mỗi lần khởi động (và mỗi cold start). Bản cũ gọi `findUnique` rồi `update`
+ * tuần tự cho TỪNG tham số: 39 tham số là ~78 lượt đi database, mỗi lượt ~450ms tới Supabase.
+ */
+describe('SystemParameterService.syncCatalog', () => {
+  function createService(existingCodes: string[]) {
+    const findMany = jest.fn().mockResolvedValue(existingCodes.map((code) => ({ code })));
+    const createMany = jest
+      .fn<Promise<{ count: number }>, [{ data: { code: string }[]; skipDuplicates?: boolean }]>()
+      .mockResolvedValue({ count: 0 });
+    const update = jest
+      .fn<{ __update: boolean }, [{ data: Record<string, unknown> }]>()
+      .mockReturnValue({ __update: true });
+    const transaction = jest.fn().mockResolvedValue([]);
+    const prisma = {
+      isEnabled: () => true,
+      systemParameter: { findMany, createMany, update },
+      $transaction: transaction,
+    } as unknown as PrismaService;
+    const service = new SystemParameterService(
+      prisma,
+      { write: jest.fn() } as unknown as AuditWriter,
+    );
+    return { service, findMany, createMany, update, transaction };
+  }
+
+  it('đọc một lần, tạo một lần, cập nhật trong một batch — không phải mỗi tham số một lượt', async () => {
+    const { service, findMany, createMany, transaction } = createService([
+      SYSTEM_PARAMETER_CODE.SHIPPING_SMALL_FEE_VND,
+    ]);
+
+    await service.syncCatalog();
+
+    expect(findMany).toHaveBeenCalledTimes(1);
+    expect(createMany).toHaveBeenCalledTimes(1);
+    expect(transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it('chỉ tạo những tham số còn thiếu và trả về số lượng đã tạo', async () => {
+    const { service, createMany } = createService([SYSTEM_PARAMETER_CODE.SHIPPING_SMALL_FEE_VND]);
+
+    const created = await service.syncCatalog();
+
+    const payload = createMany.mock.calls[0]?.[0];
+    expect(payload?.data.some((row) => row.code === SYSTEM_PARAMETER_CODE.SHIPPING_SMALL_FEE_VND))
+      .toBe(false);
+    expect(created).toBe(payload?.data.length);
+  });
+
+  /** Hai instance khởi động cùng lúc đều thấy "chưa có"; trùng khoá không được làm instance chết. */
+  it('bỏ qua bản ghi trùng khi hai instance cùng đồng bộ', async () => {
+    const { service, createMany } = createService([]);
+
+    await service.syncCatalog();
+
+    expect(createMany.mock.calls[0]?.[0]).toMatchObject({ skipDuplicates: true });
+  });
+
+  /** `value` là của vận hành: đồng bộ metadata không được ghi đè giá trị đang chạy. */
+  it('không ghi đè value của bản ghi đã có', async () => {
+    const { service, update } = createService([SYSTEM_PARAMETER_CODE.SHIPPING_SMALL_FEE_VND]);
+
+    await service.syncCatalog();
+
+    const data = update.mock.calls[0]?.[0];
+    expect(data?.data).not.toHaveProperty('value');
+    expect(data?.data).toHaveProperty('defaultValue');
+  });
+
+  it('database tắt thì không đụng tới nó', async () => {
+    const { service, findMany } = createService([]);
+    const disabled = new SystemParameterService(
+      { isEnabled: () => false } as unknown as PrismaService,
+      { write: jest.fn() } as unknown as AuditWriter,
+    );
+
+    await expect(disabled.syncCatalog()).resolves.toBe(0);
+    expect(findMany).not.toHaveBeenCalled();
+    void service;
+  });
+});

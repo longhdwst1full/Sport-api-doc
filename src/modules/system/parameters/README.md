@@ -1,10 +1,10 @@
 # System Parameters — maintenance note
 
-> **Document version:** 1.0.1
+> **Document version:** 1.1.0
 >
-> **Last updated:** 2026-09-18
+> **Last updated:** 2026-09-22
 >
-> **Change summary:** Lý do khi sửa/ngừng dùng tham số là tùy chọn; actor, thời điểm và thay đổi vẫn được audit.
+> **Change summary:** Làm rõ ranh giới: cờ bật/tắt worker vào bảng, bí mật của worker ở lại env.
 
 ## Vì sao có bảng này
 
@@ -21,9 +21,16 @@ Quyết định mới: **ngưỡng nghiệp vụ chuyển sang bảng, bí mật
 | Biểu phí giao hàng, bán kính miễn phí | `DATABASE_URL`, `JWT_ACCESS_SECRET` |
 | TTL giữ chỗ, thời gian chờ hoàn tất đơn | Khoá Cloudinary, GHN |
 | Hạn thanh toán, TTL giỏ khách vãng lai | `AUTH_BYPASS`, `CORS_ORIGINS` |
-| TTL giữ suất flash sale | Bật/tắt job, `CRON_SECRET` |
+| TTL giữ suất flash sale | `CRON_SECRET` và mọi bí mật khác |
+| Bật/tắt worker, batch size của worker | `*_JOB_URL`, `*_CRON_SCHEDULE` (lịch nằm ở Supabase Cron) |
 
 Đưa bí mật vào bảng nghĩa là cho sửa cấu hình bảo mật qua giao diện và mở rộng bề mặt tấn công.
+
+**Cờ bật/tắt worker thuộc về bảng, không thuộc env.** Khi worker gây sự cố, vận hành cần dừng nó
+trong vài giây; nếu cờ nằm ở env thì phải redeploy, và trong lúc chờ thì sự cố vẫn chạy. Riêng
+secret của endpoint worker ở lại env vì đổi được khoá từ giao diện là mở rộng bề mặt tấn công.
+Hệ quả phải chấp nhận: tham số có thể bật trong khi env thiếu secret — endpoint khi đó **từ chối
+401**, không phải 500.
 
 ## Hai loại tham số
 
@@ -82,3 +89,4 @@ Tham chiếu: `msttparameter`, `ParameterResource` (`/api/v1/broker/mst/paramete
 | --- | --- | --- |
 | 1.0.0 | 2026-09-14 | Tạo bảng tham số, kế thừa pattern `msttparameter` của fund-ops-service. |
 | 1.0.1 | 2026-09-18 | Cho phép bỏ trống lý do khi sửa/ngừng dùng, không bỏ audit. |
+| 1.1.0 | 2026-09-22 | Cờ bật/tắt và batch size của worker chuyển vào bảng; bí mật worker ở lại env. |

@@ -74,6 +74,9 @@ describe('validateEnvironment', () => {
     }).RESERVATION_EXPIRY_JOB_ENABLED).toBe(true);
     expect(() => validateEnvironment({ PAYMENT_EXPIRY_JOB_ENABLED: 'true' })).toThrow('CRON_SECRET');
     expect(() => validateEnvironment({ ORDER_COMPLETION_JOB_ENABLED: 'true' })).toThrow('CRON_SECRET');
+    expect(() => validateEnvironment({ FLASH_SALE_QUOTA_EXPIRY_JOB_ENABLED: 'true' })).toThrow(
+      'CRON_SECRET',
+    );
   });
 
   it.each(['0', '366', '1.5'])('rejects invalid guest cart TTL %s', (value) => {
