@@ -48,6 +48,9 @@ export const SYSTEM_PARAMETER_CODE = {
   GUEST_CART_TTL_DAYS: 'GUEST_CART_TTL_DAYS',
   FLASH_SALE_QUOTA_TTL_MINUTES: 'FLASH_SALE_QUOTA_TTL_MINUTES',
   FLASH_SALE_QUOTA_EXPIRY_JOB_ENABLED: 'FLASH_SALE_QUOTA_EXPIRY_JOB_ENABLED',
+  RESERVATION_EXPIRY_JOB_ENABLED: 'RESERVATION_EXPIRY_JOB_ENABLED',
+  PAYMENT_EXPIRY_JOB_ENABLED: 'PAYMENT_EXPIRY_JOB_ENABLED',
+  ORDER_COMPLETION_JOB_ENABLED: 'ORDER_COMPLETION_JOB_ENABLED',
   FLASH_SALE_QUOTA_EXPIRY_JOB_BATCH_SIZE: 'FLASH_SALE_QUOTA_EXPIRY_JOB_BATCH_SIZE',
 
   // --- Tích hợp vận chuyển GHN ---
@@ -436,4 +439,44 @@ export const SYSTEM_PARAMETER_CATALOG: readonly SystemParameterDefinition[] = [
     valueType: SYSTEM_PARAMETER_VALUE_TYPE.STRING,
     defaultValue: '', sortOrder: 440, isSecret: true, envFallback: 'TELEGRAM_WEBHOOK_SECRET',
   },
+  /**
+   * Cờ bật/tắt ba worker còn lại.
+   *
+   * Trước đây chúng chỉ đọc biến môi trường, mà `.env.production` trong repo không bao giờ được
+   * ứng dụng đọc (`envFilePath` chỉ có `.env.local` và `.env`) và Vercel cũng không nạp file env từ
+   * repo. Hệ quả đã xảy ra thật: job "đã bật" trong file nhưng chạy no-op trên production, im lặng.
+   * Đưa vào bảng tham số thì vận hành bật/tắt được ngay từ màn Admin và tra được bằng
+   * `GET /api/v1/health/config`.
+   */
+  {
+    code: SYSTEM_PARAMETER_CODE.RESERVATION_EXPIRY_JOB_ENABLED,
+    groupCode: SYSTEM_PARAMETER_GROUP.CHECKOUT,
+    label: 'Bật worker trả tồn kho giữ chỗ quá hạn',
+    description:
+      'Tắt thì hàng đã giữ cho checkout bỏ dở không bao giờ trả về kho. Chỉ tắt khi đang xử lý sự cố.',
+    valueType: SYSTEM_PARAMETER_VALUE_TYPE.BOOLEAN,
+    defaultValue: 'false', sortOrder: 90,
+    envFallback: 'RESERVATION_EXPIRY_JOB_ENABLED',
+  },
+  {
+    code: SYSTEM_PARAMETER_CODE.PAYMENT_EXPIRY_JOB_ENABLED,
+    groupCode: SYSTEM_PARAMETER_GROUP.PAYMENT,
+    label: 'Bật worker huỷ đơn quá hạn thanh toán',
+    description:
+      'Tắt thì đơn chờ chuyển khoản quá hạn vẫn giữ tồn kho và không bao giờ tự huỷ.',
+    valueType: SYSTEM_PARAMETER_VALUE_TYPE.BOOLEAN,
+    defaultValue: 'false', sortOrder: 91,
+    envFallback: 'PAYMENT_EXPIRY_JOB_ENABLED',
+  },
+  {
+    code: SYSTEM_PARAMETER_CODE.ORDER_COMPLETION_JOB_ENABLED,
+    groupCode: SYSTEM_PARAMETER_GROUP.ORDER,
+    label: 'Bật worker tự hoàn tất đơn đã giao',
+    description:
+      'Tắt thì đơn đã giao đứng mãi ở DELIVERED và không vào doanh thu thực nhận của báo cáo.',
+    valueType: SYSTEM_PARAMETER_VALUE_TYPE.BOOLEAN,
+    defaultValue: 'false', sortOrder: 92,
+    envFallback: 'ORDER_COMPLETION_JOB_ENABLED',
+  },
+
 ];

@@ -1,4 +1,5 @@
 import { ConfigService } from '@nestjs/config';
+import type { SystemParameterService } from '../src/modules/system/parameters/system-parameter.service';
 import { PrismaClient } from '@prisma/client';
 
 import { PrismaService } from '../src/database/prisma.service';
@@ -23,10 +24,15 @@ describe('Reservation expiry worker concurrency', () => {
   } as unknown as ConfigService;
   const prisma = new PrismaService(config);
   const auditWrite = jest.fn().mockResolvedValue({ id: 'integration', createdAt: new Date().toISOString() });
+  /** Worker đọc cờ bật/tắt từ bảng tham số; test chỉ cần nó trả true để chạy tới phần nghiệp vụ. */
+  const parameters = {
+    getBoolean: jest.fn().mockResolvedValue(true),
+  } as unknown as SystemParameterService;
   const service = new ReservationExpiryService(
     prisma,
     config,
     { write: auditWrite } as unknown as AuditWriter,
+    parameters,
   );
   let branchId = 0n;
   let warehouseId = 0n;

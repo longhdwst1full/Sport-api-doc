@@ -3,6 +3,10 @@ import { createHash, randomUUID } from 'node:crypto';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
+import {
+  measurePackageFrom,
+  type MeasurableLine,
+} from '../shipping/package-measurement';
 import { toDatabaseId, toEntityId } from '../../common/identifiers/entity-id';
 import { PrismaService } from '../../database/prisma.service';
 import { normalizeVietnamesePhone } from '../auth/phone-normalization';
@@ -379,30 +383,54 @@ export class CheckoutService {
     return Array.from(demand, ([productVariantId, quantity]) => ({ productVariantId, quantity }));
   }
 
+  /**
+   * Kiện hàng gửi cho hãng vận chuyển lúc BÁO GIÁ.
+   *
+   * Dùng đúng `measurePackageFrom` mà bước tạo vận đơn dùng. GHN tự tính trọng lượng quy đổi thể
+   * tích, nhưng chỉ từ kích thước ta gửi lên — báo giá gửi thiếu thì GHN báo trên một kiện 1cm,
+   * tới lúc tạo vận đơn gửi kích thước thật thì hãng thu theo kiện thật và cửa hàng chịu phần chênh.
+   *
+   * Bản trước còn hai chỗ lệch với bước tạo vận đơn, cả hai đều khai THIẾU:
+   * - sản phẩm chưa khai cân nặng đóng góp 0g rồi cả kiện rơi về `Math.max(1, …)` = 1 gram;
+   * - một món thiếu kích thước thì vẫn gửi kích thước của các món còn lại, bỏ hẳn phần món đó.
+   */
   private packageInput(items: Awaited<ReturnType<CheckoutService['loadSellableCart']>>['items'], subtotal: Prisma.Decimal, cod: boolean) {
-    let weightGrams = 0;
-    let lengthMm = 0;
-    let widthMm = 0;
-    let heightMm = 0;
-    const add = (variant: { weightGrams: number; lengthMm: number | null; widthMm: number | null; heightMm: number | null }, quantity: number) => {
-      weightGrams += variant.weightGrams * quantity;
-      lengthMm = Math.max(lengthMm, variant.lengthMm ?? 0);
-      widthMm = Math.max(widthMm, variant.widthMm ?? 0);
-      heightMm += (variant.heightMm ?? 0) * quantity;
+    const lines: MeasurableLine[] = [];
+    const add = (
+      variant: { weightGrams: number; lengthMm: number | null; widthMm: number | null; heightMm: number | null },
+      quantity: number,
+    ) => {
+      lines.push({
+        quantity,
+        weightGrams: variant.weightGrams,
+        lengthMm: variant.lengthMm,
+        widthMm: variant.widthMm,
+        heightMm: variant.heightMm,
+      });
     };
     for (const item of items) {
       const bundle = item.productVariant.bundleDefinition;
       if (!bundle) add(item.productVariant, item.quantity);
       else for (const component of bundle.items) add(component.componentVariant, component.quantity * item.quantity);
     }
+
+    const measurement = measurePackageFrom(lines);
     const declaredValue = Math.min(Number(subtotal.toFixed(0)), 5_000_000);
     return {
-      weightGrams: Math.max(1, weightGrams),
-      lengthCm: lengthMm ? Math.ceil(lengthMm / 10) : undefined,
-      widthCm: widthMm ? Math.ceil(widthMm / 10) : undefined,
-      heightCm: heightMm ? Math.ceil(heightMm / 10) : undefined,
+      // Gửi khối lượng THẬT kèm kích thước: để GHN tự quyết định tính theo cân nặng hay theo thể
+      // tích. Gửi sẵn chargeable weight cộng thêm kích thước là để hãng tính thể tích hai lần.
+      weightGrams: Math.max(1, measurement.actualWeightGrams),
+      ...(measurement.hasDimensions
+        ? {
+            lengthCm: measurement.lengthCm,
+            widthCm: measurement.widthCm,
+            heightCm: measurement.heightCm,
+          }
+        : {}),
       declaredValue,
       codAmount: cod ? Number(subtotal.toFixed(0)) : 0,
+      /** Dùng cho đường phí dự phòng nội bộ khi hãng không trả lời được. */
+      chargeableWeightGrams: measurement.chargeableWeightGrams,
     };
   }
 

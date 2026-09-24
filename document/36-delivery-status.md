@@ -1,10 +1,10 @@
 # Trạng thái bàn giao — nguồn tiến độ duy nhất
 
-> **Document version:** 1.6.0
+> **Document version:** 1.7.0
 >
-> **Last updated:** 2026-09-21
+> **Last updated:** 2026-09-24
 >
-> **Change summary:** Hoàn thiện remember-me phía Backend cho cookie phiên/cookie lưu dài hạn và refresh rotation.
+> **Change summary:** Cập nhật thông báo/email, hồ sơ và đổi mật khẩu, export báo cáo; ghi nhận storefront chưa deploy lên domain thật.
 
 ## Tài liệu này dùng để làm gì
 
@@ -42,15 +42,18 @@ không được gộp làm một.
 | Thanh toán VNPay | ✅ | ⚠️ Chờ khoá | Backend + IPN + trang kết quả; khoá SMTP/VNPay do chủ dự án cấp |
 | Bán tại quầy | ✅ | ✅ | `ORD-20260915-00000025`, `...26` |
 | Flash sale + quota | ✅ | ⚠️ Cần bật cron | `test/flash-sale-quota.integration-spec.ts` — 6 test trên PostgreSQL thật |
-| Báo cáo và Dashboard | ✅ | ✅ | 4 endpoint `Admin Reporting` |
+| Báo cáo và Dashboard | ✅ | ✅ | 5 endpoint `Admin Reporting` + tổng hợp tồn kho |
+| Export báo cáo CSV/XLSX | ⚠️ Backend xong 5 endpoint; **Admin chưa có nút tải** | ❌ Chưa dùng được vì thiếu giao diện | `exportAdminReportRevenue/…/exportAdminReportInventory`; `src/modules/reporting/export/` |
 | Quản lý khách hàng | ✅ | ✅ | `Admin Customers`; fixture đã xoá |
 | Vai trò và phân quyền | ✅; OWNER được bảo vệ full permission catalog | ⚠️ Chờ deploy bản IAM mới | CRUD + cây quyền; API 381/381 unit tests pass ngày 2026-09-20 |
 | Tồn kho | ✅; adjustment có idempotency, retry serialization và timeout | ✅; cần redeploy bản resilience mới | Transaction rollback-only trên Supabase; unit test P2034/P2010/P2024/P2028 |
 | Ghi nhớ đăng nhập | ✅; Backend phân biệt session/persistent refresh cookie và giữ lựa chọn khi rotate | ⚠️ Chờ deploy API/Admin mới | `LoginDto.rememberMe`; `auth-token-transport.service.spec.ts` |
 | E2E trình duyệt | ⚠️ Admin 17/17, Storefront 41/41; chưa phủ checkout/Orders/Inventory mutation | ⚠️ Admin đã cấu hình CI, chưa xác minh run trên GitHub; Client chưa gắn CI | `document/37-playwright-e2e-report.md` |
-| PWA Storefront | ⚠️ Icon PNG và manifest đã có, chưa nghiệm thu cài đặt/offline trên HTTPS | Chưa kiểm chứng | `client/public/icon-192.png`, `icon-512.png`, `src/app/manifest.ts`, cache v3 trong `public/sw.js` |
+| PWA Storefront | ⚠️ Icon PNG và manifest đã có, chưa nghiệm thu cài đặt/offline | ❌ **Không kiểm được**: `baoansport.vn` đang là site PHP cũ, không phải Next.js app | `/manifest.webmanifest`, `/sw.js`, `/offline` đều trả HTTP 410 ngày 2026-09-24; `x-powered-by: PHP/7.4.33` |
+| Storefront trên domain thật | ❌ Chưa deploy | ❌ `/login` trả 500, `/gio-hang` và asset tĩnh trả 410 | Domain trỏ site cũ; `VNPAY_RETURN_URL` vì thế cũng trỏ vào trang 410 |
 | Đổi trả và hoàn tiền | ❌ | ❌ | `grep -c "model Return\|model Refund"` → `0` |
-| Thông báo và email | ⚠️ Có cổng Mailtrap + disabled adapter; chưa có use case và model `Notification` | ❌ Chưa xác minh gửi email thật | `api/src/integrations/email/`, `api/src/modules/notification/notification.module.ts` |
+| Thông báo và email | ✅ Outbox + worker + dead-letter + 4 mẫu email (đặt hàng, cập nhật giao vận, đặt lại mật khẩu, đổi mật khẩu thành công) | ⚠️ Cron dispatch **chưa đăng ký trên Supabase**; chưa xác minh gửi thật qua Mailtrap | `modules/notification/outbox-dispatcher.service.ts`, `outbox.writer.ts`, `notification.templates.ts` |
+| Hồ sơ khách và đổi mật khẩu | ✅ Cập nhật hồ sơ, quên/đặt lại/đổi mật khẩu, `password_reset_tokens` chỉ lưu hash | ⚠️ Chờ deploy; cần `STOREFRONT_BASE_URL` để link trong email trỏ đúng | `modules/auth/password-reset.service.ts`, `modules/customer/customer-profile.service.ts` |
 | Bảo hành | ❌ | ❌ | Chưa có model `Warranty` |
 
 ## Việc còn lại
@@ -64,9 +67,9 @@ Kế hoạch thực thi và phân tích rủi ro chuẩn nằm ở
 | B1 | Đồng bộ trạng thái tài liệu sprint cũ, tránh checklist mâu thuẫn | 0.5 ngày |
 | B2 | Sửa soft-404 trên route động | 0.5 ngày |
 | B3 | Chuẩn hoá thông báo lỗi sang tiếng Việt | 1 ngày |
-| B4 | Notification use case + gửi email qua adapter đã có | 2–3 ngày |
-| B5 | Vật lý hoá Outbox + retry/dead-letter | 1–2 ngày |
-| B6 | Export báo cáo CSV/XLSX | 1 ngày |
+| ~~B4~~ | ~~Notification use case + gửi email qua adapter đã có~~ — **đã xong ở mã nguồn**, còn đăng ký cron và nghiệm thu gửi thật | — |
+| ~~B5~~ | ~~Vật lý hoá Outbox + retry/dead-letter~~ — **đã xong**, gồm cả thu hồi lock quá hạn | — |
+| B6 | Export báo cáo CSV/XLSX — **Backend xong**, còn nút tải ở Admin | 0.5 ngày |
 | B7 | Nghiệm thu cài đặt/offline/update/reset trên HTTPS; icon PNG đã có | 0.5 ngày |
 | B8 | Giảm bundle Admin (chunk chính 748 kB, charts 370 kB ở build 2026-09-18) | Cần phân tích tách route/chunk, chưa ước lượng lại |
 | B9 | Đồng bộ giỏ hàng nhiều thiết bị | 1–2 ngày |
@@ -128,11 +131,21 @@ PWA HTTPS acceptance. Ước lượng R2 cũ chỉ bao phủ happy path; estimat
 - `client/yarn lint`, `client/yarn test` (5 file, 15 test) và `client/yarn build`: pass. Manifest bản build trả đúng icon PNG 192/512, cả hai URL icon trả HTTP 200. Nghiệm thu cài đặt/offline/update trên HTTPS vẫn chưa làm.
 - `admin/yarn build`: pass nhưng cảnh báo chunk `index` 748.07 kB; `vendor-charts` 370.16 kB. `client/yarn build`: trang `/` 210 kB First Load JS. Đây là rủi ro hiệu năng chưa xử lý, không phải lỗi build.
 - Các module Return/Refund và Warranty chưa có model Prisma; không đánh dấu hoàn thành chỉ vì có module NestJS scaffold.
+- Kiểm ngày 2026-09-24: API production (`sport-api-doc.vercel.app/api/v1/health`) trả 200. Nhưng
+  `baoansport.vn` **không phải Storefront** — header `x-powered-by: PHP/7.4.33`, tức site cũ. `/login`
+  trả 500, `/gio-hang`, `/sw.js`, `/manifest.webmanifest`, `/icon-192.png` đều trả 410. Vì vậy PWA
+  và luồng trả về của VNPay (`VNPAY_RETURN_URL` trỏ vào chính domain đó) **chưa thể nghiệm thu**.
+- Cron: `dctd-reservation-expiry`, `dctd-order-maintenance` và `dctd-flash-sale-quota-expiry` đã
+  đăng ký, timeout nâng lên 30s. Bằng chứng lấy từ `net._http_response` chứ không phải
+  `cron.job_run_details` — bảng sau chỉ chứng minh pg_cron đã xếp hàng request. Còn lại: job
+  notification-dispatch **chưa đăng ký**, flash-sale trả `enabled:false` vì biến môi trường chưa bật
+  trên Vercel, và vẫn còn lượt timeout ở mốc 30s.
 
 ## Revision history
 
 | Version | Date | Change summary |
 | --- | --- | --- |
+| 1.7.0 | 2026-09-24 | Notification/outbox, hồ sơ và mật khẩu, export báo cáo; ghi nhận Storefront chưa deploy lên domain thật. |
 | 1.6.0 | 2026-09-21 | Hoàn thiện remember-me Backend và trace trạng thái triển khai. |
 | 1.5.0 | 2026-09-21 | Harden adjustment transaction/retry/timeout và chuẩn hóa lỗi transient thành 503 tiếng Việt. |
 | 1.4.0 | 2026-09-20 | Product + initial SKU aggregate create atomic và Admin form một màn hình. |

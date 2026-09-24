@@ -1,4 +1,6 @@
 import { Controller, Get, Headers, Req, UnauthorizedException } from '@nestjs/common';
+import { SYSTEM_PARAMETER_CODE } from '../system/parameters/system-parameter.catalog';
+import { SystemParameterService } from '../system/parameters/system-parameter.service';
 import { ConfigService } from '@nestjs/config';
 import { ApiExcludeController } from '@nestjs/swagger';
 import type { Request } from 'express';
@@ -32,15 +34,19 @@ export class ReservationExpiryController {
   constructor(
     private readonly config: ConfigService,
     private readonly expiry: ReservationExpiryService,
+    private readonly parameters: SystemParameterService,
   ) {}
 
   /** Khi job bị tắt, trả kết quả no-op mà không truy cập database. */
   @Get('expire')
-  run(
+  async run(
     @Headers('authorization') authorization: string | undefined,
     @Req() request: Request,
   ): Promise<ReservationExpiryRunResult> {
-    const enabled = this.config.get<boolean>('app.jobs.reservationExpiry.enabled') ?? false;
+    // Cờ bật/tắt đọc từ bảng tham số, cùng nguồn với worker bên dưới.
+    const enabled = await this.parameters.getBoolean(
+      SYSTEM_PARAMETER_CODE.RESERVATION_EXPIRY_JOB_ENABLED,
+    );
     if (!enabled) return this.expiry.run(requestId(request));
     const secret = this.config.getOrThrow<string>('app.jobs.cronSecret');
     if (!authorization || !secretsMatch(authorization, `Bearer ${secret}`)) {

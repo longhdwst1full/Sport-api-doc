@@ -1,4 +1,6 @@
 import { timingSafeEqual } from 'node:crypto';
+import { SYSTEM_PARAMETER_CODE } from '../../system/parameters/system-parameter.catalog';
+import { SystemParameterService } from '../../system/parameters/system-parameter.service';
 import { Controller, Get, Headers, Req, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiExcludeController } from '@nestjs/swagger';
@@ -24,12 +26,18 @@ export class OrderMaintenanceController {
     private readonly config: ConfigService,
     private readonly paymentExpiry: PaymentExpiryService,
     private readonly orderCompletion: OrderCompletionService,
+    private readonly parameters: SystemParameterService,
   ) {}
 
   @Get('maintenance')
   async run(@Headers('authorization') authorization: string | undefined, @Req() request: Request): Promise<OrderMaintenanceResult> {
-    const enabled = (this.config.get<boolean>('app.jobs.paymentExpiry.enabled') ?? false)
-      || (this.config.get<boolean>('app.jobs.orderCompletion.enabled') ?? false);
+    // Cờ bật/tắt đọc từ bảng tham số như chính hai worker bên dưới; đọc từ nguồn khác thì
+    // controller và worker có thể nói hai điều khác nhau về cùng một job.
+    const [paymentExpiryEnabled, orderCompletionEnabled] = await Promise.all([
+      this.parameters.getBoolean(SYSTEM_PARAMETER_CODE.PAYMENT_EXPIRY_JOB_ENABLED),
+      this.parameters.getBoolean(SYSTEM_PARAMETER_CODE.ORDER_COMPLETION_JOB_ENABLED),
+    ]);
+    const enabled = paymentExpiryEnabled || orderCompletionEnabled;
     if (enabled) {
       const secret = this.config.getOrThrow<string>('app.jobs.cronSecret');
       if (!authorization || !secretsMatch(authorization, `Bearer ${secret}`)) {

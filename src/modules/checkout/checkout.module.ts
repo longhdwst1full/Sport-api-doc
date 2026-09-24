@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { SystemModule } from '../system/system.module';
 
 import { AuditModule } from '../audit/audit.module';
 import { CartModule } from '../cart/cart.module';
@@ -11,7 +12,7 @@ import { ReservationExpiryController } from './reservation-expiry.controller';
 import { ReservationExpiryService } from './reservation-expiry.service';
 
 @Module({
-  imports: [AuditModule, CartModule, PromotionModule, ShippingModule],
+  imports: [SystemModule, AuditModule, CartModule, PromotionModule, ShippingModule],
   controllers: [GuestCheckoutController, AccountCheckoutController, AdminCheckoutController, ReservationExpiryController],
   providers: [CheckoutService, InventoryReservationService, ReservationExpiryService],
   exports: [CheckoutService, InventoryReservationService],

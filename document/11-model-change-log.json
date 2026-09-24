@@ -3973,6 +3973,32 @@
         "source:scripts/configure-notification-dispatch-cron.cjs"
       ],
       "targets": []
+    },
+    {
+      "id": "API-20260924-JOB-FLAGS-TO-PARAMETERS",
+      "date": "2026-09-24",
+      "scope": "SYSTEM+JOBS+OPERATIONS",
+      "summary": "Ba cờ bật/tắt worker còn lại (RESERVATION_EXPIRY, PAYMENT_EXPIRY, ORDER_COMPLETION) chuyển từ biến môi trường sang bảng system_parameters, cùng cơ chế với FLASH_SALE_QUOTA_EXPIRY đã làm trước đó; env chỉ còn là fallback khi ô value trống. Lý do: .env.production trong repo không bao giờ được ứng dụng đọc (envFilePath chỉ có .env.local và .env) và Vercel cũng không nạp file env từ repo, nên job 'đã bật' trong file vẫn chạy no-op trên production mà không có dấu hiệu gì — đúng nguyên nhân của sự cố GHN 503 trước đó. Controller đọc cùng nguồn với worker để hai bên không nói hai điều khác nhau về cùng một job; reservation-expiry controller vì thế thành async. Đã seed cả bốn cờ = true trên database và xác minh endpoint flash sale trả enabled:true.",
+      "sources": [
+        "source:src/modules/system/parameters/system-parameter.catalog.ts",
+        "source:src/modules/payment/services/payment-expiry.service.ts",
+        "source:src/modules/order/services/order-completion.service.ts",
+        "source:src/modules/checkout/reservation-expiry.service.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260924-SHARED-PACKAGE-MEASUREMENT",
+      "date": "2026-09-24",
+      "scope": "SHIPPING+CHECKOUT+FULFILLMENT",
+      "summary": "Báo giá và tạo vận đơn dùng chung một công thức đo kiện (src/modules/shipping/package-measurement.ts). GHN tự tính trọng lượng quy đổi thể tích nhưng chỉ từ kích thước ta gửi lên; checkout trước đó gửi thiếu nên GHN báo giá trên kiện 1cm, tới lúc tạo vận đơn gửi kích thước thật thì hãng thu theo kiện thật và cửa hàng chịu chênh — thảm tập 1,2m x 0,6m x 0,4m nặng 800g là 50.000d so với 200.000d. Checkout còn hai lỗi khai thiếu đã sửa: sản phẩm chưa khai cân nặng làm cả kiện rơi về 1 gram, và một món thiếu kích thước thì vẫn gửi kích thước của các món còn lại. Biểu phí dự phòng nội bộ chia bậc theo chargeableWeightGrams thay vì cân nặng thực, để cùng thước đo với hãng.",
+      "sources": [
+        "source:src/modules/shipping/package-measurement.ts",
+        "source:src/modules/checkout/checkout.service.ts",
+        "source:src/modules/shipping/shipping-quote.service.ts",
+        "test:src/modules/shipping/package-measurement.spec.ts"
+      ],
+      "targets": []
     }
   ]
 }

@@ -1,4 +1,5 @@
 import { ConfigService } from '@nestjs/config';
+import type { SystemParameterService } from '../../system/parameters/system-parameter.service';
 import { PrismaService } from '../../../database/prisma.service';
 import { AuditWriter } from '../../audit/audit.writer';
 import { PaymentExpiryService } from './payment-expiry.service';
@@ -32,7 +33,11 @@ describe('PaymentExpiryService', () => {
     get: jest.fn().mockReturnValue(true),
     getOrThrow: jest.fn().mockReturnValue(50),
   } as unknown as ConfigService;
-  const service = new PaymentExpiryService(prisma, config, { write: auditWrite } as unknown as AuditWriter);
+  /** Worker đọc cờ bật/tắt từ bảng tham số; test chỉ cần nó trả true để chạy tới phần nghiệp vụ. */
+  const parameters = {
+    getBoolean: jest.fn().mockResolvedValue(true),
+  } as unknown as SystemParameterService;
+  const service = new PaymentExpiryService(prisma, config, { write: auditWrite } as unknown as AuditWriter, parameters);
 
   const order = {
     id: 11n,
@@ -65,7 +70,8 @@ describe('PaymentExpiryService', () => {
   });
 
   it('does not access PostgreSQL when payment expiry is disabled', async () => {
-    (config.get as jest.Mock).mockReturnValue(false);
+    // Cờ bật/tắt nay đọc từ bảng tham số, không còn từ biến môi trường.
+    (parameters.getBoolean as jest.Mock).mockResolvedValueOnce(false);
 
     await expect(service.run('cron-disabled')).resolves.toMatchObject({ enabled: false, expired: 0 });
     expect(runTransaction).not.toHaveBeenCalled();

@@ -1,4 +1,6 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { SYSTEM_PARAMETER_CODE } from '../../system/parameters/system-parameter.catalog';
+import { SystemParameterService } from '../../system/parameters/system-parameter.service';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { toEntityId } from '../../../common/identifiers/entity-id';
@@ -23,10 +25,13 @@ export class OrderCompletionService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly audit: AuditWriter,
+    private readonly parameters: SystemParameterService,
   ) {}
 
   async run(requestId: string): Promise<OrderCompletionRunResult> {
-    const enabled = this.config.get<boolean>('app.jobs.orderCompletion.enabled') ?? false;
+    // Cờ bật/tắt nằm ở `system_parameters` (env chỉ là fallback khi ô value còn trống),
+    // nên vận hành bật/tắt được từ màn Admin mà không cần deploy lại.
+    const enabled = await this.parameters.getBoolean(SYSTEM_PARAMETER_CODE.ORDER_COMPLETION_JOB_ENABLED);
     if (!enabled) return this.result(false, 0, 0, false);
     if (!this.prisma.isEnabled()) throw new ServiceUnavailableException('Kho dữ liệu đơn hàng chưa được bật');
     const batchSize = this.config.getOrThrow<number>('app.jobs.orderCompletion.batchSize');

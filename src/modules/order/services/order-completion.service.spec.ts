@@ -1,4 +1,5 @@
 import { ConfigService } from '@nestjs/config';
+import type { SystemParameterService } from '../../system/parameters/system-parameter.service';
 import { PrismaService } from '../../../database/prisma.service';
 import { AuditWriter } from '../../audit/audit.writer';
 import { OrderCompletionService } from './order-completion.service';
@@ -21,7 +22,11 @@ describe('OrderCompletionService', () => {
     get: jest.fn().mockReturnValue(true),
     getOrThrow: jest.fn((key: string) => key.endsWith('batchSize') ? 50 : 72),
   } as unknown as ConfigService;
-  const service = new OrderCompletionService(prisma, config, { write: auditWrite } as unknown as AuditWriter);
+  /** Worker đọc cờ bật/tắt từ bảng tham số; test chỉ cần nó trả true để chạy tới phần nghiệp vụ. */
+  const parameters = {
+    getBoolean: jest.fn().mockResolvedValue(true),
+  } as unknown as SystemParameterService;
+  const service = new OrderCompletionService(prisma, config, { write: auditWrite } as unknown as AuditWriter, parameters);
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -34,7 +39,8 @@ describe('OrderCompletionService', () => {
   });
 
   it('does not access PostgreSQL when auto completion is disabled', async () => {
-    (config.get as jest.Mock).mockReturnValue(false);
+    // Cờ bật/tắt nay đọc từ bảng tham số, không còn từ biến môi trường.
+    (parameters.getBoolean as jest.Mock).mockResolvedValueOnce(false);
 
     await expect(service.run('cron-disabled')).resolves.toMatchObject({
       enabled: false,

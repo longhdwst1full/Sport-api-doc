@@ -101,9 +101,16 @@ export class ShippingQuoteService {
           this.parameters.getInteger(SYSTEM_PARAMETER_CODE.SHIPPING_MEDIUM_FEE_VND),
           this.parameters.getInteger(SYSTEM_PARAMETER_CODE.SHIPPING_LARGE_FEE_VND),
         ]);
-      const fee = input.package.weightGrams <= smallMaxWeightGrams
+      // Chia bậc theo TRỌNG LƯỢNG TÍNH CƯỚC, không theo cân nặng thật: hãng vận chuyển tính tiền
+      // theo số lớn hơn giữa cân nặng và quy đổi thể tích, nên biểu phí dự phòng phải theo cùng
+      // một thước đo. Dùng cân nặng thật ở đây làm hàng cồng kềnh nhẹ cân rơi vào bậc rẻ nhất
+      // trong khi hãng thu bậc đắt nhất — thảm tập 1,2m × 0,6m × 0,4m nặng 800g là 50.000đ so với
+      // 200.000đ.
+      const chargeableWeightGrams =
+        input.package.chargeableWeightGrams ?? input.package.weightGrams;
+      const fee = chargeableWeightGrams <= smallMaxWeightGrams
         ? smallFeeVnd
-        : input.package.weightGrams <= mediumMaxWeightGrams
+        : chargeableWeightGrams <= mediumMaxWeightGrams
           ? mediumFeeVnd
           : largeFeeVnd;
       return {

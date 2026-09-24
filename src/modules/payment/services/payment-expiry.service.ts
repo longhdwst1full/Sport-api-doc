@@ -1,4 +1,6 @@
 import { createHash } from 'node:crypto';
+import { SYSTEM_PARAMETER_CODE } from '../../system/parameters/system-parameter.catalog';
+import { SystemParameterService } from '../../system/parameters/system-parameter.service';
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
@@ -26,10 +28,13 @@ export class PaymentExpiryService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly audit: AuditWriter,
+    private readonly parameters: SystemParameterService,
   ) {}
 
   async run(requestId: string): Promise<PaymentExpiryRunResult> {
-    const enabled = this.config.get<boolean>('app.jobs.paymentExpiry.enabled') ?? false;
+    // Cờ bật/tắt nằm ở `system_parameters` (env chỉ là fallback khi ô value còn trống),
+    // nên vận hành bật/tắt được từ màn Admin mà không cần deploy lại.
+    const enabled = await this.parameters.getBoolean(SYSTEM_PARAMETER_CODE.PAYMENT_EXPIRY_JOB_ENABLED);
     if (!enabled) return this.result(false, 0, 0, false);
     if (!this.prisma.isEnabled()) throw new ServiceUnavailableException('Kho dữ liệu thanh toán chưa được bật');
     const batchSize = this.config.getOrThrow<number>('app.jobs.paymentExpiry.batchSize');

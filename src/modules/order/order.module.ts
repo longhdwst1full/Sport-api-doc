@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { SystemModule } from '../system/system.module';
 import { AuditModule } from '../audit/audit.module';
 import { CartModule } from '../cart/cart.module';
 import { AccountOrderController, AdminOrderController, GuestOrderController } from './controllers/order.controller';
@@ -14,7 +15,9 @@ import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   imports: [
-    NotificationModule,AuditModule, CartModule, PaymentModule, PromotionModule, CheckoutModule, FulfillmentModule],
+    SystemModule,
+    NotificationModule,
+    AuditModule, CartModule, PaymentModule, PromotionModule, CheckoutModule, FulfillmentModule],
   controllers: [GuestOrderController, AccountOrderController, AdminOrderController, OrderMaintenanceController],
   providers: [OrderService, OrderCompletionService, PosOrderService],
   exports: [OrderService, PosOrderService],

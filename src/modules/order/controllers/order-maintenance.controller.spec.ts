@@ -1,8 +1,14 @@
 import { UnauthorizedException } from '@nestjs/common';
+import type { SystemParameterService } from '../../system/parameters/system-parameter.service';
 import { ConfigService } from '@nestjs/config';
 import { PaymentExpiryService } from '../../payment/services/payment-expiry.service';
 import { OrderMaintenanceController } from './order-maintenance.controller';
 import { OrderCompletionService } from '../services/order-completion.service';
+
+const parameters = {
+  getBoolean: jest.fn().mockResolvedValue(true),
+} as unknown as SystemParameterService;
+
 
 describe('OrderMaintenanceController', () => {
   const paymentRun = jest.fn().mockResolvedValue({ enabled: true, claimed: 0, expired: 0 });
@@ -16,6 +22,7 @@ describe('OrderMaintenanceController', () => {
     config,
     { run: paymentRun } as unknown as PaymentExpiryService,
     { run: completionRun } as unknown as OrderCompletionService,
+    parameters,
   );
   const request = { id: 'request-maintenance-1' } as never;
 

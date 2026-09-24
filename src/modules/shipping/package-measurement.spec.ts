@@ -1,4 +1,4 @@
-import { measurePackageFrom, type MeasurableLine } from './fulfillment.service';
+import { measurePackageFrom, type MeasurableLine } from './package-measurement';
 
 /**
  * Cước vận chuyển tính trên số này. Trước đây chỗ tạo vận đơn nhân số lượng với hằng số 500g và
@@ -129,5 +129,57 @@ describe('measurePackageFrom', () => {
     expect(measurement.lengthCm).toBe(21);
     expect(measurement.widthCm).toBe(16);
     expect(measurement.heightCm).toBe(11);
+  });
+});
+
+/**
+ * Báo giá và tạo vận đơn phải gửi CÙNG một kiện cho hãng.
+ *
+ * GHN tự tính trọng lượng quy đổi thể tích, nhưng chỉ từ kích thước ta gửi lên. Báo giá gửi thiếu
+ * kích thước thì GHN báo giá trên một kiện 1cm; tới lúc tạo vận đơn gửi kích thước thật thì hãng
+ * thu theo kiện thật, và phần chênh rơi vào cửa hàng.
+ */
+describe('cùng một công thức cho báo giá và vận đơn', () => {
+  /** Thảm tập 1,2m × 0,6m × 0,4m nặng 800g — hàng cồng kềnh nhẹ cân điển hình. */
+  const bulkyLight = {
+    quantity: 1,
+    weightGrams: 800,
+    lengthMm: 1_200,
+    widthMm: 600,
+    heightMm: 400,
+  };
+
+  it('gửi kích thước lên hãng, còn khối lượng vẫn là khối lượng thật', () => {
+    const measurement = measurePackageFrom([bulkyLight]);
+
+    // Gửi lên hãng: khối lượng thật + kích thước, để hãng tự quy đổi.
+    expect(measurement.actualWeightGrams).toBe(800);
+    expect(measurement.hasDimensions).toBe(true);
+    expect(measurement.lengthCm).toBe(120);
+    expect(measurement.widthCm).toBe(60);
+    expect(measurement.heightCm).toBe(40);
+  });
+
+  /** Biểu phí dự phòng nội bộ phải chia bậc theo đúng con số hãng dùng để tính tiền. */
+  it('trọng lượng tính cước là số quy đổi, không phải 800g', () => {
+    const measurement = measurePackageFrom([bulkyLight]);
+
+    expect(measurement.chargeableWeightGrams).toBe(58_000);
+    expect(measurement.weightType).toBe('VOLUMETRIC');
+    // Với mốc mặc định (nhẹ ≤ 5kg, trung ≤ 20kg), 58kg rơi vào bậc nặng — đúng như hãng thu.
+    expect(measurement.chargeableWeightGrams).toBeGreaterThan(20_000);
+  });
+
+  /**
+   * Hồi quy: bản checkout cũ cộng `weightGrams * quantity` rồi `Math.max(1, …)`, nên sản phẩm chưa
+   * khai cân nặng báo giá trên **1 gram** trong khi vận đơn gửi 500g.
+   */
+  it('sản phẩm chưa khai cân nặng không rơi về 1 gram', () => {
+    const measurement = measurePackageFrom([
+      { quantity: 2, weightGrams: 0, lengthMm: null, widthMm: null, heightMm: null },
+    ]);
+
+    expect(measurement.actualWeightGrams).toBe(1_000);
+    expect(measurement.actualWeightGrams).not.toBe(1);
   });
 });

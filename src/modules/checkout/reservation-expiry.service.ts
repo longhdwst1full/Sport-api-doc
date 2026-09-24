@@ -1,4 +1,6 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { SYSTEM_PARAMETER_CODE } from '../system/parameters/system-parameter.catalog';
+import { SystemParameterService } from '../system/parameters/system-parameter.service';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 
@@ -40,6 +42,7 @@ export class ReservationExpiryService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly audit: AuditWriter,
+    private readonly parameters: SystemParameterService,
   ) {}
 
   /**
@@ -47,7 +50,9 @@ export class ReservationExpiryService {
    * invocation quá lâu. `requestId` được ghi vào audit để trace đúng lần chạy cron.
    */
   async run(requestId: string): Promise<ReservationExpiryRunResult> {
-    const enabled = this.config.get<boolean>('app.jobs.reservationExpiry.enabled') ?? false;
+    // Cờ bật/tắt nằm ở `system_parameters` (env chỉ là fallback khi ô value còn trống),
+    // nên vận hành bật/tắt được từ màn Admin mà không cần deploy lại.
+    const enabled = await this.parameters.getBoolean(SYSTEM_PARAMETER_CODE.RESERVATION_EXPIRY_JOB_ENABLED);
     if (!enabled) return this.emptyResult(false);
     if (!this.prisma.isEnabled()) {
       throw new ServiceUnavailableException('Durable checkout storage is not enabled');
