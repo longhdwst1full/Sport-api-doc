@@ -1,15 +1,16 @@
 # Payment module
 
-> **Document version:** 1.1.0  
-> **Last updated:** 2026-09-13  
-> **Change summary:** Kích hoạt worker hết hạn chuyển khoản và giải phóng tồn giữ an toàn.
+> **Document version:** 1.2.0  
+> **Last updated:** 2026-09-24  
+> **Change summary:** Payment có thể chuyển REFUNDED do module Return; IPN VNPay và review thủ công không ghi đè trạng thái này.
 
 ## Responsibility and boundary
 
 - Public entries: Guest/Account đọc Payment, tạo signed evidence upload và finalize bằng chứng; Admin list/detail/confirm/reject.
 - OpenAPI operations nằm trong `Guest Payments`, `Account Payments`, `Admin Payments` và được xuất sang hai SDK FE.
 - Source of truth: `payments`; child append-only `payment_transactions`; bằng chứng tin cậy liên kết `payment_evidences -> media_assets`.
-- Không tích hợp gateway/webhook, refund hoặc settlement trong wave này. Bank account/QR production chưa được phát hành khi chưa có credential được duyệt.
+- Refund thủ công thuộc module Return (`../return/README.md`): Return ghi `refunds` và chỉ đổi `payments.status`/`orders.payment_status` sang `REFUNDED` khi tổng refund SUCCEEDED bằng `received_amount`. Payment coi `REFUNDED` là trạng thái kết thúc: IPN VNPay đến muộn trả `ALREADY_CONFIRMED`, review thủ công bị từ chối. Chưa có refund qua gateway và settlement.
+- Không tích hợp settlement trong wave này. Bank account/QR production chưa được phát hành khi chưa có credential được duyệt.
 
 ## Invariants
 
@@ -37,5 +38,6 @@
 
 | Version | Date | Change summary |
 | --- | --- | --- |
+| 1.2.0 | 2026-09-24 | REFUNDED là trạng thái kết thúc; refund thủ công do Return sở hữu. |
 | 1.1.0 | 2026-09-13 | Thêm payment-expiry worker, race evidence guard và unit test. |
 | 1.0.0 | 2026-09-12 | Tạo maintenance map cho Payment V1 persisted. |

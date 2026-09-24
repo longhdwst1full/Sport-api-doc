@@ -29,6 +29,8 @@ export const OUTBOX_EVENT_TYPE = {
   ORDER_FULFILLMENT_UPDATED: 'order.fulfillment_updated',
   PASSWORD_RESET_REQUESTED: 'auth.password_reset_requested',
   PASSWORD_CHANGED: 'auth.password_changed',
+  RETURN_DECIDED: 'return.decided',
+  REFUND_SUCCEEDED: 'return.refund_succeeded',
 } as const;
 
 export type OutboxEventType = (typeof OUTBOX_EVENT_TYPE)[keyof typeof OUTBOX_EVENT_TYPE];

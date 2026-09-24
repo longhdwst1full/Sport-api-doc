@@ -145,7 +145,6 @@ export const BUSINESS_MODEL_REGISTRY: BusinessModuleDefinition[] = [
       model('payments', 'P0'),
       model('payment_transactions', 'P0'),
       model('payment_evidences', 'P0'),
-      model('refunds', 'P1'),
     ],
   },
   {
@@ -165,12 +164,15 @@ export const BUSINESS_MODEL_REGISTRY: BusinessModuleDefinition[] = [
   },
   {
     key: 'return',
-    name: 'Trả hàng theo sản phẩm',
-    status: 'SCAFFOLDED',
+    name: 'Trả hàng & hoàn tiền',
+    status: 'ACTIVE',
+    // D60: return_policies không tạo (hạn trả là tham số, loại trừ bằng categories.returnable);
+    // refunds chuyển từ Payment sang Return vì V1 chỉ hoàn thủ công theo phiếu trả.
     models: [
-      model('return_policies', 'P1'),
       model('return_requests', 'P1'),
       model('return_items', 'P1'),
+      model('return_status_history', 'P1'),
+      model('refunds', 'P1'),
     ],
   },
   {

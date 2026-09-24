@@ -1,10 +1,10 @@
 # V1 model và quan hệ — bản review
 
-> **Document version:** 3.6.0
+> **Document version:** 3.7.0
 >
-> **Last updated:** 2026-09-21
+> **Last updated:** 2026-09-24
 >
-> **Change summary:** Đồng bộ lifecycle xóa Product Media với Cloudinary, usage guard và compensation.
+> **Change summary:** Vật lý hoá quan hệ Return/Refund V1; refunds thuộc Return, không qua approval_requests.
 
 File nguồn ERD: `09-v1-model.dbml`. Copy toàn bộ nội dung vào dbdiagram.io để xem và kéo thả sơ đồ.
 
@@ -118,7 +118,11 @@ Sơ đồ trên chỉ hiển thị aggregate lõi. File DBML chứa toàn bộ 7
 | `carts/customers/branches/warehouses` | `checkout_sessions` | n → 1 | RESTRICT | Quote snapshot một branch đủ toàn bộ cart; payment/shipping dimension dùng cho Order/Payment Sprint 4 |
 | `orders` | `return_requests` | 1 → 0..1 active | RESTRICT | Chọn item/quantity; combo trả nguyên bộ |
 | `return_requests` | `return_items` | 1 → n | RESTRICT | Mỗi item tham chiếu order item gốc |
-| `approval_requests` | `refunds` và stock adjustment nâng cao sau V1 | 1 → 0..1 mỗi loại | RESTRICT | Sprint 1 stock adjustment cơ bản post trực tiếp; threshold approval mở ở sprint sau |
+| `return_requests` | `return_status_history` | 1 → n | RESTRICT | Append-only, chứa khoá replay của mọi lệnh trên phiếu |
+| `return_requests` | `refunds` | 1 → n (≤ 1 PENDING) | RESTRICT | Lượt lỗi đánh FAILED rồi tạo lượt mới; tổng không vượt trần phiếu |
+| `payments` | `refunds` | 1 → n | RESTRICT | Tổng PENDING + SUCCEEDED của mọi phiếu ≤ `received_amount` |
+| `branches` / `warehouses` | `return_requests` | 1 → n | RESTRICT | Snapshot của đơn: phạm vi dữ liệu và kho nhập lại |
+| `approval_requests` | stock adjustment nâng cao sau V1 | 1 → 0..1 | RESTRICT | Refund KHÔNG đi qua approval_requests (D56, D60): duyệt theo quyền `payment.refund.approve` |
 
 Lifecycle P0 sau quyết định D22:
 
@@ -282,6 +286,7 @@ Quy tắc:
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 3.7.0 | 2026-09-24 | Return/Refund V1: thêm quan hệ return_status_history, refunds 1→n theo phiếu và payment, bỏ return_policies và liên kết approval_requests–refunds. | API-20260924-RETURN-REFUND-V1 |
 | 3.6.0 | 2026-09-21 | Product Media DELETE gọi Cloudinary có usage guard, trạng thái DELETE_PENDING và compensation. | API-20260921-PRODUCT-MEDIA-PROVIDER-DELETE |
 | 3.5.0 | 2026-09-13 | Vật lý hóa quan hệ Order–Fulfillment–History và khóa retry-safe cho transition. | DBAPI-20260913-FULFILLMENT-S43 |
 | 3.4.0 | 2026-09-12 | Vật lý hóa Payment aggregate và quan hệ evidence-media asset. | DBAPI-20260912-PAYMENT-S42 |

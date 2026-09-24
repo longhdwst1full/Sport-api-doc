@@ -1,0 +1,1218 @@
+# Generated from NestJS decorators. Do not edit by hand.
+openapi: 3.0.0
+info:
+  title: DCTD-UTC Commerce API
+  description: Contract for storefront and admin applications
+  version: 1.0.0
+  contact: {}
+servers:
+  - url: http://localhost:4000
+    description: Local
+paths:
+  /api/v1/admin/returns:
+    get:
+      operationId: listAdminReturns
+      parameters:
+        - name: page
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            default: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 20
+            type: number
+        - name: status
+          required: false
+          in: query
+          schema:
+            type: string
+            enum:
+              - REQUESTED
+              - APPROVED
+              - REJECTED
+              - RECEIVED
+              - REFUNDED
+              - CLOSED
+              - CANCELLED
+        - name: search
+          required: false
+          in: query
+          description: Mã phiếu trả, mã đơn hoặc tên/SĐT người nhận
+          schema:
+            maxLength: 100
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReturnListDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Danh sách phiếu trả hàng theo trạng thái và phạm vi chi nhánh
+      tags:
+        - Admin Returns
+      x-required-permissions:
+        - return.view
+    post:
+      operationId: createAdminReturn
+      parameters:
+        - name: idempotency-key
+          required: true
+          in: header
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAdminReturnDto"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReturnDetailDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Nhân viên tạo phiếu trả hộ khách; người có quyền duyệt tạo thì phiếu được duyệt ngay (D56)
+      tags:
+        - Admin Returns
+      x-required-permissions:
+        - return.create
+  /api/v1/admin/returns/{id}:
+    get:
+      operationId: getAdminReturn
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReturnDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Chi tiết phiếu trả, kết quả kiểm hàng, lượt hoàn tiền và lịch sử
+      tags:
+        - Admin Returns
+      x-required-permissions:
+        - return.view
+  /api/v1/admin/returns/{id}/approve:
+    post:
+      operationId: approveAdminReturn
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: idempotency-key
+          required: true
+          in: header
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApproveReturnDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReturnDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Duyệt phiếu trả và chốt lỗi thuộc shop hay khách
+      tags:
+        - Admin Returns
+      x-required-permissions:
+        - return.decide
+  /api/v1/admin/returns/{id}/reject:
+    post:
+      operationId: rejectAdminReturn
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: idempotency-key
+          required: true
+          in: header
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReturnReasonCommandDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReturnDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Từ chối phiếu trả kèm lý do
+      tags:
+        - Admin Returns
+      x-required-permissions:
+        - return.decide
+  /api/v1/admin/returns/{id}/cancel:
+    post:
+      operationId: cancelAdminReturn
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: idempotency-key
+          required: true
+          in: header
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReturnReasonCommandDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReturnDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Huỷ phiếu trả chưa nhận hàng
+      tags:
+        - Admin Returns
+      x-required-permissions:
+        - return.decide
+  /api/v1/admin/returns/{id}/receive:
+    post:
+      operationId: receiveAdminReturn
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: idempotency-key
+          required: true
+          in: header
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InspectReturnDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReturnDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Nhận và kiểm hàng trả; chỉ SELLABLE được nhập lại tồn bán, chốt trần tiền hoàn
+      tags:
+        - Admin Returns
+      x-required-permissions:
+        - return.receive
+  /api/v1/admin/returns/{id}/refunds:
+    post:
+      operationId: requestAdminReturnRefund
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: idempotency-key
+          required: true
+          in: header
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRefundDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReturnDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Tạo lượt hoàn tiền (tiền mặt/chuyển khoản), không vượt số tiền còn được hoàn
+      tags:
+        - Admin Returns
+      x-required-permissions:
+        - payment.refund.request
+  /api/v1/admin/returns/{id}/refunds/{refundId}/confirm:
+    post:
+      operationId: confirmAdminReturnRefund
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: refundId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: idempotency-key
+          required: true
+          in: header
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmRefundDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReturnDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Xác nhận đã trả tiền cho khách; chuyển khoản bắt buộc mã giao dịch
+      tags:
+        - Admin Returns
+      x-required-permissions:
+        - payment.refund.approve
+  /api/v1/admin/returns/{id}/refunds/{refundId}/fail:
+    post:
+      operationId: failAdminReturnRefund
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: refundId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: idempotency-key
+          required: true
+          in: header
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReturnReasonCommandDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReturnDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Đánh lượt hoàn không thực hiện được để tạo lượt khác
+      tags:
+        - Admin Returns
+      x-required-permissions:
+        - payment.refund.approve
+  /api/v1/admin/returns/{id}/close:
+    post:
+      operationId: closeAdminReturn
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: idempotency-key
+          required: true
+          in: header
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReturnCommandDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReturnDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Đóng phiếu trả đã nhận hàng khi không còn lượt hoàn chờ
+      tags:
+        - Admin Returns
+      x-required-permissions:
+        - return.decide
+components:
+  schemas:
+    ReturnListDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReturnSummaryDto"
+        page:
+          type: number
+        limit:
+          type: number
+        total:
+          type: number
+      required:
+        - items
+        - page
+        - limit
+        - total
+    ErrorResponseDto:
+      type: object
+      properties:
+        statusCode:
+          type: number
+          example: 400
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: Dữ liệu gửi lên không hợp lệ.
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorDetailDto"
+        path:
+          type: string
+          example: /api/v1/catalog/products
+        method:
+          type: string
+          example: POST
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+      required:
+        - statusCode
+        - code
+        - message
+        - path
+        - method
+        - timestamp
+    CreateAdminReturnDto:
+      type: object
+      properties:
+        reasonCode:
+          type: string
+          enum:
+            - DEFECTIVE
+            - WRONG_ITEM
+            - NOT_AS_DESCRIBED
+            - WRONG_SIZE
+            - CHANGED_MIND
+            - OTHER
+        description:
+          type: string
+          maxLength: 2000
+        evidenceUrls:
+          maxItems: 5
+          description: Ảnh bằng chứng (HTTPS)
+          type: array
+          items:
+            type: string
+        items:
+          minItems: 1
+          maxItems: 50
+          type: array
+          items:
+            $ref: "#/components/schemas/ReturnLineInputDto"
+        orderId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        fault:
+          type: string
+          enum:
+            - SHOP
+            - CUSTOMER
+          description: "Bắt buộc khi người tạo có quyền return.decide: phiếu được duyệt ngay (D56)"
+        windowOverrideNote:
+          type: string
+          minLength: 5
+          maxLength: 500
+          description: Lý do nhận trả khi đã quá hạn; cần quyền return.window.override
+      required:
+        - reasonCode
+        - items
+        - orderId
+    ReturnDetailDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        returnNo:
+          type: string
+          example: RMA-20260924-000001
+        orderId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        orderNo:
+          type: string
+        status:
+          type: string
+          enum:
+            - REQUESTED
+            - APPROVED
+            - REJECTED
+            - RECEIVED
+            - REFUNDED
+            - CLOSED
+            - CANCELLED
+        channel:
+          type: string
+          enum:
+            - ACCOUNT
+            - ADMIN
+        reasonCode:
+          type: string
+          enum:
+            - DEFECTIVE
+            - WRONG_ITEM
+            - NOT_AS_DESCRIBED
+            - WRONG_SIZE
+            - CHANGED_MIND
+            - OTHER
+        fault:
+          type: string
+          enum:
+            - SHOP
+            - CUSTOMER
+          nullable: true
+        recipientName:
+          type: string
+        itemCount:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+        version:
+          type: string
+        description:
+          type: string
+          nullable: true
+        evidenceUrls:
+          type: array
+          items:
+            type: string
+        deliveredAt:
+          type: string
+          format: date-time
+        windowOverridden:
+          type: boolean
+        windowOverrideNote:
+          type: string
+          nullable: true
+          description: Chỉ trả cho Admin
+        decisionNote:
+          type: string
+          nullable: true
+        decidedAt:
+          type: string
+          format: date-time
+          nullable: true
+        receivedAt:
+          type: string
+          format: date-time
+          nullable: true
+        closedAt:
+          type: string
+          format: date-time
+          nullable: true
+        refundCap:
+          type: string
+          nullable: true
+          description: Trần tiền hoàn, có sau khi nhận hàng
+        refundedAmount:
+          type: string
+        pendingRefundAmount:
+          type: string
+        refundableAmount:
+          type: string
+          description: Số tiền còn được hoàn, đã chặn theo cả phiếu và số tiền đã thu
+        allowedRefundMethods:
+          type: array
+          items:
+            type: string
+            enum:
+              - CASH
+              - BANK_TRANSFER
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReturnItemDto"
+        refunds:
+          type: array
+          items:
+            $ref: "#/components/schemas/RefundDto"
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReturnHistoryDto"
+      required:
+        - id
+        - returnNo
+        - orderId
+        - orderNo
+        - status
+        - channel
+        - reasonCode
+        - recipientName
+        - itemCount
+        - createdAt
+        - version
+        - evidenceUrls
+        - deliveredAt
+        - windowOverridden
+        - refundedAmount
+        - pendingRefundAmount
+        - refundableAmount
+        - allowedRefundMethods
+        - items
+        - refunds
+        - history
+    ApproveReturnDto:
+      type: object
+      properties:
+        expectedVersion:
+          type: string
+          pattern: ^\d+$
+          example: "0"
+        note:
+          type: string
+          maxLength: 500
+        fault:
+          type: string
+          enum:
+            - SHOP
+            - CUSTOMER
+          description: SHOP thì hoàn thêm phí giao ban đầu (D57)
+      required:
+        - expectedVersion
+        - fault
+    ReturnReasonCommandDto:
+      type: object
+      properties:
+        expectedVersion:
+          type: string
+          pattern: ^\d+$
+          example: "0"
+        reason:
+          type: string
+          minLength: 5
+          maxLength: 500
+      required:
+        - expectedVersion
+        - reason
+    InspectReturnDto:
+      type: object
+      properties:
+        expectedVersion:
+          type: string
+          pattern: ^\d+$
+          example: "0"
+        note:
+          type: string
+          maxLength: 500
+        items:
+          minItems: 1
+          description: Phải có đủ mọi dòng của phiếu
+          type: array
+          items:
+            $ref: "#/components/schemas/InspectReturnItemDto"
+      required:
+        - expectedVersion
+        - items
+    CreateRefundDto:
+      type: object
+      properties:
+        expectedVersion:
+          type: string
+          pattern: ^\d+$
+          example: "0"
+        note:
+          type: string
+          maxLength: 500
+        method:
+          type: string
+          enum:
+            - CASH
+            - BANK_TRANSFER
+        amount:
+          type: string
+          pattern: ^\d{1,17}(\.\d{1,2})?$
+          example: "570000.00"
+      required:
+        - expectedVersion
+        - method
+        - amount
+    ConfirmRefundDto:
+      type: object
+      properties:
+        expectedVersion:
+          type: string
+          pattern: ^\d+$
+          example: "0"
+        externalRef:
+          type: string
+          maxLength: 255
+          description: "Bắt buộc với BANK_TRANSFER: mã giao dịch ngân hàng. CASH: số biên nhận nếu có"
+        cashHandedOver:
+          type: boolean
+          description: "Bắt buộc true với CASH: người xác nhận đã đưa tiền cho khách"
+      required:
+        - expectedVersion
+    ReturnCommandDto:
+      type: object
+      properties:
+        expectedVersion:
+          type: string
+          pattern: ^\d+$
+          example: "0"
+        note:
+          type: string
+          maxLength: 500
+      required:
+        - expectedVersion
+    ReturnSummaryDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        returnNo:
+          type: string
+          example: RMA-20260924-000001
+        orderId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        orderNo:
+          type: string
+        status:
+          type: string
+          enum:
+            - REQUESTED
+            - APPROVED
+            - REJECTED
+            - RECEIVED
+            - REFUNDED
+            - CLOSED
+            - CANCELLED
+        channel:
+          type: string
+          enum:
+            - ACCOUNT
+            - ADMIN
+        reasonCode:
+          type: string
+          enum:
+            - DEFECTIVE
+            - WRONG_ITEM
+            - NOT_AS_DESCRIBED
+            - WRONG_SIZE
+            - CHANGED_MIND
+            - OTHER
+        fault:
+          type: string
+          enum:
+            - SHOP
+            - CUSTOMER
+          nullable: true
+        recipientName:
+          type: string
+        itemCount:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+        version:
+          type: string
+      required:
+        - id
+        - returnNo
+        - orderId
+        - orderNo
+        - status
+        - channel
+        - reasonCode
+        - recipientName
+        - itemCount
+        - createdAt
+        - version
+    ErrorDetailDto:
+      type: object
+      properties:
+        field:
+          type: string
+          example: name
+        code:
+          type: string
+          example: INVALID_VALUE
+        message:
+          type: string
+          example: 'Trường "name": Trường này không được để trống.'
+      required:
+        - code
+        - message
+    ReturnLineInputDto:
+      type: object
+      properties:
+        orderItemId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        quantity:
+          type: number
+          minimum: 1
+          description: Combo phải bằng toàn bộ số bộ còn trả được của dòng
+      required:
+        - orderItemId
+        - quantity
+    ReturnItemDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        orderItemId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        sku:
+          type: string
+        productName:
+          type: string
+        variantName:
+          type: string
+        itemType:
+          type: string
+          enum:
+            - STANDARD
+            - BUNDLE
+        quantity:
+          type: number
+        unitPrice:
+          type: string
+          example: "350000.00"
+        condition:
+          type: string
+          enum:
+            - SELLABLE
+            - DAMAGED
+            - MISSING
+          nullable: true
+        disposition:
+          type: string
+          enum:
+            - RESTOCK
+            - HOLD
+            - WRITE_OFF
+          nullable: true
+        restockQty:
+          type: number
+        refundCap:
+          type: string
+          nullable: true
+        note:
+          type: string
+          nullable: true
+      required:
+        - id
+        - orderItemId
+        - sku
+        - productName
+        - variantName
+        - itemType
+        - quantity
+        - unitPrice
+        - restockQty
+    RefundDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        refundNo:
+          type: string
+        method:
+          type: string
+          enum:
+            - CASH
+            - BANK_TRANSFER
+        amount:
+          type: string
+          example: "570000.00"
+        status:
+          type: string
+          enum:
+            - PENDING
+            - SUCCEEDED
+            - FAILED
+        externalRef:
+          type: string
+          nullable: true
+        note:
+          type: string
+          nullable: true
+        failureReason:
+          type: string
+          nullable: true
+        processedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        version:
+          type: string
+      required:
+        - id
+        - refundNo
+        - method
+        - amount
+        - status
+        - createdAt
+        - version
+    ReturnHistoryDto:
+      type: object
+      properties:
+        sequenceNo:
+          type: number
+        action:
+          type: string
+          enum:
+            - CREATE
+            - APPROVE
+            - REJECT
+            - CANCEL
+            - RECEIVE
+            - REFUND_REQUEST
+            - REFUND_CONFIRM
+            - REFUND_FAIL
+            - CLOSE
+        fromStatus:
+          type: string
+          nullable: true
+        toStatus:
+          type: string
+          enum:
+            - REQUESTED
+            - APPROVED
+            - REJECTED
+            - RECEIVED
+            - REFUNDED
+            - CLOSED
+            - CANCELLED
+        reason:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - sequenceNo
+        - action
+        - toStatus
+        - createdAt
+    InspectReturnItemDto:
+      type: object
+      properties:
+        returnItemId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        condition:
+          type: string
+          enum:
+            - SELLABLE
+            - DAMAGED
+            - MISSING
+        disposition:
+          type: string
+          enum:
+            - RESTOCK
+            - HOLD
+            - WRITE_OFF
+          description: Bắt buộc với DAMAGED (HOLD hoặc WRITE_OFF); SELLABLE luôn RESTOCK, MISSING luôn WRITE_OFF
+        note:
+          type: string
+          maxLength: 500
+      required:
+        - returnItemId
+        - condition
+  securitySchemes:
+    bearer:
+      scheme: bearer
+      bearerFormat: JWT
+      type: http

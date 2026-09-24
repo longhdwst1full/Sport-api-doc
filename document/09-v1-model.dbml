@@ -307,6 +307,7 @@ Table categories {
   image_asset_id bigint
   sort_order int [not null, default: 0]
   status varchar(24) [not null, default: 'ACTIVE']
+  returnable boolean [not null, default: true, note: 'D54: false thì sản phẩm thuộc danh mục không tạo được phiếu trả']
   seo_json jsonb
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
@@ -988,23 +989,28 @@ Table payment_evidences {
 Table refunds {
   id bigint [pk, increment]
   refund_no varchar(32) [not null, unique]
+  return_request_id bigint [not null]
   payment_id bigint [not null]
-  return_request_id bigint [not null, unique]
-  approval_request_id bigint [not null]
+  method varchar(16) [not null, note: 'CASH | BANK_TRANSFER (D58)']
+  amount decimal(19,2) [not null, note: 'CHECK > 0']
+  currency_code char(3) [not null, default: 'VND']
+  status varchar(16) [not null, default: 'PENDING', note: 'PENDING | SUCCEEDED | FAILED']
+  external_ref varchar(255) [note: 'Bắt buộc khi BANK_TRANSFER SUCCEEDED; UNIQUE(method, external_ref) khi có']
+  note varchar(500)
   idempotency_key varchar(150) [not null, unique]
-  amount decimal(19,2) [not null]
-  currency_code char(3) [not null]
-  reason text [not null]
-  status varchar(32) [not null, default: 'REQUESTED']
+  request_hash char(64) [not null]
   requested_by bigint [not null]
-  approved_by bigint
+  processed_by bigint
   processed_at timestamptz
-  external_ref varchar(255)
-  failure_reason text
+  failure_reason varchar(500)
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
-  Note: '[P1] Cho phép partial refund theo return request; tổng refund thành công không vượt payment received_amount.'
+  indexes {
+    (return_request_id, created_at)
+    (payment_id, status)
+  }
+  Note: '[P1] Thuộc Return (D60). Nhiều lượt/phiếu, tối đa một PENDING (partial unique). Tổng PENDING+SUCCEEDED không vượt refund_cap của phiếu và payments.received_amount. Không dùng approval_requests: duyệt theo quyền payment.refund.approve (D56).'
 }
 
 // FULFILLMENT + SHIPPING
@@ -1083,56 +1089,84 @@ Table shipping_rates {
 }
 
 // RETURN
-Table return_policies {
-  id bigint [pk, increment]
-  code varchar(32) [not null]
-  version_no int [not null]
-  name varchar(255) [not null]
-  return_window_days int [not null]
-  conditions_json jsonb [not null]
-  effective_from timestamptz [not null]
-  effective_to timestamptz
-  status varchar(24) [not null, default: 'DRAFT']
-  created_at timestamptz [not null]
-  created_by bigint [not null]
-  indexes { (code, version_no) [unique] }
-  Note: '[P1] Version immutable sau khi active.'
-}
+// return_policies KHÔNG tạo trong V1 (D60): hạn trả là system_parameters.RETURN_WINDOW_DAYS,
+// danh mục loại trừ là categories.returnable (D54). Mở lại khi cần chính sách versioned theo thời gian.
 
 Table return_requests {
   id bigint [pk, increment]
-  return_no varchar(32) [not null, unique]
+  return_no varchar(32) [not null, unique, note: 'RMA-YYYYMMDD-<id>']
   order_id bigint [not null]
   customer_id bigint [not null]
-  policy_id bigint [not null]
-  status varchar(32) [not null, default: 'REQUESTED']
-  reason_code varchar(64) [not null]
-  description text
+  branch_id bigint [not null, note: 'Snapshot của đơn; phạm vi dữ liệu']
+  warehouse_id bigint [not null, note: 'Kho đã xuất; hàng SELLABLE nhập lại đúng kho này']
+  status varchar(24) [not null, default: 'REQUESTED', note: 'REQUESTED | APPROVED | REJECTED | RECEIVED | REFUNDED | CLOSED | CANCELLED']
+  channel varchar(16) [not null, note: 'ACCOUNT | ADMIN (D55)']
+  reason_code varchar(32) [not null]
+  description varchar(2000)
   evidence_urls jsonb
-  requested_at timestamptz [not null]
-  reviewed_by bigint
-  reviewed_at timestamptz
-  decision_reason text
+  fault varchar(16) [note: 'SHOP | CUSTOMER; bắt buộc từ APPROVED (D57)']
+  delivered_at timestamptz [not null, note: 'Mốc tính hạn trả (D54)']
+  window_override_by bigint
+  window_override_note varchar(500)
+  refund_cap decimal(19,2) [note: 'Chốt lúc nhận hàng; bắt buộc từ RECEIVED']
+  idempotency_key varchar(150) [not null, unique]
+  request_hash char(64) [not null]
+  created_by bigint [not null]
+  decided_by bigint
+  decided_at timestamptz
+  decision_note varchar(500)
   received_by bigint
   received_at timestamptz
-  received_condition varchar(32)
+  closed_at timestamptz
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
-  Note: '[P1] Một active return/order; cho chọn order items/quantity. Combo phải trả nguyên combo.'
+  indexes {
+    order_id
+    (customer_id, created_at, id)
+    (branch_id, status, created_at, id)
+    warehouse_id
+  }
+  Note: '[P1] Một phiếu mở/đơn: UNIQUE(order_id) WHERE status NOT IN (REJECTED, CANCELLED, CLOSED). Combo trả nguyên dòng.'
 }
 
 Table return_items {
   id bigint [pk, increment]
   return_request_id bigint [not null]
   order_item_id bigint [not null]
-  quantity int [not null]
-  item_condition varchar(32)
-  disposition varchar(32)
-  restock_qty int [not null, default: 0]
-  note text
-  indexes { (return_request_id, order_item_id) [unique] }
-  Note: '[P1] RESTOCK mới tạo inventory movement IN.'
+  quantity int [not null, note: 'CHECK > 0']
+  condition varchar(16) [note: 'SELLABLE | DAMAGED | MISSING']
+  disposition varchar(16) [note: 'RESTOCK | HOLD | WRITE_OFF']
+  restock_qty int [not null, default: 0, note: 'CHECK: = quantity khi RESTOCK+SELLABLE, ngược lại 0']
+  refund_cap decimal(19,2) [note: 'Thành tiền dòng × số trả / số mua, làm tròn xuống; MISSING = 0']
+  note varchar(500)
+  indexes {
+    (return_request_id, order_item_id) [unique]
+    order_item_id
+  }
+  Note: '[P1] Chỉ RESTOCK sinh inventory movement RETURN_RESTOCK.'
+}
+
+Table return_status_history {
+  id bigint [pk, increment]
+  return_request_id bigint [not null]
+  sequence_no int [not null]
+  action varchar(32) [not null]
+  from_status varchar(24)
+  to_status varchar(24) [not null]
+  reason varchar(500)
+  actor_type varchar(16) [not null, note: 'CUSTOMER | USER']
+  actor_id bigint
+  request_id varchar(100) [not null]
+  idempotency_key varchar(150)
+  request_hash char(64)
+  created_at timestamptz [not null]
+  indexes {
+    (return_request_id, sequence_no) [unique]
+    (return_request_id, idempotency_key) [unique]
+    request_id
+  }
+  Note: '[P1] Append-only; khoá replay của mọi lệnh trên phiếu (D60).'
 }
 
 // CMS + NOTIFICATION + PLATFORM
@@ -1442,23 +1476,19 @@ Ref: payment_evidences.uploaded_by > users.id [delete: restrict]
 Ref: payment_evidences.reviewed_by > users.id [delete: restrict]
 Ref: refunds.payment_id > payments.id [delete: restrict]
 Ref: refunds.return_request_id > return_requests.id [delete: restrict]
-Ref: refunds.approval_request_id > approval_requests.id [delete: restrict]
-Ref: refunds.requested_by > users.id [delete: restrict]
-Ref: refunds.approved_by > users.id [delete: restrict]
 Ref: fulfillments.order_id > orders.id [delete: restrict]
 Ref: fulfillments.warehouse_id > warehouses.id [delete: restrict]
 Ref: fulfillment_status_history.fulfillment_id > fulfillments.id [delete: restrict]
 Ref: fulfillment_status_history.actor_id > users.id [delete: set null]
 Ref: shipping_rates.zone_id > shipping_zones.id [delete: restrict]
 Ref: shipping_rates.branch_id > branches.id [delete: restrict]
-Ref: return_policies.created_by > users.id [delete: restrict]
 Ref: return_requests.order_id > orders.id [delete: restrict]
 Ref: return_requests.customer_id > customers.id [delete: restrict]
-Ref: return_requests.policy_id > return_policies.id [delete: restrict]
-Ref: return_requests.reviewed_by > users.id [delete: restrict]
-Ref: return_requests.received_by > users.id [delete: restrict]
+Ref: return_requests.branch_id > branches.id [delete: restrict]
+Ref: return_requests.warehouse_id > warehouses.id [delete: restrict]
 Ref: return_items.return_request_id > return_requests.id [delete: restrict]
 Ref: return_items.order_item_id > order_items.id [delete: restrict]
+Ref: return_status_history.return_request_id > return_requests.id [delete: restrict]
 Ref: content_categories.parent_id > content_categories.id [delete: restrict]
 Ref: pages.hero_asset_id > media_assets.id [delete: set null]
 Ref: pages.created_by > users.id [delete: restrict]

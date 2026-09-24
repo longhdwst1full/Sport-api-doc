@@ -182,6 +182,7 @@ export class CatalogMasterService {
             description: input.description,
             imageAssetId: toOptionalDatabaseId(input.imageAssetId),
             sortOrder: input.sortOrder ?? 0,
+            returnable: input.returnable ?? true,
             path: 'PENDING',
             depth: parent ? parent.depth + 1 : 0,
           },
@@ -383,6 +384,7 @@ export class CatalogMasterService {
               description: current.description,
               imageAssetId: toOptionalEntityId(current.imageAssetId),
               sortOrder: current.sortOrder,
+              returnable: current.returnable,
               status: current.status,
               version: Number(current.version),
             },
@@ -515,7 +517,7 @@ export class CatalogMasterService {
   private toCategory(row: {
     id: bigint; parentId: bigint | null; code: string; name: string; slug: string;
     path: string; depth: number; description: string | null; imageAssetId: bigint | null;
-    sortOrder: number; status: string; version: bigint;
+    sortOrder: number; returnable: boolean; status: string; version: bigint;
   }): CategoryDto {
     return {
       id: toEntityId(row.id),
@@ -528,6 +530,7 @@ export class CatalogMasterService {
       ...(row.description ? { description: row.description } : {}),
       ...(row.imageAssetId ? { imageAssetId: toEntityId(row.imageAssetId) } : {}),
       sortOrder: row.sortOrder,
+      returnable: row.returnable,
       status: row.status as CategoryDto['status'],
       version: Number(row.version),
     };

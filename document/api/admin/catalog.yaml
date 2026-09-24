@@ -2148,6 +2148,10 @@ components:
           type: number
           minimum: 0
           default: 0
+        returnable:
+          type: boolean
+          default: true
+          description: Cho phép trả hàng sản phẩm thuộc danh mục (D54)
       required:
         - name
     CategoryDto:
@@ -2179,6 +2183,9 @@ components:
           example: "1"
         sortOrder:
           type: number
+        returnable:
+          type: boolean
+          description: Tắt thì sản phẩm thuộc danh mục không tạo được yêu cầu trả hàng (D54)
         status:
           type: string
           enum:
@@ -2194,6 +2201,7 @@ components:
         - path
         - depth
         - sortOrder
+        - returnable
         - status
         - version
     UpdateCategoryDto:
@@ -2212,6 +2220,9 @@ components:
         sortOrder:
           type: number
           minimum: 0
+        returnable:
+          type: boolean
+          description: Cho phép trả hàng sản phẩm thuộc danh mục (D54)
         expectedVersion:
           type: number
           minimum: 0

@@ -1,10 +1,10 @@
 # Backend bounded contexts
 
-> **Document version:** 1.3.0
+> **Document version:** 1.4.0
 >
-> **Last updated:** 2026-09-13
+> **Last updated:** 2026-09-24
 >
-> **Change summary:** CMS Content và Product Reviews chuyển sang PostgreSQL; kết thúc toàn bộ slice in-memory.
+> **Change summary:** Kích hoạt Return/Refund; registry bỏ `return_policies`, thêm `return_status_history`, `refunds` thuộc Return.
 
 The reviewed V1 model contains 75 tables (45 P0, 30 P1). `system/model-registry.data.ts` is the executable coverage manifest and its unit test prevents a table from silently disappearing during refactoring.
 
@@ -13,7 +13,7 @@ Status meanings:
 - `ACTIVE`: the module has at least one real HTTP/application vertical slice in this base.
 - `SCAFFOLDED`: the Nest boundary exists and its models are registered, but no generic CRUD API is exposed yet.
 
-Active slices are Organization, IAM, Catalog, Inventory, Cart, Checkout, Shipping quote, Order, Payment, Fulfillment, CMS Content and Product Reviews. Checkout sở hữu quote/reservation; Order sở hữu snapshot; Payment sở hữu trạng thái thu tiền/ledger/evidence; Fulfillment sở hữu pick-pack-ship/delivery và stock commit. CMS Content và Product Reviews đã persist PostgreSQL từ 2026-09-13 (`20260913140000_persist_cms_and_reviews`); **không còn vertical slice nào chạy bằng dữ liệu trong bộ nhớ tiến trình**. Remaining modules are intentionally opened by use case and delivery wave from `document/07-delivery-plan.md`; an empty generic CRUD controller would bypass state-machine, audit, idempotency and transaction rules.
+Active slices are Organization, IAM, Catalog, Inventory, Cart, Checkout, Shipping quote, Order, Payment, Fulfillment, Return/Refund, CMS Content and Product Reviews. Return sở hữu phiếu trả, kiểm hàng và lượt hoàn tiền thủ công (`return/README.md`). Checkout sở hữu quote/reservation; Order sở hữu snapshot; Payment sở hữu trạng thái thu tiền/ledger/evidence; Fulfillment sở hữu pick-pack-ship/delivery và stock commit. CMS Content và Product Reviews đã persist PostgreSQL từ 2026-09-13 (`20260913140000_persist_cms_and_reviews`); **không còn vertical slice nào chạy bằng dữ liệu trong bộ nhớ tiến trình**. Remaining modules are intentionally opened by use case and delivery wave from `document/07-delivery-plan.md`; an empty generic CRUD controller would bypass state-machine, audit, idempotency and transaction rules.
 
 Use two reference shapes for new V1 work:
 
@@ -36,6 +36,7 @@ Persistence is still represented by the reviewed DBML in `document/09-v1-model.d
 
 | Version | Date | Change summary | Source |
 | --- | --- | --- | --- |
+| 1.4.0 | 2026-09-24 | Kích hoạt Return/Refund V1. | API-20260924-RETURN-REFUND-V1 |
 | 1.3.0 | 2026-09-13 | Persist CMS Content và Product Reviews; không còn slice in-memory. | DBAPI-20260913-PERSIST-CMS-REVIEWS |
 | 1.2.0 | 2026-09-13 | Kích hoạt Order, Payment, Fulfillment và maintenance workers Sprint 4. | DBAPI-20260913-FULFILLMENT-S43 |
 | 1.0.0 | 2026-08-29 | Thiết lập bounded-context registry và trạng thái ACTIVE/SCAFFOLDED. | Sprint 0/1 foundation |

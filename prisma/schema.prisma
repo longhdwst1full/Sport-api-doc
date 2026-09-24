@@ -38,6 +38,7 @@ model Branch {
   checkoutSessions CheckoutSession[]
   shippingRates    ShippingRate[]
   orders           Order[]
+  returnRequests   ReturnRequest[]
 
   @@map("branches")
 }
@@ -66,6 +67,7 @@ model Warehouse {
   inventoryReservations  InventoryReservation[]
   orders                 Order[]
   fulfillments           Fulfillment[]
+  returnRequests         ReturnRequest[]
 
   @@map("warehouses")
 }
@@ -337,6 +339,8 @@ model Category {
   imageAssetId BigInt?  @map("image_asset_id")
   sortOrder    Int      @default(0) @map("sort_order")
   status       String   @default("ACTIVE") @db.VarChar(24)
+  /// D54: tắt thì sản phẩm thuộc danh mục này không tạo được yêu cầu trả hàng.
+  returnable   Boolean  @default(true)
   seoJson      Json?    @map("seo_json") @db.JsonB
   version      BigInt   @default(0)
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -693,6 +697,7 @@ model Customer {
   checkoutSessions CheckoutSession[]
   orders           Order[]
   reviews          ProductReview[]
+  returnRequests   ReturnRequest[]
 
   @@index([normalizedEmail])
   @@index([normalizedPhone])
@@ -941,6 +946,7 @@ model Order {
   statusHistory   OrderStatusHistory[]
   payment         Payment?
   fulfillment     Fulfillment?
+  returnRequests  ReturnRequest[]
 
   @@index([customerId, placedAt(sort: Desc), id(sort: Desc)])
   @@index([branchId, status, placedAt(sort: Desc), id(sort: Desc)])
@@ -975,6 +981,7 @@ model OrderItem {
   productBundle  ProductBundle?       @relation(fields: [productBundleId], references: [id], onDelete: Restrict)
   components     OrderItemComponent[]
   reviews             ProductReview[]
+  returnItems         ReturnItem[]
 
   @@unique([orderId, lineNo])
   @@index([productVariantId])
@@ -1072,6 +1079,7 @@ model Payment {
   order        Order                @relation(fields: [orderId], references: [id], onDelete: Restrict)
   confirmer    User?                @relation("PaymentConfirmer", fields: [confirmedBy], references: [id], onDelete: Restrict)
   transactions PaymentTransaction[]
+  refunds      Refund[]
   evidences    PaymentEvidence[]
 
   @@index([status, createdAt(sort: Desc), id(sort: Desc)])
@@ -1502,4 +1510,136 @@ model PasswordResetToken {
   @@index([userId, createdAt(sort: Desc)])
   @@index([expiresAt])
   @@map("password_reset_tokens")
+}
+
+/// Phiếu trả hàng (RMA) của một đơn đã giao.
+///
+/// INVARIANT: tối đa MỘT phiếu đang mở cho mỗi đơn (partial unique index trong migration). Chi
+/// nhánh và kho là snapshot của đơn lúc tạo phiếu: hàng trả phải về đúng kho đã xuất, và phạm vi
+/// dữ liệu lọc theo chi nhánh của phiếu chứ không theo kho hiện tại của sản phẩm.
+model ReturnRequest {
+  id                 BigInt    @id @default(autoincrement())
+  returnNo           String    @unique @map("return_no") @db.VarChar(32)
+  orderId            BigInt    @map("order_id")
+  customerId         BigInt    @map("customer_id")
+  branchId           BigInt    @map("branch_id")
+  warehouseId        BigInt    @map("warehouse_id")
+  status             String    @default("REQUESTED") @db.VarChar(24)
+  channel            String    @db.VarChar(16)
+  reasonCode         String    @map("reason_code") @db.VarChar(32)
+  description        String?   @db.VarChar(2000)
+  evidenceUrls       Json?     @map("evidence_urls") @db.JsonB
+  fault              String?   @db.VarChar(16)
+  deliveredAt        DateTime  @map("delivered_at") @db.Timestamptz(6)
+  windowOverrideBy   BigInt?   @map("window_override_by")
+  windowOverrideNote String?   @map("window_override_note") @db.VarChar(500)
+  /// Trần tiền hoàn của phiếu, chốt lúc nhận hàng: tổng trần từng dòng cộng phí giao khi lỗi shop.
+  refundCap          Decimal?  @map("refund_cap") @db.Decimal(19, 2)
+  idempotencyKey     String    @unique @map("idempotency_key") @db.VarChar(150)
+  requestHash        String    @map("request_hash") @db.Char(64)
+  createdBy          BigInt    @map("created_by")
+  decidedBy          BigInt?   @map("decided_by")
+  decidedAt          DateTime? @map("decided_at") @db.Timestamptz(6)
+  decisionNote       String?   @map("decision_note") @db.VarChar(500)
+  receivedBy         BigInt?   @map("received_by")
+  receivedAt         DateTime? @map("received_at") @db.Timestamptz(6)
+  closedAt           DateTime? @map("closed_at") @db.Timestamptz(6)
+  version            BigInt    @default(0)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  order     Order                 @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  customer  Customer              @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  branch    Branch                @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  warehouse Warehouse             @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  items     ReturnItem[]
+  refunds   Refund[]
+  history   ReturnStatusHistory[]
+
+  @@index([orderId])
+  @@index([customerId, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([branchId, status, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([warehouseId])
+  @@map("return_requests")
+}
+
+/// Một dòng hàng trả. Combo trả nguyên dòng (tham chiếu `order_items` cha, không tách thành phần).
+model ReturnItem {
+  id              BigInt   @id @default(autoincrement())
+  returnRequestId BigInt   @map("return_request_id")
+  orderItemId     BigInt   @map("order_item_id")
+  quantity        Int
+  condition       String?  @db.VarChar(16)
+  disposition     String?  @db.VarChar(16)
+  restockQty      Int      @default(0) @map("restock_qty")
+  /// Trần tiền hoàn của dòng, chốt lúc nhận hàng theo giá cuối cùng khách đã trả; MISSING là 0.
+  refundCap       Decimal? @map("refund_cap") @db.Decimal(19, 2)
+  note            String?  @db.VarChar(500)
+
+  returnRequest ReturnRequest @relation(fields: [returnRequestId], references: [id], onDelete: Restrict)
+  orderItem     OrderItem     @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
+
+  @@unique([returnRequestId, orderItemId])
+  @@index([orderItemId])
+  @@map("return_items")
+}
+
+/// Lịch sử append-only của phiếu trả, kể cả thao tác không đổi trạng thái (tạo/xác nhận hoàn tiền).
+///
+/// IDEMPOTENCY: `(return_request_id, idempotency_key)` là khoá replay của mọi lệnh trên phiếu.
+model ReturnStatusHistory {
+  id              BigInt   @id @default(autoincrement())
+  returnRequestId BigInt   @map("return_request_id")
+  sequenceNo      Int      @map("sequence_no")
+  action          String   @db.VarChar(32)
+  fromStatus      String?  @map("from_status") @db.VarChar(24)
+  toStatus        String   @map("to_status") @db.VarChar(24)
+  reason          String?  @db.VarChar(500)
+  actorType       String   @map("actor_type") @db.VarChar(16)
+  actorId         BigInt?  @map("actor_id")
+  requestId       String   @map("request_id") @db.VarChar(100)
+  idempotencyKey  String?  @map("idempotency_key") @db.VarChar(150)
+  requestHash     String?  @map("request_hash") @db.Char(64)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  returnRequest ReturnRequest @relation(fields: [returnRequestId], references: [id], onDelete: Restrict)
+
+  @@unique([returnRequestId, sequenceNo])
+  @@unique([returnRequestId, idempotencyKey])
+  @@index([requestId])
+  @@map("return_status_history")
+}
+
+/// Một lượt hoàn tiền thủ công (tiền mặt hoặc chuyển khoản) cho phiếu trả.
+///
+/// Một phiếu có thể có nhiều dòng: lượt chuyển khoản lỗi thì đánh FAILED rồi tạo lượt mới. Tổng
+/// PENDING + SUCCEEDED không vượt trần của phiếu và số tiền đã thu của payment (kiểm trong
+/// transaction đã khoá); partial unique index chặn hai lượt PENDING song song.
+model Refund {
+  id              BigInt    @id @default(autoincrement())
+  refundNo        String    @unique @map("refund_no") @db.VarChar(32)
+  returnRequestId BigInt    @map("return_request_id")
+  paymentId       BigInt    @map("payment_id")
+  method          String    @db.VarChar(16)
+  amount          Decimal   @db.Decimal(19, 2)
+  currencyCode    String    @default("VND") @map("currency_code") @db.Char(3)
+  status          String    @default("PENDING") @db.VarChar(16)
+  externalRef     String?   @map("external_ref") @db.VarChar(255)
+  note            String?   @db.VarChar(500)
+  idempotencyKey  String    @unique @map("idempotency_key") @db.VarChar(150)
+  requestHash     String    @map("request_hash") @db.Char(64)
+  requestedBy     BigInt    @map("requested_by")
+  processedBy     BigInt?   @map("processed_by")
+  processedAt     DateTime? @map("processed_at") @db.Timestamptz(6)
+  failureReason   String?   @map("failure_reason") @db.VarChar(500)
+  version         BigInt    @default(0)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  returnRequest ReturnRequest @relation(fields: [returnRequestId], references: [id], onDelete: Restrict)
+  payment       Payment       @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@index([returnRequestId, createdAt])
+  @@index([paymentId, status])
+  @@map("refunds")
 }

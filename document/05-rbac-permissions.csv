@@ -39,17 +39,19 @@ order.manage,Order,manage,GLOBAL;BRANCH,true,Order Manager; Order Operator,Trans
 order.cancel,Order,cancel,GLOBAL;BRANCH;OWN,true,Order Manager; Order Operator; Customer,OWN chỉ trước payment success
 payment.view,Payment,view,GLOBAL;BRANCH;OWN,true,Finance Manager; Finance Operator; Order Manager,Che evidence/bank data
 payment.confirm,Payment,confirm,GLOBAL;BRANCH,true,Finance Manager; Finance Operator,Cannot confirm own fabricated evidence policy
-payment.refund.request,Payment,request,GLOBAL;BRANCH,true,Finance Operator; Customer Service,Refund theo return items; combo nguyên bộ
-payment.refund.approve,Payment,approve,GLOBAL,true,Finance Manager,Maker != approver
+payment.refund.request,Payment,refund_request,GLOBAL;BRANCH,true,OWNER; BRANCH_MANAGER; STAFF,Tạo lượt hoàn PENDING cho phiếu đã nhận hàng; không vượt trần phiếu và tiền đã thu (D60)
+payment.refund.approve,Payment,refund_approve,GLOBAL;BRANCH,true,OWNER; BRANCH_MANAGER,Xác nhận tiền đã trả; theo vai trò không phải maker-checker cứng (D56); chuyển khoản bắt buộc external_ref
 fulfillment.view,Fulfillment,view,GLOBAL;BRANCH;WAREHOUSE;OWN,false,Order Manager; Order Operator; Inventory Manager; Warehouse Operator,
 fulfillment.pick,Fulfillment,pick,GLOBAL;WAREHOUSE,true,Warehouse Operator; Inventory Manager,
 fulfillment.pack,Fulfillment,pack,GLOBAL;WAREHOUSE,true,Warehouse Operator; Inventory Manager,
 fulfillment.ship,Fulfillment,ship,GLOBAL;WAREHOUSE,true,Warehouse Operator; Inventory Manager,Trừ on_hand tại command này
 fulfillment.delivery_update,Fulfillment,update,GLOBAL;BRANCH,true,Order Manager; Order Operator,Webhook carrier dùng system principal
 return.view,Return,view,GLOBAL;BRANCH;WAREHOUSE;OWN,true,Customer Service; Order Manager; Warehouse Operator,
-return.request,Return,request,OWN,false,Customer,Policy evaluation server-side
-return.decide,Return,decide,GLOBAL;BRANCH,true,Customer Service; Order Manager,Refund vẫn cần Finance approve
-return.receive,Return,receive,GLOBAL;WAREHOUSE,true,Warehouse Operator; Inventory Manager,RESTOCK mới tăng tồn
+return.request,Return,request,OWN,false,Customer,Chưa tạo mã quyền: endpoint account/returns chỉ cần đăng nhập và chủ đơn giống account/orders
+return.create,Return,create,GLOBAL;BRANCH,true,OWNER; BRANCH_MANAGER; STAFF,Nhân viên tạo phiếu hộ khách (D55); có return.decide thì duyệt ngay (D56)
+return.decide,Return,decide,GLOBAL;BRANCH,true,OWNER; BRANCH_MANAGER,Duyệt/từ chối/huỷ/đóng phiếu; chốt fault SHOP|CUSTOMER
+return.receive,Return,receive,GLOBAL;BRANCH,true,OWNER; BRANCH_MANAGER; STAFF,Kiểm hàng; chỉ SELLABLE nhập lại tồn bán
+return.window.override,Return,override,GLOBAL,true,OWNER,Nhận trả quá hạn RETURN_WINDOW_DAYS; bắt buộc lý do và ghi audit
 cms.content.view,CMS,view,GLOBAL;BRANCH,false,Content Editor; Marketing Manager,
 cms.content.manage,CMS,manage,GLOBAL,true,Content Editor; Marketing Manager,
 media.asset.upload,Media,upload,GLOBAL;BRANCH;OWN,true,Content Editor; Marketing Manager; Catalog Manager; Customer,Customer chỉ upload review media qua restricted preset

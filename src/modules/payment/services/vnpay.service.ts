@@ -63,8 +63,9 @@ export class VnpayService {
           return VNPAY_IPN_RESPONSE.ORDER_NOT_FOUND;
         }
         // VNPay gọi lại nhiều lần cho cùng một giao dịch; lần thứ hai trở đi
-        // không được cộng tiền lần nữa.
-        if (payment.status === PAYMENT_STATUS.SUCCESS) {
+        // không được cộng tiền lần nữa. REFUNDED cũng là đã thu: IPN đến muộn sau khi hoàn tiền
+        // không được lật payment về SUCCESS/FAILED và xoá dấu vết hoàn tiền.
+        if (payment.status === PAYMENT_STATUS.SUCCESS || payment.status === PAYMENT_STATUS.REFUNDED) {
           return VNPAY_IPN_RESPONSE.ALREADY_CONFIRMED;
         }
         const expected = new Prisma.Decimal(payment.expectedAmount);

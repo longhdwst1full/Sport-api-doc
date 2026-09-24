@@ -96,6 +96,18 @@ describe('VnpayService.handleIpn', () => {
     expect(paymentUpdate).not.toHaveBeenCalled();
   });
 
+  it('IPN đến muộn sau khi đã hoàn tiền không lật payment REFUNDED', async () => {
+    const { service, paymentUpdate } = createService({
+      verification: {},
+      payment: {
+        id: 1n, orderId: 2n, status: PAYMENT_STATUS.REFUNDED, method: 'VNPAY',
+        expectedAmount: new Prisma.Decimal(500_000), currencyCode: 'VND',
+      },
+    });
+    await expect(service.handleIpn(query)).resolves.toEqual(VNPAY_IPN_RESPONSE.ALREADY_CONFIRMED);
+    expect(paymentUpdate).not.toHaveBeenCalled();
+  });
+
   it('đánh dấu thất bại khi VNPay trả mã lỗi', async () => {
     const { service, paymentUpdate } = createService({
       verification: { isSuccess: false, responseCode: '24' },

@@ -34,6 +34,8 @@ const CONTRACT_SLICES: ContractSlice[] = [
   { relativePath: 'admin/fulfillments.yaml', tags: ['Admin Fulfillments'] },
   { relativePath: 'storefront/payments.yaml', tags: ['Storefront Guest Payments', 'Storefront Account Payments', 'Storefront Payments'] },
   { relativePath: 'admin/payments.yaml', tags: ['Admin Payments'] },
+  { relativePath: 'storefront/returns.yaml', tags: ['Storefront Account Returns'] },
+  { relativePath: 'admin/returns.yaml', tags: ['Admin Returns'] },
   { relativePath: 'storefront/promotions.yaml', tags: ['Storefront Promotions'] },
   { relativePath: 'storefront/system.yaml', tags: ['Storefront System'] },
   { relativePath: 'admin/promotions.yaml', tags: ['Admin Promotions'] },

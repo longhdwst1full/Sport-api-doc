@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsBoolean,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -37,6 +38,8 @@ export class CategoryDto {
   @ApiPropertyOptional() description?: string;
   @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI }) imageAssetId?: string;
   @ApiProperty() sortOrder: number;
+  @ApiProperty({ description: 'Tắt thì sản phẩm thuộc danh mục không tạo được yêu cầu trả hàng (D54)' })
+  returnable: boolean;
   @ApiProperty({ enum: ['ACTIVE', 'INACTIVE'] }) status: 'ACTIVE' | 'INACTIVE';
   @ApiProperty() version: number;
 }
@@ -111,6 +114,8 @@ export class CreateCategoryDto {
   @ApiPropertyOptional() @IsString() @IsOptional() description?: string;
   @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI }) @IsEntityId() @IsOptional() imageAssetId?: string;
   @ApiPropertyOptional({ minimum: 0, default: 0 }) @IsInt() @Min(0) @IsOptional() sortOrder?: number;
+  @ApiPropertyOptional({ default: true, description: 'Cho phép trả hàng sản phẩm thuộc danh mục (D54)' })
+  @IsBoolean() @IsOptional() returnable?: boolean;
 }
 
 export class UpdateBrandDto {
@@ -137,6 +142,8 @@ export class UpdateCategoryDto {
   @ApiPropertyOptional() @IsString() @IsOptional() description?: string;
   @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI }) @IsEntityId() @IsOptional() imageAssetId?: string;
   @ApiPropertyOptional({ minimum: 0 }) @IsInt() @Min(0) @IsOptional() sortOrder?: number;
+  @ApiPropertyOptional({ description: 'Cho phép trả hàng sản phẩm thuộc danh mục (D54)' })
+  @IsBoolean() @IsOptional() returnable?: boolean;
   @ApiProperty({ minimum: 0 }) @IsInt() @Min(0) expectedVersion: number;
 }
 

@@ -60,6 +60,30 @@ export interface PasswordChangedPayload {
   revokedSessions: number;
 }
 
+export interface ReturnDecidedPayload {
+  recipientEmail: string;
+  recipientName: string;
+  returnNo: string;
+  orderNo: string;
+  approved: boolean;
+  note: string | null;
+}
+
+export interface RefundSucceededPayload {
+  recipientEmail: string;
+  recipientName: string;
+  returnNo: string;
+  orderNo: string;
+  refundNo: string;
+  amount: string;
+  method: string;
+}
+
+const REFUND_METHOD_LABELS: Record<string, string> = {
+  CASH: 'tiền mặt tại cửa hàng',
+  BANK_TRANSFER: 'chuyển khoản',
+};
+
 const FULFILLMENT_LABELS: Record<string, string> = {
   PICKING: 'đang được soạn hàng',
   PACKED: 'đã đóng gói xong',
@@ -160,6 +184,52 @@ export function renderEmail(eventType: OutboxEventType, payload: unknown): Rende
            <p>Nếu không phải bạn thực hiện, hãy liên hệ ngay với chúng tôi.</p>`,
         ),
         category: 'password-changed',
+      };
+    }
+    case OUTBOX_EVENT_TYPE.RETURN_DECIDED: {
+      const data = payload as ReturnDecidedPayload;
+      const verdict = data.approved ? 'đã được chấp nhận' : 'chưa được chấp nhận';
+      const next = data.approved
+        ? 'Vui lòng gửi hoặc mang sản phẩm về cửa hàng. Tiền được hoàn sau khi cửa hàng nhận và kiểm hàng.'
+        : '';
+      const note = data.note ? `Ghi chú: ${data.note}` : '';
+      return {
+        subject: `Yêu cầu trả hàng ${data.returnNo} ${verdict}`,
+        text: [
+          `Chào ${data.recipientName},`,
+          '',
+          `Yêu cầu trả hàng ${data.returnNo} của đơn ${data.orderNo} ${verdict}.`,
+          note,
+          next,
+        ].filter(Boolean).join('\n'),
+        html: layout(
+          `Yêu cầu trả hàng ${data.returnNo} ${verdict}`,
+          `<p>Chào ${data.recipientName},</p>
+           <p>Yêu cầu trả hàng <strong>${data.returnNo}</strong> của đơn <strong>${data.orderNo}</strong> ${verdict}.</p>
+           ${note ? `<p>${note}</p>` : ''}
+           ${next ? `<p>${next}</p>` : ''}`,
+        ),
+        category: 'return-decided',
+      };
+    }
+    case OUTBOX_EVENT_TYPE.REFUND_SUCCEEDED: {
+      const data = payload as RefundSucceededPayload;
+      const method = REFUND_METHOD_LABELS[data.method] ?? data.method;
+      return {
+        subject: `Đã hoàn tiền cho yêu cầu trả hàng ${data.returnNo}`,
+        text: [
+          `Chào ${data.recipientName},`,
+          '',
+          `Cửa hàng đã hoàn ${money.format(Number(data.amount))} qua ${method} cho yêu cầu trả hàng ${data.returnNo} (đơn ${data.orderNo}).`,
+          `Mã lượt hoàn: ${data.refundNo}.`,
+        ].join('\n'),
+        html: layout(
+          `Đã hoàn tiền cho yêu cầu trả hàng ${data.returnNo}`,
+          `<p>Chào ${data.recipientName},</p>
+           <p>Cửa hàng đã hoàn <strong>${money.format(Number(data.amount))}</strong> qua ${method} cho yêu cầu trả hàng <strong>${data.returnNo}</strong> (đơn ${data.orderNo}).</p>
+           <p>Mã lượt hoàn: ${data.refundNo}.</p>`,
+        ),
+        category: 'refund-succeeded',
       };
     }
   }

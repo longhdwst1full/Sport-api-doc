@@ -48,14 +48,14 @@ PAY-01,Payment,Storefront,Guest/Customer,P0,Hiển thị hướng dẫn chuyển
 PAY-02,Payment,Storefront,Guest/Customer,P0,Gửi bằng chứng thanh toán,Tệp an toàn và không tự đánh dấu success,Chuyển AWAITING_CONFIRMATION
 PAY-03,Payment,Admin,Finance Operator,P0,Xác nhận/từ chối thanh toán,Kiểm tra amount reference và trạng thái,Success commit reservation một lần
 PAY-04,Payment,System,System,P0,Xử lý giao dịch/webhook,Verify signature khi có provider; idempotent event,Duplicate event không đổi kết quả
-PAY-05,Payment,Admin,Finance Manager,P1,Hoàn tiền theo return request,Cần approval; tổng refund không vượt tiền đã nhận,Partial refund state/history/audit đầy đủ
+PAY-05,Return,Admin,Branch Manager,P1,Hoàn tiền theo return request,Tạo lượt (payment.refund.request) rồi xác nhận (payment.refund.approve); không vượt trần phiếu và tiền đã nhận; chuyển khoản bắt buộc external_ref,Partial refund state/history/audit đầy đủ
 FUL-01,Fulfillment,Admin,Warehouse Operator,P0,Tạo picking list,Chỉ payment success và reservation committed,Kho chỉ thấy đơn trong scope
 FUL-02,Fulfillment,Admin,Warehouse Operator,P0,Pick pack ship,Mỗi bước có version và history,Ship trừ on_hand và reserved atomic
 FUL-03,Fulfillment,Admin,Order Operator,P0,Cập nhật giao hàng và giao thất bại,Delivered không tự đồng nghĩa completed; thất bại phải có reason và trả đúng kho,Tracking và kết quả kiểm tra hàng hoàn hiển thị trong timeline
 FUL-04,Fulfillment,System,System,P0,Hoàn tất đơn,Delivered + hết thời gian khiếu nại hoặc admin confirm,Revenue ghi nhận tại COMPLETED
-RET-01,Return,Storefront,Customer,P1,Tạo yêu cầu trả theo sản phẩm,Chọn order item/quantity; combo phải trả nguyên combo; áp policy tại request,Có lý do ảnh deadline và số tiền hoàn dự kiến
-RET-02,Return,Admin,Customer Service,P1,Duyệt/từ chối trả hàng,Maker-checker khi dẫn đến refund,History và lý do bắt buộc
-RET-03,Return,Admin,Warehouse Operator,P1,Nhận hàng trả,Phân loại RESTOCK/DAMAGED/REJECTED,Chỉ RESTOCK tạo movement IN
+RET-01,Return,Storefront,Customer,P1,Tạo yêu cầu trả theo sản phẩm,Chọn order item/quantity; combo phải trả nguyên combo; hạn RETURN_WINDOW_DAYS từ delivered_at; danh mục returnable,Có lý do và ảnh; số tiền hoàn chốt khi cửa hàng nhận hàng
+RET-02,Return,Admin,Branch Manager,P1,Duyệt/từ chối trả hàng,Theo quyền return.decide (D56); chốt fault SHOP/CUSTOMER,History và lý do bắt buộc
+RET-03,Return,Admin,Staff,P1,Nhận hàng trả,Kiểm SELLABLE/DAMAGED/MISSING; SELLABLE luôn RESTOCK,Chỉ RESTOCK tạo movement RETURN_RESTOCK về kho đã xuất
 CMS-01,CMS,Admin,Content Editor,P1,Quản lý page/post,Draft publish schedule archive,Slug/version/SEO metadata
 CMS-02,CMS,Admin,Content Editor,P1,Quản lý banner,Có vị trí thời gian và audience cơ bản,Không hiển thị ngoài hiệu lực
 CMS-03,CMS,Admin,Content Editor,P1,Quản lý danh mục tag và bài viết liên quan,Taxonomy độc lập product category; một primary category/post,Gắn nhiều tag và sản phẩm liên quan có thứ tự

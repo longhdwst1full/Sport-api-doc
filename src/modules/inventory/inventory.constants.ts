@@ -5,6 +5,8 @@ export const INVENTORY_MOVEMENT_TYPE = {
   TRANSFER_IN: 'TRANSFER_IN',
   SALE_SHIP: 'SALE_SHIP',
   DELIVERY_RETURN_RESTOCK: 'DELIVERY_RETURN_RESTOCK',
+  /** Khách trả hàng sau khi đã nhận; chỉ dòng kiểm SELLABLE mới tạo movement này. */
+  RETURN_RESTOCK: 'RETURN_RESTOCK',
 } as const;
 
 export type InventoryMovementType =
@@ -14,6 +16,7 @@ export const INVENTORY_REFERENCE_TYPE = {
   STOCK_ADJUSTMENT: 'STOCK_ADJUSTMENT',
   STOCK_TRANSFER: 'STOCK_TRANSFER',
   FULFILLMENT: 'FULFILLMENT',
+  RETURN_REQUEST: 'RETURN_REQUEST',
 } as const;
 
 export const STOCK_ADJUSTMENT_TYPE = {

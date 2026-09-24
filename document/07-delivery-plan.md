@@ -1,5 +1,11 @@
 # Kế hoạch triển khai V1
 
+> **Document version:** 1.1.0
+>
+> **Last updated:** 2026-09-24
+>
+> **Change summary:** Refund không đi qua approval request (D56, D60); ghi endpoint Return/Refund đã hiện thực.
+
 ## 1. Thứ tự xây dựng theo dependency
 
 | Wave | Mục tiêu | Module | Exit criteria |
@@ -45,7 +51,9 @@ api modules/
 | `POST /payments/{id}/confirm` | `payment.confirm` + scope | Bắt buộc | Payment + reservation commit + fulfillment |
 | `POST /fulfillments/{id}/ship` | `fulfillment.ship` + warehouse scope | Bắt buộc | Balance + movement + fulfillment + order history |
 | `POST /stock-adjustments/{id}/post` | `inventory.stock.adjust` | Bắt buộc | Approval check + movements + balances |
-| `POST /refunds` | `payment.refund.request` | Bắt buộc | Tạo approval request; chưa hoàn tiền ngay |
+| `POST /admin/returns/{id}/refunds` | `payment.refund.request` + branch scope | Bắt buộc | Tạo lượt hoàn PENDING, chưa hoàn tiền ngay; không qua approval request (D60) |
+| `POST /admin/returns/{id}/refunds/{refundId}/confirm` | `payment.refund.approve` + branch scope | Bắt buộc | Refund SUCCEEDED (+ payment/order REFUNDED khi hoàn đủ); chuyển khoản bắt buộc external_ref |
+| `POST /admin/returns/{id}/receive` | `return.receive` + branch scope | Bắt buộc | Kết quả kiểm + chốt trần + movement RETURN_RESTOCK cho SELLABLE |
 | `POST /approvals/{id}/approve` | `approval.decide` + target permission | Bắt buộc | Decision; execution bằng idempotent worker/service |
 
 List API dùng cursor pagination cho order/movement/audit lớn; filter/sort phải whitelist. Update dùng `If-Match`/`version`; server trả 409 khi stale.
@@ -112,3 +120,10 @@ List API dùng cursor pagination cho order/movement/audit lớn; filter/sort ph�
 3. Viết permission seed và role matrix; test scope trước CRUD admin.
 4. Dựng prototype transaction reservation → order → payment success → ship.
 5. Chạy load/concurrency test prototype; chỉ sau đó phát triển UI checkout đầy đủ.
+
+## Revision history
+
+| Version | Date | Change summary | Source / Change ID |
+| --- | --- | --- | --- |
+| 1.1.0 | 2026-09-24 | Thêm metadata version; thay `POST /refunds` qua approval bằng endpoint Return/Refund V1 đã hiện thực. | API-20260924-RETURN-REFUND-V1 |
+| 1.0.0 | 2026-08-29 | Bản kế hoạch triển khai V1 ban đầu (chưa có metadata version). | Sprint 0/1 foundation |

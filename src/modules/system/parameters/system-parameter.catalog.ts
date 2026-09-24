@@ -44,6 +44,7 @@ export const SYSTEM_PARAMETER_CODE = {
   SHIPPING_LARGE_FEE_VND: 'SHIPPING_LARGE_FEE_VND',
   CHECKOUT_RESERVATION_TTL_MINUTES: 'CHECKOUT_RESERVATION_TTL_MINUTES',
   ORDER_COMPLETION_HOLD_HOURS: 'ORDER_COMPLETION_HOLD_HOURS',
+  RETURN_WINDOW_DAYS: 'RETURN_WINDOW_DAYS',
   PAYMENT_TIMEOUT_MINUTES: 'PAYMENT_TIMEOUT_MINUTES',
   GUEST_CART_TTL_DAYS: 'GUEST_CART_TTL_DAYS',
   FLASH_SALE_QUOTA_TTL_MINUTES: 'FLASH_SALE_QUOTA_TTL_MINUTES',
@@ -178,6 +179,15 @@ export const SYSTEM_PARAMETER_CATALOG: readonly SystemParameterDefinition[] = [
     description: 'Sau khi giao thành công, đơn tự chuyển COMPLETED nếu không có khiếu nại.',
     valueType: SYSTEM_PARAMETER_VALUE_TYPE.INTEGER,
     defaultValue: '72', minValue: 1, maxValue: 720, unit: 'giờ', sortOrder: 10,
+  },
+  {
+    code: SYSTEM_PARAMETER_CODE.RETURN_WINDOW_DAYS,
+    groupCode: SYSTEM_PARAMETER_GROUP.ORDER,
+    label: 'Thời hạn đổi trả',
+    description:
+      'Số ngày tính từ lúc giao thành công mà khách còn được tạo yêu cầu trả hàng (D54). Quá hạn chỉ tạo được khi có quyền override và ghi lý do.',
+    valueType: SYSTEM_PARAMETER_VALUE_TYPE.INTEGER,
+    defaultValue: '7', minValue: 1, maxValue: 90, unit: 'ngày', sortOrder: 20, isPublic: true,
   },
   {
     code: SYSTEM_PARAMETER_CODE.PAYMENT_TIMEOUT_MINUTES,

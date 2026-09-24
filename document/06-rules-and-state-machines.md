@@ -1,10 +1,10 @@
 # Business rules và state machine V1
 
-> **Document version:** 1.8.0
+> **Document version:** 1.9.0
 >
-> **Last updated:** 2026-09-13
+> **Last updated:** 2026-09-24
 >
-> **Change summary:** Hiện thực Fulfillment transition, payment-expiry và auto-completion bằng secured cron worker.
+> **Change summary:** Thay state machine Return/Refund bằng bản V1 đã hiện thực (D60); payment REFUNDED khi hoàn đủ số đã thu.
 
 ## 0. Customer identity V1
 
@@ -68,8 +68,10 @@ PENDING -> AWAITING_CONFIRMATION -> SUCCESS
    │              ├──────────────> FAILED
    ├──────────────> EXPIRED
    └ late/ambiguous event ───────> NEED_REVIEW
-SUCCESS -> REFUND_PENDING -> REFUNDED
+SUCCESS -> REFUNDED   (chỉ khi tổng refunds SUCCEEDED = received_amount; hoàn một phần giữ SUCCESS)
 ```
+
+`REFUND_PENDING` không dùng ở V1: lượt hoàn chờ xác nhận nằm ở `refunds.status = PENDING`, không đổi trạng thái payment (D60). IPN VNPay đến sau khi payment đã REFUNDED được coi như đã xác nhận, không ghi đè.
 
 - `received_amount` phải bằng `expected_amount` trong V1. Thiếu/thừa tiền → `NEED_REVIEW`.
 - Payment đến sau order/reservation expiry → `NEED_REVIEW`; nhân viên quyết định tạo lại đơn/reservation hoặc refund thủ công.
@@ -126,16 +128,23 @@ Quota reservation: ACTIVE -> COMMITTED | RELEASED | EXPIRED
 ## 7. Return/refund
 
 ```text
-REQUESTED -> UNDER_REVIEW -> APPROVED -> RECEIVED -> REFUND_PENDING -> REFUNDED -> CLOSED
-                   └────────> REJECTED
-APPROVED/RECEIVED ──────────> CANCELLED (theo policy)
+REQUESTED ──approve──> APPROVED ──receive──> RECEIVED ──(hoàn đủ trần)──> REFUNDED ──close──> CLOSED
+    │ reject               │ cancel              └──────────────close─────────────────> CLOSED
+    ↓                      ↓
+ REJECTED              CANCELLED        (cancel cũng được từ REQUESTED)
+
+refunds: PENDING ──confirm──> SUCCEEDED
+                └──fail─────> FAILED     (tối đa một PENDING mỗi phiếu)
 ```
 
-- V1 cho chọn order item và quantity cần trả. Combo phải trả nguyên combo, không trả riêng component.
-- Policy được version hóa; request giữ FK tới version được áp dụng.
-- Khi nhận hàng: `RESTOCK` tạo movement IN; `DAMAGED` không tăng sellable stock; `REJECTED` không hoàn tiền.
-- Quyết định trả hàng và approve refund là hai quyền khác nhau.
-- Refund có thể nhỏ hơn payment dù khách chỉ thanh toán một lần; tổng refund SUCCESS không được vượt received amount.
+- Chỉ đơn `DELIVERED`/`COMPLETED` có `fulfillments.delivered_at`; hạn `RETURN_WINDOW_DAYS` (mặc định 7) tính từ mốc này (D54). Quá hạn chỉ tạo được khi có `return.window.override` và lý do.
+- Chọn order item và quantity; số lượng cộng dồn qua mọi phiếu chưa REJECTED/CANCELLED không vượt số đã mua. Combo phải trả nguyên phần còn lại của dòng, không trả riêng component.
+- Sản phẩm (hoặc thành phần combo) thuộc danh mục `returnable = false` không trả được.
+- Một phiếu mở mỗi đơn. Người có `return.decide` tạo phiếu thì phiếu được duyệt ngay (D56); duyệt bắt buộc chốt `fault`.
+- Nhận hàng kiểm đủ mọi dòng trong một lệnh: `SELLABLE` → `RESTOCK` và movement `RETURN_RESTOCK` về đúng kho đã xuất; `DAMAGED` → `HOLD`/`WRITE_OFF`, không tăng tồn; `MISSING` → `WRITE_OFF`, trần tiền 0.
+- Trần phiếu chốt lúc nhận: Σ(thành tiền dòng × số trả / số mua, làm tròn xuống) + phí giao ban đầu nếu `fault = SHOP` và chưa phiếu nào của đơn cộng (D57).
+- Mỗi lượt hoàn ≤ min(trần phiếu − PENDING/SUCCEEDED của phiếu, `received_amount` − PENDING/SUCCEEDED của payment). Chuyển khoản chỉ SUCCEEDED khi có `external_ref`; tiền mặt cần xác nhận đã đưa tiền (D58).
+- Quyền tách: `return.decide` duyệt trả hàng, `payment.refund.request` tạo lượt hoàn, `payment.refund.approve` xác nhận tiền đã trả. Không dùng approval_requests.
 
 ## 8. Approval
 
@@ -148,7 +157,7 @@ EXECUTING -> EXECUTION_FAILED (được retry cùng idempotency key)
 
 Áp dụng cho:
 
-- Refund toàn phần.
+- ~~Refund toàn phần.~~ Không áp dụng V1: refund duyệt theo quyền (D56, D60).
 - Stock adjustment vượt ngưỡng cấu hình hoặc làm tồn giảm mạnh.
 - Giá thay đổi quá ngưỡng phần trăm/giá trị hoặc retroactive.
 - Gán role chứa permission nhạy cảm.
@@ -217,6 +226,7 @@ UPLOADING -> ACTIVE -> DELETING -> DELETED
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.9.0 | 2026-09-24 | State machine Return/Refund V1 theo D60; payment chỉ REFUNDED khi hoàn đủ; refund không qua approval. | API-20260924-RETURN-REFUND-V1 |
 | 1.8.0 | 2026-09-13 | Hiện thực Fulfillment, hàng hoàn SELLABLE và maintenance worker payment-expiry/auto-complete. | DBAPI-20260913-FULFILLMENT-S43 |
 | 1.7.1 | 2026-09-12 | Chốt manual complete không giới hạn trong ngày sau khi giao đủ và thu đủ tiền. | API-20260912-ORDER-GUEST-HARDENING |
 | 1.7.0 | 2026-09-12 | Đồng bộ state, exact amount, COD delivery gate và idempotent review của Payment V1. | DBAPI-20260912-PAYMENT-S42 |

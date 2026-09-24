@@ -340,7 +340,11 @@ export class PaymentService {
       if (payment.version !== this.toExpectedVersion(input.expectedVersion)) {
         throw new ConflictException('Thông tin thanh toán đã thay đổi; vui lòng tải lại trước khi xử lý');
       }
-      if (payment.status === PAYMENT_STATUS.SUCCESS || payment.status === PAYMENT_STATUS.CANCELLED) {
+      if (
+        payment.status === PAYMENT_STATUS.SUCCESS ||
+        payment.status === PAYMENT_STATUS.CANCELLED ||
+        payment.status === PAYMENT_STATUS.REFUNDED
+      ) {
         throw new ConflictException('Thanh toán đã ở trạng thái kết thúc');
       }
 

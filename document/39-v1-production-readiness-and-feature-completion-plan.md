@@ -1,10 +1,10 @@
 # Kế hoạch Production Readiness và hoàn thiện chức năng V1
 
-> **Document version:** 1.1.0
+> **Document version:** 1.2.0
 >
-> **Last updated:** 2026-09-21
+> **Last updated:** 2026-09-24
 >
-> **Change summary:** Thống nhất phạm vi giỏ hàng đa thiết bị: Owner đã quyết không làm trong V1, nên chuyển khỏi backlog sang mục phạm vi đã loại trừ.
+> **Change summary:** Gate B chốt 4 bảng thay vì 5 (bỏ `refund_transactions`), gộp nhận và kiểm hàng, backend đã hiện thực theo D60.
 
 ## 1. Mục tiêu và nguyên tắc
 
@@ -184,6 +184,11 @@ công khai có fallback, đồng thời không biến lỗi contract thành nộ
 
 ## 5. Gate B — Return/Refund V1
 
+> **Cập nhật 2026-09-24 (D60):** chốt **4 bảng** — bỏ `refund_transactions`, vì một phiếu có nhiều dòng
+> `refunds` (lượt lỗi đánh FAILED rồi tạo lượt mới). Nhận và kiểm hàng gộp thành một bước RECEIVED;
+> không có UNDER_REVIEW/REFUND_PENDING. Backend đã hiện thực trong `src/modules/return`; Admin,
+> Storefront và PostgreSQL integration test còn lại. Bảng dưới giữ nguyên để truy vết đề xuất gốc.
+
 ### 5.1 Giảm schema từ 6 xuống 5 bảng
 
 V1 dùng `system_parameters` hiện có cho `RETURN_WINDOW_DAYS=7`; chưa cần
@@ -310,4 +315,5 @@ Ba quyết định này phải được xác nhận trước khi bắt đầu đ
 
 | Version | Date | Change summary |
 | --- | --- | --- |
+| 1.2.0 | 2026-09-24 | Gate B: 4 bảng, gộp nhận-kiểm hàng, backend Return/Refund đã hiện thực (API-20260924-RETURN-REFUND-V1). |
 | 1.0.0 | 2026-09-20 | Tạo kế hoạch production readiness và hoàn thiện V1 từ audit source/schema thực tế. |

@@ -3999,6 +3999,1648 @@
         "test:src/modules/shipping/package-measurement.spec.ts"
       ],
       "targets": []
+    },
+    {
+      "id": "API-20260924-ADMIN-EXPORT-AND-OWNER-LOCK",
+      "date": "2026-09-24",
+      "scope": "ADMIN+STOREFRONT+UX",
+      "summary": "Admin có nút tải báo cáo cho 4 endpoint export đã làm trước đó (doanh thu theo kỳ, doanh thu theo chi nhánh, khách mua nhiều nhất, sản phẩm bán chạy, hàng cần nhập); tên file lấy từ header Content-Disposition do Backend đặt chứ không dựng lại ở Frontend, để quy tắc đặt tên chỉ có một bản. apiFetcher tách thêm apiFetcherWithResponse vì bản cũ chỉ trả response.data nên mất header. Form vai trò khoá toàn bộ checkbox quyền của OWNER: Backend vốn từ chối mọi thay đổi tập quyền OWNER, để người dùng bỏ tick rồi mới nhận 403 là tạo một thao tác chắc chắn hỏng. Storefront thêm chính sách cache React Query theo tính chất dữ liệu (REFERENCE/LOOKUP/CATALOG), cùng quy ước với Admin; giỏ hàng, báo giá checkout, đơn, thanh toán và suất flash sale cố ý KHÔNG cache vì đó là dữ liệu khách dùng để ra quyết định. Không đổi schema hay contract.",
+      "sources": [
+        "source:admin/src/features/dashboard/components/report-export-button.tsx",
+        "source:admin/src/lib/api/download.ts",
+        "source:admin/src/features/roles/model/role-lifecycle.policy.ts",
+        "source:client/src/app/config/query-cache-policy.ts",
+        "test:client/src/app/config/query-cache-policy.test.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260924-RETURN-REFUND-V1",
+      "date": "2026-09-24",
+      "scope": "DATABASE+RETURN+PAYMENT+INVENTORY+CATALOG+IAM+NOTIFICATION+API",
+      "summary": "Return/Refund V1 cho cửa hàng 1-3 người (D60). Thêm return_requests, return_items, return_status_history, refunds và categories.returnable; KHÔNG tạo return_policies (hạn trả là tham số RETURN_WINDOW_DAYS=7, loại trừ bằng categories.returnable theo D54) và không dùng approval_requests (duyệt theo quyền return.decide/payment.refund.approve theo D56); refunds chuyển sở hữu từ Payment sang Return, một phiếu nhiều lượt nên bỏ refund_transactions của doc 39. Trạng thái REQUESTED→APPROVED→RECEIVED→REFUNDED→CLOSED (+REJECTED/CANCELLED); nhận và kiểm hàng là một bước, chỉ SELLABLE tạo movement RETURN_RESTOCK về kho đã xuất, DAMAGED ghi HOLD/WRITE_OFF. Trần hoàn chốt lúc nhận hàng theo giá khách đã trả (+ phí giao một lần khi lỗi shop, D57); mỗi lượt ≤ min(trần phiếu, received_amount) trừ PENDING/SUCCEEDED; chuyển khoản bắt buộc external_ref unique (D58). payments_status_check thêm REFUNDED; payment/đơn chỉ REFUNDED khi hoàn đủ; IPN VNPay và review thủ công không ghi đè REFUNDED. Seed 4 quyền return.create, return.window.override, payment.refund.request, payment.refund.approve. Thêm 15 operation Account/Admin Returns và slice admin/returns.yaml, storefront/returns.yaml; CategoryDto/Create/Update thêm returnable, InventoryMovementDto thêm RETURN_RESTOCK. Migration CHƯA áp lên database; chưa có PostgreSQL integration test.",
+      "sources": [
+        "migration:prisma/migrations/20260924120000_return_refund_foundation",
+        "OpenAPI:createAccountReturn/listAccountReturns/getAccountReturn/cancelAccountReturn",
+        "OpenAPI:listAdminReturns/getAdminReturn/createAdminReturn/approveAdminReturn/rejectAdminReturn/cancelAdminReturn/receiveAdminReturn/closeAdminReturn",
+        "OpenAPI:requestAdminReturnRefund/confirmAdminReturnRefund/failAdminReturnRefund",
+        "OpenAPI:createAdminCategory/updateAdminCategory/listInventoryMovements",
+        "source:src/modules/return/",
+        "source:src/modules/payment/services/vnpay.service.ts",
+        "source:src/modules/payment/services/payment.service.ts",
+        "test:src/modules/return/return.policy.spec.ts",
+        "test:src/modules/return/services/return-workflow.spec.ts",
+        "test:src/modules/payment/services/vnpay.service.spec.ts",
+        "decision:D60"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": {
+            "Tên bảng": "categories"
+          },
+          "columns": [
+            "Các cột chính"
+          ],
+          "set": {
+            "Các cột chính": "code,name,slug,parent_id,path,image_asset_id,sort_order,status,returnable,version"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": {
+            "Tên bảng": "refunds"
+          },
+          "columns": [
+            "Module",
+            "Ý nghĩa",
+            "Khóa ngoại quan trọng",
+            "Unique / CHECK",
+            "Các cột chính"
+          ],
+          "set": {
+            "Module": "Return",
+            "Ý nghĩa": "Lượt hoàn tiền thủ công theo phiếu trả (CASH/BANK_TRANSFER)",
+            "Khóa ngoại quan trọng": "payment_id->payments; return_request_id->return_requests",
+            "Unique / CHECK": "refund_no UQ; idempotency UQ; một PENDING/phiếu partial UQ; (method+external_ref) partial UQ; amount>0; BANK_TRANSFER SUCCEEDED cần external_ref",
+            "Các cột chính": "method,amount,status,external_ref,requested_by,processed_by,processed_at,failure_reason,version"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": {
+            "Tên bảng": "return_requests"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Khóa ngoại quan trọng",
+            "Unique / CHECK",
+            "Các cột chính"
+          ],
+          "set": {
+            "Ý nghĩa": "Yêu cầu trả theo sản phẩm (RMA)",
+            "Khóa ngoại quan trọng": "order_id->orders; customer_id->customers; branch_id->branches; warehouse_id->warehouses",
+            "Unique / CHECK": "return_no UQ; idempotency UQ; một phiếu mở/order partial UQ; status/channel/reason/fault CHECK; fault từ APPROVED; refund_cap từ RECEIVED",
+            "Các cột chính": "status,channel,reason_code,description,evidence_urls,fault,delivered_at,window_override_by,window_override_note,refund_cap,decided_by,received_by,closed_at,version"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": {
+            "Tên bảng": "return_items"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Unique / CHECK",
+            "Các cột chính"
+          ],
+          "set": {
+            "Ý nghĩa": "Snapshot item trả và kết quả kiểm",
+            "Unique / CHECK": "request+order_item UQ; quantity>0; restock chỉ khi SELLABLE+RESTOCK",
+            "Các cột chính": "quantity,condition,disposition,restock_qty,refund_cap,note"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": {
+            "Tên bảng": "return_policies"
+          },
+          "columns": "*",
+          "archiveRemovedRowsTo": "Removed Tables"
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "refunds",
+            "Tên cột": [
+              "approval_request_id",
+              "reason",
+              "approved_by"
+            ]
+          },
+          "columns": "*",
+          "archiveRemovedRowsTo": "Removed Columns"
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_policies",
+            "Tên cột": [
+              "id",
+              "code",
+              "version_no",
+              "name",
+              "return_window_days",
+              "conditions_json",
+              "effective_from",
+              "effective_to",
+              "status",
+              "created_at",
+              "created_by"
+            ]
+          },
+          "columns": "*",
+          "archiveRemovedRowsTo": "Removed Columns"
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_requests",
+            "Tên cột": [
+              "policy_id",
+              "requested_at",
+              "reviewed_by",
+              "reviewed_at",
+              "decision_reason",
+              "received_condition"
+            ]
+          },
+          "columns": "*",
+          "archiveRemovedRowsTo": "Removed Columns"
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_items",
+            "Tên cột": [
+              "item_condition"
+            ]
+          },
+          "columns": "*",
+          "archiveRemovedRowsTo": "Removed Columns"
+        },
+        {
+          "sheet": "Relationships",
+          "match": {
+            "Bảng con": "refunds",
+            "Cột FK": [
+              "approval_request_id",
+              "requested_by",
+              "approved_by"
+            ]
+          },
+          "columns": "*",
+          "archiveRemovedRowsTo": "Removed Relationships"
+        },
+        {
+          "sheet": "Relationships",
+          "match": {
+            "Bảng con": "return_policies",
+            "Cột FK": [
+              "created_by"
+            ]
+          },
+          "columns": "*",
+          "archiveRemovedRowsTo": "Removed Relationships"
+        },
+        {
+          "sheet": "Relationships",
+          "match": {
+            "Bảng con": "return_requests",
+            "Cột FK": [
+              "policy_id",
+              "reviewed_by",
+              "received_by"
+            ]
+          },
+          "columns": "*",
+          "archiveRemovedRowsTo": "Removed Relationships"
+        },
+        {
+          "sheet": "RBAC Permissions",
+          "match": {
+            "Permission code": "payment.refund.request"
+          },
+          "columns": [
+            "Action",
+            "Default roles",
+            "Ghi chú"
+          ],
+          "set": {
+            "Action": "refund_request",
+            "Default roles": "OWNER; BRANCH_MANAGER; STAFF",
+            "Ghi chú": "Tạo lượt hoàn PENDING cho phiếu đã nhận hàng; không vượt trần phiếu và tiền đã thu (D60)"
+          }
+        },
+        {
+          "sheet": "RBAC Permissions",
+          "match": {
+            "Permission code": "payment.refund.approve"
+          },
+          "columns": [
+            "Action",
+            "Allowed scopes",
+            "Default roles",
+            "Ghi chú"
+          ],
+          "set": {
+            "Action": "refund_approve",
+            "Allowed scopes": "GLOBAL;BRANCH",
+            "Default roles": "OWNER; BRANCH_MANAGER",
+            "Ghi chú": "Xác nhận tiền đã trả; theo vai trò không phải maker-checker cứng (D56); chuyển khoản bắt buộc external_ref"
+          }
+        },
+        {
+          "sheet": "RBAC Permissions",
+          "match": {
+            "Permission code": "return.request"
+          },
+          "columns": [
+            "Ghi chú"
+          ],
+          "set": {
+            "Ghi chú": "Chưa tạo mã quyền: endpoint account/returns chỉ cần đăng nhập và chủ đơn giống account/orders"
+          }
+        },
+        {
+          "sheet": "RBAC Permissions",
+          "match": {
+            "Permission code": "return.decide"
+          },
+          "columns": [
+            "Default roles",
+            "Ghi chú"
+          ],
+          "set": {
+            "Default roles": "OWNER; BRANCH_MANAGER",
+            "Ghi chú": "Duyệt/từ chối/huỷ/đóng phiếu; chốt fault SHOP|CUSTOMER"
+          }
+        },
+        {
+          "sheet": "RBAC Permissions",
+          "match": {
+            "Permission code": "return.receive"
+          },
+          "columns": [
+            "Allowed scopes",
+            "Default roles",
+            "Ghi chú"
+          ],
+          "set": {
+            "Allowed scopes": "GLOBAL;BRANCH",
+            "Default roles": "OWNER; BRANCH_MANAGER; STAFF",
+            "Ghi chú": "Kiểm hàng; chỉ SELLABLE nhập lại tồn bán"
+          }
+        }
+      ],
+      "upsertRows": [
+        {
+          "sheet": "Tables",
+          "match": {
+            "Tên bảng": "return_status_history"
+          },
+          "values": {
+            "ID": "T79",
+            "Module": "Return",
+            "Tên bảng": "return_status_history",
+            "Priority": "P1",
+            "Ý nghĩa": "Lịch sử append-only và khoá replay của phiếu trả",
+            "Khóa chính": "id BIGINT IDENTITY",
+            "Khóa ngoại quan trọng": "return_request_id->return_requests",
+            "Unique / CHECK": "request+sequence UQ; request+idempotency_key UQ; action/actor_type CHECK",
+            "Các cột chính": "action,from_status,to_status,reason,actor_type,actor_id,request_id,idempotency_key,request_hash",
+            "Retention": "10 years proposed"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_requests",
+            "Tên cột": "id"
+          },
+          "values": {
+            "Tên bảng": "return_requests",
+            "STT": 1,
+            "Tên cột": "id",
+            "Kiểu dữ liệu": "bigint",
+            "Cho phép NULL": "NO",
+            "Primary key": "YES",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "PK"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_requests",
+            "Tên cột": "return_no"
+          },
+          "values": {
+            "Tên bảng": "return_requests",
+            "STT": 2,
+            "Tên cột": "return_no",
+            "Kiểu dữ liệu": "varchar(32)",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "YES",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "RMA-YYYYMMDD-<id>; khách và nhân viên cùng tra"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_requests",
+            "Tên cột": "order_id"
+          },
+          "values": {
+            "Tên bảng": "return_requests",
+            "STT": 3,
+            "Tên cột": "order_id",
+            "Kiểu dữ liệu": "bigint",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "Đơn được trả; một phiếu mở mỗi đơn (partial unique)"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_requests",
+            "Tên cột": "customer_id"
+          },
+          "values": {
+            "Tên bảng": "return_requests",
+            "STT": 4,
+            "Tên cột": "customer_id",
+            "Kiểu dữ liệu": "bigint",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "Khách của đơn"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_requests",
+            "Tên cột": "branch_id"
+          },
+          "values": {
+            "Tên bảng": "return_requests",
+            "STT": 5,
+            "Tên cột": "branch_id",
+            "Kiểu dữ liệu": "bigint",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "Snapshot chi nhánh của đơn; phạm vi dữ liệu"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_requests",
+            "Tên cột": "warehouse_id"
+          },
+          "values": {
+            "Tên bảng": "return_requests",
+            "STT": 6,
+            "Tên cột": "warehouse_id",
+            "Kiểu dữ liệu": "bigint",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "Kho đã xuất; SELLABLE nhập lại đúng kho này"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_requests",
+            "Tên cột": "status"
+          },
+          "values": {
+            "Tên bảng": "return_requests",
+            "STT": 7,
+            "Tên cột": "status",
+            "Kiểu dữ liệu": "varchar(24)",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "REQUESTED",
+            "Ý nghĩa / trạng thái cho phép": "REQUESTED|APPROVED|REJECTED|RECEIVED|REFUNDED|CLOSED|CANCELLED"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_requests",
+            "Tên cột": "channel"
+          },
+          "values": {
+            "Tên bảng": "return_requests",
+            "STT": 8,
+            "Tên cột": "channel",
+            "Kiểu dữ liệu": "varchar(16)",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "ACCOUNT|ADMIN (D55)"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_requests",
+            "Tên cột": "reason_code"
+          },
+          "values": {
+            "Tên bảng": "return_requests",
+            "STT": 9,
+            "Tên cột": "reason_code",
+            "Kiểu dữ liệu": "varchar(32)",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "DEFECTIVE|WRONG_ITEM|NOT_AS_DESCRIBED|WRONG_SIZE|CHANGED_MIND|OTHER"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_requests",
+            "Tên cột": "description"
+          },
+          "values": {
+            "Tên bảng": "return_requests",
+            "STT": 10,
+            "Tên cột": "description",
+            "Kiểu dữ liệu": "varchar(2000)",
+            "Cho phép NULL": "YES",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "Mô tả của khách"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_requests",
+            "Tên cột": "evidence_urls"
+          },
+          "values": {
+            "Tên bảng": "return_requests",
+            "STT": 11,
+            "Tên cột": "evidence_urls",
+            "Kiểu dữ liệu": "jsonb",
+            "Cho phép NULL": "YES",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "Mảng URL ảnh HTTPS, tối đa 5"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_requests",
+            "Tên cột": "fault"
+          },
+          "values": {
+            "Tên bảng": "return_requests",
+            "STT": 12,
+            "Tên cột": "fault",
+            "Kiểu dữ liệu": "varchar(16)",
+            "Cho phép NULL": "YES",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "SHOP|CUSTOMER; bắt buộc từ APPROVED; SHOP thì hoàn phí giao (D57)"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_requests",
+            "Tên cột": "delivered_at"
+          },
+          "values": {
+            "Tên bảng": "return_requests",
+            "STT": 13,
+            "Tên cột": "delivered_at",
+            "Kiểu dữ liệu": "timestamptz",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "Mốc tính hạn RETURN_WINDOW_DAYS (D54)"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_requests",
+            "Tên cột": "window_override_by"
+          },
+          "values": {
+            "Tên bảng": "return_requests",
+            "STT": 14,
+            "Tên cột": "window_override_by",
+            "Kiểu dữ liệu": "bigint",
+            "Cho phép NULL": "YES",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "Người nhận trả quá hạn (return.window.override)"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_requests",
+            "Tên cột": "window_override_note"
+          },
+          "values": {
+            "Tên bảng": "return_requests",
+            "STT": 15,
+            "Tên cột": "window_override_note",
+            "Kiểu dữ liệu": "varchar(500)",
+            "Cho phép NULL": "YES",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "Lý do override; đi cặp với window_override_by"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_requests",
+            "Tên cột": "refund_cap"
+          },
+          "values": {
+            "Tên bảng": "return_requests",
+            "STT": 16,
+            "Tên cột": "refund_cap",
+            "Kiểu dữ liệu": "decimal(19,2)",
+            "Cho phép NULL": "YES",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "Trần tiền hoàn chốt lúc nhận hàng; bắt buộc từ RECEIVED"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_requests",
+            "Tên cột": "idempotency_key"
+          },
+          "values": {
+            "Tên bảng": "return_requests",
+            "STT": 17,
+            "Tên cột": "idempotency_key",
+            "Kiểu dữ liệu": "varchar(150)",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "YES",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "Khoá tạo phiếu (unique)"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_requests",
+            "Tên cột": "request_hash"
+          },
+          "values": {
+            "Tên bảng": "return_requests",
+            "STT": 18,
+            "Tên cột": "request_hash",
+            "Kiểu dữ liệu": "char(64)",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "Hash payload tạo phiếu; khác hash cùng key là conflict"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_requests",
+            "Tên cột": "created_by"
+          },
+          "values": {
+            "Tên bảng": "return_requests",
+            "STT": 19,
+            "Tên cột": "created_by",
+            "Kiểu dữ liệu": "bigint",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "User tạo (khách hoặc nhân viên); không FK"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_requests",
+            "Tên cột": "decided_by"
+          },
+          "values": {
+            "Tên bảng": "return_requests",
+            "STT": 20,
+            "Tên cột": "decided_by",
+            "Kiểu dữ liệu": "bigint",
+            "Cho phép NULL": "YES",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "Người duyệt/từ chối"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_requests",
+            "Tên cột": "decided_at"
+          },
+          "values": {
+            "Tên bảng": "return_requests",
+            "STT": 21,
+            "Tên cột": "decided_at",
+            "Kiểu dữ liệu": "timestamptz",
+            "Cho phép NULL": "YES",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "Thời điểm duyệt/từ chối"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_requests",
+            "Tên cột": "decision_note"
+          },
+          "values": {
+            "Tên bảng": "return_requests",
+            "STT": 22,
+            "Tên cột": "decision_note",
+            "Kiểu dữ liệu": "varchar(500)",
+            "Cho phép NULL": "YES",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "Ghi chú quyết định"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_requests",
+            "Tên cột": "received_by"
+          },
+          "values": {
+            "Tên bảng": "return_requests",
+            "STT": 23,
+            "Tên cột": "received_by",
+            "Kiểu dữ liệu": "bigint",
+            "Cho phép NULL": "YES",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "Người nhận và kiểm hàng"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_requests",
+            "Tên cột": "received_at"
+          },
+          "values": {
+            "Tên bảng": "return_requests",
+            "STT": 24,
+            "Tên cột": "received_at",
+            "Kiểu dữ liệu": "timestamptz",
+            "Cho phép NULL": "YES",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "Thời điểm nhận hàng"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_requests",
+            "Tên cột": "closed_at"
+          },
+          "values": {
+            "Tên bảng": "return_requests",
+            "STT": 25,
+            "Tên cột": "closed_at",
+            "Kiểu dữ liệu": "timestamptz",
+            "Cho phép NULL": "YES",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "Thời điểm đóng/huỷ"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_requests",
+            "Tên cột": "version"
+          },
+          "values": {
+            "Tên bảng": "return_requests",
+            "STT": 26,
+            "Tên cột": "version",
+            "Kiểu dữ liệu": "bigint",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "0",
+            "Ý nghĩa / trạng thái cho phép": "Optimistic version; mọi lệnh kiểm expectedVersion"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_requests",
+            "Tên cột": "created_at"
+          },
+          "values": {
+            "Tên bảng": "return_requests",
+            "STT": 27,
+            "Tên cột": "created_at",
+            "Kiểu dữ liệu": "timestamptz",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "CURRENT_TIMESTAMP",
+            "Ý nghĩa / trạng thái cho phép": ""
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_requests",
+            "Tên cột": "updated_at"
+          },
+          "values": {
+            "Tên bảng": "return_requests",
+            "STT": 28,
+            "Tên cột": "updated_at",
+            "Kiểu dữ liệu": "timestamptz",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": ""
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_items",
+            "Tên cột": "id"
+          },
+          "values": {
+            "Tên bảng": "return_items",
+            "STT": 1,
+            "Tên cột": "id",
+            "Kiểu dữ liệu": "bigint",
+            "Cho phép NULL": "NO",
+            "Primary key": "YES",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": ""
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_items",
+            "Tên cột": "return_request_id"
+          },
+          "values": {
+            "Tên bảng": "return_items",
+            "STT": 2,
+            "Tên cột": "return_request_id",
+            "Kiểu dữ liệu": "bigint",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": ""
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_items",
+            "Tên cột": "order_item_id"
+          },
+          "values": {
+            "Tên bảng": "return_items",
+            "STT": 3,
+            "Tên cột": "order_item_id",
+            "Kiểu dữ liệu": "bigint",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": ""
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_items",
+            "Tên cột": "quantity"
+          },
+          "values": {
+            "Tên bảng": "return_items",
+            "STT": 4,
+            "Tên cột": "quantity",
+            "Kiểu dữ liệu": "int",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "> 0; cộng dồn qua phiếu không vượt số mua; combo bằng toàn bộ phần còn lại"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_items",
+            "Tên cột": "condition"
+          },
+          "values": {
+            "Tên bảng": "return_items",
+            "STT": 5,
+            "Tên cột": "condition",
+            "Kiểu dữ liệu": "varchar(16)",
+            "Cho phép NULL": "YES",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "SELLABLE|DAMAGED|MISSING; NULL trước khi nhận"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_items",
+            "Tên cột": "disposition"
+          },
+          "values": {
+            "Tên bảng": "return_items",
+            "STT": 6,
+            "Tên cột": "disposition",
+            "Kiểu dữ liệu": "varchar(16)",
+            "Cho phép NULL": "YES",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "RESTOCK|HOLD|WRITE_OFF"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_items",
+            "Tên cột": "restock_qty"
+          },
+          "values": {
+            "Tên bảng": "return_items",
+            "STT": 7,
+            "Tên cột": "restock_qty",
+            "Kiểu dữ liệu": "int",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "0",
+            "Ý nghĩa / trạng thái cho phép": "= quantity chỉ khi SELLABLE+RESTOCK, ngược lại 0"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_items",
+            "Tên cột": "refund_cap"
+          },
+          "values": {
+            "Tên bảng": "return_items",
+            "STT": 8,
+            "Tên cột": "refund_cap",
+            "Kiểu dữ liệu": "decimal(19,2)",
+            "Cho phép NULL": "YES",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "Thành tiền dòng × số trả / số mua, làm tròn xuống; MISSING = 0"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_items",
+            "Tên cột": "note"
+          },
+          "values": {
+            "Tên bảng": "return_items",
+            "STT": 9,
+            "Tên cột": "note",
+            "Kiểu dữ liệu": "varchar(500)",
+            "Cho phép NULL": "YES",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": ""
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_status_history",
+            "Tên cột": "id"
+          },
+          "values": {
+            "Tên bảng": "return_status_history",
+            "STT": 1,
+            "Tên cột": "id",
+            "Kiểu dữ liệu": "bigint",
+            "Cho phép NULL": "NO",
+            "Primary key": "YES",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": ""
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_status_history",
+            "Tên cột": "return_request_id"
+          },
+          "values": {
+            "Tên bảng": "return_status_history",
+            "STT": 2,
+            "Tên cột": "return_request_id",
+            "Kiểu dữ liệu": "bigint",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": ""
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_status_history",
+            "Tên cột": "sequence_no"
+          },
+          "values": {
+            "Tên bảng": "return_status_history",
+            "STT": 3,
+            "Tên cột": "sequence_no",
+            "Kiểu dữ liệu": "int",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": ""
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_status_history",
+            "Tên cột": "action"
+          },
+          "values": {
+            "Tên bảng": "return_status_history",
+            "STT": 4,
+            "Tên cột": "action",
+            "Kiểu dữ liệu": "varchar(32)",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "CREATE|APPROVE|REJECT|CANCEL|RECEIVE|REFUND_REQUEST|REFUND_CONFIRM|REFUND_FAIL|CLOSE"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_status_history",
+            "Tên cột": "from_status"
+          },
+          "values": {
+            "Tên bảng": "return_status_history",
+            "STT": 5,
+            "Tên cột": "from_status",
+            "Kiểu dữ liệu": "varchar(24)",
+            "Cho phép NULL": "YES",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": ""
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_status_history",
+            "Tên cột": "to_status"
+          },
+          "values": {
+            "Tên bảng": "return_status_history",
+            "STT": 6,
+            "Tên cột": "to_status",
+            "Kiểu dữ liệu": "varchar(24)",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": ""
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_status_history",
+            "Tên cột": "reason"
+          },
+          "values": {
+            "Tên bảng": "return_status_history",
+            "STT": 7,
+            "Tên cột": "reason",
+            "Kiểu dữ liệu": "varchar(500)",
+            "Cho phép NULL": "YES",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": ""
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_status_history",
+            "Tên cột": "actor_type"
+          },
+          "values": {
+            "Tên bảng": "return_status_history",
+            "STT": 8,
+            "Tên cột": "actor_type",
+            "Kiểu dữ liệu": "varchar(16)",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "CUSTOMER|USER"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_status_history",
+            "Tên cột": "actor_id"
+          },
+          "values": {
+            "Tên bảng": "return_status_history",
+            "STT": 9,
+            "Tên cột": "actor_id",
+            "Kiểu dữ liệu": "bigint",
+            "Cho phép NULL": "YES",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": ""
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_status_history",
+            "Tên cột": "request_id"
+          },
+          "values": {
+            "Tên bảng": "return_status_history",
+            "STT": 10,
+            "Tên cột": "request_id",
+            "Kiểu dữ liệu": "varchar(100)",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": ""
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_status_history",
+            "Tên cột": "idempotency_key"
+          },
+          "values": {
+            "Tên bảng": "return_status_history",
+            "STT": 11,
+            "Tên cột": "idempotency_key",
+            "Kiểu dữ liệu": "varchar(150)",
+            "Cho phép NULL": "YES",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "Khoá replay theo phiếu (unique cùng return_request_id)"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_status_history",
+            "Tên cột": "request_hash"
+          },
+          "values": {
+            "Tên bảng": "return_status_history",
+            "STT": 12,
+            "Tên cột": "request_hash",
+            "Kiểu dữ liệu": "char(64)",
+            "Cho phép NULL": "YES",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": ""
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_status_history",
+            "Tên cột": "created_at"
+          },
+          "values": {
+            "Tên bảng": "return_status_history",
+            "STT": 13,
+            "Tên cột": "created_at",
+            "Kiểu dữ liệu": "timestamptz",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "CURRENT_TIMESTAMP",
+            "Ý nghĩa / trạng thái cho phép": ""
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "refunds",
+            "Tên cột": "id"
+          },
+          "values": {
+            "Tên bảng": "refunds",
+            "STT": 1,
+            "Tên cột": "id",
+            "Kiểu dữ liệu": "bigint",
+            "Cho phép NULL": "NO",
+            "Primary key": "YES",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": ""
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "refunds",
+            "Tên cột": "refund_no"
+          },
+          "values": {
+            "Tên bảng": "refunds",
+            "STT": 2,
+            "Tên cột": "refund_no",
+            "Kiểu dữ liệu": "varchar(32)",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "YES",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": ""
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "refunds",
+            "Tên cột": "return_request_id"
+          },
+          "values": {
+            "Tên bảng": "refunds",
+            "STT": 3,
+            "Tên cột": "return_request_id",
+            "Kiểu dữ liệu": "bigint",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": ""
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "refunds",
+            "Tên cột": "payment_id"
+          },
+          "values": {
+            "Tên bảng": "refunds",
+            "STT": 4,
+            "Tên cột": "payment_id",
+            "Kiểu dữ liệu": "bigint",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": ""
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "refunds",
+            "Tên cột": "method"
+          },
+          "values": {
+            "Tên bảng": "refunds",
+            "STT": 5,
+            "Tên cột": "method",
+            "Kiểu dữ liệu": "varchar(16)",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "CASH|BANK_TRANSFER (D58)"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "refunds",
+            "Tên cột": "amount"
+          },
+          "values": {
+            "Tên bảng": "refunds",
+            "STT": 6,
+            "Tên cột": "amount",
+            "Kiểu dữ liệu": "decimal(19,2)",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "> 0; tổng PENDING+SUCCEEDED ≤ trần phiếu và received_amount"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "refunds",
+            "Tên cột": "currency_code"
+          },
+          "values": {
+            "Tên bảng": "refunds",
+            "STT": 7,
+            "Tên cột": "currency_code",
+            "Kiểu dữ liệu": "char(3)",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "VND",
+            "Ý nghĩa / trạng thái cho phép": ""
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "refunds",
+            "Tên cột": "status"
+          },
+          "values": {
+            "Tên bảng": "refunds",
+            "STT": 8,
+            "Tên cột": "status",
+            "Kiểu dữ liệu": "varchar(16)",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "PENDING",
+            "Ý nghĩa / trạng thái cho phép": "PENDING|SUCCEEDED|FAILED; tối đa một PENDING mỗi phiếu"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "refunds",
+            "Tên cột": "external_ref"
+          },
+          "values": {
+            "Tên bảng": "refunds",
+            "STT": 9,
+            "Tên cột": "external_ref",
+            "Kiểu dữ liệu": "varchar(255)",
+            "Cho phép NULL": "YES",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "Mã giao dịch/biên nhận; bắt buộc khi BANK_TRANSFER SUCCEEDED; unique theo method"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "refunds",
+            "Tên cột": "note"
+          },
+          "values": {
+            "Tên bảng": "refunds",
+            "STT": 10,
+            "Tên cột": "note",
+            "Kiểu dữ liệu": "varchar(500)",
+            "Cho phép NULL": "YES",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": ""
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "refunds",
+            "Tên cột": "idempotency_key"
+          },
+          "values": {
+            "Tên bảng": "refunds",
+            "STT": 11,
+            "Tên cột": "idempotency_key",
+            "Kiểu dữ liệu": "varchar(150)",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "YES",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "sha256(phiếu, Idempotency-Key)"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "refunds",
+            "Tên cột": "request_hash"
+          },
+          "values": {
+            "Tên bảng": "refunds",
+            "STT": 12,
+            "Tên cột": "request_hash",
+            "Kiểu dữ liệu": "char(64)",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": ""
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "refunds",
+            "Tên cột": "requested_by"
+          },
+          "values": {
+            "Tên bảng": "refunds",
+            "STT": 13,
+            "Tên cột": "requested_by",
+            "Kiểu dữ liệu": "bigint",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "Người tạo lượt (payment.refund.request)"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "refunds",
+            "Tên cột": "processed_by"
+          },
+          "values": {
+            "Tên bảng": "refunds",
+            "STT": 14,
+            "Tên cột": "processed_by",
+            "Kiểu dữ liệu": "bigint",
+            "Cho phép NULL": "YES",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "Người xác nhận/đánh lỗi (payment.refund.approve)"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "refunds",
+            "Tên cột": "processed_at"
+          },
+          "values": {
+            "Tên bảng": "refunds",
+            "STT": 15,
+            "Tên cột": "processed_at",
+            "Kiểu dữ liệu": "timestamptz",
+            "Cho phép NULL": "YES",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": ""
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "refunds",
+            "Tên cột": "failure_reason"
+          },
+          "values": {
+            "Tên bảng": "refunds",
+            "STT": 16,
+            "Tên cột": "failure_reason",
+            "Kiểu dữ liệu": "varchar(500)",
+            "Cho phép NULL": "YES",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "Bắt buộc khi FAILED"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "refunds",
+            "Tên cột": "version"
+          },
+          "values": {
+            "Tên bảng": "refunds",
+            "STT": 17,
+            "Tên cột": "version",
+            "Kiểu dữ liệu": "bigint",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "0",
+            "Ý nghĩa / trạng thái cho phép": ""
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "refunds",
+            "Tên cột": "created_at"
+          },
+          "values": {
+            "Tên bảng": "refunds",
+            "STT": 18,
+            "Tên cột": "created_at",
+            "Kiểu dữ liệu": "timestamptz",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "CURRENT_TIMESTAMP",
+            "Ý nghĩa / trạng thái cho phép": ""
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "refunds",
+            "Tên cột": "updated_at"
+          },
+          "values": {
+            "Tên bảng": "refunds",
+            "STT": 19,
+            "Tên cột": "updated_at",
+            "Kiểu dữ liệu": "timestamptz",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": ""
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "categories",
+            "Tên cột": "returnable"
+          },
+          "values": {
+            "Tên bảng": "categories",
+            "STT": 16,
+            "Tên cột": "returnable",
+            "Kiểu dữ liệu": "boolean",
+            "Cho phép NULL": "NO",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "true",
+            "Ý nghĩa / trạng thái cho phép": "D54: false thì sản phẩm thuộc danh mục không tạo được phiếu trả"
+          }
+        },
+        {
+          "sheet": "Relationships",
+          "match": {
+            "Bảng con": "return_requests",
+            "Cột FK": "branch_id"
+          },
+          "values": {
+            "Bảng con": "return_requests",
+            "Cột FK": "branch_id",
+            "Bảng cha": "branches",
+            "Cột PK": "id",
+            "Cardinality": "N → 1",
+            "ON DELETE": "RESTRICT",
+            "Điểm cần kiểm tra": "Snapshot chi nhánh của đơn; phạm vi dữ liệu Admin lọc theo cột này"
+          }
+        },
+        {
+          "sheet": "Relationships",
+          "match": {
+            "Bảng con": "return_requests",
+            "Cột FK": "warehouse_id"
+          },
+          "values": {
+            "Bảng con": "return_requests",
+            "Cột FK": "warehouse_id",
+            "Bảng cha": "warehouses",
+            "Cột PK": "id",
+            "Cardinality": "N → 1",
+            "ON DELETE": "RESTRICT",
+            "Điểm cần kiểm tra": "Hàng SELLABLE phải nhập lại đúng kho đã xuất"
+          }
+        },
+        {
+          "sheet": "Relationships",
+          "match": {
+            "Bảng con": "return_status_history",
+            "Cột FK": "return_request_id"
+          },
+          "values": {
+            "Bảng con": "return_status_history",
+            "Cột FK": "return_request_id",
+            "Bảng cha": "return_requests",
+            "Cột PK": "id",
+            "Cardinality": "N → 1",
+            "ON DELETE": "RESTRICT",
+            "Điểm cần kiểm tra": "Append-only; không xoá lịch sử khi phiếu kết thúc"
+          }
+        },
+        {
+          "sheet": "RBAC Permissions",
+          "match": {
+            "Permission code": "return.create"
+          },
+          "values": {
+            "Permission code": "return.create",
+            "Module": "Return",
+            "Action": "create",
+            "Allowed scopes": "GLOBAL;BRANCH",
+            "Sensitive": "true",
+            "Default roles": "OWNER; BRANCH_MANAGER; STAFF",
+            "Ghi chú": "Nhân viên tạo phiếu hộ khách (D55); có return.decide thì duyệt ngay (D56)"
+          }
+        },
+        {
+          "sheet": "RBAC Permissions",
+          "match": {
+            "Permission code": "return.window.override"
+          },
+          "values": {
+            "Permission code": "return.window.override",
+            "Module": "Return",
+            "Action": "override",
+            "Allowed scopes": "GLOBAL",
+            "Sensitive": "true",
+            "Default roles": "OWNER",
+            "Ghi chú": "Nhận trả quá hạn RETURN_WINDOW_DAYS; bắt buộc lý do và ghi audit"
+          }
+        }
+      ]
     }
   ]
 }
