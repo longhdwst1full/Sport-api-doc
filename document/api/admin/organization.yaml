@@ -618,10 +618,8 @@ components:
           type: string
           example: Chi nhánh Hồ Chí Minh
         status:
-          type: string
-          enum:
-            - ACTIVE
-            - INACTIVE
+          allOf:
+            - $ref: "#/components/schemas/OrganizationStatus"
         phone:
           type: string
           example: 028 7300 8899
@@ -727,10 +725,8 @@ components:
           type: string
           example: Kho bán hàng Hồ Chí Minh
         status:
-          type: string
-          enum:
-            - ACTIVE
-            - INACTIVE
+          allOf:
+            - $ref: "#/components/schemas/OrganizationStatus"
         version:
           type: number
           example: 0
@@ -790,6 +786,11 @@ components:
           example: Kho bán hàng Đà Nẵng
       required:
         - name
+    OrganizationStatus:
+      type: string
+      enum:
+        - ACTIVE
+        - INACTIVE
   securitySchemes:
     bearer:
       scheme: bearer

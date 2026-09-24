@@ -54,27 +54,16 @@ components:
           type: string
           description: Mã ổn định dùng trong code; không đổi được từ giao diện
         groupCode:
-          type: string
-          enum:
-            - SHIPPING
-            - CHECKOUT
-            - ORDER
-            - PAYMENT
-            - CART
-            - PROMOTION
-            - INTEGRATION
+          allOf:
+            - $ref: "#/components/schemas/SystemParameterGroup"
         label:
           type: string
         description:
           type: string
           nullable: true
         valueType:
-          type: string
-          enum:
-            - INTEGER
-            - DECIMAL
-            - BOOLEAN
-            - STRING
+          allOf:
+            - $ref: "#/components/schemas/SystemParameterValueType"
         value:
           type: string
           description: Giá trị đang áp dụng, luôn ở dạng chuỗi
@@ -129,6 +118,23 @@ components:
         - isSecret
         - version
         - updatedAt
+    SystemParameterGroup:
+      type: string
+      enum:
+        - SHIPPING
+        - CHECKOUT
+        - ORDER
+        - PAYMENT
+        - CART
+        - PROMOTION
+        - INTEGRATION
+    SystemParameterValueType:
+      type: string
+      enum:
+        - INTEGER
+        - DECIMAL
+        - BOOLEAN
+        - STRING
   securitySchemes:
     bearer:
       scheme: bearer

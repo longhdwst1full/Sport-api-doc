@@ -28,7 +28,7 @@ export class ShippingQuoteDto {
   @ApiProperty({ ...ENTITY_ID_OPENAPI }) shippingRateId: string;
   @ApiProperty({ ...ENTITY_ID_OPENAPI }) branchId: string;
   @ApiProperty() zoneCode: string;
-  @ApiProperty({ enum: ['VND'] }) currencyCode: string;
+  @ApiProperty({ enum: ['VND'], enumName: 'CurrencyCode' }) currencyCode: string;
   @ApiProperty({ example: '45000.00' }) fee: string;
   @ApiProperty({ minimum: 0 }) etaMinDays: number;
   @ApiProperty({ minimum: 0 }) etaMaxDays: number;

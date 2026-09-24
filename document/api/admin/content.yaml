@@ -18,13 +18,7 @@ paths:
           in: query
           description: Lọc theo loại bài viết. Bỏ trống để lấy tất cả.
           schema:
-            type: string
-            enum:
-              - NEWS
-              - TRAINING_GUIDE
-              - PRODUCT_GUIDE
-              - ABOUT
-              - POLICY
+            $ref: "#/components/schemas/ContentPostType"
       responses:
         "200":
           description: ""
@@ -199,6 +193,14 @@ paths:
         - cms.content.manage
 components:
   schemas:
+    ContentPostType:
+      type: string
+      enum:
+        - NEWS
+        - TRAINING_GUIDE
+        - PRODUCT_GUIDE
+        - ABOUT
+        - POLICY
     ContentPostListDto:
       type: object
       properties:
@@ -249,13 +251,8 @@ components:
       type: object
       properties:
         postType:
-          type: string
-          enum:
-            - NEWS
-            - TRAINING_GUIDE
-            - PRODUCT_GUIDE
-            - ABOUT
-            - POLICY
+          allOf:
+            - $ref: "#/components/schemas/ContentPostType"
         title:
           type: string
         slug:
@@ -287,13 +284,8 @@ components:
         slug:
           type: string
         postType:
-          type: string
-          enum:
-            - NEWS
-            - TRAINING_GUIDE
-            - PRODUCT_GUIDE
-            - ABOUT
-            - POLICY
+          allOf:
+            - $ref: "#/components/schemas/ContentPostType"
         isPublished:
           type: boolean
           example: true
@@ -315,10 +307,8 @@ components:
           type: string
           format: date-time
         status:
-          type: string
-          enum:
-            - PUBLISHED
-            - ARCHIVED
+          allOf:
+            - $ref: "#/components/schemas/ContentPostStatus"
         version:
           type: number
           minimum: 0
@@ -396,6 +386,11 @@ components:
       required:
         - code
         - message
+    ContentPostStatus:
+      type: string
+      enum:
+        - PUBLISHED
+        - ARCHIVED
   securitySchemes:
     bearer:
       scheme: bearer

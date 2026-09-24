@@ -13,7 +13,7 @@ export class AdminFulfillmentQueryDto {
   @ApiPropertyOptional({ type: Number, default: 20, minimum: 1, maximum: 100 })
   @Type(() => Number) @IsInt() @Min(1) @Max(100) @IsOptional() limit = 20;
 
-  @ApiPropertyOptional({ enum: Object.values(FULFILLMENT_STATUS) })
+  @ApiPropertyOptional({ enum: Object.values(FULFILLMENT_STATUS), enumName: 'FulfillmentStatus' })
   @IsIn(Object.values(FULFILLMENT_STATUS)) @IsOptional() status?: string;
 
   @ApiPropertyOptional({ maxLength: 100, description: 'Mã fulfillment, mã đơn, tracking, tên, SĐT hoặc email người nhận' })
@@ -47,7 +47,7 @@ export class FailDeliveryDto extends FulfillmentTransitionDto {
 }
 
 export class ReceiveReturnDto extends FulfillmentTransitionDto {
-  @ApiProperty({ enum: Object.values(RETURN_CONDITION) })
+  @ApiProperty({ enum: Object.values(RETURN_CONDITION), enumName: 'ReturnCondition' })
   @IsIn(Object.values(RETURN_CONDITION)) condition: string;
 
   @ApiProperty({ minLength: 5, maxLength: 500 })
@@ -58,7 +58,7 @@ export class ReceiveReturnDto extends FulfillmentTransitionDto {
 export class FulfillmentHistoryDto {
   @ApiProperty() sequenceNo: number;
   @ApiPropertyOptional({ type: String, nullable: true }) fromStatus: string | null;
-  @ApiProperty({ enum: Object.values(FULFILLMENT_STATUS) }) toStatus: string;
+  @ApiProperty({ enum: Object.values(FULFILLMENT_STATUS), enumName: 'FulfillmentStatus' }) toStatus: string;
   @ApiPropertyOptional({ type: String, nullable: true }) reason: string | null;
   @ApiProperty({ format: 'date-time' }) createdAt: string;
 }
@@ -70,7 +70,7 @@ export class FulfillmentSummaryDto {
   @ApiProperty() orderNo: string;
   @ApiProperty({ ...ENTITY_ID_OPENAPI }) warehouseId: string;
   @ApiProperty() warehouseName: string;
-  @ApiProperty({ enum: Object.values(FULFILLMENT_STATUS) }) status: string;
+  @ApiProperty({ enum: Object.values(FULFILLMENT_STATUS), enumName: 'FulfillmentStatus' }) status: string;
   @ApiPropertyOptional({ type: String, nullable: true }) carrierCode: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) trackingNo: string | null;
   @ApiProperty() recipientName: string;

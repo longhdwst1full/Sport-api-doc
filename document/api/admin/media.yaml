@@ -120,13 +120,9 @@ components:
           type: string
           example: product-front.webp
         contentType:
-          type: string
-          enum:
-            - image/jpeg
-            - image/png
-            - image/webp
-            - image/avif
           example: image/webp
+          allOf:
+            - $ref: "#/components/schemas/ImageMimeType"
         sizeBytes:
           type: number
           minimum: 1
@@ -140,9 +136,8 @@ components:
       type: object
       properties:
         provider:
-          type: string
-          enum:
-            - CLOUDINARY
+          allOf:
+            - $ref: "#/components/schemas/MediaProvider"
         uploadUrl:
           type: string
           format: uri
@@ -246,9 +241,8 @@ components:
           pattern: ^[1-9][0-9]*$
           example: "1"
         provider:
-          type: string
-          enum:
-            - CLOUDINARY
+          allOf:
+            - $ref: "#/components/schemas/MediaProvider"
         providerAssetId:
           type: string
         publicId:
@@ -291,6 +285,17 @@ components:
         - format
         - providerVersion
         - status
+    ImageMimeType:
+      type: string
+      enum:
+        - image/jpeg
+        - image/png
+        - image/webp
+        - image/avif
+    MediaProvider:
+      type: string
+      enum:
+        - CLOUDINARY
     ErrorDetailDto:
       type: object
       properties:

@@ -75,7 +75,7 @@ export class InventoryMovementQueryDto {
   @IsOptional()
   sku?: string;
 
-  @ApiPropertyOptional({ enum: Object.values(INVENTORY_MOVEMENT_TYPE) })
+  @ApiPropertyOptional({ enum: Object.values(INVENTORY_MOVEMENT_TYPE), enumName: 'InventoryMovementType' })
   @IsIn(Object.values(INVENTORY_MOVEMENT_TYPE))
   @IsOptional()
   movementType?: string;
@@ -103,7 +103,7 @@ export class InventoryMovementDto {
   @ApiProperty() warehouseCode: string;
   @ApiProperty() sku: string;
   @ApiProperty() productName: string;
-  @ApiProperty({ enum: Object.values(INVENTORY_MOVEMENT_TYPE) }) movementType: string;
+  @ApiProperty({ enum: Object.values(INVENTORY_MOVEMENT_TYPE), enumName: 'InventoryMovementType' }) movementType: string;
   @ApiProperty() quantityDelta: number;
   @ApiProperty() balanceAfter: number;
   @ApiProperty() referenceType: string;

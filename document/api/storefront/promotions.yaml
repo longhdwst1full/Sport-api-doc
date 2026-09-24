@@ -106,10 +106,8 @@ components:
           type: number
           nullable: true
         status:
-          type: string
-          enum:
-            - ACTIVE
-            - INACTIVE
+          allOf:
+            - $ref: "#/components/schemas/FlashSaleItemStatus"
         version:
           type: string
       required:
@@ -124,6 +122,11 @@ components:
         - availableQuantity
         - status
         - version
+    FlashSaleItemStatus:
+      type: string
+      enum:
+        - ACTIVE
+        - INACTIVE
   securitySchemes:
     bearer:
       scheme: bearer

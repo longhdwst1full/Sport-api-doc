@@ -62,13 +62,7 @@ paths:
           in: query
           description: Gom biểu đồ theo ngày, tháng, quý hoặc năm.
           schema:
-            default: DAY
-            type: string
-            enum:
-              - DAY
-              - MONTH
-              - QUARTER
-              - YEAR
+            $ref: "#/components/schemas/ReportGranularity"
       responses:
         "200":
           description: ""
@@ -252,23 +246,13 @@ paths:
           in: query
           description: Gom biểu đồ theo ngày, tháng, quý hoặc năm.
           schema:
-            default: DAY
-            type: string
-            enum:
-              - DAY
-              - MONTH
-              - QUARTER
-              - YEAR
+            $ref: "#/components/schemas/ReportGranularity"
         - name: format
           required: false
           in: query
           description: Định dạng file tải về.
           schema:
-            default: XLSX
-            type: string
-            enum:
-              - CSV
-              - XLSX
+            $ref: "#/components/schemas/ReportExportFormat"
       responses:
         "200":
           description: File báo cáo, tên file nằm trong header Content-Disposition.
@@ -323,23 +307,13 @@ paths:
           in: query
           description: Gom biểu đồ theo ngày, tháng, quý hoặc năm.
           schema:
-            default: DAY
-            type: string
-            enum:
-              - DAY
-              - MONTH
-              - QUARTER
-              - YEAR
+            $ref: "#/components/schemas/ReportGranularity"
         - name: format
           required: false
           in: query
           description: Định dạng file tải về.
           schema:
-            default: XLSX
-            type: string
-            enum:
-              - CSV
-              - XLSX
+            $ref: "#/components/schemas/ReportExportFormat"
       responses:
         "200":
           description: File báo cáo, tên file nằm trong header Content-Disposition.
@@ -401,11 +375,7 @@ paths:
           required: false
           in: query
           schema:
-            default: XLSX
-            type: string
-            enum:
-              - CSV
-              - XLSX
+            $ref: "#/components/schemas/ReportExportFormat"
       responses:
         "200":
           description: File báo cáo, tên file nằm trong header Content-Disposition.
@@ -467,11 +437,7 @@ paths:
           required: false
           in: query
           schema:
-            default: XLSX
-            type: string
-            enum:
-              - CSV
-              - XLSX
+            $ref: "#/components/schemas/ReportExportFormat"
       responses:
         "200":
           description: File báo cáo, tên file nằm trong header Content-Disposition.
@@ -511,11 +477,7 @@ paths:
           required: false
           in: query
           schema:
-            default: XLSX
-            type: string
-            enum:
-              - CSV
-              - XLSX
+            $ref: "#/components/schemas/ReportExportFormat"
       responses:
         "200":
           description: File báo cáo, tên file nằm trong header Content-Disposition.
@@ -616,6 +578,13 @@ components:
         - path
         - method
         - timestamp
+    ReportGranularity:
+      type: string
+      enum:
+        - DAY
+        - MONTH
+        - QUARTER
+        - YEAR
     RevenueReportDto:
       type: object
       properties:
@@ -644,13 +613,9 @@ components:
           type: string
           description: Giá trị trung bình mỗi đơn đã hoàn tất
         granularity:
-          type: string
-          enum:
-            - DAY
-            - MONTH
-            - QUARTER
-            - YEAR
           description: Mức gom đã áp dụng cho `series`
+          allOf:
+            - $ref: "#/components/schemas/ReportGranularity"
         series:
           description: Doanh thu thực nhận theo kỳ hoàn tất
           type: array
@@ -713,6 +678,11 @@ components:
             $ref: "#/components/schemas/TopCustomerDto"
       required:
         - items
+    ReportExportFormat:
+      type: string
+      enum:
+        - CSV
+        - XLSX
     OrderStatusCountDto:
       type: object
       properties:

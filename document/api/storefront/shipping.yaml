@@ -155,9 +155,8 @@ components:
         zoneCode:
           type: string
         currencyCode:
-          type: string
-          enum:
-            - VND
+          allOf:
+            - $ref: "#/components/schemas/CurrencyCode"
         fee:
           type: string
           example: "45000.00"
@@ -218,6 +217,10 @@ components:
             $ref: "#/components/schemas/ShippingAreaDto"
       required:
         - items
+    CurrencyCode:
+      type: string
+      enum:
+        - VND
     ErrorDetailDto:
       type: object
       properties:

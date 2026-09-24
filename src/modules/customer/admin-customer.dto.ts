@@ -59,11 +59,11 @@ export class AdminCustomerQueryDto {
   @IsOptional() @IsString() @MaxLength(255)
   email?: string;
 
-  @ApiPropertyOptional({ enum: CUSTOMER_STATUSES })
+  @ApiPropertyOptional({ enum: CUSTOMER_STATUSES, enumName: 'CustomerStatus' })
   @IsOptional() @IsIn(CUSTOMER_STATUSES)
   status?: CustomerStatus;
 
-  @ApiPropertyOptional({ enum: CUSTOMER_KINDS })
+  @ApiPropertyOptional({ enum: CUSTOMER_KINDS, enumName: 'CustomerKind' })
   @IsOptional() @IsIn(CUSTOMER_KINDS)
   kind?: CustomerKind;
 }
@@ -74,10 +74,10 @@ export class AdminCustomerSummaryDto {
   @ApiProperty({ example: 'Nguyễn Minh Anh' }) name: string;
   @ApiProperty({ type: String, nullable: true }) email: string | null;
   @ApiProperty({ type: String, nullable: true }) phone: string | null;
-  @ApiProperty({ enum: CUSTOMER_STATUSES }) status: string;
+  @ApiProperty({ enum: CUSTOMER_STATUSES, enumName: 'CustomerStatus' }) status: string;
 
   @ApiProperty({
-    enum: CUSTOMER_KINDS,
+    enum: CUSTOMER_KINDS, enumName: 'CustomerKind',
     description: 'Suy từ việc khách có tài khoản đăng nhập hay không',
   })
   kind: CustomerKind;
@@ -160,9 +160,8 @@ export class AdminCustomerAddressDto {
   provinceCode: string;
 
   @ApiProperty({
-    type: String,
     nullable: true,
-    enum: ADDRESS_CODE_PROVIDERS,
+    enum: ADDRESS_CODE_PROVIDERS, enumName: 'AddressCodeProvider',
     description:
       'Hãng đã cấp bộ mã địa giới này. Mã của hãng khác không dùng lẫn được, nên địa chỉ lưu từ '
       + 'hãng cũ phải chọn lại khi đổi hãng.',
@@ -232,7 +231,7 @@ export class AdminCustomerAddressInputDto {
   provinceCode: string;
 
   @ApiPropertyOptional({
-    enum: ADDRESS_CODE_PROVIDERS,
+    enum: ADDRESS_CODE_PROVIDERS, enumName: 'AddressCodeProvider',
     default: 'GHN',
     description: 'Hãng đã cấp bộ mã gửi kèm. Bỏ trống thì hiểu là hãng mặc định của hệ thống.',
   })

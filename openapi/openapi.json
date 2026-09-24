@@ -133,16 +133,7 @@
             "required": false,
             "in": "query",
             "schema": {
-              "type": "string",
-              "enum": [
-                "SHIPPING",
-                "CHECKOUT",
-                "ORDER",
-                "PAYMENT",
-                "CART",
-                "PROMOTION",
-                "INTEGRATION"
-              ]
+              "$ref": "#/components/schemas/SystemParameterGroup"
             }
           },
           {
@@ -160,11 +151,7 @@
             "required": false,
             "in": "query",
             "schema": {
-              "type": "string",
-              "enum": [
-                "ACTIVE",
-                "INACTIVE"
-              ]
+              "$ref": "#/components/schemas/SystemParameterStatus"
             }
           },
           {
@@ -182,15 +169,7 @@
             "in": "query",
             "description": "Trường sắp xếp; kèm `sortDirection` để đổi chiều",
             "schema": {
-              "default": "sortOrder",
-              "type": "string",
-              "enum": [
-                "id",
-                "code",
-                "groupCode",
-                "sortOrder",
-                "updatedAt"
-              ]
+              "$ref": "#/components/schemas/SystemParameterSortField"
             }
           },
           {
@@ -3299,11 +3278,7 @@
             "required": false,
             "in": "query",
             "schema": {
-              "type": "string",
-              "enum": [
-                "ACTIVE",
-                "INACTIVE"
-              ]
+              "$ref": "#/components/schemas/CustomerStatus"
             }
           },
           {
@@ -3311,11 +3286,7 @@
             "required": false,
             "in": "query",
             "schema": {
-              "type": "string",
-              "enum": [
-                "MEMBER",
-                "GUEST"
-              ]
+              "$ref": "#/components/schemas/CustomerKind"
             }
           }
         ],
@@ -5056,12 +5027,7 @@
             "required": false,
             "in": "query",
             "schema": {
-              "type": "string",
-              "enum": [
-                "DRAFT",
-                "PUBLISHED",
-                "ARCHIVED"
-              ]
+              "$ref": "#/components/schemas/ProductStatus"
             }
           }
         ],
@@ -5199,12 +5165,7 @@
             "required": false,
             "in": "query",
             "schema": {
-              "type": "string",
-              "enum": [
-                "DRAFT",
-                "PUBLISHED",
-                "ARCHIVED"
-              ]
+              "$ref": "#/components/schemas/ProductStatus"
             }
           }
         ],
@@ -7524,16 +7485,7 @@
             "required": false,
             "in": "query",
             "schema": {
-              "type": "string",
-              "enum": [
-                "ADJUST",
-                "RECEIVE",
-                "TRANSFER_OUT",
-                "TRANSFER_IN",
-                "SALE_SHIP",
-                "DELIVERY_RETURN_RESTOCK",
-                "RETURN_RESTOCK"
-              ]
+              "$ref": "#/components/schemas/InventoryMovementType"
             }
           },
           {
@@ -7991,13 +7943,7 @@
             "required": false,
             "in": "query",
             "schema": {
-              "type": "string",
-              "enum": [
-                "DRAFT",
-                "SUBMITTED",
-                "SHIPPED",
-                "RECEIVED"
-              ]
+              "$ref": "#/components/schemas/StockTransferStatus"
             }
           }
         ],
@@ -8622,14 +8568,7 @@
             "required": false,
             "in": "query",
             "schema": {
-              "type": "string",
-              "enum": [
-                "DRAFT",
-                "SCHEDULED",
-                "ACTIVE",
-                "ENDED",
-                "CANCELLED"
-              ]
+              "$ref": "#/components/schemas/FlashSaleCampaignStatus"
             }
           },
           {
@@ -10320,14 +10259,7 @@
             "in": "query",
             "description": "Lọc theo loại bài viết. Bỏ trống để lấy tất cả.",
             "schema": {
-              "type": "string",
-              "enum": [
-                "NEWS",
-                "TRAINING_GUIDE",
-                "PRODUCT_GUIDE",
-                "ABOUT",
-                "POLICY"
-              ]
+              "$ref": "#/components/schemas/ContentPostType"
             }
           }
         ],
@@ -10400,14 +10332,7 @@
             "in": "query",
             "description": "Lọc theo loại bài viết. Bỏ trống để lấy tất cả.",
             "schema": {
-              "type": "string",
-              "enum": [
-                "NEWS",
-                "TRAINING_GUIDE",
-                "PRODUCT_GUIDE",
-                "ABOUT",
-                "POLICY"
-              ]
+              "$ref": "#/components/schemas/ContentPostType"
             }
           }
         ],
@@ -11450,13 +11375,7 @@
             "in": "query",
             "description": "Nhóm trạng thái dùng trực tiếp cho các tab màn quản lý đơn hàng",
             "schema": {
-              "type": "string",
-              "enum": [
-                "PENDING_CONFIRMATION",
-                "CONFIRMED",
-                "IN_TRANSIT",
-                "DELIVERED"
-              ]
+              "$ref": "#/components/schemas/OrderStatusGroup"
             }
           },
           {
@@ -12427,16 +12346,7 @@
             "required": false,
             "in": "query",
             "schema": {
-              "type": "string",
-              "enum": [
-                "PENDING",
-                "AWAITING_CONFIRMATION",
-                "NEED_REVIEW",
-                "SUCCESS",
-                "FAILED",
-                "CANCELLED",
-                "REFUNDED"
-              ]
+              "$ref": "#/components/schemas/PaymentStatus"
             }
           },
           {
@@ -12444,12 +12354,7 @@
             "required": false,
             "in": "query",
             "schema": {
-              "type": "string",
-              "enum": [
-                "BANK_TRANSFER",
-                "COD",
-                "VNPAY"
-              ]
+              "$ref": "#/components/schemas/PaymentMethod"
             }
           },
           {
@@ -12948,18 +12853,7 @@
             "required": false,
             "in": "query",
             "schema": {
-              "type": "string",
-              "enum": [
-                "PENDING",
-                "PICKING",
-                "PACKED",
-                "SHIPPED",
-                "DELIVERED",
-                "DELIVERY_FAILED",
-                "RETURNING_TO_WAREHOUSE",
-                "RETURNED_TO_WAREHOUSE",
-                "CANCELLED"
-              ]
+              "$ref": "#/components/schemas/FulfillmentStatus"
             }
           },
           {
@@ -14064,16 +13958,7 @@
             "required": false,
             "in": "query",
             "schema": {
-              "type": "string",
-              "enum": [
-                "REQUESTED",
-                "APPROVED",
-                "REJECTED",
-                "RECEIVED",
-                "REFUNDED",
-                "CLOSED",
-                "CANCELLED"
-              ]
+              "$ref": "#/components/schemas/ReturnStatus"
             }
           },
           {
@@ -15798,14 +15683,7 @@
             "in": "query",
             "description": "Gom biểu đồ theo ngày, tháng, quý hoặc năm.",
             "schema": {
-              "default": "DAY",
-              "type": "string",
-              "enum": [
-                "DAY",
-                "MONTH",
-                "QUARTER",
-                "YEAR"
-              ]
+              "$ref": "#/components/schemas/ReportGranularity"
             }
           }
         ],
@@ -16099,14 +15977,7 @@
             "in": "query",
             "description": "Gom biểu đồ theo ngày, tháng, quý hoặc năm.",
             "schema": {
-              "default": "DAY",
-              "type": "string",
-              "enum": [
-                "DAY",
-                "MONTH",
-                "QUARTER",
-                "YEAR"
-              ]
+              "$ref": "#/components/schemas/ReportGranularity"
             }
           },
           {
@@ -16115,12 +15986,7 @@
             "in": "query",
             "description": "Định dạng file tải về.",
             "schema": {
-              "default": "XLSX",
-              "type": "string",
-              "enum": [
-                "CSV",
-                "XLSX"
-              ]
+              "$ref": "#/components/schemas/ReportExportFormat"
             }
           }
         ],
@@ -16207,14 +16073,7 @@
             "in": "query",
             "description": "Gom biểu đồ theo ngày, tháng, quý hoặc năm.",
             "schema": {
-              "default": "DAY",
-              "type": "string",
-              "enum": [
-                "DAY",
-                "MONTH",
-                "QUARTER",
-                "YEAR"
-              ]
+              "$ref": "#/components/schemas/ReportGranularity"
             }
           },
           {
@@ -16223,12 +16082,7 @@
             "in": "query",
             "description": "Định dạng file tải về.",
             "schema": {
-              "default": "XLSX",
-              "type": "string",
-              "enum": [
-                "CSV",
-                "XLSX"
-              ]
+              "$ref": "#/components/schemas/ReportExportFormat"
             }
           }
         ],
@@ -16325,12 +16179,7 @@
             "required": false,
             "in": "query",
             "schema": {
-              "default": "XLSX",
-              "type": "string",
-              "enum": [
-                "CSV",
-                "XLSX"
-              ]
+              "$ref": "#/components/schemas/ReportExportFormat"
             }
           }
         ],
@@ -16427,12 +16276,7 @@
             "required": false,
             "in": "query",
             "schema": {
-              "default": "XLSX",
-              "type": "string",
-              "enum": [
-                "CSV",
-                "XLSX"
-              ]
+              "$ref": "#/components/schemas/ReportExportFormat"
             }
           }
         ],
@@ -16498,12 +16342,7 @@
             "required": false,
             "in": "query",
             "schema": {
-              "default": "XLSX",
-              "type": "string",
-              "enum": [
-                "CSV",
-                "XLSX"
-              ]
+              "$ref": "#/components/schemas/ReportExportFormat"
             }
           }
         ],
@@ -16638,6 +16477,16 @@
           "database"
         ]
       },
+      "CapabilityReadinessStatus": {
+        "type": "string",
+        "enum": [
+          "READY",
+          "DISABLED",
+          "MISCONFIGURED",
+          "UNKNOWN"
+        ],
+        "description": "READY: đủ tham số. DISABLED: cố tình tắt, không phải lỗi. MISCONFIGURED: đang bật nhưng thiếu tham số — đây là thứ cần sửa. UNKNOWN: chưa đọc được tham số để kết luận."
+      },
       "CapabilityReadinessDto": {
         "type": "object",
         "properties": {
@@ -16650,14 +16499,12 @@
             "description": "Năng lực có đang được bật hay không"
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "READY",
-              "DISABLED",
-              "MISCONFIGURED",
-              "UNKNOWN"
-            ],
-            "description": "READY: đủ tham số. DISABLED: cố tình tắt, không phải lỗi. MISCONFIGURED: đang bật nhưng thiếu tham số — đây là thứ cần sửa. UNKNOWN: chưa đọc được tham số để kết luận."
+            "description": "READY: đủ tham số. DISABLED: cố tình tắt, không phải lỗi. MISCONFIGURED: đang bật nhưng thiếu tham số — đây là thứ cần sửa. UNKNOWN: chưa đọc được tham số để kết luận.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CapabilityReadinessStatus"
+              }
+            ]
           },
           "missing": {
             "example": [
@@ -16838,6 +16685,44 @@
           "p1Models"
         ]
       },
+      "SystemParameterGroup": {
+        "type": "string",
+        "enum": [
+          "SHIPPING",
+          "CHECKOUT",
+          "ORDER",
+          "PAYMENT",
+          "CART",
+          "PROMOTION",
+          "INTEGRATION"
+        ]
+      },
+      "SystemParameterStatus": {
+        "type": "string",
+        "enum": [
+          "ACTIVE",
+          "INACTIVE"
+        ]
+      },
+      "SystemParameterSortField": {
+        "type": "string",
+        "enum": [
+          "id",
+          "code",
+          "groupCode",
+          "sortOrder",
+          "updatedAt"
+        ]
+      },
+      "SystemParameterValueType": {
+        "type": "string",
+        "enum": [
+          "INTEGER",
+          "DECIMAL",
+          "BOOLEAN",
+          "STRING"
+        ]
+      },
       "SystemParameterDto": {
         "type": "object",
         "properties": {
@@ -16851,15 +16736,10 @@
             "description": "Mã ổn định dùng trong code; không đổi được từ giao diện"
           },
           "groupCode": {
-            "type": "string",
-            "enum": [
-              "SHIPPING",
-              "CHECKOUT",
-              "ORDER",
-              "PAYMENT",
-              "CART",
-              "PROMOTION",
-              "INTEGRATION"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SystemParameterGroup"
+              }
             ]
           },
           "label": {
@@ -16870,12 +16750,10 @@
             "nullable": true
           },
           "valueType": {
-            "type": "string",
-            "enum": [
-              "INTEGER",
-              "DECIMAL",
-              "BOOLEAN",
-              "STRING"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SystemParameterValueType"
+              }
             ]
           },
           "value": {
@@ -17007,15 +16885,10 @@
             "description": "Mã viết hoa, dùng gạch dưới"
           },
           "groupCode": {
-            "type": "string",
-            "enum": [
-              "SHIPPING",
-              "CHECKOUT",
-              "ORDER",
-              "PAYMENT",
-              "CART",
-              "PROMOTION",
-              "INTEGRATION"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SystemParameterGroup"
+              }
             ]
           },
           "label": {
@@ -17026,12 +16899,10 @@
             "type": "string"
           },
           "valueType": {
-            "type": "string",
-            "enum": [
-              "INTEGER",
-              "DECIMAL",
-              "BOOLEAN",
-              "STRING"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SystemParameterValueType"
+              }
             ]
           },
           "value": {
@@ -17171,6 +17042,13 @@
           "items"
         ]
       },
+      "OrganizationStatus": {
+        "type": "string",
+        "enum": [
+          "ACTIVE",
+          "INACTIVE"
+        ]
+      },
       "AddressDto": {
         "type": "object",
         "properties": {
@@ -17237,10 +17115,10 @@
             "example": "Chi nhánh Hồ Chí Minh"
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "ACTIVE",
-              "INACTIVE"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrganizationStatus"
+              }
             ]
           },
           "phone": {
@@ -17314,10 +17192,10 @@
             "example": "Kho bán hàng Hồ Chí Minh"
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "ACTIVE",
-              "INACTIVE"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrganizationStatus"
+              }
             ]
           },
           "version": {
@@ -17558,6 +17436,13 @@
           "warehouseExpectedVersion"
         ]
       },
+      "ScopeType": {
+        "type": "string",
+        "enum": [
+          "GLOBAL",
+          "BRANCH"
+        ]
+      },
       "UserRoleAssignmentDto": {
         "type": "object",
         "properties": {
@@ -17580,10 +17465,10 @@
             "type": "string"
           },
           "scopeType": {
-            "type": "string",
-            "enum": [
-              "GLOBAL",
-              "BRANCH"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ScopeType"
+              }
             ]
           },
           "branchId": {
@@ -17747,6 +17632,13 @@
           "reason"
         ]
       },
+      "RoleStatus": {
+        "type": "string",
+        "enum": [
+          "ACTIVE",
+          "INACTIVE"
+        ]
+      },
       "RoleDto": {
         "type": "object",
         "properties": {
@@ -17767,10 +17659,10 @@
             "type": "string"
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "ACTIVE",
-              "INACTIVE"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RoleStatus"
+              }
             ]
           },
           "system": {
@@ -17908,10 +17800,10 @@
             "maxLength": 1000
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "ACTIVE",
-              "INACTIVE"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RoleStatus"
+              }
             ]
           },
           "permissionCodes": {
@@ -17953,16 +17845,23 @@
           "reason"
         ]
       },
+      "AssignableStaffRoleCode": {
+        "type": "string",
+        "enum": [
+          "BRANCH_MANAGER",
+          "STAFF"
+        ]
+      },
       "AssignUserRoleDto": {
         "type": "object",
         "properties": {
           "roleCode": {
-            "type": "string",
-            "enum": [
-              "BRANCH_MANAGER",
-              "STAFF"
-            ],
-            "example": "BRANCH_MANAGER"
+            "example": "BRANCH_MANAGER",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AssignableStaffRoleCode"
+              }
+            ]
           },
           "scopeType": {
             "type": "string",
@@ -18214,6 +18113,13 @@
           "newPassword"
         ]
       },
+      "AddressCodeProvider": {
+        "type": "string",
+        "enum": [
+          "GHN"
+        ],
+        "description": "Hãng đã cấp bộ mã địa giới của địa chỉ này."
+      },
       "CustomerAddressDto": {
         "type": "object",
         "properties": {
@@ -18257,12 +18163,13 @@
             "type": "string"
           },
           "codeProvider": {
-            "type": "string",
             "nullable": true,
-            "enum": [
-              "GHN"
-            ],
-            "description": "Hãng đã cấp bộ mã địa giới của địa chỉ này."
+            "description": "Hãng đã cấp bộ mã địa giới của địa chỉ này.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AddressCodeProvider"
+              }
+            ]
           },
           "postalCode": {
             "type": "string",
@@ -18344,12 +18251,13 @@
             "maxLength": 32
           },
           "codeProvider": {
-            "type": "string",
-            "enum": [
-              "GHN"
-            ],
             "default": "GHN",
-            "description": "Hãng đã cấp bộ mã gửi kèm; bỏ trống thì hiểu là hãng mặc định của hệ thống."
+            "description": "Hãng đã cấp bộ mã gửi kèm; bỏ trống thì hiểu là hãng mặc định của hệ thống.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AddressCodeProvider"
+              }
+            ]
           },
           "postalCode": {
             "type": "string",
@@ -18419,12 +18327,13 @@
             "maxLength": 32
           },
           "codeProvider": {
-            "type": "string",
-            "enum": [
-              "GHN"
-            ],
             "default": "GHN",
-            "description": "Hãng đã cấp bộ mã gửi kèm; bỏ trống thì hiểu là hãng mặc định của hệ thống."
+            "description": "Hãng đã cấp bộ mã gửi kèm; bỏ trống thì hiểu là hãng mặc định của hệ thống.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AddressCodeProvider"
+              }
+            ]
           },
           "postalCode": {
             "type": "string",
@@ -18531,6 +18440,20 @@
           "expectedVersion"
         ]
       },
+      "CustomerStatus": {
+        "type": "string",
+        "enum": [
+          "ACTIVE",
+          "INACTIVE"
+        ]
+      },
+      "CustomerKind": {
+        "type": "string",
+        "enum": [
+          "MEMBER",
+          "GUEST"
+        ]
+      },
       "AdminCustomerSummaryDto": {
         "type": "object",
         "properties": {
@@ -18556,19 +18479,19 @@
             "nullable": true
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "ACTIVE",
-              "INACTIVE"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CustomerStatus"
+              }
             ]
           },
           "kind": {
-            "type": "string",
-            "enum": [
-              "MEMBER",
-              "GUEST"
-            ],
-            "description": "Suy từ việc khách có tài khoản đăng nhập hay không"
+            "description": "Suy từ việc khách có tài khoản đăng nhập hay không",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CustomerKind"
+              }
+            ]
           },
           "marketingConsent": {
             "type": "boolean",
@@ -18704,12 +18627,13 @@
             "description": "Mã tỉnh/thành của hãng vận chuyển."
           },
           "codeProvider": {
-            "type": "string",
             "nullable": true,
-            "enum": [
-              "GHN"
-            ],
-            "description": "Hãng đã cấp bộ mã địa giới này. Mã của hãng khác không dùng lẫn được, nên địa chỉ lưu từ hãng cũ phải chọn lại khi đổi hãng."
+            "description": "Hãng đã cấp bộ mã địa giới này. Mã của hãng khác không dùng lẫn được, nên địa chỉ lưu từ hãng cũ phải chọn lại khi đổi hãng.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AddressCodeProvider"
+              }
+            ]
           },
           "isDefault": {
             "type": "boolean"
@@ -18790,19 +18714,19 @@
             "nullable": true
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "ACTIVE",
-              "INACTIVE"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CustomerStatus"
+              }
             ]
           },
           "kind": {
-            "type": "string",
-            "enum": [
-              "MEMBER",
-              "GUEST"
-            ],
-            "description": "Suy từ việc khách có tài khoản đăng nhập hay không"
+            "description": "Suy từ việc khách có tài khoản đăng nhập hay không",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CustomerKind"
+              }
+            ]
           },
           "marketingConsent": {
             "type": "boolean",
@@ -18934,12 +18858,13 @@
             "description": "Mã tỉnh/thành theo danh mục hãng vận chuyển"
           },
           "codeProvider": {
-            "type": "string",
-            "enum": [
-              "GHN"
-            ],
             "default": "GHN",
-            "description": "Hãng đã cấp bộ mã gửi kèm. Bỏ trống thì hiểu là hãng mặc định của hệ thống."
+            "description": "Hãng đã cấp bộ mã gửi kèm. Bỏ trống thì hiểu là hãng mặc định của hệ thống.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AddressCodeProvider"
+              }
+            ]
           },
           "isDefault": {
             "type": "boolean",
@@ -19061,6 +18986,13 @@
           "expectedVersion"
         ]
       },
+      "CatalogMasterStatus": {
+        "type": "string",
+        "enum": [
+          "ACTIVE",
+          "INACTIVE"
+        ]
+      },
       "BrandDto": {
         "type": "object",
         "properties": {
@@ -19087,10 +19019,10 @@
             "example": "1"
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "ACTIVE",
-              "INACTIVE"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CatalogMasterStatus"
+              }
             ]
           },
           "version": {
@@ -19233,10 +19165,10 @@
             "description": "Tắt thì sản phẩm thuộc danh mục không tạo được yêu cầu trả hàng (D54)"
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "ACTIVE",
-              "INACTIVE"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CatalogMasterStatus"
+              }
             ]
           },
           "version": {
@@ -19414,6 +19346,27 @@
           "total"
         ]
       },
+      "ProductStatus": {
+        "type": "string",
+        "enum": [
+          "DRAFT",
+          "PUBLISHED",
+          "ARCHIVED"
+        ]
+      },
+      "ProductType": {
+        "type": "string",
+        "enum": [
+          "STANDARD",
+          "BUNDLE"
+        ]
+      },
+      "CurrencyCode": {
+        "type": "string",
+        "enum": [
+          "VND"
+        ]
+      },
       "ProductSummaryDto": {
         "type": "object",
         "properties": {
@@ -19450,18 +19403,17 @@
             "type": "string"
           },
           "productType": {
-            "type": "string",
-            "enum": [
-              "STANDARD",
-              "BUNDLE"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProductType"
+              }
             ]
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "DRAFT",
-              "PUBLISHED",
-              "ARCHIVED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProductStatus"
+              }
             ]
           },
           "isPublished": {
@@ -19479,11 +19431,12 @@
             "nullable": true
           },
           "currency": {
-            "type": "string",
-            "enum": [
-              "VND"
-            ],
-            "example": "VND"
+            "example": "VND",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CurrencyCode"
+              }
+            ]
           },
           "imageUrl": {
             "type": "string",
@@ -19548,6 +19501,26 @@
           "meta"
         ]
       },
+      "ProductVariantStatus": {
+        "type": "string",
+        "enum": [
+          "ACTIVE",
+          "INACTIVE"
+        ]
+      },
+      "ProductBundleType": {
+        "type": "string",
+        "enum": [
+          "FIXED_VIRTUAL"
+        ]
+      },
+      "ProductBundleStatus": {
+        "type": "string",
+        "enum": [
+          "ACTIVE",
+          "INACTIVE"
+        ]
+      },
       "BundleComponentDto": {
         "type": "object",
         "properties": {
@@ -19578,16 +19551,17 @@
         "type": "object",
         "properties": {
           "bundleType": {
-            "type": "string",
-            "enum": [
-              "FIXED_VIRTUAL"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProductBundleType"
+              }
             ]
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "ACTIVE",
-              "INACTIVE"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProductBundleStatus"
+              }
             ]
           },
           "components": {
@@ -19640,10 +19614,10 @@
             "nullable": true
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "ACTIVE",
-              "INACTIVE"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProductVariantStatus"
+              }
             ]
           },
           "version": {
@@ -19683,6 +19657,13 @@
           "weightGrams",
           "status",
           "version"
+        ]
+      },
+      "ProductMediaStatus": {
+        "type": "string",
+        "enum": [
+          "ACTIVE",
+          "INACTIVE"
         ]
       },
       "ProductMediaDto": {
@@ -19725,10 +19706,10 @@
             "type": "boolean"
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "ACTIVE",
-              "INACTIVE"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProductMediaStatus"
+              }
             ]
           }
         },
@@ -19798,18 +19779,17 @@
             "type": "string"
           },
           "productType": {
-            "type": "string",
-            "enum": [
-              "STANDARD",
-              "BUNDLE"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProductType"
+              }
             ]
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "DRAFT",
-              "PUBLISHED",
-              "ARCHIVED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProductStatus"
+              }
             ]
           },
           "isPublished": {
@@ -19827,11 +19807,12 @@
             "nullable": true
           },
           "currency": {
-            "type": "string",
-            "enum": [
-              "VND"
-            ],
-            "example": "VND"
+            "example": "VND",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CurrencyCode"
+              }
+            ]
           },
           "imageUrl": {
             "type": "string",
@@ -19932,12 +19913,12 @@
         "type": "object",
         "properties": {
           "productType": {
-            "type": "string",
-            "enum": [
-              "STANDARD",
-              "BUNDLE"
-            ],
-            "default": "STANDARD"
+            "default": "STANDARD",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProductType"
+              }
+            ]
           },
           "name": {
             "type": "string"
@@ -19989,12 +19970,12 @@
         "type": "object",
         "properties": {
           "productType": {
-            "type": "string",
-            "enum": [
-              "STANDARD",
-              "BUNDLE"
-            ],
-            "default": "STANDARD"
+            "default": "STANDARD",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProductType"
+              }
+            ]
           },
           "name": {
             "type": "string"
@@ -20492,6 +20473,18 @@
           "totalAvailable"
         ]
       },
+      "InventoryMovementType": {
+        "type": "string",
+        "enum": [
+          "ADJUST",
+          "RECEIVE",
+          "TRANSFER_OUT",
+          "TRANSFER_IN",
+          "SALE_SHIP",
+          "DELIVERY_RETURN_RESTOCK",
+          "RETURN_RESTOCK"
+        ]
+      },
       "InventoryMovementDto": {
         "type": "object",
         "properties": {
@@ -20510,15 +20503,10 @@
             "type": "string"
           },
           "movementType": {
-            "type": "string",
-            "enum": [
-              "ADJUST",
-              "RECEIVE",
-              "TRANSFER_OUT",
-              "TRANSFER_IN",
-              "SALE_SHIP",
-              "DELIVERY_RETURN_RESTOCK",
-              "RETURN_RESTOCK"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/InventoryMovementType"
+              }
             ]
           },
           "quantityDelta": {
@@ -20773,6 +20761,23 @@
           "items"
         ]
       },
+      "StockAdjustmentType": {
+        "type": "string",
+        "enum": [
+          "CORRECTION",
+          "OPENING_BALANCE",
+          "MANUAL_RECEIPT"
+        ]
+      },
+      "StockAdjustmentReason": {
+        "type": "string",
+        "enum": [
+          "MANUAL",
+          "COUNT_CORRECTION",
+          "INITIAL_STOCK",
+          "EXTERNAL_RECEIPT"
+        ]
+      },
       "StockAdjustmentItemInputDto": {
         "type": "object",
         "properties": {
@@ -20797,23 +20802,20 @@
             "example": "KHO-HCM-01"
           },
           "adjustmentType": {
-            "type": "string",
-            "enum": [
-              "CORRECTION",
-              "OPENING_BALANCE",
-              "MANUAL_RECEIPT"
-            ],
-            "default": "CORRECTION"
+            "default": "CORRECTION",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StockAdjustmentType"
+              }
+            ]
           },
           "reasonCode": {
-            "type": "string",
-            "enum": [
-              "MANUAL",
-              "COUNT_CORRECTION",
-              "INITIAL_STOCK",
-              "EXTERNAL_RECEIPT"
-            ],
-            "default": "MANUAL"
+            "default": "MANUAL",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StockAdjustmentReason"
+              }
+            ]
           },
           "externalReference": {
             "type": "string",
@@ -20854,11 +20856,10 @@
             ]
           },
           "adjustmentType": {
-            "type": "string",
-            "enum": [
-              "CORRECTION",
-              "OPENING_BALANCE",
-              "MANUAL_RECEIPT"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StockAdjustmentType"
+              }
             ]
           },
           "reasonCode": {
@@ -20896,6 +20897,15 @@
           "postedAt"
         ]
       },
+      "StockTransferStatus": {
+        "type": "string",
+        "enum": [
+          "DRAFT",
+          "SUBMITTED",
+          "SHIPPED",
+          "RECEIVED"
+        ]
+      },
       "StockTransferSummaryDto": {
         "type": "object",
         "properties": {
@@ -20914,12 +20924,10 @@
             "type": "string"
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "DRAFT",
-              "SUBMITTED",
-              "SHIPPED",
-              "RECEIVED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StockTransferStatus"
+              }
             ]
           },
           "reason": {
@@ -21054,12 +21062,10 @@
             "type": "string"
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "DRAFT",
-              "SUBMITTED",
-              "SHIPPED",
-              "RECEIVED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StockTransferStatus"
+              }
             ]
           },
           "reason": {
@@ -21226,6 +21232,13 @@
           "items"
         ]
       },
+      "FlashSaleItemStatus": {
+        "type": "string",
+        "enum": [
+          "ACTIVE",
+          "INACTIVE"
+        ]
+      },
       "FlashSaleItemDto": {
         "type": "object",
         "properties": {
@@ -21278,10 +21291,10 @@
             "nullable": true
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "ACTIVE",
-              "INACTIVE"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FlashSaleItemStatus"
+              }
             ]
           },
           "version": {
@@ -21359,6 +21372,16 @@
           "serverTime"
         ]
       },
+      "FlashSaleCampaignStatus": {
+        "type": "string",
+        "enum": [
+          "DRAFT",
+          "SCHEDULED",
+          "ACTIVE",
+          "ENDED",
+          "CANCELLED"
+        ]
+      },
       "FlashSaleCampaignSummaryDto": {
         "type": "object",
         "properties": {
@@ -21386,13 +21409,10 @@
             "format": "date-time"
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "DRAFT",
-              "SCHEDULED",
-              "ACTIVE",
-              "ENDED",
-              "CANCELLED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FlashSaleCampaignStatus"
+              }
             ]
           },
           "itemCount": {
@@ -21466,13 +21486,10 @@
             "format": "date-time"
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "DRAFT",
-              "SCHEDULED",
-              "ACTIVE",
-              "ENDED",
-              "CANCELLED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FlashSaleCampaignStatus"
+              }
             ]
           },
           "itemCount": {
@@ -21566,13 +21583,10 @@
             "pattern": "^\\d+$"
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "DRAFT",
-              "SCHEDULED",
-              "ACTIVE",
-              "ENDED",
-              "CANCELLED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FlashSaleCampaignStatus"
+              }
             ]
           }
         },
@@ -21620,6 +21634,12 @@
         },
         "required": [
           "expectedVersion"
+        ]
+      },
+      "ActiveCartStatus": {
+        "type": "string",
+        "enum": [
+          "ACTIVE"
         ]
       },
       "CartItemDto": {
@@ -21686,15 +21706,17 @@
             "example": "1"
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "ACTIVE"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ActiveCartStatus"
+              }
             ]
           },
           "currencyCode": {
-            "type": "string",
-            "enum": [
-              "VND"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CurrencyCode"
+              }
             ]
           },
           "version": {
@@ -21739,15 +21761,17 @@
             "example": "1"
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "ACTIVE"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ActiveCartStatus"
+              }
             ]
           },
           "currencyCode": {
-            "type": "string",
-            "enum": [
-              "VND"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CurrencyCode"
+              }
             ]
           },
           "version": {
@@ -21901,6 +21925,14 @@
           "provinceCode"
         ]
       },
+      "CheckoutPaymentMethod": {
+        "type": "string",
+        "enum": [
+          "BANK_TRANSFER",
+          "COD",
+          "VNPAY"
+        ]
+      },
       "CreateCheckoutQuoteDto": {
         "type": "object",
         "properties": {
@@ -21908,13 +21940,12 @@
             "$ref": "#/components/schemas/CheckoutRecipientDto"
           },
           "paymentMethod": {
-            "type": "string",
-            "enum": [
-              "BANK_TRANSFER",
-              "COD",
-              "VNPAY"
-            ],
-            "example": "BANK_TRANSFER"
+            "example": "BANK_TRANSFER",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CheckoutPaymentMethod"
+              }
+            ]
           },
           "requestShippingConsultation": {
             "type": "boolean",
@@ -21930,6 +21961,29 @@
         "required": [
           "recipient",
           "paymentMethod"
+        ]
+      },
+      "CheckoutQuoteStatus": {
+        "type": "string",
+        "enum": [
+          "QUOTED",
+          "AWAITING_SHIPPING_CONSULTATION"
+        ]
+      },
+      "CheckoutQuotePaymentMethod": {
+        "type": "string",
+        "enum": [
+          "BANK_TRANSFER",
+          "COD"
+        ]
+      },
+      "ShippingMethod": {
+        "type": "string",
+        "enum": [
+          "BRANCH_FREE",
+          "STANDARD_DELIVERY",
+          "THIRD_PARTY",
+          "MANUAL_EXTERNAL"
         ]
       },
       "CheckoutQuoteItemDto": {
@@ -21973,10 +22027,10 @@
             "description": "Opaque token used to confirm this exact quote"
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "QUOTED",
-              "AWAITING_SHIPPING_CONSULTATION"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CheckoutQuoteStatus"
+              }
             ]
           },
           "branchId": {
@@ -21993,19 +22047,17 @@
             "type": "string"
           },
           "paymentMethod": {
-            "type": "string",
-            "enum": [
-              "BANK_TRANSFER",
-              "COD"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CheckoutQuotePaymentMethod"
+              }
             ]
           },
           "shippingMethod": {
-            "type": "string",
-            "enum": [
-              "BRANCH_FREE",
-              "STANDARD_DELIVERY",
-              "THIRD_PARTY",
-              "MANUAL_EXTERNAL"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ShippingMethod"
+              }
             ]
           },
           "shippingProvider": {
@@ -22141,10 +22193,10 @@
             "description": "Opaque token used to confirm this exact quote"
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "QUOTED",
-              "AWAITING_SHIPPING_CONSULTATION"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CheckoutQuoteStatus"
+              }
             ]
           },
           "branchId": {
@@ -22161,19 +22213,17 @@
             "type": "string"
           },
           "paymentMethod": {
-            "type": "string",
-            "enum": [
-              "BANK_TRANSFER",
-              "COD"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CheckoutQuotePaymentMethod"
+              }
             ]
           },
           "shippingMethod": {
-            "type": "string",
-            "enum": [
-              "BRANCH_FREE",
-              "STANDARD_DELIVERY",
-              "THIRD_PARTY",
-              "MANUAL_EXTERNAL"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ShippingMethod"
+              }
             ]
           },
           "shippingProvider": {
@@ -22365,9 +22415,10 @@
             "type": "string"
           },
           "currencyCode": {
-            "type": "string",
-            "enum": [
-              "VND"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CurrencyCode"
+              }
             ]
           },
           "fee": {
@@ -22425,6 +22476,23 @@
           "items"
         ]
       },
+      "ContentPostType": {
+        "type": "string",
+        "enum": [
+          "NEWS",
+          "TRAINING_GUIDE",
+          "PRODUCT_GUIDE",
+          "ABOUT",
+          "POLICY"
+        ]
+      },
+      "ContentPostStatus": {
+        "type": "string",
+        "enum": [
+          "PUBLISHED",
+          "ARCHIVED"
+        ]
+      },
       "ContentPostDto": {
         "type": "object",
         "properties": {
@@ -22435,13 +22503,10 @@
             "type": "string"
           },
           "postType": {
-            "type": "string",
-            "enum": [
-              "NEWS",
-              "TRAINING_GUIDE",
-              "PRODUCT_GUIDE",
-              "ABOUT",
-              "POLICY"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ContentPostType"
+              }
             ]
           },
           "isPublished": {
@@ -22473,10 +22538,10 @@
             "format": "date-time"
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "PUBLISHED",
-              "ARCHIVED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ContentPostStatus"
+              }
             ]
           },
           "version": {
@@ -22528,13 +22593,10 @@
         "type": "object",
         "properties": {
           "postType": {
-            "type": "string",
-            "enum": [
-              "NEWS",
-              "TRAINING_GUIDE",
-              "PRODUCT_GUIDE",
-              "ABOUT",
-              "POLICY"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ContentPostType"
+              }
             ]
           },
           "title": {
@@ -22626,6 +22688,44 @@
         "required": [
           "expectedVersion",
           "reason"
+        ]
+      },
+      "OrderStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING_CONFIRMATION",
+          "CONFIRMED",
+          "PICKING",
+          "PACKED",
+          "SHIPPED",
+          "DELIVERED",
+          "COMPLETED",
+          "CANCELLED"
+        ]
+      },
+      "PaymentStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "AWAITING_CONFIRMATION",
+          "NEED_REVIEW",
+          "SUCCESS",
+          "FAILED",
+          "CANCELLED",
+          "REFUNDED"
+        ]
+      },
+      "OrderFulfillmentStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "PICKING",
+          "PACKED",
+          "SHIPPED",
+          "DELIVERED",
+          "FAILED",
+          "RETURNED",
+          "CANCELLED"
         ]
       },
       "OrderRecipientDto": {
@@ -22755,30 +22855,18 @@
             "type": "number"
           },
           "fromStatus": {
-            "type": "string",
-            "enum": [
-              "PENDING_CONFIRMATION",
-              "CONFIRMED",
-              "PICKING",
-              "PACKED",
-              "SHIPPED",
-              "DELIVERED",
-              "COMPLETED",
-              "CANCELLED"
-            ],
-            "nullable": true
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrderStatus"
+              }
+            ]
           },
           "toStatus": {
-            "type": "string",
-            "enum": [
-              "PENDING_CONFIRMATION",
-              "CONFIRMED",
-              "PICKING",
-              "PACKED",
-              "SHIPPED",
-              "DELIVERED",
-              "COMPLETED",
-              "CANCELLED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrderStatus"
+              }
             ]
           },
           "reason": {
@@ -22812,41 +22900,24 @@
             "type": "string"
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "PENDING_CONFIRMATION",
-              "CONFIRMED",
-              "PICKING",
-              "PACKED",
-              "SHIPPED",
-              "DELIVERED",
-              "COMPLETED",
-              "CANCELLED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrderStatus"
+              }
             ]
           },
           "paymentStatus": {
-            "type": "string",
-            "enum": [
-              "PENDING",
-              "AWAITING_CONFIRMATION",
-              "NEED_REVIEW",
-              "SUCCESS",
-              "FAILED",
-              "CANCELLED",
-              "REFUNDED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PaymentStatus"
+              }
             ]
           },
           "fulfillmentStatus": {
-            "type": "string",
-            "enum": [
-              "PENDING",
-              "PICKING",
-              "PACKED",
-              "SHIPPED",
-              "DELIVERED",
-              "FAILED",
-              "RETURNED",
-              "CANCELLED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrderFulfillmentStatus"
+              }
             ]
           },
           "paymentMethod": {
@@ -22960,41 +23031,24 @@
             "type": "string"
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "PENDING_CONFIRMATION",
-              "CONFIRMED",
-              "PICKING",
-              "PACKED",
-              "SHIPPED",
-              "DELIVERED",
-              "COMPLETED",
-              "CANCELLED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrderStatus"
+              }
             ]
           },
           "paymentStatus": {
-            "type": "string",
-            "enum": [
-              "PENDING",
-              "AWAITING_CONFIRMATION",
-              "NEED_REVIEW",
-              "SUCCESS",
-              "FAILED",
-              "CANCELLED",
-              "REFUNDED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PaymentStatus"
+              }
             ]
           },
           "fulfillmentStatus": {
-            "type": "string",
-            "enum": [
-              "PENDING",
-              "PICKING",
-              "PACKED",
-              "SHIPPED",
-              "DELIVERED",
-              "FAILED",
-              "RETURNED",
-              "CANCELLED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrderFulfillmentStatus"
+              }
             ]
           },
           "paymentMethod": {
@@ -23110,7 +23164,7 @@
           "reason"
         ]
       },
-      "AdminOrderSummaryDto": {
+      "OrderSummaryDto": {
         "type": "object",
         "properties": {
           "id": {
@@ -23122,41 +23176,24 @@
             "type": "string"
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "PENDING_CONFIRMATION",
-              "CONFIRMED",
-              "PICKING",
-              "PACKED",
-              "SHIPPED",
-              "DELIVERED",
-              "COMPLETED",
-              "CANCELLED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrderStatus"
+              }
             ]
           },
           "paymentStatus": {
-            "type": "string",
-            "enum": [
-              "PENDING",
-              "AWAITING_CONFIRMATION",
-              "NEED_REVIEW",
-              "SUCCESS",
-              "FAILED",
-              "CANCELLED",
-              "REFUNDED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PaymentStatus"
+              }
             ]
           },
           "fulfillmentStatus": {
-            "type": "string",
-            "enum": [
-              "PENDING",
-              "PICKING",
-              "PACKED",
-              "SHIPPED",
-              "DELIVERED",
-              "FAILED",
-              "RETURNED",
-              "CANCELLED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrderFulfillmentStatus"
+              }
             ]
           },
           "paymentMethod": {
@@ -23217,7 +23254,7 @@
           "items": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/AdminOrderSummaryDto"
+              "$ref": "#/components/schemas/OrderSummaryDto"
             }
           },
           "page": {
@@ -23413,6 +23450,14 @@
           "quantity"
         ]
       },
+      "PosPaymentMethod": {
+        "type": "string",
+        "enum": [
+          "CASH",
+          "BANK_TRANSFER",
+          "COD"
+        ]
+      },
       "PosDeliveryAddressDto": {
         "type": "object",
         "properties": {
@@ -23483,13 +23528,12 @@
             }
           },
           "paymentMethod": {
-            "type": "string",
-            "enum": [
-              "CASH",
-              "BANK_TRANSFER",
-              "COD"
-            ],
-            "example": "CASH"
+            "example": "CASH",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PosPaymentMethod"
+              }
+            ]
           },
           "delivery": {
             "description": "Bỏ trống: khách nhận ngay tại quầy như cũ. Có giá trị: đơn đi giao hàng, tồn kho vẫn đặt chỗ như luồng checkout của khách.",
@@ -23521,13 +23565,22 @@
           "paymentMethod"
         ]
       },
+      "OrderStatusGroup": {
+        "type": "string",
+        "enum": [
+          "PENDING_CONFIRMATION",
+          "CONFIRMED",
+          "IN_TRANSIT",
+          "DELIVERED"
+        ]
+      },
       "AdminOrderListDto": {
         "type": "object",
         "properties": {
           "items": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/AdminOrderSummaryDto"
+              "$ref": "#/components/schemas/OrderSummaryDto"
             }
           },
           "page": {
@@ -23585,15 +23638,22 @@
           "reason"
         ]
       },
+      "PaymentMethod": {
+        "type": "string",
+        "enum": [
+          "BANK_TRANSFER",
+          "COD",
+          "VNPAY"
+        ]
+      },
       "PaymentInstructionDto": {
         "type": "object",
         "properties": {
           "method": {
-            "type": "string",
-            "enum": [
-              "BANK_TRANSFER",
-              "COD",
-              "VNPAY"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PaymentMethod"
+              }
             ]
           },
           "provider": {
@@ -23615,6 +23675,15 @@
           "provider",
           "reference",
           "customerMessage"
+        ]
+      },
+      "PaymentEvidenceStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING_REVIEW",
+          "ACCEPTED",
+          "REJECTED",
+          "CANCELLED"
         ]
       },
       "PaymentEvidenceDto": {
@@ -23645,12 +23714,10 @@
             "type": "number"
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "PENDING_REVIEW",
-              "ACCEPTED",
-              "REJECTED",
-              "CANCELLED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PaymentEvidenceStatus"
+              }
             ]
           },
           "note": {
@@ -23703,23 +23770,17 @@
             "type": "string"
           },
           "method": {
-            "type": "string",
-            "enum": [
-              "BANK_TRANSFER",
-              "COD",
-              "VNPAY"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PaymentMethod"
+              }
             ]
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "PENDING",
-              "AWAITING_CONFIRMATION",
-              "NEED_REVIEW",
-              "SUCCESS",
-              "FAILED",
-              "CANCELLED",
-              "REFUNDED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PaymentStatus"
+              }
             ]
           },
           "expectedAmount": {
@@ -23729,9 +23790,10 @@
             "type": "string"
           },
           "currencyCode": {
-            "type": "string",
-            "enum": [
-              "VND"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CurrencyCode"
+              }
             ]
           },
           "expiresAt": {
@@ -23774,6 +23836,15 @@
           "evidences"
         ]
       },
+      "ImageMimeType": {
+        "type": "string",
+        "enum": [
+          "image/jpeg",
+          "image/png",
+          "image/webp",
+          "image/avif"
+        ]
+      },
       "CreateMediaUploadDto": {
         "type": "object",
         "properties": {
@@ -23782,14 +23853,12 @@
             "example": "product-front.webp"
           },
           "contentType": {
-            "type": "string",
-            "enum": [
-              "image/jpeg",
-              "image/png",
-              "image/webp",
-              "image/avif"
-            ],
-            "example": "image/webp"
+            "example": "image/webp",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ImageMimeType"
+              }
+            ]
           },
           "sizeBytes": {
             "type": "number",
@@ -23804,13 +23873,20 @@
           "sizeBytes"
         ]
       },
+      "MediaProvider": {
+        "type": "string",
+        "enum": [
+          "CLOUDINARY"
+        ]
+      },
       "SignedMediaUploadDto": {
         "type": "object",
         "properties": {
           "provider": {
-            "type": "string",
-            "enum": [
-              "CLOUDINARY"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MediaProvider"
+              }
             ]
           },
           "uploadUrl": {
@@ -23929,23 +24005,17 @@
             "type": "string"
           },
           "method": {
-            "type": "string",
-            "enum": [
-              "BANK_TRANSFER",
-              "COD",
-              "VNPAY"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PaymentMethod"
+              }
             ]
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "PENDING",
-              "AWAITING_CONFIRMATION",
-              "NEED_REVIEW",
-              "SUCCESS",
-              "FAILED",
-              "CANCELLED",
-              "REFUNDED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PaymentStatus"
+              }
             ]
           },
           "expectedAmount": {
@@ -24074,6 +24144,20 @@
           "message"
         ]
       },
+      "FulfillmentStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "PICKING",
+          "PACKED",
+          "SHIPPED",
+          "DELIVERED",
+          "DELIVERY_FAILED",
+          "RETURNING_TO_WAREHOUSE",
+          "RETURNED_TO_WAREHOUSE",
+          "CANCELLED"
+        ]
+      },
       "FulfillmentSummaryDto": {
         "type": "object",
         "properties": {
@@ -24102,17 +24186,10 @@
             "type": "string"
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "PENDING",
-              "PICKING",
-              "PACKED",
-              "SHIPPED",
-              "DELIVERED",
-              "DELIVERY_FAILED",
-              "RETURNING_TO_WAREHOUSE",
-              "RETURNED_TO_WAREHOUSE",
-              "CANCELLED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FulfillmentStatus"
+              }
             ]
           },
           "carrierCode": {
@@ -24192,17 +24269,10 @@
             "nullable": true
           },
           "toStatus": {
-            "type": "string",
-            "enum": [
-              "PENDING",
-              "PICKING",
-              "PACKED",
-              "SHIPPED",
-              "DELIVERED",
-              "DELIVERY_FAILED",
-              "RETURNING_TO_WAREHOUSE",
-              "RETURNED_TO_WAREHOUSE",
-              "CANCELLED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FulfillmentStatus"
+              }
             ]
           },
           "reason": {
@@ -24248,17 +24318,10 @@
             "type": "string"
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "PENDING",
-              "PICKING",
-              "PACKED",
-              "SHIPPED",
-              "DELIVERED",
-              "DELIVERY_FAILED",
-              "RETURNING_TO_WAREHOUSE",
-              "RETURNED_TO_WAREHOUSE",
-              "CANCELLED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FulfillmentStatus"
+              }
             ]
           },
           "carrierCode": {
@@ -24438,6 +24501,14 @@
           "reason"
         ]
       },
+      "ReturnCondition": {
+        "type": "string",
+        "enum": [
+          "SELLABLE",
+          "DAMAGED",
+          "MISSING"
+        ]
+      },
       "ReceiveReturnDto": {
         "type": "object",
         "properties": {
@@ -24450,11 +24521,10 @@
             "maxLength": 500
           },
           "condition": {
-            "type": "string",
-            "enum": [
-              "SELLABLE",
-              "DAMAGED",
-              "MISSING"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReturnCondition"
+              }
             ]
           },
           "reason": {
@@ -24467,6 +24537,17 @@
           "expectedVersion",
           "condition",
           "reason"
+        ]
+      },
+      "ReturnReasonCode": {
+        "type": "string",
+        "enum": [
+          "DEFECTIVE",
+          "WRONG_ITEM",
+          "NOT_AS_DESCRIBED",
+          "WRONG_SIZE",
+          "CHANGED_MIND",
+          "OTHER"
         ]
       },
       "ReturnEvidenceInputDto": {
@@ -24513,14 +24594,10 @@
         "type": "object",
         "properties": {
           "reasonCode": {
-            "type": "string",
-            "enum": [
-              "DEFECTIVE",
-              "WRONG_ITEM",
-              "NOT_AS_DESCRIBED",
-              "WRONG_SIZE",
-              "CHANGED_MIND",
-              "OTHER"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReturnReasonCode"
+              }
             ]
           },
           "description": {
@@ -24555,6 +24632,32 @@
           "orderNo"
         ]
       },
+      "ReturnStatus": {
+        "type": "string",
+        "enum": [
+          "REQUESTED",
+          "APPROVED",
+          "REJECTED",
+          "RECEIVED",
+          "REFUNDED",
+          "CLOSED",
+          "CANCELLED"
+        ]
+      },
+      "ReturnChannel": {
+        "type": "string",
+        "enum": [
+          "ACCOUNT",
+          "ADMIN"
+        ]
+      },
+      "ReturnFault": {
+        "type": "string",
+        "enum": [
+          "SHOP",
+          "CUSTOMER"
+        ]
+      },
       "ReturnEvidenceImageDto": {
         "type": "object",
         "properties": {
@@ -24580,6 +24683,28 @@
           "height"
         ]
       },
+      "RefundMethod": {
+        "type": "string",
+        "enum": [
+          "CASH",
+          "BANK_TRANSFER"
+        ]
+      },
+      "OrderItemType": {
+        "type": "string",
+        "enum": [
+          "STANDARD",
+          "BUNDLE"
+        ]
+      },
+      "ReturnItemDisposition": {
+        "type": "string",
+        "enum": [
+          "RESTOCK",
+          "HOLD",
+          "WRITE_OFF"
+        ]
+      },
       "ReturnItemDto": {
         "type": "object",
         "properties": {
@@ -24603,10 +24728,10 @@
             "type": "string"
           },
           "itemType": {
-            "type": "string",
-            "enum": [
-              "STANDARD",
-              "BUNDLE"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrderItemType"
+              }
             ]
           },
           "quantity": {
@@ -24617,22 +24742,20 @@
             "example": "350000.00"
           },
           "condition": {
-            "type": "string",
-            "enum": [
-              "SELLABLE",
-              "DAMAGED",
-              "MISSING"
-            ],
-            "nullable": true
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReturnCondition"
+              }
+            ]
           },
           "disposition": {
-            "type": "string",
-            "enum": [
-              "RESTOCK",
-              "HOLD",
-              "WRITE_OFF"
-            ],
-            "nullable": true
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReturnItemDisposition"
+              }
+            ]
           },
           "restockQty": {
             "type": "number"
@@ -24658,6 +24781,14 @@
           "restockQty"
         ]
       },
+      "RefundStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "SUCCEEDED",
+          "FAILED"
+        ]
+      },
       "RefundDto": {
         "type": "object",
         "properties": {
@@ -24670,10 +24801,10 @@
             "type": "string"
           },
           "method": {
-            "type": "string",
-            "enum": [
-              "CASH",
-              "BANK_TRANSFER"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RefundMethod"
+              }
             ]
           },
           "amount": {
@@ -24681,11 +24812,10 @@
             "example": "570000.00"
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "PENDING",
-              "SUCCEEDED",
-              "FAILED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RefundStatus"
+              }
             ]
           },
           "externalRef": {
@@ -24731,6 +24861,20 @@
           "version"
         ]
       },
+      "ReturnAction": {
+        "type": "string",
+        "enum": [
+          "CREATE",
+          "APPROVE",
+          "REJECT",
+          "CANCEL",
+          "RECEIVE",
+          "REFUND_REQUEST",
+          "REFUND_CONFIRM",
+          "REFUND_FAIL",
+          "CLOSE"
+        ]
+      },
       "ReturnHistoryDto": {
         "type": "object",
         "properties": {
@@ -24738,17 +24882,10 @@
             "type": "number"
           },
           "action": {
-            "type": "string",
-            "enum": [
-              "CREATE",
-              "APPROVE",
-              "REJECT",
-              "CANCEL",
-              "RECEIVE",
-              "REFUND_REQUEST",
-              "REFUND_CONFIRM",
-              "REFUND_FAIL",
-              "CLOSE"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReturnAction"
+              }
             ]
           },
           "fromStatus": {
@@ -24756,15 +24893,10 @@
             "nullable": true
           },
           "toStatus": {
-            "type": "string",
-            "enum": [
-              "REQUESTED",
-              "APPROVED",
-              "REJECTED",
-              "RECEIVED",
-              "REFUNDED",
-              "CLOSED",
-              "CANCELLED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReturnStatus"
+              }
             ]
           },
           "reason": {
@@ -24804,42 +24936,33 @@
             "type": "string"
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "REQUESTED",
-              "APPROVED",
-              "REJECTED",
-              "RECEIVED",
-              "REFUNDED",
-              "CLOSED",
-              "CANCELLED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReturnStatus"
+              }
             ]
           },
           "channel": {
-            "type": "string",
-            "enum": [
-              "ACCOUNT",
-              "ADMIN"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReturnChannel"
+              }
             ]
           },
           "reasonCode": {
-            "type": "string",
-            "enum": [
-              "DEFECTIVE",
-              "WRONG_ITEM",
-              "NOT_AS_DESCRIBED",
-              "WRONG_SIZE",
-              "CHANGED_MIND",
-              "OTHER"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReturnReasonCode"
+              }
             ]
           },
           "fault": {
-            "type": "string",
-            "enum": [
-              "SHOP",
-              "CUSTOMER"
-            ],
-            "nullable": true
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReturnFault"
+              }
+            ]
           },
           "recipientName": {
             "type": "string"
@@ -24917,11 +25040,7 @@
           "allowedRefundMethods": {
             "type": "array",
             "items": {
-              "type": "string",
-              "enum": [
-                "CASH",
-                "BANK_TRANSFER"
-              ]
+              "$ref": "#/components/schemas/RefundMethod"
             }
           },
           "items": {
@@ -24976,14 +25095,12 @@
             "example": "product-front.webp"
           },
           "contentType": {
-            "type": "string",
-            "enum": [
-              "image/jpeg",
-              "image/png",
-              "image/webp",
-              "image/avif"
-            ],
-            "example": "image/webp"
+            "example": "image/webp",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ImageMimeType"
+              }
+            ]
           },
           "sizeBytes": {
             "type": "number",
@@ -25025,42 +25142,33 @@
             "type": "string"
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "REQUESTED",
-              "APPROVED",
-              "REJECTED",
-              "RECEIVED",
-              "REFUNDED",
-              "CLOSED",
-              "CANCELLED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReturnStatus"
+              }
             ]
           },
           "channel": {
-            "type": "string",
-            "enum": [
-              "ACCOUNT",
-              "ADMIN"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReturnChannel"
+              }
             ]
           },
           "reasonCode": {
-            "type": "string",
-            "enum": [
-              "DEFECTIVE",
-              "WRONG_ITEM",
-              "NOT_AS_DESCRIBED",
-              "WRONG_SIZE",
-              "CHANGED_MIND",
-              "OTHER"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReturnReasonCode"
+              }
             ]
           },
           "fault": {
-            "type": "string",
-            "enum": [
-              "SHOP",
-              "CUSTOMER"
-            ],
-            "nullable": true
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReturnFault"
+              }
+            ]
           },
           "recipientName": {
             "type": "string"
@@ -25114,6 +25222,15 @@
           "page",
           "limit",
           "total"
+        ]
+      },
+      "ReturnIneligibleReason": {
+        "type": "string",
+        "enum": [
+          "ORDER_NOT_RETURNABLE",
+          "OPEN_RETURN_EXISTS",
+          "WINDOW_EXPIRED",
+          "NOTHING_RETURNABLE"
         ]
       },
       "ReturnEligibilityLineDto": {
@@ -25194,14 +25311,12 @@
             "description": "false thì FE tắt nút tạo phiếu và hiển thị reason"
           },
           "reason": {
-            "type": "string",
-            "enum": [
-              "ORDER_NOT_RETURNABLE",
-              "OPEN_RETURN_EXISTS",
-              "WINDOW_EXPIRED",
-              "NOTHING_RETURNABLE"
-            ],
-            "nullable": true
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReturnIneligibleReason"
+              }
+            ]
           },
           "deliveredAt": {
             "type": "string",
@@ -25308,14 +25423,12 @@
             "example": "product-front.webp"
           },
           "contentType": {
-            "type": "string",
-            "enum": [
-              "image/jpeg",
-              "image/png",
-              "image/webp",
-              "image/avif"
-            ],
-            "example": "image/webp"
+            "example": "image/webp",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ImageMimeType"
+              }
+            ]
           },
           "sizeBytes": {
             "type": "number",
@@ -25340,14 +25453,10 @@
         "type": "object",
         "properties": {
           "reasonCode": {
-            "type": "string",
-            "enum": [
-              "DEFECTIVE",
-              "WRONG_ITEM",
-              "NOT_AS_DESCRIBED",
-              "WRONG_SIZE",
-              "CHANGED_MIND",
-              "OTHER"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReturnReasonCode"
+              }
             ]
           },
           "description": {
@@ -25376,12 +25485,12 @@
             "example": "1"
           },
           "fault": {
-            "type": "string",
-            "enum": [
-              "SHOP",
-              "CUSTOMER"
-            ],
-            "description": "Bắt buộc khi người tạo có quyền return.decide: phiếu được duyệt ngay (D56)"
+            "description": "Bắt buộc khi người tạo có quyền return.decide: phiếu được duyệt ngay (D56)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReturnFault"
+              }
+            ]
           },
           "windowOverrideNote": {
             "type": "string",
@@ -25409,12 +25518,12 @@
             "maxLength": 500
           },
           "fault": {
-            "type": "string",
-            "enum": [
-              "SHOP",
-              "CUSTOMER"
-            ],
-            "description": "SHOP thì hoàn thêm phí giao ban đầu (D57)"
+            "description": "SHOP thì hoàn thêm phí giao ban đầu (D57)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReturnFault"
+              }
+            ]
           }
         },
         "required": [
@@ -25431,21 +25540,19 @@
             "example": "1"
           },
           "condition": {
-            "type": "string",
-            "enum": [
-              "SELLABLE",
-              "DAMAGED",
-              "MISSING"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReturnCondition"
+              }
             ]
           },
           "disposition": {
-            "type": "string",
-            "enum": [
-              "RESTOCK",
-              "HOLD",
-              "WRITE_OFF"
-            ],
-            "description": "Bắt buộc với DAMAGED (HOLD hoặc WRITE_OFF); SELLABLE luôn RESTOCK, MISSING luôn WRITE_OFF"
+            "description": "Bắt buộc với DAMAGED (HOLD hoặc WRITE_OFF); SELLABLE luôn RESTOCK, MISSING luôn WRITE_OFF",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReturnItemDisposition"
+              }
+            ]
           },
           "note": {
             "type": "string",
@@ -25496,10 +25603,10 @@
             "maxLength": 500
           },
           "method": {
-            "type": "string",
-            "enum": [
-              "CASH",
-              "BANK_TRANSFER"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RefundMethod"
+              }
             ]
           },
           "amount": {
@@ -25561,6 +25668,14 @@
           "expectedVersion"
         ]
       },
+      "ReviewModerationStatus": {
+        "type": "string",
+        "enum": [
+          "APPROVED",
+          "REJECTED"
+        ],
+        "description": "Đánh giá hiển thị ngay khi gửi; REJECTED là đã bị Admin gỡ khỏi website"
+      },
       "ReviewCommentDto": {
         "type": "object",
         "properties": {
@@ -25620,12 +25735,12 @@
             "type": "boolean"
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "APPROVED",
-              "REJECTED"
-            ],
-            "description": "Đánh giá hiển thị ngay khi gửi; REJECTED là đã bị Admin gỡ khỏi website"
+            "description": "Đánh giá hiển thị ngay khi gửi; REJECTED là đã bị Admin gỡ khỏi website",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReviewModerationStatus"
+              }
+            ]
           },
           "version": {
             "type": "number",
@@ -25689,10 +25804,10 @@
         "type": "object",
         "properties": {
           "status": {
-            "type": "string",
-            "enum": [
-              "APPROVED",
-              "REJECTED"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReviewModerationStatus"
+              }
             ]
           },
           "reason": {
@@ -25756,9 +25871,10 @@
             "example": "1"
           },
           "provider": {
-            "type": "string",
-            "enum": [
-              "CLOUDINARY"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MediaProvider"
+              }
             ]
           },
           "providerAssetId": {
@@ -25879,6 +25995,15 @@
           "ordersByStatus"
         ]
       },
+      "ReportGranularity": {
+        "type": "string",
+        "enum": [
+          "DAY",
+          "MONTH",
+          "QUARTER",
+          "YEAR"
+        ]
+      },
       "RevenuePointDto": {
         "type": "object",
         "properties": {
@@ -25961,14 +26086,12 @@
             "description": "Giá trị trung bình mỗi đơn đã hoàn tất"
           },
           "granularity": {
-            "type": "string",
-            "enum": [
-              "DAY",
-              "MONTH",
-              "QUARTER",
-              "YEAR"
-            ],
-            "description": "Mức gom đã áp dụng cho `series`"
+            "description": "Mức gom đã áp dụng cho `series`",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReportGranularity"
+              }
+            ]
           },
           "series": {
             "description": "Doanh thu thực nhận theo kỳ hoàn tất",
@@ -26146,6 +26269,13 @@
         },
         "required": [
           "items"
+        ]
+      },
+      "ReportExportFormat": {
+        "type": "string",
+        "enum": [
+          "CSV",
+          "XLSX"
         ]
       }
     }

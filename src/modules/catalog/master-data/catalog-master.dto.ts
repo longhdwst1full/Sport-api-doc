@@ -18,7 +18,7 @@ export class BrandDto {
   @ApiProperty() slug: string;
   @ApiPropertyOptional() description?: string;
   @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI }) logoAssetId?: string;
-  @ApiProperty({ enum: ['ACTIVE', 'INACTIVE'] }) status: 'ACTIVE' | 'INACTIVE';
+  @ApiProperty({ enum: ['ACTIVE', 'INACTIVE'], enumName: 'CatalogMasterStatus' }) status: 'ACTIVE' | 'INACTIVE';
   @ApiProperty() version: number;
 }
 
@@ -40,7 +40,7 @@ export class CategoryDto {
   @ApiProperty() sortOrder: number;
   @ApiProperty({ description: 'Tắt thì sản phẩm thuộc danh mục không tạo được yêu cầu trả hàng (D54)' })
   returnable: boolean;
-  @ApiProperty({ enum: ['ACTIVE', 'INACTIVE'] }) status: 'ACTIVE' | 'INACTIVE';
+  @ApiProperty({ enum: ['ACTIVE', 'INACTIVE'], enumName: 'CatalogMasterStatus' }) status: 'ACTIVE' | 'INACTIVE';
   @ApiProperty() version: number;
 }
 

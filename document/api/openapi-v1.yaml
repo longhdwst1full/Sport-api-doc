@@ -86,15 +86,7 @@ paths:
           required: false
           in: query
           schema:
-            type: string
-            enum:
-              - SHIPPING
-              - CHECKOUT
-              - ORDER
-              - PAYMENT
-              - CART
-              - PROMOTION
-              - INTEGRATION
+            $ref: "#/components/schemas/SystemParameterGroup"
         - name: search
           required: false
           in: query
@@ -106,10 +98,7 @@ paths:
           required: false
           in: query
           schema:
-            type: string
-            enum:
-              - ACTIVE
-              - INACTIVE
+            $ref: "#/components/schemas/SystemParameterStatus"
         - name: isSystem
           required: false
           in: query
@@ -121,14 +110,7 @@ paths:
           in: query
           description: Trường sắp xếp; kèm `sortDirection` để đổi chiều
           schema:
-            default: sortOrder
-            type: string
-            enum:
-              - id
-              - code
-              - groupCode
-              - sortOrder
-              - updatedAt
+            $ref: "#/components/schemas/SystemParameterSortField"
         - name: sortDirection
           required: false
           in: query
@@ -2023,18 +2005,12 @@ paths:
           required: false
           in: query
           schema:
-            type: string
-            enum:
-              - ACTIVE
-              - INACTIVE
+            $ref: "#/components/schemas/CustomerStatus"
         - name: kind
           required: false
           in: query
           schema:
-            type: string
-            enum:
-              - MEMBER
-              - GUEST
+            $ref: "#/components/schemas/CustomerKind"
       responses:
         "200":
           description: ""
@@ -3087,11 +3063,7 @@ paths:
           required: false
           in: query
           schema:
-            type: string
-            enum:
-              - DRAFT
-              - PUBLISHED
-              - ARCHIVED
+            $ref: "#/components/schemas/ProductStatus"
       responses:
         "200":
           description: ""
@@ -3180,11 +3152,7 @@ paths:
           required: false
           in: query
           schema:
-            type: string
-            enum:
-              - DRAFT
-              - PUBLISHED
-              - ARCHIVED
+            $ref: "#/components/schemas/ProductStatus"
       responses:
         "200":
           description: ""
@@ -4583,15 +4551,7 @@ paths:
           required: false
           in: query
           schema:
-            type: string
-            enum:
-              - ADJUST
-              - RECEIVE
-              - TRANSFER_OUT
-              - TRANSFER_IN
-              - SALE_SHIP
-              - DELIVERY_RETURN_RESTOCK
-              - RETURN_RESTOCK
+            $ref: "#/components/schemas/InventoryMovementType"
         - name: referenceType
           required: false
           in: query
@@ -4874,12 +4834,7 @@ paths:
           required: false
           in: query
           schema:
-            type: string
-            enum:
-              - DRAFT
-              - SUBMITTED
-              - SHIPPED
-              - RECEIVED
+            $ref: "#/components/schemas/StockTransferStatus"
       responses:
         "200":
           description: ""
@@ -5255,13 +5210,7 @@ paths:
           required: false
           in: query
           schema:
-            type: string
-            enum:
-              - DRAFT
-              - SCHEDULED
-              - ACTIVE
-              - ENDED
-              - CANCELLED
+            $ref: "#/components/schemas/FlashSaleCampaignStatus"
         - name: search
           required: false
           in: query
@@ -6286,13 +6235,7 @@ paths:
           in: query
           description: Lọc theo loại bài viết. Bỏ trống để lấy tất cả.
           schema:
-            type: string
-            enum:
-              - NEWS
-              - TRAINING_GUIDE
-              - PRODUCT_GUIDE
-              - ABOUT
-              - POLICY
+            $ref: "#/components/schemas/ContentPostType"
       responses:
         "200":
           description: ""
@@ -6337,13 +6280,7 @@ paths:
           in: query
           description: Lọc theo loại bài viết. Bỏ trống để lấy tất cả.
           schema:
-            type: string
-            enum:
-              - NEWS
-              - TRAINING_GUIDE
-              - PRODUCT_GUIDE
-              - ABOUT
-              - POLICY
+            $ref: "#/components/schemas/ContentPostType"
       responses:
         "200":
           description: ""
@@ -6977,12 +6914,7 @@ paths:
           in: query
           description: Nhóm trạng thái dùng trực tiếp cho các tab màn quản lý đơn hàng
           schema:
-            type: string
-            enum:
-              - PENDING_CONFIRMATION
-              - CONFIRMED
-              - IN_TRANSIT
-              - DELIVERED
+            $ref: "#/components/schemas/OrderStatusGroup"
         - name: search
           required: false
           in: query
@@ -7570,24 +7502,12 @@ paths:
           required: false
           in: query
           schema:
-            type: string
-            enum:
-              - PENDING
-              - AWAITING_CONFIRMATION
-              - NEED_REVIEW
-              - SUCCESS
-              - FAILED
-              - CANCELLED
-              - REFUNDED
+            $ref: "#/components/schemas/PaymentStatus"
         - name: method
           required: false
           in: query
           schema:
-            type: string
-            enum:
-              - BANK_TRANSFER
-              - COD
-              - VNPAY
+            $ref: "#/components/schemas/PaymentMethod"
         - name: search
           required: false
           in: query
@@ -7891,17 +7811,7 @@ paths:
           required: false
           in: query
           schema:
-            type: string
-            enum:
-              - PENDING
-              - PICKING
-              - PACKED
-              - SHIPPED
-              - DELIVERED
-              - DELIVERY_FAILED
-              - RETURNING_TO_WAREHOUSE
-              - RETURNED_TO_WAREHOUSE
-              - CANCELLED
+            $ref: "#/components/schemas/FulfillmentStatus"
         - name: search
           required: false
           in: query
@@ -8564,15 +8474,7 @@ paths:
           required: false
           in: query
           schema:
-            type: string
-            enum:
-              - REQUESTED
-              - APPROVED
-              - REJECTED
-              - RECEIVED
-              - REFUNDED
-              - CLOSED
-              - CANCELLED
+            $ref: "#/components/schemas/ReturnStatus"
         - name: search
           required: false
           in: query
@@ -9607,13 +9509,7 @@ paths:
           in: query
           description: Gom biểu đồ theo ngày, tháng, quý hoặc năm.
           schema:
-            default: DAY
-            type: string
-            enum:
-              - DAY
-              - MONTH
-              - QUARTER
-              - YEAR
+            $ref: "#/components/schemas/ReportGranularity"
       responses:
         "200":
           description: ""
@@ -9797,23 +9693,13 @@ paths:
           in: query
           description: Gom biểu đồ theo ngày, tháng, quý hoặc năm.
           schema:
-            default: DAY
-            type: string
-            enum:
-              - DAY
-              - MONTH
-              - QUARTER
-              - YEAR
+            $ref: "#/components/schemas/ReportGranularity"
         - name: format
           required: false
           in: query
           description: Định dạng file tải về.
           schema:
-            default: XLSX
-            type: string
-            enum:
-              - CSV
-              - XLSX
+            $ref: "#/components/schemas/ReportExportFormat"
       responses:
         "200":
           description: File báo cáo, tên file nằm trong header Content-Disposition.
@@ -9868,23 +9754,13 @@ paths:
           in: query
           description: Gom biểu đồ theo ngày, tháng, quý hoặc năm.
           schema:
-            default: DAY
-            type: string
-            enum:
-              - DAY
-              - MONTH
-              - QUARTER
-              - YEAR
+            $ref: "#/components/schemas/ReportGranularity"
         - name: format
           required: false
           in: query
           description: Định dạng file tải về.
           schema:
-            default: XLSX
-            type: string
-            enum:
-              - CSV
-              - XLSX
+            $ref: "#/components/schemas/ReportExportFormat"
       responses:
         "200":
           description: File báo cáo, tên file nằm trong header Content-Disposition.
@@ -9946,11 +9822,7 @@ paths:
           required: false
           in: query
           schema:
-            default: XLSX
-            type: string
-            enum:
-              - CSV
-              - XLSX
+            $ref: "#/components/schemas/ReportExportFormat"
       responses:
         "200":
           description: File báo cáo, tên file nằm trong header Content-Disposition.
@@ -10012,11 +9884,7 @@ paths:
           required: false
           in: query
           schema:
-            default: XLSX
-            type: string
-            enum:
-              - CSV
-              - XLSX
+            $ref: "#/components/schemas/ReportExportFormat"
       responses:
         "200":
           description: File báo cáo, tên file nằm trong header Content-Disposition.
@@ -10056,11 +9924,7 @@ paths:
           required: false
           in: query
           schema:
-            default: XLSX
-            type: string
-            enum:
-              - CSV
-              - XLSX
+            $ref: "#/components/schemas/ReportExportFormat"
       responses:
         "200":
           description: File báo cáo, tên file nằm trong header Content-Disposition.
@@ -10148,6 +10012,14 @@ components:
         - version
         - timestamp
         - database
+    CapabilityReadinessStatus:
+      type: string
+      enum:
+        - READY
+        - DISABLED
+        - MISCONFIGURED
+        - UNKNOWN
+      description: "READY: đủ tham số. DISABLED: cố tình tắt, không phải lỗi. MISCONFIGURED: đang bật nhưng thiếu tham số — đây là thứ cần sửa. UNKNOWN: chưa đọc được tham số để kết luận."
     CapabilityReadinessDto:
       type: object
       properties:
@@ -10158,13 +10030,9 @@ components:
           type: boolean
           description: Năng lực có đang được bật hay không
         status:
-          type: string
-          enum:
-            - READY
-            - DISABLED
-            - MISCONFIGURED
-            - UNKNOWN
           description: "READY: đủ tham số. DISABLED: cố tình tắt, không phải lỗi. MISCONFIGURED: đang bật nhưng thiếu tham số — đây là thứ cần sửa. UNKNOWN: chưa đọc được tham số để kết luận."
+          allOf:
+            - $ref: "#/components/schemas/CapabilityReadinessStatus"
         missing:
           example:
             - GHN_TOKEN
@@ -10293,6 +10161,36 @@ components:
         - totalModels
         - p0Models
         - p1Models
+    SystemParameterGroup:
+      type: string
+      enum:
+        - SHIPPING
+        - CHECKOUT
+        - ORDER
+        - PAYMENT
+        - CART
+        - PROMOTION
+        - INTEGRATION
+    SystemParameterStatus:
+      type: string
+      enum:
+        - ACTIVE
+        - INACTIVE
+    SystemParameterSortField:
+      type: string
+      enum:
+        - id
+        - code
+        - groupCode
+        - sortOrder
+        - updatedAt
+    SystemParameterValueType:
+      type: string
+      enum:
+        - INTEGER
+        - DECIMAL
+        - BOOLEAN
+        - STRING
     SystemParameterDto:
       type: object
       properties:
@@ -10304,27 +10202,16 @@ components:
           type: string
           description: Mã ổn định dùng trong code; không đổi được từ giao diện
         groupCode:
-          type: string
-          enum:
-            - SHIPPING
-            - CHECKOUT
-            - ORDER
-            - PAYMENT
-            - CART
-            - PROMOTION
-            - INTEGRATION
+          allOf:
+            - $ref: "#/components/schemas/SystemParameterGroup"
         label:
           type: string
         description:
           type: string
           nullable: true
         valueType:
-          type: string
-          enum:
-            - INTEGER
-            - DECIMAL
-            - BOOLEAN
-            - STRING
+          allOf:
+            - $ref: "#/components/schemas/SystemParameterValueType"
         value:
           type: string
           description: Giá trị đang áp dụng, luôn ở dạng chuỗi
@@ -10423,27 +10310,16 @@ components:
           maxLength: 64
           description: Mã viết hoa, dùng gạch dưới
         groupCode:
-          type: string
-          enum:
-            - SHIPPING
-            - CHECKOUT
-            - ORDER
-            - PAYMENT
-            - CART
-            - PROMOTION
-            - INTEGRATION
+          allOf:
+            - $ref: "#/components/schemas/SystemParameterGroup"
         label:
           type: string
           maxLength: 255
         description:
           type: string
         valueType:
-          type: string
-          enum:
-            - INTEGER
-            - DECIMAL
-            - BOOLEAN
-            - STRING
+          allOf:
+            - $ref: "#/components/schemas/SystemParameterValueType"
         value:
           type: string
           maxLength: 500
@@ -10545,6 +10421,11 @@ components:
           nullable: true
       required:
         - items
+    OrganizationStatus:
+      type: string
+      enum:
+        - ACTIVE
+        - INACTIVE
     AddressDto:
       type: object
       properties:
@@ -10597,10 +10478,8 @@ components:
           type: string
           example: Chi nhánh Hồ Chí Minh
         status:
-          type: string
-          enum:
-            - ACTIVE
-            - INACTIVE
+          allOf:
+            - $ref: "#/components/schemas/OrganizationStatus"
         phone:
           type: string
           example: 028 7300 8899
@@ -10654,10 +10533,8 @@ components:
           type: string
           example: Kho bán hàng Hồ Chí Minh
         status:
-          type: string
-          enum:
-            - ACTIVE
-            - INACTIVE
+          allOf:
+            - $ref: "#/components/schemas/OrganizationStatus"
         version:
           type: number
           example: 0
@@ -10828,6 +10705,11 @@ components:
       required:
         - expectedVersion
         - warehouseExpectedVersion
+    ScopeType:
+      type: string
+      enum:
+        - GLOBAL
+        - BRANCH
     UserRoleAssignmentDto:
       type: object
       properties:
@@ -10846,10 +10728,8 @@ components:
         roleCode:
           type: string
         scopeType:
-          type: string
-          enum:
-            - GLOBAL
-            - BRANCH
+          allOf:
+            - $ref: "#/components/schemas/ScopeType"
         branchId:
           type: string
           pattern: ^[1-9][0-9]*$
@@ -10969,6 +10849,11 @@ components:
           maxLength: 255
       required:
         - reason
+    RoleStatus:
+      type: string
+      enum:
+        - ACTIVE
+        - INACTIVE
     RoleDto:
       type: object
       properties:
@@ -10985,10 +10870,8 @@ components:
         description:
           type: string
         status:
-          type: string
-          enum:
-            - ACTIVE
-            - INACTIVE
+          allOf:
+            - $ref: "#/components/schemas/RoleStatus"
         system:
           type: boolean
         permissionCodes:
@@ -11087,10 +10970,8 @@ components:
           type: string
           maxLength: 1000
         status:
-          type: string
-          enum:
-            - ACTIVE
-            - INACTIVE
+          allOf:
+            - $ref: "#/components/schemas/RoleStatus"
         permissionCodes:
           description: Danh sách quyền thay thế toàn bộ. Bỏ trống để giữ nguyên quyền hiện tại.
           type: array
@@ -11119,15 +11000,18 @@ components:
       required:
         - expectedVersion
         - reason
+    AssignableStaffRoleCode:
+      type: string
+      enum:
+        - BRANCH_MANAGER
+        - STAFF
     AssignUserRoleDto:
       type: object
       properties:
         roleCode:
-          type: string
-          enum:
-            - BRANCH_MANAGER
-            - STAFF
           example: BRANCH_MANAGER
+          allOf:
+            - $ref: "#/components/schemas/AssignableStaffRoleCode"
         scopeType:
           type: string
           enum:
@@ -11313,6 +11197,11 @@ components:
       required:
         - token
         - newPassword
+    AddressCodeProvider:
+      type: string
+      enum:
+        - GHN
+      description: Hãng đã cấp bộ mã địa giới của địa chỉ này.
     CustomerAddressDto:
       type: object
       properties:
@@ -11346,11 +11235,10 @@ components:
         provinceCode:
           type: string
         codeProvider:
-          type: string
           nullable: true
-          enum:
-            - GHN
           description: Hãng đã cấp bộ mã địa giới của địa chỉ này.
+          allOf:
+            - $ref: "#/components/schemas/AddressCodeProvider"
         postalCode:
           type: string
           nullable: true
@@ -11414,11 +11302,10 @@ components:
           example: "79"
           maxLength: 32
         codeProvider:
-          type: string
-          enum:
-            - GHN
           default: GHN
           description: Hãng đã cấp bộ mã gửi kèm; bỏ trống thì hiểu là hãng mặc định của hệ thống.
+          allOf:
+            - $ref: "#/components/schemas/AddressCodeProvider"
         postalCode:
           type: string
           example: "700000"
@@ -11473,11 +11360,10 @@ components:
           example: "79"
           maxLength: 32
         codeProvider:
-          type: string
-          enum:
-            - GHN
           default: GHN
           description: Hãng đã cấp bộ mã gửi kèm; bỏ trống thì hiểu là hãng mặc định của hệ thống.
+          allOf:
+            - $ref: "#/components/schemas/AddressCodeProvider"
         postalCode:
           type: string
           example: "700000"
@@ -11558,6 +11444,16 @@ components:
           description: Khách có đồng ý nhận tin khuyến mãi
       required:
         - expectedVersion
+    CustomerStatus:
+      type: string
+      enum:
+        - ACTIVE
+        - INACTIVE
+    CustomerKind:
+      type: string
+      enum:
+        - MEMBER
+        - GUEST
     AdminCustomerSummaryDto:
       type: object
       properties:
@@ -11578,16 +11474,12 @@ components:
           type: string
           nullable: true
         status:
-          type: string
-          enum:
-            - ACTIVE
-            - INACTIVE
+          allOf:
+            - $ref: "#/components/schemas/CustomerStatus"
         kind:
-          type: string
-          enum:
-            - MEMBER
-            - GUEST
           description: Suy từ việc khách có tài khoản đăng nhập hay không
+          allOf:
+            - $ref: "#/components/schemas/CustomerKind"
         marketingConsent:
           type: boolean
           description: Khách có đồng ý nhận tin khuyến mãi
@@ -11693,11 +11585,10 @@ components:
           example: "201"
           description: Mã tỉnh/thành của hãng vận chuyển.
         codeProvider:
-          type: string
           nullable: true
-          enum:
-            - GHN
           description: Hãng đã cấp bộ mã địa giới này. Mã của hãng khác không dùng lẫn được, nên địa chỉ lưu từ hãng cũ phải chọn lại khi đổi hãng.
+          allOf:
+            - $ref: "#/components/schemas/AddressCodeProvider"
         isDefault:
           type: boolean
       required:
@@ -11759,16 +11650,12 @@ components:
           type: string
           nullable: true
         status:
-          type: string
-          enum:
-            - ACTIVE
-            - INACTIVE
+          allOf:
+            - $ref: "#/components/schemas/CustomerStatus"
         kind:
-          type: string
-          enum:
-            - MEMBER
-            - GUEST
           description: Suy từ việc khách có tài khoản đăng nhập hay không
+          allOf:
+            - $ref: "#/components/schemas/CustomerKind"
         marketingConsent:
           type: boolean
           description: Khách có đồng ý nhận tin khuyến mãi
@@ -11874,11 +11761,10 @@ components:
           maxLength: 32
           description: Mã tỉnh/thành theo danh mục hãng vận chuyển
         codeProvider:
-          type: string
-          enum:
-            - GHN
           default: GHN
           description: Hãng đã cấp bộ mã gửi kèm. Bỏ trống thì hiểu là hãng mặc định của hệ thống.
+          allOf:
+            - $ref: "#/components/schemas/AddressCodeProvider"
         isDefault:
           type: boolean
           default: false
@@ -11969,6 +11855,11 @@ components:
           description: Lý do, lưu lại để truy vết
       required:
         - expectedVersion
+    CatalogMasterStatus:
+      type: string
+      enum:
+        - ACTIVE
+        - INACTIVE
     BrandDto:
       type: object
       properties:
@@ -11989,10 +11880,8 @@ components:
           pattern: ^[1-9][0-9]*$
           example: "1"
         status:
-          type: string
-          enum:
-            - ACTIVE
-            - INACTIVE
+          allOf:
+            - $ref: "#/components/schemas/CatalogMasterStatus"
         version:
           type: number
       required:
@@ -12092,10 +11981,8 @@ components:
           type: boolean
           description: Tắt thì sản phẩm thuộc danh mục không tạo được yêu cầu trả hàng (D54)
         status:
-          type: string
-          enum:
-            - ACTIVE
-            - INACTIVE
+          allOf:
+            - $ref: "#/components/schemas/CatalogMasterStatus"
         version:
           type: number
       required:
@@ -12222,6 +12109,21 @@ components:
       required:
         - items
         - total
+    ProductStatus:
+      type: string
+      enum:
+        - DRAFT
+        - PUBLISHED
+        - ARCHIVED
+    ProductType:
+      type: string
+      enum:
+        - STANDARD
+        - BUNDLE
+    CurrencyCode:
+      type: string
+      enum:
+        - VND
     ProductSummaryDto:
       type: object
       properties:
@@ -12250,16 +12152,11 @@ components:
         primaryCategory:
           type: string
         productType:
-          type: string
-          enum:
-            - STANDARD
-            - BUNDLE
+          allOf:
+            - $ref: "#/components/schemas/ProductType"
         status:
-          type: string
-          enum:
-            - DRAFT
-            - PUBLISHED
-            - ARCHIVED
+          allOf:
+            - $ref: "#/components/schemas/ProductStatus"
         isPublished:
           type: boolean
           example: true
@@ -12272,10 +12169,9 @@ components:
           example: "18990000.00"
           nullable: true
         currency:
-          type: string
-          enum:
-            - VND
           example: VND
+          allOf:
+            - $ref: "#/components/schemas/CurrencyCode"
         imageUrl:
           type: string
           format: uri
@@ -12322,6 +12218,20 @@ components:
       required:
         - items
         - meta
+    ProductVariantStatus:
+      type: string
+      enum:
+        - ACTIVE
+        - INACTIVE
+    ProductBundleType:
+      type: string
+      enum:
+        - FIXED_VIRTUAL
+    ProductBundleStatus:
+      type: string
+      enum:
+        - ACTIVE
+        - INACTIVE
     BundleComponentDto:
       type: object
       properties:
@@ -12345,14 +12255,11 @@ components:
       type: object
       properties:
         bundleType:
-          type: string
-          enum:
-            - FIXED_VIRTUAL
+          allOf:
+            - $ref: "#/components/schemas/ProductBundleType"
         status:
-          type: string
-          enum:
-            - ACTIVE
-            - INACTIVE
+          allOf:
+            - $ref: "#/components/schemas/ProductBundleStatus"
         components:
           type: array
           items:
@@ -12390,10 +12297,8 @@ components:
           minimum: 1
           nullable: true
         status:
-          type: string
-          enum:
-            - ACTIVE
-            - INACTIVE
+          allOf:
+            - $ref: "#/components/schemas/ProductVariantStatus"
         version:
           type: number
           example: 0
@@ -12422,6 +12327,11 @@ components:
         - weightGrams
         - status
         - version
+    ProductMediaStatus:
+      type: string
+      enum:
+        - ACTIVE
+        - INACTIVE
     ProductMediaDto:
       type: object
       properties:
@@ -12454,10 +12364,8 @@ components:
         isPrimary:
           type: boolean
         status:
-          type: string
-          enum:
-            - ACTIVE
-            - INACTIVE
+          allOf:
+            - $ref: "#/components/schemas/ProductMediaStatus"
       required:
         - id
         - mediaAssetId
@@ -12508,16 +12416,11 @@ components:
         primaryCategory:
           type: string
         productType:
-          type: string
-          enum:
-            - STANDARD
-            - BUNDLE
+          allOf:
+            - $ref: "#/components/schemas/ProductType"
         status:
-          type: string
-          enum:
-            - DRAFT
-            - PUBLISHED
-            - ARCHIVED
+          allOf:
+            - $ref: "#/components/schemas/ProductStatus"
         isPublished:
           type: boolean
           example: true
@@ -12530,10 +12433,9 @@ components:
           example: "18990000.00"
           nullable: true
         currency:
-          type: string
-          enum:
-            - VND
           example: VND
+          allOf:
+            - $ref: "#/components/schemas/CurrencyCode"
         imageUrl:
           type: string
           format: uri
@@ -12607,11 +12509,9 @@ components:
       type: object
       properties:
         productType:
-          type: string
-          enum:
-            - STANDARD
-            - BUNDLE
           default: STANDARD
+          allOf:
+            - $ref: "#/components/schemas/ProductType"
         name:
           type: string
         brandId:
@@ -12649,11 +12549,9 @@ components:
       type: object
       properties:
         productType:
-          type: string
-          enum:
-            - STANDARD
-            - BUNDLE
           default: STANDARD
+          allOf:
+            - $ref: "#/components/schemas/ProductType"
         name:
           type: string
         categoryIds:
@@ -13013,6 +12911,16 @@ components:
         - totalOnHand
         - totalReserved
         - totalAvailable
+    InventoryMovementType:
+      type: string
+      enum:
+        - ADJUST
+        - RECEIVE
+        - TRANSFER_OUT
+        - TRANSFER_IN
+        - SALE_SHIP
+        - DELIVERY_RETURN_RESTOCK
+        - RETURN_RESTOCK
     InventoryMovementDto:
       type: object
       properties:
@@ -13027,15 +12935,8 @@ components:
         productName:
           type: string
         movementType:
-          type: string
-          enum:
-            - ADJUST
-            - RECEIVE
-            - TRANSFER_OUT
-            - TRANSFER_IN
-            - SALE_SHIP
-            - DELIVERY_RETURN_RESTOCK
-            - RETURN_RESTOCK
+          allOf:
+            - $ref: "#/components/schemas/InventoryMovementType"
         quantityDelta:
           type: number
         balanceAfter:
@@ -13221,6 +13122,19 @@ components:
         - createdByDisplayName
         - postedAt
         - items
+    StockAdjustmentType:
+      type: string
+      enum:
+        - CORRECTION
+        - OPENING_BALANCE
+        - MANUAL_RECEIPT
+    StockAdjustmentReason:
+      type: string
+      enum:
+        - MANUAL
+        - COUNT_CORRECTION
+        - INITIAL_STOCK
+        - EXTERNAL_RECEIPT
     StockAdjustmentItemInputDto:
       type: object
       properties:
@@ -13239,20 +13153,13 @@ components:
           type: string
           example: KHO-HCM-01
         adjustmentType:
-          type: string
-          enum:
-            - CORRECTION
-            - OPENING_BALANCE
-            - MANUAL_RECEIPT
           default: CORRECTION
+          allOf:
+            - $ref: "#/components/schemas/StockAdjustmentType"
         reasonCode:
-          type: string
-          enum:
-            - MANUAL
-            - COUNT_CORRECTION
-            - INITIAL_STOCK
-            - EXTERNAL_RECEIPT
           default: MANUAL
+          allOf:
+            - $ref: "#/components/schemas/StockAdjustmentReason"
         externalReference:
           type: string
           maxLength: 100
@@ -13281,11 +13188,8 @@ components:
           enum:
             - POSTED
         adjustmentType:
-          type: string
-          enum:
-            - CORRECTION
-            - OPENING_BALANCE
-            - MANUAL_RECEIPT
+          allOf:
+            - $ref: "#/components/schemas/StockAdjustmentType"
         reasonCode:
           type: string
         externalReference:
@@ -13311,6 +13215,13 @@ components:
         - reason
         - balances
         - postedAt
+    StockTransferStatus:
+      type: string
+      enum:
+        - DRAFT
+        - SUBMITTED
+        - SHIPPED
+        - RECEIVED
     StockTransferSummaryDto:
       type: object
       properties:
@@ -13325,12 +13236,8 @@ components:
         toWarehouseCode:
           type: string
         status:
-          type: string
-          enum:
-            - DRAFT
-            - SUBMITTED
-            - SHIPPED
-            - RECEIVED
+          allOf:
+            - $ref: "#/components/schemas/StockTransferStatus"
         reason:
           type: string
         itemCount:
@@ -13429,12 +13336,8 @@ components:
         toWarehouseCode:
           type: string
         status:
-          type: string
-          enum:
-            - DRAFT
-            - SUBMITTED
-            - SHIPPED
-            - RECEIVED
+          allOf:
+            - $ref: "#/components/schemas/StockTransferStatus"
         reason:
           type: string
         itemCount:
@@ -13554,6 +13457,11 @@ components:
       required:
         - version
         - items
+    FlashSaleItemStatus:
+      type: string
+      enum:
+        - ACTIVE
+        - INACTIVE
     FlashSaleItemDto:
       type: object
       properties:
@@ -13594,10 +13502,8 @@ components:
           type: number
           nullable: true
         status:
-          type: string
-          enum:
-            - ACTIVE
-            - INACTIVE
+          allOf:
+            - $ref: "#/components/schemas/FlashSaleItemStatus"
         version:
           type: string
       required:
@@ -13653,6 +13559,14 @@ components:
       required:
         - items
         - serverTime
+    FlashSaleCampaignStatus:
+      type: string
+      enum:
+        - DRAFT
+        - SCHEDULED
+        - ACTIVE
+        - ENDED
+        - CANCELLED
     FlashSaleCampaignSummaryDto:
       type: object
       properties:
@@ -13674,13 +13588,8 @@ components:
           type: string
           format: date-time
         status:
-          type: string
-          enum:
-            - DRAFT
-            - SCHEDULED
-            - ACTIVE
-            - ENDED
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/FlashSaleCampaignStatus"
         itemCount:
           type: number
         version:
@@ -13733,13 +13642,8 @@ components:
           type: string
           format: date-time
         status:
-          type: string
-          enum:
-            - DRAFT
-            - SCHEDULED
-            - ACTIVE
-            - ENDED
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/FlashSaleCampaignStatus"
         itemCount:
           type: number
         version:
@@ -13807,13 +13711,8 @@ components:
           type: string
           pattern: ^\d+$
         status:
-          type: string
-          enum:
-            - DRAFT
-            - SCHEDULED
-            - ACTIVE
-            - ENDED
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/FlashSaleCampaignStatus"
       required:
         - expectedVersion
         - status
@@ -13847,6 +13746,10 @@ components:
           pattern: ^\d+$
       required:
         - expectedVersion
+    ActiveCartStatus:
+      type: string
+      enum:
+        - ACTIVE
     CartItemDto:
       type: object
       properties:
@@ -13897,13 +13800,11 @@ components:
           pattern: ^[1-9][0-9]*$
           example: "1"
         status:
-          type: string
-          enum:
-            - ACTIVE
+          allOf:
+            - $ref: "#/components/schemas/ActiveCartStatus"
         currencyCode:
-          type: string
-          enum:
-            - VND
+          allOf:
+            - $ref: "#/components/schemas/CurrencyCode"
         version:
           type: number
           minimum: 0
@@ -13936,13 +13837,11 @@ components:
           pattern: ^[1-9][0-9]*$
           example: "1"
         status:
-          type: string
-          enum:
-            - ACTIVE
+          allOf:
+            - $ref: "#/components/schemas/ActiveCartStatus"
         currencyCode:
-          type: string
-          enum:
-            - VND
+          allOf:
+            - $ref: "#/components/schemas/CurrencyCode"
         version:
           type: number
           minimum: 0
@@ -14056,18 +13955,21 @@ components:
         - district
         - province
         - provinceCode
+    CheckoutPaymentMethod:
+      type: string
+      enum:
+        - BANK_TRANSFER
+        - COD
+        - VNPAY
     CreateCheckoutQuoteDto:
       type: object
       properties:
         recipient:
           $ref: "#/components/schemas/CheckoutRecipientDto"
         paymentMethod:
-          type: string
-          enum:
-            - BANK_TRANSFER
-            - COD
-            - VNPAY
           example: BANK_TRANSFER
+          allOf:
+            - $ref: "#/components/schemas/CheckoutPaymentMethod"
         requestShippingConsultation:
           type: boolean
           default: false
@@ -14079,6 +13981,23 @@ components:
       required:
         - recipient
         - paymentMethod
+    CheckoutQuoteStatus:
+      type: string
+      enum:
+        - QUOTED
+        - AWAITING_SHIPPING_CONSULTATION
+    CheckoutQuotePaymentMethod:
+      type: string
+      enum:
+        - BANK_TRANSFER
+        - COD
+    ShippingMethod:
+      type: string
+      enum:
+        - BRANCH_FREE
+        - STANDARD_DELIVERY
+        - THIRD_PARTY
+        - MANUAL_EXTERNAL
     CheckoutQuoteItemDto:
       type: object
       properties:
@@ -14110,10 +14029,8 @@ components:
           type: string
           description: Opaque token used to confirm this exact quote
         status:
-          type: string
-          enum:
-            - QUOTED
-            - AWAITING_SHIPPING_CONSULTATION
+          allOf:
+            - $ref: "#/components/schemas/CheckoutQuoteStatus"
         branchId:
           type: string
           pattern: ^[1-9][0-9]*$
@@ -14125,17 +14042,11 @@ components:
         branchName:
           type: string
         paymentMethod:
-          type: string
-          enum:
-            - BANK_TRANSFER
-            - COD
+          allOf:
+            - $ref: "#/components/schemas/CheckoutQuotePaymentMethod"
         shippingMethod:
-          type: string
-          enum:
-            - BRANCH_FREE
-            - STANDARD_DELIVERY
-            - THIRD_PARTY
-            - MANUAL_EXTERNAL
+          allOf:
+            - $ref: "#/components/schemas/ShippingMethod"
         shippingProvider:
           type: string
           nullable: true
@@ -14235,10 +14146,8 @@ components:
           type: string
           description: Opaque token used to confirm this exact quote
         status:
-          type: string
-          enum:
-            - QUOTED
-            - AWAITING_SHIPPING_CONSULTATION
+          allOf:
+            - $ref: "#/components/schemas/CheckoutQuoteStatus"
         branchId:
           type: string
           pattern: ^[1-9][0-9]*$
@@ -14250,17 +14159,11 @@ components:
         branchName:
           type: string
         paymentMethod:
-          type: string
-          enum:
-            - BANK_TRANSFER
-            - COD
+          allOf:
+            - $ref: "#/components/schemas/CheckoutQuotePaymentMethod"
         shippingMethod:
-          type: string
-          enum:
-            - BRANCH_FREE
-            - STANDARD_DELIVERY
-            - THIRD_PARTY
-            - MANUAL_EXTERNAL
+          allOf:
+            - $ref: "#/components/schemas/ShippingMethod"
         shippingProvider:
           type: string
           nullable: true
@@ -14405,9 +14308,8 @@ components:
         zoneCode:
           type: string
         currencyCode:
-          type: string
-          enum:
-            - VND
+          allOf:
+            - $ref: "#/components/schemas/CurrencyCode"
         fee:
           type: string
           example: "45000.00"
@@ -14447,6 +14349,19 @@ components:
             $ref: "#/components/schemas/ShippingAreaDto"
       required:
         - items
+    ContentPostType:
+      type: string
+      enum:
+        - NEWS
+        - TRAINING_GUIDE
+        - PRODUCT_GUIDE
+        - ABOUT
+        - POLICY
+    ContentPostStatus:
+      type: string
+      enum:
+        - PUBLISHED
+        - ARCHIVED
     ContentPostDto:
       type: object
       properties:
@@ -14455,13 +14370,8 @@ components:
         slug:
           type: string
         postType:
-          type: string
-          enum:
-            - NEWS
-            - TRAINING_GUIDE
-            - PRODUCT_GUIDE
-            - ABOUT
-            - POLICY
+          allOf:
+            - $ref: "#/components/schemas/ContentPostType"
         isPublished:
           type: boolean
           example: true
@@ -14483,10 +14393,8 @@ components:
           type: string
           format: date-time
         status:
-          type: string
-          enum:
-            - PUBLISHED
-            - ARCHIVED
+          allOf:
+            - $ref: "#/components/schemas/ContentPostStatus"
         version:
           type: number
           minimum: 0
@@ -14524,13 +14432,8 @@ components:
       type: object
       properties:
         postType:
-          type: string
-          enum:
-            - NEWS
-            - TRAINING_GUIDE
-            - PRODUCT_GUIDE
-            - ABOUT
-            - POLICY
+          allOf:
+            - $ref: "#/components/schemas/ContentPostType"
         title:
           type: string
         slug:
@@ -14595,6 +14498,38 @@ components:
       required:
         - expectedVersion
         - reason
+    OrderStatus:
+      type: string
+      enum:
+        - PENDING_CONFIRMATION
+        - CONFIRMED
+        - PICKING
+        - PACKED
+        - SHIPPED
+        - DELIVERED
+        - COMPLETED
+        - CANCELLED
+    PaymentStatus:
+      type: string
+      enum:
+        - PENDING
+        - AWAITING_CONFIRMATION
+        - NEED_REVIEW
+        - SUCCESS
+        - FAILED
+        - CANCELLED
+        - REFUNDED
+    OrderFulfillmentStatus:
+      type: string
+      enum:
+        - PENDING
+        - PICKING
+        - PACKED
+        - SHIPPED
+        - DELIVERED
+        - FAILED
+        - RETURNED
+        - CANCELLED
     OrderRecipientDto:
       type: object
       properties:
@@ -14688,28 +14623,12 @@ components:
         sequenceNo:
           type: number
         fromStatus:
-          type: string
-          enum:
-            - PENDING_CONFIRMATION
-            - CONFIRMED
-            - PICKING
-            - PACKED
-            - SHIPPED
-            - DELIVERED
-            - COMPLETED
-            - CANCELLED
           nullable: true
+          allOf:
+            - $ref: "#/components/schemas/OrderStatus"
         toStatus:
-          type: string
-          enum:
-            - PENDING_CONFIRMATION
-            - CONFIRMED
-            - PICKING
-            - PACKED
-            - SHIPPED
-            - DELIVERED
-            - COMPLETED
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/OrderStatus"
         reason:
           type: string
           nullable: true
@@ -14733,37 +14652,14 @@ components:
         orderNo:
           type: string
         status:
-          type: string
-          enum:
-            - PENDING_CONFIRMATION
-            - CONFIRMED
-            - PICKING
-            - PACKED
-            - SHIPPED
-            - DELIVERED
-            - COMPLETED
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/OrderStatus"
         paymentStatus:
-          type: string
-          enum:
-            - PENDING
-            - AWAITING_CONFIRMATION
-            - NEED_REVIEW
-            - SUCCESS
-            - FAILED
-            - CANCELLED
-            - REFUNDED
+          allOf:
+            - $ref: "#/components/schemas/PaymentStatus"
         fulfillmentStatus:
-          type: string
-          enum:
-            - PENDING
-            - PICKING
-            - PACKED
-            - SHIPPED
-            - DELIVERED
-            - FAILED
-            - RETURNED
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/OrderFulfillmentStatus"
         paymentMethod:
           type: string
         shippingMethod:
@@ -14848,37 +14744,14 @@ components:
         orderNo:
           type: string
         status:
-          type: string
-          enum:
-            - PENDING_CONFIRMATION
-            - CONFIRMED
-            - PICKING
-            - PACKED
-            - SHIPPED
-            - DELIVERED
-            - COMPLETED
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/OrderStatus"
         paymentStatus:
-          type: string
-          enum:
-            - PENDING
-            - AWAITING_CONFIRMATION
-            - NEED_REVIEW
-            - SUCCESS
-            - FAILED
-            - CANCELLED
-            - REFUNDED
+          allOf:
+            - $ref: "#/components/schemas/PaymentStatus"
         fulfillmentStatus:
-          type: string
-          enum:
-            - PENDING
-            - PICKING
-            - PACKED
-            - SHIPPED
-            - DELIVERED
-            - FAILED
-            - RETURNED
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/OrderFulfillmentStatus"
         paymentMethod:
           type: string
         shippingMethod:
@@ -14963,7 +14836,7 @@ components:
       required:
         - expectedVersion
         - reason
-    AdminOrderSummaryDto:
+    OrderSummaryDto:
       type: object
       properties:
         id:
@@ -14973,37 +14846,14 @@ components:
         orderNo:
           type: string
         status:
-          type: string
-          enum:
-            - PENDING_CONFIRMATION
-            - CONFIRMED
-            - PICKING
-            - PACKED
-            - SHIPPED
-            - DELIVERED
-            - COMPLETED
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/OrderStatus"
         paymentStatus:
-          type: string
-          enum:
-            - PENDING
-            - AWAITING_CONFIRMATION
-            - NEED_REVIEW
-            - SUCCESS
-            - FAILED
-            - CANCELLED
-            - REFUNDED
+          allOf:
+            - $ref: "#/components/schemas/PaymentStatus"
         fulfillmentStatus:
-          type: string
-          enum:
-            - PENDING
-            - PICKING
-            - PACKED
-            - SHIPPED
-            - DELIVERED
-            - FAILED
-            - RETURNED
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/OrderFulfillmentStatus"
         paymentMethod:
           type: string
         shippingMethod:
@@ -15049,7 +14899,7 @@ components:
         items:
           type: array
           items:
-            $ref: "#/components/schemas/AdminOrderSummaryDto"
+            $ref: "#/components/schemas/OrderSummaryDto"
         page:
           type: number
         limit:
@@ -15196,6 +15046,12 @@ components:
       required:
         - productVariantId
         - quantity
+    PosPaymentMethod:
+      type: string
+      enum:
+        - CASH
+        - BANK_TRANSFER
+        - COD
     PosDeliveryAddressDto:
       type: object
       properties:
@@ -15251,12 +15107,9 @@ components:
           items:
             $ref: "#/components/schemas/PosOrderItemDto"
         paymentMethod:
-          type: string
-          enum:
-            - CASH
-            - BANK_TRANSFER
-            - COD
           example: CASH
+          allOf:
+            - $ref: "#/components/schemas/PosPaymentMethod"
         delivery:
           description: "Bỏ trống: khách nhận ngay tại quầy như cũ. Có giá trị: đơn đi giao hàng, tồn kho vẫn đặt chỗ như luồng checkout của khách."
           allOf:
@@ -15277,13 +15130,20 @@ components:
         - customer
         - items
         - paymentMethod
+    OrderStatusGroup:
+      type: string
+      enum:
+        - PENDING_CONFIRMATION
+        - CONFIRMED
+        - IN_TRANSIT
+        - DELIVERED
     AdminOrderListDto:
       type: object
       properties:
         items:
           type: array
           items:
-            $ref: "#/components/schemas/AdminOrderSummaryDto"
+            $ref: "#/components/schemas/OrderSummaryDto"
         page:
           type: number
         limit:
@@ -15323,15 +15183,18 @@ components:
       required:
         - expectedVersion
         - reason
+    PaymentMethod:
+      type: string
+      enum:
+        - BANK_TRANSFER
+        - COD
+        - VNPAY
     PaymentInstructionDto:
       type: object
       properties:
         method:
-          type: string
-          enum:
-            - BANK_TRANSFER
-            - COD
-            - VNPAY
+          allOf:
+            - $ref: "#/components/schemas/PaymentMethod"
         provider:
           type: string
         reference:
@@ -15346,6 +15209,13 @@ components:
         - provider
         - reference
         - customerMessage
+    PaymentEvidenceStatus:
+      type: string
+      enum:
+        - PENDING_REVIEW
+        - ACCEPTED
+        - REJECTED
+        - CANCELLED
     PaymentEvidenceDto:
       type: object
       properties:
@@ -15368,12 +15238,8 @@ components:
         sizeBytes:
           type: number
         status:
-          type: string
-          enum:
-            - PENDING_REVIEW
-            - ACCEPTED
-            - REJECTED
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/PaymentEvidenceStatus"
         note:
           type: string
         reviewReason:
@@ -15412,29 +15278,18 @@ components:
         paymentRef:
           type: string
         method:
-          type: string
-          enum:
-            - BANK_TRANSFER
-            - COD
-            - VNPAY
+          allOf:
+            - $ref: "#/components/schemas/PaymentMethod"
         status:
-          type: string
-          enum:
-            - PENDING
-            - AWAITING_CONFIRMATION
-            - NEED_REVIEW
-            - SUCCESS
-            - FAILED
-            - CANCELLED
-            - REFUNDED
+          allOf:
+            - $ref: "#/components/schemas/PaymentStatus"
         expectedAmount:
           type: string
         receivedAmount:
           type: string
         currencyCode:
-          type: string
-          enum:
-            - VND
+          allOf:
+            - $ref: "#/components/schemas/CurrencyCode"
         expiresAt:
           type: string
           format: date-time
@@ -15465,6 +15320,13 @@ components:
         - version
         - instruction
         - evidences
+    ImageMimeType:
+      type: string
+      enum:
+        - image/jpeg
+        - image/png
+        - image/webp
+        - image/avif
     CreateMediaUploadDto:
       type: object
       properties:
@@ -15472,13 +15334,9 @@ components:
           type: string
           example: product-front.webp
         contentType:
-          type: string
-          enum:
-            - image/jpeg
-            - image/png
-            - image/webp
-            - image/avif
           example: image/webp
+          allOf:
+            - $ref: "#/components/schemas/ImageMimeType"
         sizeBytes:
           type: number
           minimum: 1
@@ -15488,13 +15346,16 @@ components:
         - fileName
         - contentType
         - sizeBytes
+    MediaProvider:
+      type: string
+      enum:
+        - CLOUDINARY
     SignedMediaUploadDto:
       type: object
       properties:
         provider:
-          type: string
-          enum:
-            - CLOUDINARY
+          allOf:
+            - $ref: "#/components/schemas/MediaProvider"
         uploadUrl:
           type: string
           format: uri
@@ -15580,21 +15441,11 @@ components:
         recipientPhone:
           type: string
         method:
-          type: string
-          enum:
-            - BANK_TRANSFER
-            - COD
-            - VNPAY
+          allOf:
+            - $ref: "#/components/schemas/PaymentMethod"
         status:
-          type: string
-          enum:
-            - PENDING
-            - AWAITING_CONFIRMATION
-            - NEED_REVIEW
-            - SUCCESS
-            - FAILED
-            - CANCELLED
-            - REFUNDED
+          allOf:
+            - $ref: "#/components/schemas/PaymentStatus"
         expectedAmount:
           type: string
         receivedAmount:
@@ -15686,6 +15537,18 @@ components:
       required:
         - displayStatus
         - message
+    FulfillmentStatus:
+      type: string
+      enum:
+        - PENDING
+        - PICKING
+        - PACKED
+        - SHIPPED
+        - DELIVERED
+        - DELIVERY_FAILED
+        - RETURNING_TO_WAREHOUSE
+        - RETURNED_TO_WAREHOUSE
+        - CANCELLED
     FulfillmentSummaryDto:
       type: object
       properties:
@@ -15708,17 +15571,8 @@ components:
         warehouseName:
           type: string
         status:
-          type: string
-          enum:
-            - PENDING
-            - PICKING
-            - PACKED
-            - SHIPPED
-            - DELIVERED
-            - DELIVERY_FAILED
-            - RETURNING_TO_WAREHOUSE
-            - RETURNED_TO_WAREHOUSE
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/FulfillmentStatus"
         carrierCode:
           type: string
           nullable: true
@@ -15776,17 +15630,8 @@ components:
           type: string
           nullable: true
         toStatus:
-          type: string
-          enum:
-            - PENDING
-            - PICKING
-            - PACKED
-            - SHIPPED
-            - DELIVERED
-            - DELIVERY_FAILED
-            - RETURNING_TO_WAREHOUSE
-            - RETURNED_TO_WAREHOUSE
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/FulfillmentStatus"
         reason:
           type: string
           nullable: true
@@ -15819,17 +15664,8 @@ components:
         warehouseName:
           type: string
         status:
-          type: string
-          enum:
-            - PENDING
-            - PICKING
-            - PACKED
-            - SHIPPED
-            - DELIVERED
-            - DELIVERY_FAILED
-            - RETURNING_TO_WAREHOUSE
-            - RETURNED_TO_WAREHOUSE
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/FulfillmentStatus"
         carrierCode:
           type: string
           nullable: true
@@ -15961,6 +15797,12 @@ components:
         - expectedVersion
         - reasonCode
         - reason
+    ReturnCondition:
+      type: string
+      enum:
+        - SELLABLE
+        - DAMAGED
+        - MISSING
     ReceiveReturnDto:
       type: object
       properties:
@@ -15971,11 +15813,8 @@ components:
           type: string
           maxLength: 500
         condition:
-          type: string
-          enum:
-            - SELLABLE
-            - DAMAGED
-            - MISSING
+          allOf:
+            - $ref: "#/components/schemas/ReturnCondition"
         reason:
           type: string
           minLength: 5
@@ -15984,6 +15823,15 @@ components:
         - expectedVersion
         - condition
         - reason
+    ReturnReasonCode:
+      type: string
+      enum:
+        - DEFECTIVE
+        - WRONG_ITEM
+        - NOT_AS_DESCRIBED
+        - WRONG_SIZE
+        - CHANGED_MIND
+        - OTHER
     ReturnEvidenceInputDto:
       type: object
       properties:
@@ -16017,14 +15865,8 @@ components:
       type: object
       properties:
         reasonCode:
-          type: string
-          enum:
-            - DEFECTIVE
-            - WRONG_ITEM
-            - NOT_AS_DESCRIBED
-            - WRONG_SIZE
-            - CHANGED_MIND
-            - OTHER
+          allOf:
+            - $ref: "#/components/schemas/ReturnReasonCode"
         description:
           type: string
           maxLength: 2000
@@ -16048,6 +15890,26 @@ components:
         - reasonCode
         - items
         - orderNo
+    ReturnStatus:
+      type: string
+      enum:
+        - REQUESTED
+        - APPROVED
+        - REJECTED
+        - RECEIVED
+        - REFUNDED
+        - CLOSED
+        - CANCELLED
+    ReturnChannel:
+      type: string
+      enum:
+        - ACCOUNT
+        - ADMIN
+    ReturnFault:
+      type: string
+      enum:
+        - SHOP
+        - CUSTOMER
     ReturnEvidenceImageDto:
       type: object
       properties:
@@ -16066,6 +15928,22 @@ components:
         - thumbnailUrl
         - width
         - height
+    RefundMethod:
+      type: string
+      enum:
+        - CASH
+        - BANK_TRANSFER
+    OrderItemType:
+      type: string
+      enum:
+        - STANDARD
+        - BUNDLE
+    ReturnItemDisposition:
+      type: string
+      enum:
+        - RESTOCK
+        - HOLD
+        - WRITE_OFF
     ReturnItemDto:
       type: object
       properties:
@@ -16084,29 +15962,21 @@ components:
         variantName:
           type: string
         itemType:
-          type: string
-          enum:
-            - STANDARD
-            - BUNDLE
+          allOf:
+            - $ref: "#/components/schemas/OrderItemType"
         quantity:
           type: number
         unitPrice:
           type: string
           example: "350000.00"
         condition:
-          type: string
-          enum:
-            - SELLABLE
-            - DAMAGED
-            - MISSING
           nullable: true
+          allOf:
+            - $ref: "#/components/schemas/ReturnCondition"
         disposition:
-          type: string
-          enum:
-            - RESTOCK
-            - HOLD
-            - WRITE_OFF
           nullable: true
+          allOf:
+            - $ref: "#/components/schemas/ReturnItemDisposition"
         restockQty:
           type: number
         refundCap:
@@ -16125,6 +15995,12 @@ components:
         - quantity
         - unitPrice
         - restockQty
+    RefundStatus:
+      type: string
+      enum:
+        - PENDING
+        - SUCCEEDED
+        - FAILED
     RefundDto:
       type: object
       properties:
@@ -16135,19 +16011,14 @@ components:
         refundNo:
           type: string
         method:
-          type: string
-          enum:
-            - CASH
-            - BANK_TRANSFER
+          allOf:
+            - $ref: "#/components/schemas/RefundMethod"
         amount:
           type: string
           example: "570000.00"
         status:
-          type: string
-          enum:
-            - PENDING
-            - SUCCEEDED
-            - FAILED
+          allOf:
+            - $ref: "#/components/schemas/RefundStatus"
         externalRef:
           type: string
           nullable: true
@@ -16180,36 +16051,32 @@ components:
         - proofImages
         - createdAt
         - version
+    ReturnAction:
+      type: string
+      enum:
+        - CREATE
+        - APPROVE
+        - REJECT
+        - CANCEL
+        - RECEIVE
+        - REFUND_REQUEST
+        - REFUND_CONFIRM
+        - REFUND_FAIL
+        - CLOSE
     ReturnHistoryDto:
       type: object
       properties:
         sequenceNo:
           type: number
         action:
-          type: string
-          enum:
-            - CREATE
-            - APPROVE
-            - REJECT
-            - CANCEL
-            - RECEIVE
-            - REFUND_REQUEST
-            - REFUND_CONFIRM
-            - REFUND_FAIL
-            - CLOSE
+          allOf:
+            - $ref: "#/components/schemas/ReturnAction"
         fromStatus:
           type: string
           nullable: true
         toStatus:
-          type: string
-          enum:
-            - REQUESTED
-            - APPROVED
-            - REJECTED
-            - RECEIVED
-            - REFUNDED
-            - CLOSED
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/ReturnStatus"
         reason:
           type: string
           nullable: true
@@ -16238,35 +16105,18 @@ components:
         orderNo:
           type: string
         status:
-          type: string
-          enum:
-            - REQUESTED
-            - APPROVED
-            - REJECTED
-            - RECEIVED
-            - REFUNDED
-            - CLOSED
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/ReturnStatus"
         channel:
-          type: string
-          enum:
-            - ACCOUNT
-            - ADMIN
+          allOf:
+            - $ref: "#/components/schemas/ReturnChannel"
         reasonCode:
-          type: string
-          enum:
-            - DEFECTIVE
-            - WRONG_ITEM
-            - NOT_AS_DESCRIBED
-            - WRONG_SIZE
-            - CHANGED_MIND
-            - OTHER
+          allOf:
+            - $ref: "#/components/schemas/ReturnReasonCode"
         fault:
-          type: string
-          enum:
-            - SHOP
-            - CUSTOMER
           nullable: true
+          allOf:
+            - $ref: "#/components/schemas/ReturnFault"
         recipientName:
           type: string
         itemCount:
@@ -16324,10 +16174,7 @@ components:
         allowedRefundMethods:
           type: array
           items:
-            type: string
-            enum:
-              - CASH
-              - BANK_TRANSFER
+            $ref: "#/components/schemas/RefundMethod"
         items:
           type: array
           items:
@@ -16370,13 +16217,9 @@ components:
           type: string
           example: product-front.webp
         contentType:
-          type: string
-          enum:
-            - image/jpeg
-            - image/png
-            - image/webp
-            - image/avif
           example: image/webp
+          allOf:
+            - $ref: "#/components/schemas/ImageMimeType"
         sizeBytes:
           type: number
           minimum: 1
@@ -16408,35 +16251,18 @@ components:
         orderNo:
           type: string
         status:
-          type: string
-          enum:
-            - REQUESTED
-            - APPROVED
-            - REJECTED
-            - RECEIVED
-            - REFUNDED
-            - CLOSED
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/ReturnStatus"
         channel:
-          type: string
-          enum:
-            - ACCOUNT
-            - ADMIN
+          allOf:
+            - $ref: "#/components/schemas/ReturnChannel"
         reasonCode:
-          type: string
-          enum:
-            - DEFECTIVE
-            - WRONG_ITEM
-            - NOT_AS_DESCRIBED
-            - WRONG_SIZE
-            - CHANGED_MIND
-            - OTHER
+          allOf:
+            - $ref: "#/components/schemas/ReturnReasonCode"
         fault:
-          type: string
-          enum:
-            - SHOP
-            - CUSTOMER
           nullable: true
+          allOf:
+            - $ref: "#/components/schemas/ReturnFault"
         recipientName:
           type: string
         itemCount:
@@ -16476,6 +16302,13 @@ components:
         - page
         - limit
         - total
+    ReturnIneligibleReason:
+      type: string
+      enum:
+        - ORDER_NOT_RETURNABLE
+        - OPEN_RETURN_EXISTS
+        - WINDOW_EXPIRED
+        - NOTHING_RETURNABLE
     ReturnEligibilityLineDto:
       type: object
       properties:
@@ -16536,13 +16369,9 @@ components:
           type: boolean
           description: false thì FE tắt nút tạo phiếu và hiển thị reason
         reason:
-          type: string
-          enum:
-            - ORDER_NOT_RETURNABLE
-            - OPEN_RETURN_EXISTS
-            - WINDOW_EXPIRED
-            - NOTHING_RETURNABLE
           nullable: true
+          allOf:
+            - $ref: "#/components/schemas/ReturnIneligibleReason"
         deliveredAt:
           type: string
           format: date-time
@@ -16622,13 +16451,9 @@ components:
           type: string
           example: product-front.webp
         contentType:
-          type: string
-          enum:
-            - image/jpeg
-            - image/png
-            - image/webp
-            - image/avif
           example: image/webp
+          allOf:
+            - $ref: "#/components/schemas/ImageMimeType"
         sizeBytes:
           type: number
           minimum: 1
@@ -16647,14 +16472,8 @@ components:
       type: object
       properties:
         reasonCode:
-          type: string
-          enum:
-            - DEFECTIVE
-            - WRONG_ITEM
-            - NOT_AS_DESCRIBED
-            - WRONG_SIZE
-            - CHANGED_MIND
-            - OTHER
+          allOf:
+            - $ref: "#/components/schemas/ReturnReasonCode"
         description:
           type: string
           maxLength: 2000
@@ -16675,11 +16494,9 @@ components:
           pattern: ^[1-9][0-9]*$
           example: "1"
         fault:
-          type: string
-          enum:
-            - SHOP
-            - CUSTOMER
           description: "Bắt buộc khi người tạo có quyền return.decide: phiếu được duyệt ngay (D56)"
+          allOf:
+            - $ref: "#/components/schemas/ReturnFault"
         windowOverrideNote:
           type: string
           minLength: 5
@@ -16700,11 +16517,9 @@ components:
           type: string
           maxLength: 500
         fault:
-          type: string
-          enum:
-            - SHOP
-            - CUSTOMER
           description: SHOP thì hoàn thêm phí giao ban đầu (D57)
+          allOf:
+            - $ref: "#/components/schemas/ReturnFault"
       required:
         - expectedVersion
         - fault
@@ -16716,18 +16531,12 @@ components:
           pattern: ^[1-9][0-9]*$
           example: "1"
         condition:
-          type: string
-          enum:
-            - SELLABLE
-            - DAMAGED
-            - MISSING
+          allOf:
+            - $ref: "#/components/schemas/ReturnCondition"
         disposition:
-          type: string
-          enum:
-            - RESTOCK
-            - HOLD
-            - WRITE_OFF
           description: Bắt buộc với DAMAGED (HOLD hoặc WRITE_OFF); SELLABLE luôn RESTOCK, MISSING luôn WRITE_OFF
+          allOf:
+            - $ref: "#/components/schemas/ReturnItemDisposition"
         note:
           type: string
           maxLength: 500
@@ -16764,10 +16573,8 @@ components:
           type: string
           maxLength: 500
         method:
-          type: string
-          enum:
-            - CASH
-            - BANK_TRANSFER
+          allOf:
+            - $ref: "#/components/schemas/RefundMethod"
         amount:
           type: string
           pattern: ^\d{1,17}(\.\d{1,2})?$
@@ -16810,6 +16617,12 @@ components:
           maxLength: 500
       required:
         - expectedVersion
+    ReviewModerationStatus:
+      type: string
+      enum:
+        - APPROVED
+        - REJECTED
+      description: Đánh giá hiển thị ngay khi gửi; REJECTED là đã bị Admin gỡ khỏi website
     ReviewCommentDto:
       type: object
       properties:
@@ -16853,11 +16666,9 @@ components:
         verifiedPurchase:
           type: boolean
         status:
-          type: string
-          enum:
-            - APPROVED
-            - REJECTED
           description: Đánh giá hiển thị ngay khi gửi; REJECTED là đã bị Admin gỡ khỏi website
+          allOf:
+            - $ref: "#/components/schemas/ReviewModerationStatus"
         version:
           type: number
           minimum: 0
@@ -16904,10 +16715,8 @@ components:
       type: object
       properties:
         status:
-          type: string
-          enum:
-            - APPROVED
-            - REJECTED
+          allOf:
+            - $ref: "#/components/schemas/ReviewModerationStatus"
         reason:
           type: string
         expectedVersion:
@@ -16952,9 +16761,8 @@ components:
           pattern: ^[1-9][0-9]*$
           example: "1"
         provider:
-          type: string
-          enum:
-            - CLOUDINARY
+          allOf:
+            - $ref: "#/components/schemas/MediaProvider"
         providerAssetId:
           type: string
         publicId:
@@ -17042,6 +16850,13 @@ components:
         - publishedProducts
         - customers
         - ordersByStatus
+    ReportGranularity:
+      type: string
+      enum:
+        - DAY
+        - MONTH
+        - QUARTER
+        - YEAR
     RevenuePointDto:
       type: object
       properties:
@@ -17103,13 +16918,9 @@ components:
           type: string
           description: Giá trị trung bình mỗi đơn đã hoàn tất
         granularity:
-          type: string
-          enum:
-            - DAY
-            - MONTH
-            - QUARTER
-            - YEAR
           description: Mức gom đã áp dụng cho `series`
+          allOf:
+            - $ref: "#/components/schemas/ReportGranularity"
         series:
           description: Doanh thu thực nhận theo kỳ hoàn tất
           type: array
@@ -17239,3 +17050,8 @@ components:
             $ref: "#/components/schemas/TopCustomerDto"
       required:
         - items
+    ReportExportFormat:
+      type: string
+      enum:
+        - CSV
+        - XLSX

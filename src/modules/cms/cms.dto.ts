@@ -34,7 +34,7 @@ export type ContentPostType = (typeof CONTENT_POST_TYPES)[number];
 export class ContentPostDto {
   @ApiProperty() id: string;
   @ApiProperty() slug: string;
-  @ApiProperty({ enum: CONTENT_POST_TYPES })
+  @ApiProperty({ enum: CONTENT_POST_TYPES, enumName: 'ContentPostType' })
   postType: ContentPostType;
 
   @ApiProperty({
@@ -48,7 +48,7 @@ export class ContentPostDto {
   @ApiProperty({ format: 'uri' }) coverUrl: string;
   @ApiProperty({ type: [String] }) relatedProductSlugs: string[];
   @ApiProperty({ format: 'date-time' }) publishedAt: string;
-  @ApiProperty({ enum: Object.values(CONTENT_POST_STATUS) }) status: ContentPostStatus;
+  @ApiProperty({ enum: Object.values(CONTENT_POST_STATUS), enumName: 'ContentPostStatus' }) status: ContentPostStatus;
   @ApiProperty({ minimum: 0 }) version: number;
   @ApiPropertyOptional({ format: 'date-time' }) archivedAt?: string;
   @ApiPropertyOptional() archiveReason?: string;
@@ -60,7 +60,7 @@ export class ContentPostListDto {
 }
 
 export class CreateContentPostDto {
-  @ApiProperty({ enum: CONTENT_POST_TYPES })
+  @ApiProperty({ enum: CONTENT_POST_TYPES, enumName: 'ContentPostType' })
   @IsIn(CONTENT_POST_TYPES)
   postType: ContentPostType;
   @ApiProperty() @IsString() @IsNotEmpty() title: string;
@@ -102,7 +102,7 @@ export class ArchiveContentPostDto {
 
 export class ListContentPostsQueryDto {
   @ApiPropertyOptional({
-    enum: CONTENT_POST_TYPES,
+    enum: CONTENT_POST_TYPES, enumName: 'ContentPostType',
     description: 'Lọc theo loại bài viết. Bỏ trống để lấy tất cả.',
   })
   @IsOptional()

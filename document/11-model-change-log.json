@@ -5744,6 +5744,19 @@
           }
         }
       ]
+    },
+    {
+      "id": "API-20260924-SHARED-ENUM-SCHEMAS",
+      "date": "2026-09-24",
+      "scope": "API+OPENAPI+ADMIN+STOREFRONT",
+      "summary": "Tối ưu SDK sinh ra ở Admin và Storefront: thêm enumName cho 93 enum khai từ hằng số trong 21 file DTO và cho 8 nhóm literal cùng họ nghiệp vụ (trạng thái/phương thức checkout, trạng thái kiểm duyệt review, trạng thái giỏ, provider media, trạng thái tổ chức, trạng thái brand/category), bỏ type: String đang chặn enum dùng chung ở codeProvider. OpenAPI giờ có 57 enum schema dùng chung thay vì mỗi field một enum inline; đối chiếu tự động 160 field/tham số enum cho thấy tập giá trị và nullable không đổi, không thêm/bớt operation, JSON trên đường truyền giữ nguyên. AdminOrderSummaryDto đổi tên OrderSummaryDto vì Storefront dùng chung schema này. Kết quả: Admin generated 462→404 file, file enum 137→72; Storefront 206→188 file, file enum 71→46. Enum còn trùng giá trị là các họ trạng thái khác nhau (giữ riêng theo rule 09) hoặc bản sao theo domain do mỗi domain Orval có thư mục models riêng.",
+      "sources": [
+        "source:src/modules/**/dto (enumName)",
+        "source:src/modules/order/dto/order.dto.ts (OrderSummaryDto)",
+        "OpenAPI:openapi/openapi.json",
+        "document:document/15-architecture-contract-codegen.md"
+      ],
+      "targets": []
     }
   ]
 }

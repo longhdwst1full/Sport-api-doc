@@ -72,7 +72,7 @@ export class BranchDto {
   @ApiProperty({ ...ENTITY_ID_OPENAPI }) id: string;
   @ApiProperty({ example: 'CN-HCM-01' }) code: string;
   @ApiProperty({ example: 'Chi nhánh Hồ Chí Minh' }) name: string;
-  @ApiProperty({ enum: ['ACTIVE', 'INACTIVE'] }) status: 'ACTIVE' | 'INACTIVE';
+  @ApiProperty({ enum: ['ACTIVE', 'INACTIVE'], enumName: 'OrganizationStatus' }) status: 'ACTIVE' | 'INACTIVE';
   @ApiPropertyOptional({ example: '028 7300 8899' }) phone?: string;
   @ApiPropertyOptional({ example: 'hcm@dctd.vn' }) email?: string;
   @ApiProperty({ type: AddressDto }) address: AddressDto;
@@ -85,7 +85,7 @@ export class WarehouseDto {
   @ApiProperty({ ...ENTITY_ID_OPENAPI }) branchId: string;
   @ApiProperty({ example: 'KHO-HCM-01' }) code: string;
   @ApiProperty({ example: 'Kho bán hàng Hồ Chí Minh' }) name: string;
-  @ApiProperty({ enum: ['ACTIVE', 'INACTIVE'] }) status: 'ACTIVE' | 'INACTIVE';
+  @ApiProperty({ enum: ['ACTIVE', 'INACTIVE'], enumName: 'OrganizationStatus' }) status: 'ACTIVE' | 'INACTIVE';
   @ApiProperty({ example: 0 }) version: number;
 }
 

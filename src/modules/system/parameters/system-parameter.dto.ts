@@ -22,10 +22,10 @@ const trimOptional = ({ value }: { value: unknown }) =>
 export class SystemParameterDto {
   @ApiProperty({ ...ENTITY_ID_OPENAPI }) id: string;
   @ApiProperty({ description: 'Mã ổn định dùng trong code; không đổi được từ giao diện' }) code: string;
-  @ApiProperty({ enum: Object.values(SYSTEM_PARAMETER_GROUP) }) groupCode: string;
+  @ApiProperty({ enum: Object.values(SYSTEM_PARAMETER_GROUP), enumName: 'SystemParameterGroup' }) groupCode: string;
   @ApiProperty() label: string;
   @ApiPropertyOptional({ type: String, nullable: true }) description: string | null;
-  @ApiProperty({ enum: Object.values(SYSTEM_PARAMETER_VALUE_TYPE) }) valueType: string;
+  @ApiProperty({ enum: Object.values(SYSTEM_PARAMETER_VALUE_TYPE), enumName: 'SystemParameterValueType' }) valueType: string;
   @ApiProperty({ description: 'Giá trị đang áp dụng, luôn ở dạng chuỗi' }) value: string;
   @ApiProperty({ description: 'Giá trị mặc định khi chưa cấu hình hoặc giá trị hỏng' }) defaultValue: string;
   @ApiPropertyOptional({ type: Number, nullable: true }) minValue: number | null;
@@ -77,13 +77,13 @@ export class SystemParameterQueryDto {
   @ApiPropertyOptional({ type: Number, default: 20, minimum: 1, maximum: 100 })
   @Type(() => Number) @IsInt() @Min(1) @Max(100) @IsOptional() limit = 20;
 
-  @ApiPropertyOptional({ enum: Object.values(SYSTEM_PARAMETER_GROUP) })
+  @ApiPropertyOptional({ enum: Object.values(SYSTEM_PARAMETER_GROUP), enumName: 'SystemParameterGroup' })
   @IsIn(Object.values(SYSTEM_PARAMETER_GROUP)) @IsOptional() groupCode?: string;
 
   @ApiPropertyOptional({ maxLength: 100, description: 'Tìm theo mã hoặc nhãn tham số' })
   @Transform(trimOptional) @IsString() @MaxLength(100) @IsOptional() search?: string;
 
-  @ApiPropertyOptional({ enum: Object.values(PARAMETER_STATUS) })
+  @ApiPropertyOptional({ enum: Object.values(PARAMETER_STATUS), enumName: 'SystemParameterStatus' })
   @IsIn(Object.values(PARAMETER_STATUS)) @IsOptional() status?: string;
 
   @ApiPropertyOptional({ description: 'Chỉ lấy tham số hệ thống hoặc tham số tuỳ biến' })
@@ -91,7 +91,7 @@ export class SystemParameterQueryDto {
   @IsBoolean() @IsOptional() isSystem?: boolean;
 
   @ApiPropertyOptional({
-    enum: Object.values(SYSTEM_PARAMETER_SORT_FIELD),
+    enum: Object.values(SYSTEM_PARAMETER_SORT_FIELD), enumName: 'SystemParameterSortField',
     default: 'sortOrder',
     description: 'Trường sắp xếp; kèm `sortDirection` để đổi chiều',
   })
@@ -105,7 +105,7 @@ export class CreateSystemParameterDto {
   @ApiProperty({ pattern: '^[A-Z][A-Z0-9_]*$', maxLength: 64, description: 'Mã viết hoa, dùng gạch dưới' })
   @Transform(trimOptional) @IsString() @Matches(/^[A-Z][A-Z0-9_]*$/) @MaxLength(64) code: string;
 
-  @ApiProperty({ enum: Object.values(SYSTEM_PARAMETER_GROUP) })
+  @ApiProperty({ enum: Object.values(SYSTEM_PARAMETER_GROUP), enumName: 'SystemParameterGroup' })
   @IsIn(Object.values(SYSTEM_PARAMETER_GROUP)) groupCode: string;
 
   @ApiProperty({ maxLength: 255 })
@@ -114,7 +114,7 @@ export class CreateSystemParameterDto {
   @ApiPropertyOptional()
   @Transform(trimOptional) @IsString() @IsOptional() description?: string;
 
-  @ApiProperty({ enum: Object.values(SYSTEM_PARAMETER_VALUE_TYPE) })
+  @ApiProperty({ enum: Object.values(SYSTEM_PARAMETER_VALUE_TYPE), enumName: 'SystemParameterValueType' })
   @IsIn(Object.values(SYSTEM_PARAMETER_VALUE_TYPE)) valueType: string;
 
   @ApiProperty({ maxLength: 500 })

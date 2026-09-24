@@ -50,15 +50,7 @@ paths:
           required: false
           in: query
           schema:
-            type: string
-            enum:
-              - SHIPPING
-              - CHECKOUT
-              - ORDER
-              - PAYMENT
-              - CART
-              - PROMOTION
-              - INTEGRATION
+            $ref: "#/components/schemas/SystemParameterGroup"
         - name: search
           required: false
           in: query
@@ -70,10 +62,7 @@ paths:
           required: false
           in: query
           schema:
-            type: string
-            enum:
-              - ACTIVE
-              - INACTIVE
+            $ref: "#/components/schemas/SystemParameterStatus"
         - name: isSystem
           required: false
           in: query
@@ -85,14 +74,7 @@ paths:
           in: query
           description: Trường sắp xếp; kèm `sortDirection` để đổi chiều
           schema:
-            default: sortOrder
-            type: string
-            enum:
-              - id
-              - code
-              - groupCode
-              - sortOrder
-              - updatedAt
+            $ref: "#/components/schemas/SystemParameterSortField"
         - name: sortDirection
           required: false
           in: query
@@ -293,6 +275,29 @@ components:
         - totalModels
         - p0Models
         - p1Models
+    SystemParameterGroup:
+      type: string
+      enum:
+        - SHIPPING
+        - CHECKOUT
+        - ORDER
+        - PAYMENT
+        - CART
+        - PROMOTION
+        - INTEGRATION
+    SystemParameterStatus:
+      type: string
+      enum:
+        - ACTIVE
+        - INACTIVE
+    SystemParameterSortField:
+      type: string
+      enum:
+        - id
+        - code
+        - groupCode
+        - sortOrder
+        - updatedAt
     SystemParameterListDto:
       type: object
       properties:
@@ -354,27 +359,16 @@ components:
           maxLength: 64
           description: Mã viết hoa, dùng gạch dưới
         groupCode:
-          type: string
-          enum:
-            - SHIPPING
-            - CHECKOUT
-            - ORDER
-            - PAYMENT
-            - CART
-            - PROMOTION
-            - INTEGRATION
+          allOf:
+            - $ref: "#/components/schemas/SystemParameterGroup"
         label:
           type: string
           maxLength: 255
         description:
           type: string
         valueType:
-          type: string
-          enum:
-            - INTEGER
-            - DECIMAL
-            - BOOLEAN
-            - STRING
+          allOf:
+            - $ref: "#/components/schemas/SystemParameterValueType"
         value:
           type: string
           maxLength: 500
@@ -411,27 +405,16 @@ components:
           type: string
           description: Mã ổn định dùng trong code; không đổi được từ giao diện
         groupCode:
-          type: string
-          enum:
-            - SHIPPING
-            - CHECKOUT
-            - ORDER
-            - PAYMENT
-            - CART
-            - PROMOTION
-            - INTEGRATION
+          allOf:
+            - $ref: "#/components/schemas/SystemParameterGroup"
         label:
           type: string
         description:
           type: string
           nullable: true
         valueType:
-          type: string
-          enum:
-            - INTEGER
-            - DECIMAL
-            - BOOLEAN
-            - STRING
+          allOf:
+            - $ref: "#/components/schemas/SystemParameterValueType"
         value:
           type: string
           description: Giá trị đang áp dụng, luôn ở dạng chuỗi
@@ -558,6 +541,13 @@ components:
       required:
         - code
         - message
+    SystemParameterValueType:
+      type: string
+      enum:
+        - INTEGER
+        - DECIMAL
+        - BOOLEAN
+        - STRING
   securitySchemes:
     bearer:
       scheme: bearer

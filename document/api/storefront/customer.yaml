@@ -211,11 +211,10 @@ components:
         provinceCode:
           type: string
         codeProvider:
-          type: string
           nullable: true
-          enum:
-            - GHN
           description: Hãng đã cấp bộ mã địa giới của địa chỉ này.
+          allOf:
+            - $ref: "#/components/schemas/AddressCodeProvider"
         postalCode:
           type: string
           nullable: true
@@ -279,11 +278,10 @@ components:
           example: "79"
           maxLength: 32
         codeProvider:
-          type: string
-          enum:
-            - GHN
           default: GHN
           description: Hãng đã cấp bộ mã gửi kèm; bỏ trống thì hiểu là hãng mặc định của hệ thống.
+          allOf:
+            - $ref: "#/components/schemas/AddressCodeProvider"
         postalCode:
           type: string
           example: "700000"
@@ -338,11 +336,10 @@ components:
           example: "79"
           maxLength: 32
         codeProvider:
-          type: string
-          enum:
-            - GHN
           default: GHN
           description: Hãng đã cấp bộ mã gửi kèm; bỏ trống thì hiểu là hãng mặc định của hệ thống.
+          allOf:
+            - $ref: "#/components/schemas/AddressCodeProvider"
         postalCode:
           type: string
           example: "700000"
@@ -457,6 +454,11 @@ components:
           description: Khách có đồng ý nhận tin khuyến mãi
       required:
         - expectedVersion
+    AddressCodeProvider:
+      type: string
+      enum:
+        - GHN
+      description: Hãng đã cấp bộ mã địa giới của địa chỉ này.
     ErrorDetailDto:
       type: object
       properties:

@@ -32,24 +32,12 @@ paths:
           required: false
           in: query
           schema:
-            type: string
-            enum:
-              - PENDING
-              - AWAITING_CONFIRMATION
-              - NEED_REVIEW
-              - SUCCESS
-              - FAILED
-              - CANCELLED
-              - REFUNDED
+            $ref: "#/components/schemas/PaymentStatus"
         - name: method
           required: false
           in: query
           schema:
-            type: string
-            enum:
-              - BANK_TRANSFER
-              - COD
-              - VNPAY
+            $ref: "#/components/schemas/PaymentMethod"
         - name: search
           required: false
           in: query
@@ -253,6 +241,22 @@ paths:
         - payment.confirm
 components:
   schemas:
+    PaymentStatus:
+      type: string
+      enum:
+        - PENDING
+        - AWAITING_CONFIRMATION
+        - NEED_REVIEW
+        - SUCCESS
+        - FAILED
+        - CANCELLED
+        - REFUNDED
+    PaymentMethod:
+      type: string
+      enum:
+        - BANK_TRANSFER
+        - COD
+        - VNPAY
     AdminPaymentListDto:
       type: object
       properties:
@@ -324,29 +328,18 @@ components:
         paymentRef:
           type: string
         method:
-          type: string
-          enum:
-            - BANK_TRANSFER
-            - COD
-            - VNPAY
+          allOf:
+            - $ref: "#/components/schemas/PaymentMethod"
         status:
-          type: string
-          enum:
-            - PENDING
-            - AWAITING_CONFIRMATION
-            - NEED_REVIEW
-            - SUCCESS
-            - FAILED
-            - CANCELLED
-            - REFUNDED
+          allOf:
+            - $ref: "#/components/schemas/PaymentStatus"
         expectedAmount:
           type: string
         receivedAmount:
           type: string
         currencyCode:
-          type: string
-          enum:
-            - VND
+          allOf:
+            - $ref: "#/components/schemas/CurrencyCode"
         expiresAt:
           type: string
           format: date-time
@@ -427,21 +420,11 @@ components:
         recipientPhone:
           type: string
         method:
-          type: string
-          enum:
-            - BANK_TRANSFER
-            - COD
-            - VNPAY
+          allOf:
+            - $ref: "#/components/schemas/PaymentMethod"
         status:
-          type: string
-          enum:
-            - PENDING
-            - AWAITING_CONFIRMATION
-            - NEED_REVIEW
-            - SUCCESS
-            - FAILED
-            - CANCELLED
-            - REFUNDED
+          allOf:
+            - $ref: "#/components/schemas/PaymentStatus"
         expectedAmount:
           type: string
         receivedAmount:
@@ -478,15 +461,16 @@ components:
       required:
         - code
         - message
+    CurrencyCode:
+      type: string
+      enum:
+        - VND
     PaymentInstructionDto:
       type: object
       properties:
         method:
-          type: string
-          enum:
-            - BANK_TRANSFER
-            - COD
-            - VNPAY
+          allOf:
+            - $ref: "#/components/schemas/PaymentMethod"
         provider:
           type: string
         reference:
@@ -523,12 +507,8 @@ components:
         sizeBytes:
           type: number
         status:
-          type: string
-          enum:
-            - PENDING_REVIEW
-            - ACCEPTED
-            - REJECTED
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/PaymentEvidenceStatus"
         note:
           type: string
         reviewReason:
@@ -548,6 +528,13 @@ components:
         - sizeBytes
         - status
         - createdAt
+    PaymentEvidenceStatus:
+      type: string
+      enum:
+        - PENDING_REVIEW
+        - ACCEPTED
+        - REJECTED
+        - CANCELLED
   securitySchemes:
     bearer:
       scheme: bearer

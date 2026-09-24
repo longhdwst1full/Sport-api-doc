@@ -61,8 +61,8 @@ export class CartItemDto {
 
 export class CartDto {
   @ApiProperty({ ...ENTITY_ID_OPENAPI }) id: string;
-  @ApiProperty({ enum: ['ACTIVE'] }) status: string;
-  @ApiProperty({ enum: ['VND'] }) currencyCode: string;
+  @ApiProperty({ enum: ['ACTIVE'], enumName: 'ActiveCartStatus' }) status: string;
+  @ApiProperty({ enum: ['VND'], enumName: 'CurrencyCode' }) currencyCode: string;
   @ApiProperty({ minimum: 0 }) version: number;
   @ApiProperty({ type: [CartItemDto] }) items: CartItemDto[];
   @ApiProperty({ type: String, example: '1780000.00' }) subtotalPreview: string;
