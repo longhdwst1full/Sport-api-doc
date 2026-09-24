@@ -1,8 +1,10 @@
 # Kiến trúc module và OpenAPI codegen V1
 
-Version: 1.1.0
+Version: 1.2.0
 
-Ngày cập nhật: 2026-09-05
+Ngày cập nhật: 2026-09-24
+
+Change summary: Enum trong DTO phải có `enumName` để OpenAPI sinh một schema dùng chung thay vì một type cho mỗi field.
 Phạm vi áp dụng: `api/`, `admin/`, `client/`.
 
 ## 1. Quyết định kiến trúc
@@ -102,6 +104,19 @@ admin/src/generated/api/
 Storefront (repository `Sport-Client`, snapshot `contracts/storefront/*.yaml`) chỉ có
 `catalog`, `content`, `reviews`, `auth`. Client không sinh DTO hoặc operation Admin.
 
+### Enum dùng chung
+
+Mọi enum khai từ hằng số (`Object.values(X)` hoặc mảng hằng) phải có `enumName`, ví dụ
+`@ApiProperty({ enum: Object.values(ORDER_STATUS), enumName: 'OrderStatus' })`. Không có `enumName`, Swagger nhúng
+enum vào từng field và Orval sinh một type riêng cho mỗi field (`OrderDetailDtoStatus`, `OrderSummaryDtoStatus`...),
+nên cùng một trạng thái bị lặp nhiều file và FE phải import nhiều tên cho một khái niệm.
+
+- Cùng một `enumName` bắt buộc cùng tập giá trị; dùng chung hằng số để bảo đảm điều đó.
+- Không gắn `type: String` cùng `enumName`: `type` ghi đè khiến enum vẫn bị nhúng inline.
+- Họ trạng thái khác nhau (trạng thái brand và trạng thái chi nhánh) giữ tên riêng dù cùng giá trị
+  `ACTIVE/INACTIVE`; không gộp chỉ vì trùng chuỗi.
+- Thay đổi này không đổi JSON trên đường truyền; chỉ đổi tên type sinh ra ở FE.
+
 Mỗi frontend có script dọn đúng `src/generated/api` của chính nó trước khi generate. Generated code là disposable; feature chỉ import SDK/models từ domain của mình. Mapping DTO ↔ form/table đặt trong `src/features/<feature>`, không đặt trong generated hoặc transport mutator.
 
 ## 5. Quy trình thêm API mới
@@ -138,4 +153,5 @@ Các use case tranh chấp cao như tồn kho, đặt hàng, thanh toán và sta
 
 | Version | Ngày | Thay đổi |
 | --- | --- | --- |
+| 1.2.0 | 2026-09-24 | Quy ước `enumName` cho enum dùng chung; `AdminOrderSummaryDto` đổi thành `OrderSummaryDto` (API-20260924-SHARED-ENUM-SCHEMAS). |
 | 1.1.0 | 2026-09-05 | Cập nhật pipeline contract cho ba repository độc lập và bổ sung Storefront Auth. |
