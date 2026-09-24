@@ -996,6 +996,7 @@ Table refunds {
   currency_code char(3) [not null, default: 'VND']
   status varchar(16) [not null, default: 'PENDING', note: 'PENDING | SUCCEEDED | FAILED']
   external_ref varchar(255) [note: 'Bắt buộc khi BANK_TRANSFER SUCCEEDED; UNIQUE(method, external_ref) khi có']
+  proof_images jsonb [note: 'Ảnh chứng từ chuyển/trả tiền đã xác minh, lưu khi xác nhận để đối chiếu; mảng ≤ 5']
   note varchar(500)
   idempotency_key varchar(150) [not null, unique]
   request_hash char(64) [not null]
@@ -1103,7 +1104,7 @@ Table return_requests {
   channel varchar(16) [not null, note: 'ACCOUNT | ADMIN (D55)']
   reason_code varchar(32) [not null]
   description varchar(2000)
-  evidence_urls jsonb
+  evidence_images jsonb [note: 'Ảnh đã xác minh với Cloudinary trong thư mục return-evidence/o<order_id>; mảng ≤ 5; không nhận link tự do']
   fault varchar(16) [note: 'SHOP | CUSTOMER; bắt buộc từ APPROVED (D57)']
   delivered_at timestamptz [not null, note: 'Mốc tính hạn trả (D54)']
   window_override_by bigint

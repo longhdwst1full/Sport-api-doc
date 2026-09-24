@@ -29,7 +29,9 @@ export const OUTBOX_EVENT_TYPE = {
   ORDER_FULFILLMENT_UPDATED: 'order.fulfillment_updated',
   PASSWORD_RESET_REQUESTED: 'auth.password_reset_requested',
   PASSWORD_CHANGED: 'auth.password_changed',
+  RETURN_REQUESTED: 'return.requested',
   RETURN_DECIDED: 'return.decided',
+  RETURN_RECEIVED: 'return.received',
   REFUND_SUCCEEDED: 'return.refund_succeeded',
 } as const;
 

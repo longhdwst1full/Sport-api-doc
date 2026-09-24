@@ -29,7 +29,12 @@ import {
   ReturnDetailDto,
   ReturnListDto,
   ReturnReasonCommandDto,
+  AdminReturnQueueSummaryDto,
+  CreateAccountReturnEvidenceUploadDto,
+  CreateAdminReturnEvidenceUploadDto,
+  ReturnEligibilityDto,
 } from '../dto/return.dto';
+import { CreateMediaUploadDto, SignedMediaUploadDto } from '../../media/media.dto';
 import { RETURN_PERMISSION } from '../return.constants';
 import { RefundService } from '../services/refund.service';
 import { ReturnService } from '../services/return.service';
@@ -59,11 +64,35 @@ export class AccountReturnController {
     return this.returns.createAccount(context.actorUserId, input, key ?? '', context.requestId);
   }
 
+  @Post('uploads/signature')
+  @ApiOperation({
+    operationId: 'createAccountReturnEvidenceUpload',
+    summary: 'Chữ ký upload Cloudinary ngắn hạn cho ảnh minh chứng trả hàng của một đơn đã giao',
+  })
+  @ApiCreatedResponse({ type: SignedMediaUploadDto })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  createEvidenceUpload(@Body() input: CreateAccountReturnEvidenceUploadDto, @Req() request: AuthenticatedRequest) {
+    return this.returns.createAccountEvidenceUpload(getAuthPrincipal(request).userId, input);
+  }
+
   @Get()
   @ApiOperation({ operationId: 'listAccountReturns', summary: 'Danh sách phiếu trả hàng của khách đang đăng nhập' })
   @ApiOkResponse({ type: ReturnListDto })
   list(@Query() query: AccountReturnQueryDto, @Req() request: AuthenticatedRequest) {
     return this.returns.listAccount(getAuthPrincipal(request).userId, query);
+  }
+
+  @Get('eligibility/:orderNo')
+  @ApiOperation({
+    operationId: 'getAccountReturnEligibility',
+    summary: 'Đơn có trả được không, hạn trả, số lượng còn trả được và tiền hoàn ước tính từng dòng',
+  })
+  @ApiOkResponse({ type: ReturnEligibilityDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  eligibility(@Param('orderNo') orderNo: string, @Req() request: AuthenticatedRequest) {
+    return this.returns.eligibilityAccount(getAuthPrincipal(request).userId, orderNo);
   }
 
   @Get(':returnNo')
@@ -110,6 +139,27 @@ export class AdminReturnController {
     return this.returns.listAdmin(query, getAuthPrincipal(request));
   }
 
+  // Khai báo TRƯỚC `:id`: Nest khớp route theo thứ tự, đặt sau thì "summary" bị hiểu là một id.
+  @Get('summary')
+  @RequirePermissions(RETURN_PERMISSION.VIEW)
+  @ApiOperation({ operationId: 'getAdminReturnQueueSummary', summary: 'Số phiếu chờ duyệt, chờ nhận, chờ hoàn tiền và lượt hoàn quá hạn' })
+  @ApiOkResponse({ type: AdminReturnQueueSummaryDto })
+  summary(@Req() request: AuthenticatedRequest) {
+    return this.returns.queueSummary(getAuthPrincipal(request));
+  }
+
+  @Get('eligibility/:orderId')
+  @RequirePermissions(RETURN_PERMISSION.CREATE)
+  @ApiOperation({
+    operationId: 'getAdminReturnEligibility',
+    summary: 'Điều kiện trả hàng của một đơn khi nhân viên tạo phiếu hộ; báo cần override khi quá hạn',
+  })
+  @ApiOkResponse({ type: ReturnEligibilityDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  eligibility(@Param('orderId') orderId: string, @Req() request: AuthenticatedRequest) {
+    return this.returns.eligibilityAdmin(orderId, getAuthPrincipal(request));
+  }
+
   @Get(':id')
   @RequirePermissions(RETURN_PERMISSION.VIEW)
   @ApiOperation({ operationId: 'getAdminReturn', summary: 'Chi tiết phiếu trả, kết quả kiểm hàng, lượt hoàn tiền và lịch sử' })
@@ -117,6 +167,32 @@ export class AdminReturnController {
   @ApiNotFoundResponse({ type: ErrorResponseDto })
   get(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
     return this.returns.getAdmin(id, getAuthPrincipal(request));
+  }
+
+  @Post('uploads/signature')
+  @RequirePermissions(RETURN_PERMISSION.CREATE)
+  @ApiOperation({
+    operationId: 'createAdminReturnEvidenceUpload',
+    summary: 'Chữ ký upload ảnh minh chứng khi nhân viên tạo phiếu hộ khách',
+  })
+  @ApiCreatedResponse({ type: SignedMediaUploadDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  createEvidenceUpload(@Body() input: CreateAdminReturnEvidenceUploadDto, @Req() request: AuthenticatedRequest) {
+    return this.returns.createAdminEvidenceUpload(input, getAuthPrincipal(request));
+  }
+
+  @Post(':id/refunds/uploads/signature')
+  @RequirePermissions(RETURN_PERMISSION.REFUND_APPROVE)
+  @ApiOperation({
+    operationId: 'createAdminReturnRefundProofUpload',
+    summary: 'Chữ ký upload ảnh chứng từ hoàn tiền (biên lai, màn hình chuyển khoản) để lưu khi xác nhận',
+  })
+  @ApiCreatedResponse({ type: SignedMediaUploadDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  createRefundProofUpload(@Param('id') id: string, @Body() input: CreateMediaUploadDto, @Req() request: AuthenticatedRequest) {
+    return this.refunds.createProofUpload(id, input, getAuthPrincipal(request));
   }
 
   @Post()

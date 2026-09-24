@@ -207,3 +207,107 @@ export function assertRefundMethod(paymentMethod: string, method: string): void 
     );
   }
 }
+
+export const RETURN_INELIGIBLE_REASON = {
+  ORDER_NOT_RETURNABLE: 'ORDER_NOT_RETURNABLE',
+  OPEN_RETURN_EXISTS: 'OPEN_RETURN_EXISTS',
+  WINDOW_EXPIRED: 'WINDOW_EXPIRED',
+  NOTHING_RETURNABLE: 'NOTHING_RETURNABLE',
+} as const;
+
+export type ReturnIneligibleReason = (typeof RETURN_INELIGIBLE_REASON)[keyof typeof RETURN_INELIGIBLE_REASON];
+
+export interface EligibilityLineInput {
+  orderItemId: string;
+  purchasedQuantity: number;
+  alreadyReturnedQuantity: number;
+  isBundle: boolean;
+  blockedByCategory: boolean;
+  lineTotal: Prisma.Decimal;
+}
+
+export interface EligibilityInput {
+  orderStatusAllowsReturn: boolean;
+  deliveredAt: Date | null;
+  now: Date;
+  windowDays: number;
+  openReturnNo: string | null;
+  canOverrideWindow: boolean;
+  lines: readonly EligibilityLineInput[];
+}
+
+export interface EligibilityLineResult extends EligibilityLineInput {
+  returnableQuantity: number;
+  unitRefundEstimate: Prisma.Decimal;
+  maxRefundEstimate: Prisma.Decimal;
+}
+
+export interface EligibilityResult {
+  eligible: boolean;
+  reason: ReturnIneligibleReason | null;
+  returnDeadline: Date | null;
+  withinWindow: boolean;
+  windowOverrideRequired: boolean;
+  lines: EligibilityLineResult[];
+}
+
+/**
+ * Cùng luật với lúc tạo phiếu nhưng TRẢ VỀ kết quả thay vì ném lỗi, để FE bật/tắt nút và giới hạn
+ * số lượng mà không chép lại luật. Lệnh tạo phiếu vẫn kiểm lại trong transaction đã khoá: kết quả
+ * ở đây chỉ là ảnh chụp tại thời điểm đọc.
+ *
+ * Số tiền ở đây là ƯỚC TÍNH theo giá khách đã trả, giả định hàng về còn bán được; số chính thức
+ * chỉ có sau khi nhận và kiểm hàng.
+ */
+export function evaluateEligibility(input: EligibilityInput): EligibilityResult {
+  const lines = input.lines.map((line) => {
+    const remaining = Math.max(line.purchasedQuantity - line.alreadyReturnedQuantity, 0);
+    const returnableQuantity = line.blockedByCategory ? 0 : remaining;
+    return {
+      ...line,
+      returnableQuantity,
+      unitRefundEstimate: lineRefundCap(line.lineTotal, line.purchasedQuantity, 1, RETURN_ITEM_CONDITION.SELLABLE),
+      maxRefundEstimate: returnableQuantity > 0
+        ? lineRefundCap(line.lineTotal, line.purchasedQuantity, returnableQuantity, RETURN_ITEM_CONDITION.SELLABLE)
+        : new Prisma.Decimal(0),
+    };
+  });
+  const returnDeadline = input.deliveredAt
+    ? new Date(input.deliveredAt.getTime() + input.windowDays * 24 * 60 * 60 * 1000)
+    : null;
+  const withinWindow = input.deliveredAt ? isWithinReturnWindow(input.deliveredAt, input.now, input.windowDays) : false;
+
+  const result = (reason: ReturnIneligibleReason | null, windowOverrideRequired = false): EligibilityResult => ({
+    eligible: reason === null,
+    reason,
+    returnDeadline,
+    withinWindow,
+    windowOverrideRequired,
+    lines,
+  });
+  if (!input.orderStatusAllowsReturn || !input.deliveredAt) return result(RETURN_INELIGIBLE_REASON.ORDER_NOT_RETURNABLE);
+  if (input.openReturnNo) return result(RETURN_INELIGIBLE_REASON.OPEN_RETURN_EXISTS);
+  if (!lines.some((line) => line.returnableQuantity > 0)) return result(RETURN_INELIGIBLE_REASON.NOTHING_RETURNABLE);
+  if (!withinWindow) {
+    return input.canOverrideWindow
+      ? result(null, true)
+      : result(RETURN_INELIGIBLE_REASON.WINDOW_EXPIRED);
+  }
+  return result(null);
+}
+
+/**
+ * Ước tính tiền hoàn của phiếu CHƯA nhận hàng: giá khách đã trả cho số lượng yêu cầu, cộng phí giao
+ * khi đã chốt lỗi shop. Không trừ trường hợp phí giao đã được phiếu trước cộng (hiếm, chỉ khi một đơn
+ * có nhiều phiếu lỗi shop); trần chính thức lúc nhận hàng mới xử lý chính xác.
+ */
+export function estimateRequestedRefund(
+  lines: readonly { lineTotal: Prisma.Decimal; orderedQuantity: number; returnedQuantity: number }[],
+  fault: string | null,
+  shippingTotal: Prisma.Decimal,
+): Prisma.Decimal {
+  const caps = lines.map((line) =>
+    lineRefundCap(line.lineTotal, line.orderedQuantity, line.returnedQuantity, RETURN_ITEM_CONDITION.SELLABLE),
+  );
+  return returnRefundCap(caps, fault ?? RETURN_FAULT.CUSTOMER, shippingTotal, false);
+}

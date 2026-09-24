@@ -5641,6 +5641,109 @@
           }
         }
       ]
+    },
+    {
+      "id": "API-20260924-RETURN-ELIGIBILITY-QUEUE-EMAILS",
+      "date": "2026-09-24",
+      "scope": "RETURN+NOTIFICATION+API",
+      "summary": "Bổ sung cho FE Return/Refund, không đổi schema. (1) getAccountReturnEligibility/getAdminReturnEligibility trả điều kiện trả hàng dạng dữ liệu thay vì lỗi: eligible + reason (ORDER_NOT_RETURNABLE/OPEN_RETURN_EXISTS/NOTHING_RETURNABLE/WINDOW_EXPIRED), hạn trả, số lượng còn trả được từng dòng (0 khi danh mục returnable=false), tiền hoàn ước tính; Admin có quyền override nhận windowOverrideRequired thay vì bị chặn. Dùng chung query với lệnh tạo phiếu, lệnh tạo vẫn kiểm lại trong transaction đã khoá. (2) ReturnDetailDto thêm estimatedRefundAmount: ước tính trước khi nhận hàng, bằng refundCap sau đó. (3) getAdminReturnQueueSummary: số phiếu chờ duyệt/chờ nhận/chờ hoàn/chờ đóng và lượt hoàn PENDING, PENDING quá 24 giờ, cùng phạm vi chi nhánh. (4) Outbox thêm return.requested (tạo phiếu) và return.received (nhận & kiểm xong; trần 0đ thì không nêu số tiền). Ghi nhận migration 20260924120000_return_refund_foundation đã có trên database dùng chung theo yarn db:status ngày 2026-09-24.",
+      "sources": [
+        "OpenAPI:getAccountReturnEligibility/getAdminReturnEligibility/getAdminReturnQueueSummary/getAccountReturn/getAdminReturn",
+        "source:src/modules/return/services/return.service.ts",
+        "source:src/modules/return/return.policy.ts",
+        "source:src/modules/notification/notification.templates.ts",
+        "test:src/modules/return/return.policy.spec.ts",
+        "test:src/modules/return/services/return-workflow.spec.ts",
+        "test:src/modules/notification/notification.templates.return.spec.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260924-RETURN-EVIDENCE-IMAGES",
+      "date": "2026-09-24",
+      "scope": "DATABASE+RETURN+MEDIA+API",
+      "summary": "Ảnh minh chứng phiếu trả không còn nhận link tự do: return_requests.evidence_urls đổi tên thành evidence_images (0 phiếu có dữ liệu, migration tự chặn nếu có), lưu ảnh server đã xác minh với Cloudinary. Thêm refunds.proof_images lưu ảnh chứng từ chuyển/trả tiền khi Admin xác nhận, để đối chiếu sao kê về sau cùng số tiền, external_ref, processed_at, processed_by. Theo quyết định chủ dự án KHÔNG tạo bảng riêng: không FK tới media_assets, không chặn một ảnh gắn hai phiếu cùng đơn. Ba endpoint chữ ký upload: createAccountReturnEvidenceUpload (chủ đơn, đơn đã giao), createAdminReturnEvidenceUpload (return.create), createAdminReturnRefundProofUpload (payment.refund.approve, phiếu RECEIVED). Server kiểm ảnh nằm đúng thư mục return-evidence/o<orderId> hoặc refund-proof/r<returnId> trước khi gọi provider. Contract đổi evidenceUrls → evidenceImages (đầu vào là publicId/providerVersion/providerSignature, đầu ra url/thumbnailUrl/width/height) trước khi có FE nào dùng; RefundDto thêm proofImages (rỗng với khách). Khách mô tả bằng chữ, tải ảnh hoặc cả hai, đều không bắt buộc.",
+      "sources": [
+        "migration:prisma/migrations/20260924150000_return_evidence_images",
+        "OpenAPI:createAccountReturnEvidenceUpload/createAdminReturnEvidenceUpload/createAdminReturnRefundProofUpload",
+        "OpenAPI:createAccountReturn/createAdminReturn/confirmAdminReturnRefund/getAccountReturn/getAdminReturn",
+        "source:src/modules/return/services/return-evidence.service.ts",
+        "test:src/modules/return/services/return-evidence.service.spec.ts",
+        "test:src/modules/return/services/return-workflow.spec.ts"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": {
+            "Tên bảng": "return_requests"
+          },
+          "columns": [
+            "Các cột chính"
+          ],
+          "set": {
+            "Các cột chính": "status,channel,reason_code,description,evidence_images,fault,delivered_at,window_override_by,window_override_note,refund_cap,decided_by,received_by,closed_at,version"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": {
+            "Tên bảng": "refunds"
+          },
+          "columns": [
+            "Các cột chính"
+          ],
+          "set": {
+            "Các cột chính": "method,amount,status,external_ref,proof_images,requested_by,processed_by,processed_at,failure_reason,version"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_requests",
+            "Tên cột": "evidence_urls"
+          },
+          "columns": "*",
+          "archiveRemovedRowsTo": "Removed Columns"
+        }
+      ],
+      "upsertRows": [
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "return_requests",
+            "Tên cột": "evidence_images"
+          },
+          "values": {
+            "Tên bảng": "return_requests",
+            "STT": 11,
+            "Tên cột": "evidence_images",
+            "Kiểu dữ liệu": "jsonb",
+            "Cho phép NULL": "YES",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "Ảnh đã xác minh với Cloudinary trong thư mục return-evidence/o<order_id>; mảng ≤ 5; không nhận link tự do"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "refunds",
+            "Tên cột": "proof_images"
+          },
+          "values": {
+            "Tên bảng": "refunds",
+            "STT": 10,
+            "Tên cột": "proof_images",
+            "Kiểu dữ liệu": "jsonb",
+            "Cho phép NULL": "YES",
+            "Primary key": "NO",
+            "Unique": "NO",
+            "Default": "",
+            "Ý nghĩa / trạng thái cho phép": "Ảnh chứng từ chuyển/trả tiền đã xác minh, lưu khi xác nhận để đối chiếu; mảng ≤ 5; không trả cho khách"
+          }
+        }
+      ]
     }
   ]
 }

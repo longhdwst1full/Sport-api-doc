@@ -23,7 +23,7 @@ import {
   RETURN_TRANSACTION,
   type ReturnAction,
 } from '../return.constants';
-import { allowedRefundMethods, refundableRemaining } from '../return.policy';
+import { allowedRefundMethods, estimateRequestedRefund, refundableRemaining } from '../return.policy';
 
 export const returnInclude = {
   order: {
@@ -85,6 +85,8 @@ export interface CommandIntent {
 }
 
 const ZERO = new Prisma.Decimal(0);
+
+type EvidenceImage = ReturnDetailDto['evidenceImages'][number];
 
 /**
  * Phần persistence dùng chung của phiếu trả: khoá, nạp, replay, ghi lịch sử/audit/outbox và map DTO.
@@ -345,6 +347,25 @@ export class ReturnStore {
     return { refunded, pending, refundable };
   }
 
+  /**
+   * Đọc cột JSONB ảnh đã xác minh. Dữ liệu do server tự ghi, nhưng vẫn lọc phần tử sai hình dạng để
+   * một dòng hỏng không làm sập cả trang chi tiết.
+   */
+  private images(value: Prisma.JsonValue | null): EvidenceImage[] {
+    if (!Array.isArray(value)) return [];
+    return value.flatMap((item) => {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) return [];
+      const image = item as Record<string, unknown>;
+      if (typeof image.url !== 'string') return [];
+      return [{
+        url: image.url,
+        thumbnailUrl: typeof image.thumbnailUrl === 'string' ? image.thumbnailUrl : image.url,
+        width: typeof image.width === 'number' ? image.width : 0,
+        height: typeof image.height === 'number' ? image.height : 0,
+      }];
+    });
+  }
+
   toSummary(returnRequest: LoadedReturn | LoadedReturnSummary): ReturnSummaryDto {
     const recipient = returnRequest.order.addresses[0];
     const itemCount = '_count' in returnRequest ? returnRequest._count.items : returnRequest.items.length;
@@ -370,9 +391,7 @@ export class ReturnStore {
     return {
       ...this.toSummary(returnRequest),
       description: returnRequest.description,
-      evidenceUrls: Array.isArray(returnRequest.evidenceUrls)
-        ? returnRequest.evidenceUrls.filter((url): url is string => typeof url === 'string')
-        : [],
+      evidenceImages: this.images(returnRequest.evidenceImages),
       deliveredAt: returnRequest.deliveredAt.toISOString(),
       windowOverridden: returnRequest.windowOverrideBy !== null,
       // SECURITY: ghi chú override là trao đổi nội bộ, không trả cho khách.
@@ -382,6 +401,18 @@ export class ReturnStore {
       receivedAt: returnRequest.receivedAt?.toISOString() ?? null,
       closedAt: returnRequest.closedAt?.toISOString() ?? null,
       refundCap: returnRequest.refundCap?.toFixed(2) ?? null,
+      estimatedRefundAmount: (
+        returnRequest.refundCap ??
+        estimateRequestedRefund(
+          returnRequest.items.map((item) => ({
+            lineTotal: item.orderItem.lineTotal,
+            orderedQuantity: item.orderItem.quantity,
+            returnedQuantity: item.quantity,
+          })),
+          returnRequest.fault,
+          returnRequest.order.shippingTotal,
+        )
+      ).toFixed(2),
       refundedAmount: amounts.refunded.toFixed(2),
       pendingRefundAmount: amounts.pending.toFixed(2),
       refundableAmount: amounts.refundable.toFixed(2),
@@ -410,6 +441,8 @@ export class ReturnStore {
         externalRef: refund.externalRef,
         note: forCustomer ? null : refund.note,
         failureReason: refund.failureReason,
+        // SECURITY: chứng từ chuyển khoản có thể lộ số tài khoản/tên người chuyển; chỉ trả cho Admin.
+        proofImages: forCustomer ? [] : this.images(refund.proofImages),
         processedAt: refund.processedAt?.toISOString() ?? null,
         createdAt: refund.createdAt.toISOString(),
         version: refund.version.toString(),

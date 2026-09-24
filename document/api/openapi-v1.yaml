@@ -8379,6 +8379,85 @@ paths:
       summary: Danh sách phiếu trả hàng của khách đang đăng nhập
       tags:
         - Storefront Account Returns
+  /api/v1/account/returns/uploads/signature:
+    post:
+      operationId: createAccountReturnEvidenceUpload
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAccountReturnEvidenceUploadDto"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignedMediaUploadDto"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Chữ ký upload Cloudinary ngắn hạn cho ảnh minh chứng trả hàng của một đơn đã giao
+      tags:
+        - Storefront Account Returns
+  /api/v1/account/returns/eligibility/{orderNo}:
+    get:
+      operationId: getAccountReturnEligibility
+      parameters:
+        - name: orderNo
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReturnEligibilityDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Đơn có trả được không, hạn trả, số lượng còn trả được và tiền hoàn ước tính từng dòng
+      tags:
+        - Storefront Account Returns
   /api/v1/account/returns/{returnNo}:
     get:
       operationId: getAccountReturn
@@ -8585,6 +8664,77 @@ paths:
         - Admin Returns
       x-required-permissions:
         - return.create
+  /api/v1/admin/returns/summary:
+    get:
+      operationId: getAdminReturnQueueSummary
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminReturnQueueSummaryDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Số phiếu chờ duyệt, chờ nhận, chờ hoàn tiền và lượt hoàn quá hạn
+      tags:
+        - Admin Returns
+      x-required-permissions:
+        - return.view
+  /api/v1/admin/returns/eligibility/{orderId}:
+    get:
+      operationId: getAdminReturnEligibility
+      parameters:
+        - name: orderId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReturnEligibilityDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Điều kiện trả hàng của một đơn khi nhân viên tạo phiếu hộ; báo cần override khi quá hạn
+      tags:
+        - Admin Returns
+      x-required-permissions:
+        - return.create
   /api/v1/admin/returns/{id}:
     get:
       operationId: getAdminReturn
@@ -8626,6 +8776,107 @@ paths:
         - Admin Returns
       x-required-permissions:
         - return.view
+  /api/v1/admin/returns/uploads/signature:
+    post:
+      operationId: createAdminReturnEvidenceUpload
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAdminReturnEvidenceUploadDto"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignedMediaUploadDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Chữ ký upload ảnh minh chứng khi nhân viên tạo phiếu hộ khách
+      tags:
+        - Admin Returns
+      x-required-permissions:
+        - return.create
+  /api/v1/admin/returns/{id}/refunds/uploads/signature:
+    post:
+      operationId: createAdminReturnRefundProofUpload
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMediaUploadDto"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignedMediaUploadDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Chữ ký upload ảnh chứng từ hoàn tiền (biên lai, màn hình chuyển khoản) để lưu khi xác nhận
+      tags:
+        - Admin Returns
+      x-required-permissions:
+        - payment.refund.approve
   /api/v1/admin/returns/{id}/approve:
     post:
       operationId: approveAdminReturn
@@ -15733,6 +15984,21 @@ components:
         - expectedVersion
         - condition
         - reason
+    ReturnEvidenceInputDto:
+      type: object
+      properties:
+        publicId:
+          type: string
+          example: sport-sys/sport/return-evidence/o9/8ece7be0-b7da-4ff1-a37e-fdd473b08d5e
+        providerVersion:
+          type: number
+          example: 1787999000
+        providerSignature:
+          type: string
+      required:
+        - publicId
+        - providerVersion
+        - providerSignature
     ReturnLineInputDto:
       type: object
       properties:
@@ -15762,12 +16028,12 @@ components:
         description:
           type: string
           maxLength: 2000
-        evidenceUrls:
+        evidenceImages:
           maxItems: 5
-          description: Ảnh bằng chứng (HTTPS)
+          description: Ảnh minh chứng đã tải lên bằng chữ ký upload của đơn này. Ảnh và mô tả đều không bắt buộc
           type: array
           items:
-            type: string
+            $ref: "#/components/schemas/ReturnEvidenceInputDto"
         items:
           minItems: 1
           maxItems: 50
@@ -15782,6 +16048,24 @@ components:
         - reasonCode
         - items
         - orderNo
+    ReturnEvidenceImageDto:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+        thumbnailUrl:
+          type: string
+          format: uri
+        width:
+          type: number
+        height:
+          type: number
+      required:
+        - url
+        - thumbnailUrl
+        - width
+        - height
     ReturnItemDto:
       type: object
       properties:
@@ -15873,6 +16157,11 @@ components:
         failureReason:
           type: string
           nullable: true
+        proofImages:
+          description: Chứng từ lưu khi xác nhận; không trả cho khách
+          type: array
+          items:
+            $ref: "#/components/schemas/ReturnEvidenceImageDto"
         processedAt:
           type: string
           format: date-time
@@ -15888,6 +16177,7 @@ components:
         - method
         - amount
         - status
+        - proofImages
         - createdAt
         - version
     ReturnHistoryDto:
@@ -15989,10 +16279,10 @@ components:
         description:
           type: string
           nullable: true
-        evidenceUrls:
+        evidenceImages:
           type: array
           items:
-            type: string
+            $ref: "#/components/schemas/ReturnEvidenceImageDto"
         deliveredAt:
           type: string
           format: date-time
@@ -16021,6 +16311,9 @@ components:
           type: string
           nullable: true
           description: Trần tiền hoàn, có sau khi nhận hàng
+        estimatedRefundAmount:
+          type: string
+          description: Số tiền hoàn DỰ KIẾN để hiển thị; bằng refundCap sau khi nhận hàng, trước đó là ước tính có thể thay đổi
         refundedAmount:
           type: string
         pendingRefundAmount:
@@ -16059,9 +16352,10 @@ components:
         - itemCount
         - createdAt
         - version
-        - evidenceUrls
+        - evidenceImages
         - deliveredAt
         - windowOverridden
+        - estimatedRefundAmount
         - refundedAmount
         - pendingRefundAmount
         - refundableAmount
@@ -16069,6 +16363,34 @@ components:
         - items
         - refunds
         - history
+    CreateAccountReturnEvidenceUploadDto:
+      type: object
+      properties:
+        fileName:
+          type: string
+          example: product-front.webp
+        contentType:
+          type: string
+          enum:
+            - image/jpeg
+            - image/png
+            - image/webp
+            - image/avif
+          example: image/webp
+        sizeBytes:
+          type: number
+          minimum: 1
+          maximum: 10485760
+          example: 245760
+        orderNo:
+          type: string
+          maxLength: 40
+          example: ORD-20260924-0001
+      required:
+        - fileName
+        - contentType
+        - sizeBytes
+        - orderNo
     ReturnSummaryDto:
       type: object
       properties:
@@ -16154,6 +16476,103 @@ components:
         - page
         - limit
         - total
+    ReturnEligibilityLineDto:
+      type: object
+      properties:
+        orderItemId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        sku:
+          type: string
+        productName:
+          type: string
+        variantName:
+          type: string
+        imageUrl:
+          type: string
+          nullable: true
+        isBundle:
+          type: boolean
+          description: "Combo: chỉ được trả đúng returnableQuantity, không trả lẻ"
+        purchasedQuantity:
+          type: number
+        returnedQuantity:
+          type: number
+          description: Đã nằm trên phiếu khác chưa bị từ chối/huỷ
+        returnableQuantity:
+          type: number
+          description: 0 khi đã trả hết hoặc danh mục không áp dụng đổi trả
+        blockedByCategory:
+          type: boolean
+        unitRefundEstimate:
+          type: string
+          description: Tiền hoàn ước tính cho 1 sản phẩm (làm tròn xuống)
+        maxRefundEstimate:
+          type: string
+          description: Tiền hoàn ước tính khi trả toàn bộ returnableQuantity
+      required:
+        - orderItemId
+        - sku
+        - productName
+        - variantName
+        - isBundle
+        - purchasedQuantity
+        - returnedQuantity
+        - returnableQuantity
+        - blockedByCategory
+        - unitRefundEstimate
+        - maxRefundEstimate
+    ReturnEligibilityDto:
+      type: object
+      properties:
+        orderId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        orderNo:
+          type: string
+        eligible:
+          type: boolean
+          description: false thì FE tắt nút tạo phiếu và hiển thị reason
+        reason:
+          type: string
+          enum:
+            - ORDER_NOT_RETURNABLE
+            - OPEN_RETURN_EXISTS
+            - WINDOW_EXPIRED
+            - NOTHING_RETURNABLE
+          nullable: true
+        deliveredAt:
+          type: string
+          format: date-time
+          nullable: true
+        returnDeadline:
+          type: string
+          format: date-time
+          nullable: true
+        windowDays:
+          type: number
+        withinWindow:
+          type: boolean
+        windowOverrideRequired:
+          type: boolean
+          description: "Chỉ Admin: quá hạn nhưng tài khoản được override, phải nhập windowOverrideNote"
+        openReturnNo:
+          type: string
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReturnEligibilityLineDto"
+      required:
+        - orderId
+        - orderNo
+        - eligible
+        - windowDays
+        - withinWindow
+        - windowOverrideRequired
+        - items
     ReturnReasonCommandDto:
       type: object
       properties:
@@ -16168,6 +16587,62 @@ components:
       required:
         - expectedVersion
         - reason
+    AdminReturnQueueSummaryDto:
+      type: object
+      properties:
+        awaitingDecision:
+          type: number
+          description: "REQUESTED: chờ duyệt"
+        awaitingReceipt:
+          type: number
+          description: "APPROVED: chờ nhận hàng"
+        awaitingRefund:
+          type: number
+          description: "RECEIVED: đã nhận hàng, chờ hoàn tiền hoặc đóng phiếu"
+        awaitingClose:
+          type: number
+          description: "REFUNDED: chờ đóng phiếu"
+        pendingRefunds:
+          type: number
+          description: Lượt hoàn PENDING chờ xác nhận
+        overdueRefunds:
+          type: number
+          description: Lượt hoàn PENDING quá 24 giờ
+      required:
+        - awaitingDecision
+        - awaitingReceipt
+        - awaitingRefund
+        - awaitingClose
+        - pendingRefunds
+        - overdueRefunds
+    CreateAdminReturnEvidenceUploadDto:
+      type: object
+      properties:
+        fileName:
+          type: string
+          example: product-front.webp
+        contentType:
+          type: string
+          enum:
+            - image/jpeg
+            - image/png
+            - image/webp
+            - image/avif
+          example: image/webp
+        sizeBytes:
+          type: number
+          minimum: 1
+          maximum: 10485760
+          example: 245760
+        orderId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+      required:
+        - fileName
+        - contentType
+        - sizeBytes
+        - orderId
     CreateAdminReturnDto:
       type: object
       properties:
@@ -16183,12 +16658,12 @@ components:
         description:
           type: string
           maxLength: 2000
-        evidenceUrls:
+        evidenceImages:
           maxItems: 5
-          description: Ảnh bằng chứng (HTTPS)
+          description: Ảnh minh chứng đã tải lên bằng chữ ký upload của đơn này. Ảnh và mô tả đều không bắt buộc
           type: array
           items:
-            type: string
+            $ref: "#/components/schemas/ReturnEvidenceInputDto"
         items:
           minItems: 1
           maxItems: 50
@@ -16315,6 +16790,12 @@ components:
         cashHandedOver:
           type: boolean
           description: "Bắt buộc true với CASH: người xác nhận đã đưa tiền cho khách"
+        proofImages:
+          maxItems: 5
+          description: Ảnh chứng từ (biên lai, màn hình chuyển khoản) tải lên bằng chữ ký upload chứng từ của phiếu; lưu để đối chiếu
+          type: array
+          items:
+            $ref: "#/components/schemas/ReturnEvidenceInputDto"
       required:
         - expectedVersion
     ReturnCommandDto:

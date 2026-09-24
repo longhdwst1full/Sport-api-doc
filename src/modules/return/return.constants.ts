@@ -111,6 +111,7 @@ export const RETURN_ERROR_CODE = {
   REFUND_METHOD_NOT_ALLOWED: 'REFUND_METHOD_NOT_ALLOWED',
   REFUND_REFERENCE_REQUIRED: 'REFUND_REFERENCE_REQUIRED',
   REFUND_REFERENCE_USED: 'REFUND_REFERENCE_USED',
+  EVIDENCE_INVALID: 'RETURN_EVIDENCE_INVALID',
 } as const;
 
 export const RETURN_PERMISSION = {
@@ -126,8 +127,19 @@ export const RETURN_PERMISSION = {
 export const RETURN_AUDIT_ENTITY = 'RETURN_REQUEST';
 
 export const RETURN_LIMITS = {
-  MAX_EVIDENCE_URLS: 5,
+  MAX_EVIDENCE_IMAGES: 5,
   MAX_ITEMS: 50,
+} as const;
+
+/**
+ * Ảnh minh chứng: mỗi đơn một thư mục con trên Cloudinary. Chữ ký upload chỉ cấp cho thư mục của
+ * đơn, và lúc tạo phiếu server chỉ nhận ảnh nằm trong thư mục đó — ảnh của đơn khác hay ảnh sản
+ * phẩm không gắn được vào phiếu.
+ */
+export const RETURN_EVIDENCE = {
+  FOLDER: 'return-evidence',
+  REFUND_PROOF_FOLDER: 'refund-proof',
+  UPLOAD_TTL_SECONDS: 15 * 60,
 } as const;
 
 export const RETURN_TRANSACTION = {

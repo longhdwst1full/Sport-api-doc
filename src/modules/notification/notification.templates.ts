@@ -60,6 +60,22 @@ export interface PasswordChangedPayload {
   revokedSessions: number;
 }
 
+export interface ReturnRequestedPayload {
+  recipientEmail: string;
+  recipientName: string;
+  returnNo: string;
+  orderNo: string;
+  items: { name: string; quantity: number }[];
+}
+
+export interface ReturnReceivedPayload {
+  recipientEmail: string;
+  recipientName: string;
+  returnNo: string;
+  orderNo: string;
+  refundCap: string;
+}
+
 export interface ReturnDecidedPayload {
   recipientEmail: string;
   recipientName: string;
@@ -184,6 +200,55 @@ export function renderEmail(eventType: OutboxEventType, payload: unknown): Rende
            <p>Nếu không phải bạn thực hiện, hãy liên hệ ngay với chúng tôi.</p>`,
         ),
         category: 'password-changed',
+      };
+    }
+    case OUTBOX_EVENT_TYPE.RETURN_REQUESTED: {
+      const data = payload as ReturnRequestedPayload;
+      const lines = (data.items ?? []).map((item) => `- ${item.name} × ${item.quantity}`);
+      const hold = 'Vui lòng CHƯA gửi hàng cho tới khi yêu cầu được duyệt.';
+      return {
+        subject: `Đã nhận yêu cầu trả hàng ${data.returnNo}`,
+        text: [
+          `Chào ${data.recipientName},`,
+          '',
+          `Chúng tôi đã nhận yêu cầu trả hàng ${data.returnNo} cho đơn ${data.orderNo}:`,
+          ...lines,
+          '',
+          'Cửa hàng sẽ xem xét và phản hồi sớm nhất.',
+          hold,
+        ].join('\n'),
+        html: layout(
+          `Đã nhận yêu cầu trả hàng ${data.returnNo}`,
+          `<p>Chào ${data.recipientName},</p>
+           <p>Chúng tôi đã nhận yêu cầu trả hàng <strong>${data.returnNo}</strong> cho đơn <strong>${data.orderNo}</strong>:</p>
+           <ul>${(data.items ?? []).map((item) => `<li>${item.name} × ${item.quantity}</li>`).join('')}</ul>
+           <p>Cửa hàng sẽ xem xét và phản hồi sớm nhất. ${hold}</p>`,
+        ),
+        category: 'return-requested',
+      };
+    }
+    case OUTBOX_EVENT_TYPE.RETURN_RECEIVED: {
+      const data = payload as ReturnReceivedPayload;
+      const amount = Number(data.refundCap);
+      // Trần 0đ (hàng không nhận được) không phải thông tin nên báo bằng một con số: cửa hàng liên hệ.
+      const next = amount > 0
+        ? `Số tiền hoàn: ${money.format(amount)}. Chúng tôi sẽ báo khi hoàn tiền xong.`
+        : 'Cửa hàng sẽ liên hệ với bạn về kết quả kiểm tra.';
+      return {
+        subject: `Cửa hàng đã nhận hàng trả ${data.returnNo}`,
+        text: [
+          `Chào ${data.recipientName},`,
+          '',
+          `Cửa hàng đã nhận và kiểm tra sản phẩm của yêu cầu ${data.returnNo} (đơn ${data.orderNo}).`,
+          next,
+        ].join('\n'),
+        html: layout(
+          `Cửa hàng đã nhận hàng trả ${data.returnNo}`,
+          `<p>Chào ${data.recipientName},</p>
+           <p>Cửa hàng đã nhận và kiểm tra sản phẩm của yêu cầu <strong>${data.returnNo}</strong> (đơn ${data.orderNo}).</p>
+           <p>${next}</p>`,
+        ),
+        category: 'return-received',
       };
     }
     case OUTBOX_EVENT_TYPE.RETURN_DECIDED: {

@@ -1,10 +1,10 @@
 # Trạng thái bàn giao — nguồn tiến độ duy nhất
 
-> **Document version:** 1.8.0
+> **Document version:** 1.10.0
 >
 > **Last updated:** 2026-09-24
 >
-> **Change summary:** Backend Return/Refund V1; cron notification-dispatch đã đăng ký trên Supabase.
+> **Change summary:** Return/Refund: upload ảnh minh chứng của khách và chứng từ hoàn tiền để đối chiếu.
 
 ## Tài liệu này dùng để làm gì
 
@@ -51,7 +51,7 @@ không được gộp làm một.
 | E2E trình duyệt | ⚠️ Admin 17/17, Storefront 41/41; chưa phủ checkout/Orders/Inventory mutation | ⚠️ Admin đã cấu hình CI, chưa xác minh run trên GitHub; Client chưa gắn CI | `document/37-playwright-e2e-report.md` |
 | PWA Storefront | ⚠️ Icon PNG và manifest đã có, chưa nghiệm thu cài đặt/offline | ❌ **Không kiểm được**: `baoansport.vn` đang là site PHP cũ, không phải Next.js app | `/manifest.webmanifest`, `/sw.js`, `/offline` đều trả HTTP 410 ngày 2026-09-24; `x-powered-by: PHP/7.4.33` |
 | Storefront trên domain thật | ❌ Chưa deploy | ❌ `/login` trả 500, `/gio-hang` và asset tĩnh trả 410 | Domain trỏ site cũ; `VNPAY_RETURN_URL` vì thế cũng trỏ vào trang 410 |
-| Đổi trả và hoàn tiền | ⚠️ Backend xong (15 endpoint Account/Admin Returns, 4 bảng, migration chưa áp lên DB); **Admin/Storefront chưa có màn hình**; chưa có integration test PostgreSQL | ❌ Chưa deploy, chưa migrate | `modules/return/`, `20260924120000_return_refund_foundation`, 93 unit test trong `modules/return` |
+| Đổi trả và hoàn tiền | ⚠️ Backend xong (21 endpoint Account/Admin Returns gồm eligibility, số đếm hàng đợi, 3 chữ ký upload ảnh; 4 bảng; 4 email); **Admin/Storefront chưa có màn hình**; chưa có integration test PostgreSQL | ⚠️ Migration đã có trên DB dùng chung (`db:status` 2026-09-24); bản eligibility/email chưa deploy | `modules/return/`, `20260924120000_return_refund_foundation`, 93 unit test trong `modules/return` |
 | Thông báo và email | ✅ Outbox + worker + dead-letter + 4 mẫu email (đặt hàng, cập nhật giao vận, đặt lại mật khẩu, đổi mật khẩu thành công) | ⚠️ Cron `dctd-notification-dispatch` đã đăng ký 2026-09-24 (mỗi phút, 2 lượt đầu HTTP 200, outbox rỗng); chưa xác minh gửi thật qua Mailtrap | `modules/notification/outbox-dispatcher.service.ts`, `outbox.writer.ts`, `notification.templates.ts` |
 | Hồ sơ khách và đổi mật khẩu | ✅ Cập nhật hồ sơ, quên/đặt lại/đổi mật khẩu, `password_reset_tokens` chỉ lưu hash | ⚠️ Chờ deploy; cần `STOREFRONT_BASE_URL` để link trong email trỏ đúng | `modules/auth/password-reset.service.ts`, `modules/customer/customer-profile.service.ts` |
 | Bảo hành | ❌ | ❌ | Chưa có model `Warranty` |
@@ -145,6 +145,8 @@ PWA HTTPS acceptance. Ước lượng R2 cũ chỉ bao phủ happy path; estimat
 
 | Version | Date | Change summary |
 | --- | --- | --- |
+| 1.10.0 | 2026-09-24 | Upload ảnh minh chứng và chứng từ hoàn tiền (API-20260924-RETURN-EVIDENCE-IMAGES); migration mới chưa áp. |
+| 1.9.0 | 2026-09-24 | Return/Refund: migration đã áp, eligibility, số đếm hàng đợi, 2 email mới (API-20260924-RETURN-ELIGIBILITY-QUEUE-EMAILS). |
 | 1.8.0 | 2026-09-24 | Backend Return/Refund V1 (API-20260924-RETURN-REFUND-V1); đăng ký cron notification-dispatch. |
 | 1.7.0 | 2026-09-24 | Notification/outbox, hồ sơ và mật khẩu, export báo cáo; ghi nhận Storefront chưa deploy lên domain thật. |
 | 1.6.0 | 2026-09-21 | Hoàn thiện remember-me Backend và trace trạng thái triển khai. |

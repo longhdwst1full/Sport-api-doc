@@ -15,6 +15,8 @@ import {
   RETURN_STATUS,
 } from '../return.constants';
 import { assertRefundMethod, assertTransition, refundableRemaining } from '../return.policy';
+import type { CreateMediaUploadDto, SignedMediaUploadDto } from '../../media/media.dto';
+import { ReturnEvidenceService } from './return-evidence.service';
 import { ReturnStore, type LoadedReturn, type ReturnActor } from './return-store';
 
 const conflict = (code: string, message: string) => new ConflictException({ code, message });
@@ -29,7 +31,19 @@ const ZERO = new Prisma.Decimal(0);
  */
 @Injectable()
 export class RefundService {
-  constructor(private readonly store: ReturnStore) {}
+  constructor(
+    private readonly store: ReturnStore,
+    private readonly evidence: ReturnEvidenceService,
+  ) {}
+
+  /** Chữ ký upload chứng từ hoàn tiền; chỉ cấp khi phiếu đang ở bước hoàn tiền. */
+  async createProofUpload(id: string, input: CreateMediaUploadDto, principal: AuthPrincipal): Promise<SignedMediaUploadDto> {
+    this.store.ensurePersistence();
+    const actor: ReturnActor = { type: 'USER', principal };
+    const current = await this.store.load(this.store.client, { id: toDatabaseId(id), AND: [this.store.scopeWhere(actor)] });
+    assertTransition(current.status, RETURN_ACTION.REFUND_CONFIRM);
+    return this.evidence.createUpload({ kind: 'REFUND_PROOF', returnId: current.id }, input);
+  }
 
   async request(
     id: string,
@@ -127,6 +141,13 @@ export class RefundService {
     const actor: ReturnActor = { type: 'USER', principal };
     const returnId = toDatabaseId(id);
     const intent = this.store.intent(rawKey, RETURN_ACTION.REFUND_CONFIRM, `${id}:${refundId}`, input);
+    // PROVIDER: xác minh chứng từ ngoài transaction. Ảnh phải nằm trong thư mục chứng từ của đúng phiếu này.
+    const proofImages = input.proofImages?.length
+      ? await this.evidence.verify({ kind: 'REFUND_PROOF', returnId }, input.proofImages, {
+          type: 'USER',
+          userId: principal.userId,
+        })
+      : undefined;
     return this.store.run(async (transaction) => {
       await this.store.lock(transaction, returnId);
       const current = await this.store.load(transaction, { id: returnId, AND: [this.store.scopeWhere(actor)] });
@@ -159,6 +180,8 @@ export class RefundService {
         data: {
           status: REFUND_STATUS.SUCCEEDED,
           externalRef,
+          // CONTRACT: chứng từ lưu cùng dòng refund để đối chiếu sao kê: số tiền, mã, thời điểm, người, ảnh.
+          proofImages: proofImages as unknown as Prisma.InputJsonValue | undefined,
           processedBy: toDatabaseId(principal.userId),
           processedAt: now,
           version: { increment: 1 },
@@ -196,7 +219,12 @@ export class RefundService {
         actor,
         requestId,
         before: { refundId: toEntityId(refund.id), status: refund.status },
-        after: { status: REFUND_STATUS.SUCCEEDED, amount: refund.amount.toFixed(2), externalRef },
+        after: {
+          status: REFUND_STATUS.SUCCEEDED,
+          amount: refund.amount.toFixed(2),
+          externalRef,
+          proofImageCount: proofImages?.length ?? 0,
+        },
       });
       await this.store.notify(transaction, current, OUTBOX_EVENT_TYPE.REFUND_SUCCEEDED, {
         refundNo: refund.refundNo,

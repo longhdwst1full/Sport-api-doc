@@ -1,10 +1,10 @@
 # Thiết kế dữ liệu V1
 
-> **Document version:** 2.19.0
+> **Document version:** 2.20.0
 >
 > **Last updated:** 2026-09-24
 >
-> **Change summary:** Vật lý hoá Return/Refund V1 (4 bảng), `categories.returnable` và cho phép `payments.status = REFUNDED`.
+> **Change summary:** Ảnh minh chứng phiếu trả và chứng từ hoàn tiền lưu dạng ảnh đã xác minh trong cột JSONB, không nhận link tự do.
 
 ## 1. Chuẩn chung
 
@@ -76,6 +76,7 @@ Permission nghiệp vụ mới phải có data migration cùng release, không c
 - `return_requests`: partial unique `order_id` khi status không thuộc `REJECTED/CANCELLED/CLOSED` (một phiếu mở mỗi đơn); từ `APPROVED` bắt buộc có `fault`; từ `RECEIVED` bắt buộc `received_at` và `refund_cap`; override hạn trả phải có cả người và lý do.
 - `return_items`: `quantity > 0`; `condition`/`disposition` cùng có hoặc cùng trống; `restock_qty = quantity` chỉ khi `RESTOCK` + `SELLABLE`, còn lại bằng 0 — database cũng chặn nhập kho hàng hỏng.
 - `refunds`: `amount > 0`; tối đa một lượt `PENDING` mỗi phiếu (partial unique); chuyển khoản `SUCCEEDED` bắt buộc `external_ref`; `(method, external_ref)` unique khi có. Trần tiền (theo phiếu và theo `payments.received_amount`) kiểm trong transaction Serializable đã khoá, không phải CHECK.
+- `return_requests.evidence_images` và `refunds.proof_images`: JSONB mảng ≤ 5 phần tử (CHECK). Chỉ chứa ảnh server đã xác minh với Cloudinary và nằm trong thư mục cấp cho đúng đơn (`return-evidence/o<order_id>`) hoặc đúng phiếu (`refund-proof/r<return_id>`); lưu cột thay vì bảng riêng theo quyết định chủ dự án, nên không có FK tới `media_assets` và không có ràng buộc một ảnh chỉ thuộc một phiếu.
 - **Return/Refund khác DBML review ban đầu (D60).** Không tạo `return_policies` và không dùng `approval_requests`/`refunds.approval_request_id`; cột actor (`created_by`, `decided_by`, `received_by`, `requested_by`, `processed_by`) không có FK tới `users` giống `order_status_history.actor_id`, vì phiếu do khách tạo mang user id của khách và lịch sử phải giữ nguyên khi tài khoản bị khoá.
 - **V1 nới lỏng có chủ ý.** `posts.cover_asset_id`, `product_reviews.product_id/customer_id/order_item_id/moderated_by` giữ đúng tên trong DBML nhưng NULLABLE, vì luồng tạo review theo đơn đã mua và luồng upload ảnh bìa qua media asset chưa tồn tại. Các cột V1 thay thế tạm là `posts.cover_url`, `posts.related_product_slugs`, `product_reviews.product_slug`, `product_reviews.customer_display_name`, `product_review_comments.author_name`. Khi hai luồng đích ra đời thì backfill rồi siết NOT NULL, không đổi tên cột và không đổi contract.
 - `fulfillments(order_id)` unique ở V1; `fulfillment_no` được suy ra từ `order_no` bất biến, không có sequence riêng.
@@ -229,6 +230,7 @@ Hệ quả: đơn bán tại quầy **chưa bán được SKU nào** cho tới k
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 2.20.0 | 2026-09-24 | `evidence_urls` đổi thành `evidence_images` (ảnh đã xác minh), thêm `refunds.proof_images` để đối chiếu hoàn tiền. | `20260924150000_return_evidence_images` / API-20260924-RETURN-EVIDENCE-IMAGES |
 | 2.19.0 | 2026-09-24 | Return/Refund V1: `return_requests`, `return_items`, `return_status_history`, `refunds`; `categories.returnable`; `payments_status_check` thêm REFUNDED; seed 4 quyền mới. | `20260924120000_return_refund_foundation` / API-20260924-RETURN-REFUND-V1 |
 | 2.18.0 | 2026-09-15 | Xoá 596 ảnh thu nhỏ 150x150 và các liên kết `product_media` của chúng. Kiểm trước: 0 ảnh là ảnh chính, 0 dùng làm bìa bài/ảnh danh mục, 0 sản phẩm đang bán mất ảnh. Lọc theo `secure_url` vì `width`/`height` của ảnh crawl đều NULL. | `20260915210000_remove_crawled_thumbnails` |
 | 2.17.0 | 2026-09-15 | Nạp 10 bài viết thật (4.400-26.900 ký tự, ảnh và ngày đăng gốc) vào `posts`; lưu trữ 8 bài dựng sẵn có thân bài 82-374 ký tự và ảnh Unsplash. Thân bài mang tiền tố nhẹ `## `/`### `/`- ` để giữ tiêu đề mục. | `20260915190000_seed_baoansport_articles` / `20260915200000_article_body_structure` |

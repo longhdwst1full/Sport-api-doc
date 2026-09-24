@@ -1528,7 +1528,8 @@ model ReturnRequest {
   channel            String    @db.VarChar(16)
   reasonCode         String    @map("reason_code") @db.VarChar(32)
   description        String?   @db.VarChar(2000)
-  evidenceUrls       Json?     @map("evidence_urls") @db.JsonB
+  /// Ảnh minh chứng đã xác minh với Cloudinary: [{ publicId, url, thumbnailUrl, width, height, sizeBytes, uploaderType, uploadedBy }].
+  evidenceImages     Json?     @map("evidence_images") @db.JsonB
   fault              String?   @db.VarChar(16)
   deliveredAt        DateTime  @map("delivered_at") @db.Timestamptz(6)
   windowOverrideBy   BigInt?   @map("window_override_by")
@@ -1625,6 +1626,8 @@ model Refund {
   currencyCode    String    @default("VND") @map("currency_code") @db.Char(3)
   status          String    @default("PENDING") @db.VarChar(16)
   externalRef     String?   @map("external_ref") @db.VarChar(255)
+  /// Ảnh chứng từ chuyển/trả tiền đã xác minh, lưu khi xác nhận để đối chiếu về sau; cùng hình dạng với evidence_images.
+  proofImages     Json?     @map("proof_images") @db.JsonB
   note            String?   @db.VarChar(500)
   idempotencyKey  String    @unique @map("idempotency_key") @db.VarChar(150)
   requestHash     String    @map("request_hash") @db.Char(64)

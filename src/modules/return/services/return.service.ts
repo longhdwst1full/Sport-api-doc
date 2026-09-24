@@ -27,6 +27,10 @@ import type {
   ReturnDetailDto,
   ReturnListDto,
   ReturnReasonCommandDto,
+  AdminReturnQueueSummaryDto,
+  CreateAccountReturnEvidenceUploadDto,
+  CreateAdminReturnEvidenceUploadDto,
+  ReturnEligibilityDto,
 } from '../dto/return.dto';
 import {
   REFUND_STATUS,
@@ -40,6 +44,7 @@ import {
   RETURN_TERMINAL_STATUSES,
 } from '../return.constants';
 import {
+  evaluateEligibility,
   assertRequestedLines,
   assertTransition,
   isWithinReturnWindow,
@@ -47,6 +52,8 @@ import {
   resolveInspection,
   returnRefundCap,
 } from '../return.policy';
+import type { SignedMediaUploadDto } from '../../media/media.dto';
+import { ReturnEvidenceService } from './return-evidence.service';
 import { returnSummaryInclude, ReturnStore, type ReturnActor } from './return-store';
 
 const returnableOrderInclude = {
@@ -72,7 +79,43 @@ export class ReturnService {
   constructor(
     private readonly store: ReturnStore,
     private readonly parameters: SystemParameterService,
+    private readonly evidence: ReturnEvidenceService,
   ) {}
+
+  /**
+   * Chữ ký upload ảnh minh chứng cho đơn của khách. Chỉ cấp cho đơn đã giao: không để một tài khoản
+   * bất kỳ dùng API này làm kho ảnh miễn phí trên Cloudinary của cửa hàng.
+   */
+  async createAccountEvidenceUpload(
+    userId: string,
+    input: CreateAccountReturnEvidenceUploadDto,
+  ): Promise<SignedMediaUploadDto> {
+    this.store.ensurePersistence();
+    const order = await this.store.client.order.findFirst({
+      where: {
+        orderNo: input.orderNo.trim().toUpperCase(),
+        checkoutSession: { cart: { userId: toDatabaseId(userId) } },
+      },
+      include: returnableOrderInclude,
+    });
+    if (!order) throw new NotFoundException('Không tìm thấy đơn hàng.');
+    this.assertOrderReturnable(order);
+    return this.evidence.createUpload({ kind: 'ORDER', orderId: order.id }, input);
+  }
+
+  async createAdminEvidenceUpload(
+    input: CreateAdminReturnEvidenceUploadDto,
+    principal: AuthPrincipal,
+  ): Promise<SignedMediaUploadDto> {
+    this.store.ensurePersistence();
+    const order = await this.store.client.order.findFirst({
+      where: { id: toDatabaseId(input.orderId), AND: [branchScopeWhere(principal, { strict: true })] },
+      include: returnableOrderInclude,
+    });
+    if (!order) throw new NotFoundException('Không tìm thấy đơn hàng trong phạm vi được phân quyền');
+    this.assertOrderReturnable(order);
+    return this.evidence.createUpload({ kind: 'ORDER', orderId: order.id }, input);
+  }
 
   async listAccount(userId: string, query: AccountReturnQueryDto): Promise<ReturnListDto> {
     return this.list(this.store.scopeWhere({ type: 'CUSTOMER', userId }), query.page, query.limit);
@@ -111,6 +154,60 @@ export class ReturnService {
       AND: [this.store.scopeWhere({ type: 'USER', principal })],
     });
     return this.store.toDetail(found, false);
+  }
+
+  async eligibilityAccount(userId: string, orderNo: string): Promise<ReturnEligibilityDto> {
+    this.store.ensurePersistence();
+    // SECURITY: cùng quy tắc chủ đơn với xem/huỷ đơn; đơn của người khác trả 404 như không tồn tại.
+    const order = await this.store.client.order.findFirst({
+      where: {
+        orderNo: orderNo.trim().toUpperCase(),
+        checkoutSession: { cart: { userId: toDatabaseId(userId) } },
+      },
+      include: returnableOrderInclude,
+    });
+    if (!order) throw new NotFoundException('Không tìm thấy đơn hàng.');
+    return this.eligibility(order, false);
+  }
+
+  async eligibilityAdmin(orderId: string, principal: AuthPrincipal): Promise<ReturnEligibilityDto> {
+    this.store.ensurePersistence();
+    const order = await this.store.client.order.findFirst({
+      where: { id: toDatabaseId(orderId), AND: [branchScopeWhere(principal, { strict: true })] },
+      include: returnableOrderInclude,
+    });
+    if (!order) throw new NotFoundException('Không tìm thấy đơn hàng trong phạm vi được phân quyền');
+    return this.eligibility(order, principal.permissions.includes(RETURN_PERMISSION.WINDOW_OVERRIDE));
+  }
+
+  /** Số việc đang chờ trong hàng đợi Admin, cùng phạm vi chi nhánh với danh sách. */
+  async queueSummary(principal: AuthPrincipal): Promise<AdminReturnQueueSummaryDto> {
+    this.store.ensurePersistence();
+    const scope = branchScopeWhere(principal, { strict: true });
+    const overdueBefore = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const [byStatus, pendingRefunds, overdueRefunds] = await Promise.all([
+      this.store.client.returnRequest.groupBy({
+        by: ['status'],
+        where: {
+          ...scope,
+          status: { in: [RETURN_STATUS.REQUESTED, RETURN_STATUS.APPROVED, RETURN_STATUS.RECEIVED, RETURN_STATUS.REFUNDED] },
+        },
+        _count: { _all: true },
+      }),
+      this.store.client.refund.count({ where: { status: REFUND_STATUS.PENDING, returnRequest: scope } }),
+      this.store.client.refund.count({
+        where: { status: REFUND_STATUS.PENDING, createdAt: { lt: overdueBefore }, returnRequest: scope },
+      }),
+    ]);
+    const count = (status: string) => byStatus.find((row) => row.status === status)?._count._all ?? 0;
+    return {
+      awaitingDecision: count(RETURN_STATUS.REQUESTED),
+      awaitingReceipt: count(RETURN_STATUS.APPROVED),
+      awaitingRefund: count(RETURN_STATUS.RECEIVED),
+      awaitingClose: count(RETURN_STATUS.REFUNDED),
+      pendingRefunds,
+      overdueRefunds,
+    };
   }
 
   async createAccount(
@@ -296,6 +393,9 @@ export class ReturnService {
         },
         reason: input.note,
       });
+      await this.store.notify(transaction, current, OUTBOX_EVENT_TYPE.RETURN_RECEIVED, {
+        refundCap: refundCap.toFixed(2),
+      });
       return this.store.toDetail(await this.store.reload(transaction, current.id), false);
     });
   }
@@ -378,6 +478,13 @@ export class ReturnService {
     });
     const forCustomer = actor.type === 'CUSTOMER';
     const windowDays = await this.parameters.getInteger(SYSTEM_PARAMETER_CODE.RETURN_WINDOW_DAYS);
+    // PROVIDER: xác minh ảnh với Cloudinary trước khi mở transaction; replay cũng xác minh lại, vô hại.
+    const evidenceImages = input.evidenceImages?.length
+      ? await this.evidence.verify({ kind: 'ORDER', orderId }, input.evidenceImages, {
+          type: actor.type,
+          userId: actor.type === 'CUSTOMER' ? actor.userId : actor.principal.userId,
+        })
+      : undefined;
 
     return this.store.run(async (transaction) => {
       await transaction.$queryRaw(Prisma.sql`SELECT id FROM orders WHERE id = ${orderId} FOR UPDATE`);
@@ -412,7 +519,7 @@ export class ReturnService {
           channel: forCustomer ? RETURN_CHANNEL.ACCOUNT : RETURN_CHANNEL.ADMIN,
           reasonCode: input.reasonCode,
           description: input.description ?? null,
-          evidenceUrls: input.evidenceUrls ?? undefined,
+          evidenceImages: evidenceImages as unknown as Prisma.InputJsonValue | undefined,
           deliveredAt,
           windowOverrideBy: override ? actorColumns.actorId : null,
           windowOverrideNote: override ?? null,
@@ -453,16 +560,83 @@ export class ReturnService {
         reason: override,
       });
 
+      const loaded = await this.store.reload(transaction, created.id);
+      await this.store.notify(transaction, loaded, OUTBOX_EVENT_TYPE.RETURN_REQUESTED, {
+        items: loaded.items.map((item) => ({
+          name: `${item.orderItem.productNameSnapshot} - ${item.orderItem.variantNameSnapshot}`,
+          quantity: item.quantity,
+        })),
+      });
       if (autoApprove && fault) {
-        const loaded = await this.store.reload(transaction, created.id);
         await this.applyDecision(transaction, loaded, RETURN_ACTION.APPROVE, fault, 'Duyệt ngay khi tạo (D56)', actor, requestId);
       }
       return this.store.toDetail(await this.store.reload(transaction, created.id), forCustomer);
     });
   }
 
+  private async eligibility(order: ReturnableOrder, canOverrideWindow: boolean): Promise<ReturnEligibilityDto> {
+    const client = this.store.client;
+    const [windowDays, openReturnNo, returned, blocked] = await Promise.all([
+      this.parameters.getInteger(SYSTEM_PARAMETER_CODE.RETURN_WINDOW_DAYS),
+      this.openReturnNo(client, order.id),
+      this.returnedQuantities(client, order.items.map((item) => item.id)),
+      this.blockedVariants(client, order.items.flatMap((item) => this.variantsOf(item))),
+    ]);
+    const deliveredAt = order.fulfillment?.deliveredAt ?? null;
+    const result = evaluateEligibility({
+      orderStatusAllowsReturn: this.statusAllowsReturn(order),
+      deliveredAt,
+      now: new Date(),
+      windowDays,
+      openReturnNo,
+      canOverrideWindow,
+      lines: order.items.map((item) => ({
+        orderItemId: toEntityId(item.id),
+        purchasedQuantity: item.quantity,
+        alreadyReturnedQuantity: returned.get(toEntityId(item.id)) ?? 0,
+        isBundle: item.itemType === CHECKOUT_ITEM_TYPE.BUNDLE,
+        blockedByCategory: this.variantsOf(item).some((variantId) => blocked.has(variantId)),
+        lineTotal: item.lineTotal,
+      })),
+    });
+    const itemsById = new Map(order.items.map((item) => [toEntityId(item.id), item]));
+    return {
+      orderId: toEntityId(order.id),
+      orderNo: order.orderNo,
+      eligible: result.eligible,
+      reason: result.reason,
+      deliveredAt: deliveredAt?.toISOString() ?? null,
+      returnDeadline: result.returnDeadline?.toISOString() ?? null,
+      windowDays,
+      withinWindow: result.withinWindow,
+      windowOverrideRequired: result.windowOverrideRequired,
+      openReturnNo,
+      items: result.lines.map((line) => {
+        const item = itemsById.get(line.orderItemId)!;
+        return {
+          orderItemId: line.orderItemId,
+          sku: item.skuSnapshot,
+          productName: item.productNameSnapshot,
+          variantName: item.variantNameSnapshot,
+          imageUrl: item.imageUrlSnapshot,
+          isBundle: line.isBundle,
+          purchasedQuantity: line.purchasedQuantity,
+          returnedQuantity: line.alreadyReturnedQuantity,
+          returnableQuantity: line.returnableQuantity,
+          blockedByCategory: line.blockedByCategory,
+          unitRefundEstimate: line.unitRefundEstimate.toFixed(2),
+          maxRefundEstimate: line.maxRefundEstimate.toFixed(2),
+        };
+      }),
+    };
+  }
+
+  private statusAllowsReturn(order: ReturnableOrder): boolean {
+    return order.status === ORDER_STATUS.DELIVERED || order.status === ORDER_STATUS.COMPLETED;
+  }
+
   private assertOrderReturnable(order: ReturnableOrder): Date {
-    const statusAllowsReturn = order.status === ORDER_STATUS.DELIVERED || order.status === ORDER_STATUS.COMPLETED;
+    const statusAllowsReturn = this.statusAllowsReturn(order);
     const deliveredAt = order.fulfillment?.deliveredAt;
     if (!statusAllowsReturn || !deliveredAt) {
       throw conflict(RETURN_ERROR_CODE.ORDER_NOT_RETURNABLE, 'Chỉ tạo phiếu trả cho đơn đã giao thành công');
@@ -492,13 +666,50 @@ export class ReturnService {
   }
 
   private async assertNoOpenReturn(transaction: Prisma.TransactionClient, orderId: bigint): Promise<void> {
-    const open = await transaction.returnRequest.findFirst({
+    const openReturnNo = await this.openReturnNo(transaction, orderId);
+    if (openReturnNo) {
+      throw conflict(RETURN_ERROR_CODE.OPEN_RETURN_EXISTS, `Đơn đang có phiếu trả ${openReturnNo} chưa xử lý xong`);
+    }
+  }
+
+  private async openReturnNo(client: Prisma.TransactionClient, orderId: bigint): Promise<string | null> {
+    const open = await client.returnRequest.findFirst({
       where: { orderId, status: { notIn: [...RETURN_TERMINAL_STATUSES] } },
       select: { returnNo: true },
     });
-    if (open) {
-      throw conflict(RETURN_ERROR_CODE.OPEN_RETURN_EXISTS, `Đơn đang có phiếu trả ${open.returnNo} chưa xử lý xong`);
-    }
+    return open?.returnNo ?? null;
+  }
+
+  /** Số lượng mỗi dòng đơn đã nằm trên các phiếu chưa bị từ chối/huỷ; khoá là entity id của dòng. */
+  private async returnedQuantities(client: Prisma.TransactionClient, orderItemIds: bigint[]): Promise<Map<string, number>> {
+    if (orderItemIds.length === 0) return new Map();
+    const returned = await client.returnItem.groupBy({
+      by: ['orderItemId'],
+      where: {
+        orderItemId: { in: orderItemIds },
+        returnRequest: { status: { notIn: [...RETURN_QUANTITY_RELEASED_STATUSES] } },
+      },
+      _sum: { quantity: true },
+    });
+    return new Map(returned.map((row) => [toEntityId(row.orderItemId), row._sum.quantity ?? 0]));
+  }
+
+  /** Biến thể thuộc ít nhất một danh mục tắt `returnable` (D54), kèm SKU để báo lỗi. */
+  private async blockedVariants(client: Prisma.TransactionClient, variantIds: bigint[]): Promise<Map<bigint, string>> {
+    if (variantIds.length === 0) return new Map();
+    const blocked = await client.productVariant.findMany({
+      where: {
+        id: { in: variantIds },
+        product: { categories: { some: { category: { returnable: false } } } },
+      },
+      select: { id: true, sku: true },
+    });
+    return new Map(blocked.map((variant) => [variant.id, variant.sku]));
+  }
+
+  /** Combo xét cả biến thể thành phần: combo chứa hàng không được trả thì cũng không trả được. */
+  private variantsOf(item: ReturnableOrder['items'][number]): bigint[] {
+    return [item.productVariantId, ...item.components.map((component) => component.componentVariantId)];
   }
 
   private async assertLines(
@@ -510,15 +721,10 @@ export class ReturnService {
     const unknown = lines.find((line) => !itemsById.has(line.orderItemId));
     if (unknown) throw new BadRequestException('Sản phẩm trả không thuộc đơn hàng này');
 
-    const returned = await transaction.returnItem.groupBy({
-      by: ['orderItemId'],
-      where: {
-        orderItemId: { in: lines.map((line) => toDatabaseId(line.orderItemId)) },
-        returnRequest: { status: { notIn: [...RETURN_QUANTITY_RELEASED_STATUSES] } },
-      },
-      _sum: { quantity: true },
-    });
-    const returnedById = new Map(returned.map((row) => [toEntityId(row.orderItemId), row._sum.quantity ?? 0]));
+    const returnedById = await this.returnedQuantities(
+      transaction,
+      lines.map((line) => toDatabaseId(line.orderItemId)),
+    );
     assertRequestedLines(
       lines.map((line) => {
         const item = itemsById.get(line.orderItemId)!;
@@ -535,8 +741,7 @@ export class ReturnService {
   }
 
   /**
-   * D54: sản phẩm thuộc bất kỳ danh mục nào tắt `returnable` thì không trả được. Combo xét cả biến thể
-   * thành phần: một combo chứa hàng không được trả thì cũng không trả được.
+   * D54: sản phẩm thuộc bất kỳ danh mục nào tắt `returnable` thì không trả được.
    */
   private async assertCategoriesReturnable(
     transaction: Prisma.TransactionClient,
@@ -546,16 +751,11 @@ export class ReturnService {
     const requested = new Set(lines.map((line) => line.orderItemId));
     const variantIds = order.items
       .filter((item) => requested.has(toEntityId(item.id)))
-      .flatMap((item) => [item.productVariantId, ...item.components.map((component) => component.componentVariantId)]);
-    const blocked = await transaction.productVariant.findFirst({
-      where: {
-        id: { in: variantIds },
-        product: { categories: { some: { category: { returnable: false } } } },
-      },
-      select: { sku: true },
-    });
-    if (blocked) {
-      throw conflict(RETURN_ERROR_CODE.ITEM_NOT_RETURNABLE, `${blocked.sku} thuộc danh mục không áp dụng đổi trả`);
+      .flatMap((item) => this.variantsOf(item));
+    const blocked = await this.blockedVariants(transaction, variantIds);
+    const [sku] = blocked.values();
+    if (sku) {
+      throw conflict(RETURN_ERROR_CODE.ITEM_NOT_RETURNABLE, `${sku} thuộc danh mục không áp dụng đổi trả`);
     }
   }
 

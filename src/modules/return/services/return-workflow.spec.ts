@@ -11,6 +11,7 @@ import type { SystemParameterService } from '../../system/parameters/system-para
 import { RETURN_ERROR_CODE } from '../return.constants';
 import { RefundService } from './refund.service';
 import { ReturnService } from './return.service';
+import type { ReturnEvidenceService } from './return-evidence.service';
 
 /** Spec use case Return/Refund trên Prisma giả: kiểm luật trong transaction, không kiểm SQL thật. */
 const D = (value: string | number) => new Prisma.Decimal(value);
@@ -40,6 +41,7 @@ function refundRow(overrides: Partial<RefundRow>): RefundRow {
     currencyCode: 'VND',
     status: 'PENDING',
     externalRef: null,
+    proofImages: null,
     note: null,
     idempotencyKey: 'k',
     requestHash: 'h',
@@ -88,7 +90,7 @@ function loadedReturn(overrides: {
     channel: 'ADMIN',
     reasonCode: 'DEFECTIVE',
     description: null,
-    evidenceUrls: null,
+    evidenceImages: null,
     fault: overrides.fault === undefined ? 'SHOP' : overrides.fault,
     deliveredAt: now,
     windowOverrideBy: null,
@@ -230,6 +232,12 @@ function codeOf(error: unknown): string | undefined {
   return typeof response === 'object' && response !== null ? (response as { code?: string }).code : undefined;
 }
 
+/** ReturnEvidenceService giả: coi mọi ảnh là hợp lệ; spec riêng kiểm luật thư mục. */
+const evidence = {
+  verify: jest.fn().mockResolvedValue([]),
+  createUpload: jest.fn().mockResolvedValue({ publicId: 'x' }),
+} as unknown as ReturnEvidenceService;
+
 type WriteCall = [{ where?: { id?: bigint }; data: Record<string, unknown> }];
 
 /** Đối số `data` của lần gọi thứ `index` tới một lệnh ghi Prisma giả. */
@@ -253,7 +261,7 @@ describe('RefundService.request', () => {
 
   it('creates a pending refund within the remaining amount', async () => {
     const { store, tx, audit } = buildStore(loadedReturn());
-    await new RefundService(store).request('1', input, 'refund-key-01', 'req-1', refundPermissions);
+    await new RefundService(store, evidence).request('1', input, 'refund-key-01', 'req-1', refundPermissions);
 
     expect(tx.refund.create).toHaveBeenCalledTimes(1);
     expect(written(tx.refund.create)).toMatchObject({ method: 'BANK_TRANSFER', paymentId: 50n });
@@ -268,7 +276,7 @@ describe('RefundService.request', () => {
     const current = loadedReturn({ refunds: [refundRow({ status: 'SUCCEEDED', amount: D('500000') })] });
     const { store, tx } = buildStore(current);
     const error = await rejection(
-      new RefundService(store).request('1', { ...input, amount: '30000.01' }, 'refund-key-02', 'req', refundPermissions),
+      new RefundService(store, evidence).request('1', { ...input, amount: '30000.01' }, 'refund-key-02', 'req', refundPermissions),
     );
     expect(codeOf(error)).toBe(RETURN_ERROR_CODE.REFUND_EXCEEDS_REMAINING);
     expect(tx.refund.create).not.toHaveBeenCalled();
@@ -276,14 +284,14 @@ describe('RefundService.request', () => {
 
   it('rejects a second pending refund on the same return', async () => {
     const { store } = buildStore(loadedReturn({ refunds: [refundRow({ status: 'PENDING' })] }));
-    const error = await rejection(new RefundService(store).request('1', input, 'refund-key-03', 'req', refundPermissions));
+    const error = await rejection(new RefundService(store, evidence).request('1', input, 'refund-key-03', 'req', refundPermissions));
     expect(codeOf(error)).toBe(RETURN_ERROR_CODE.REFUND_PENDING_EXISTS);
   });
 
   it('refuses to refund an order whose payment was never collected', async () => {
     const { store } = buildStore(loadedReturn({ payment: { method: 'COD', status: 'AWAITING_CONFIRMATION' } }));
     const error = await rejection(
-      new RefundService(store).request('1', { ...input, method: 'CASH' }, 'refund-key-04', 'req', refundPermissions),
+      new RefundService(store, evidence).request('1', { ...input, method: 'CASH' }, 'refund-key-04', 'req', refundPermissions),
     );
     expect(codeOf(error)).toBe(RETURN_ERROR_CODE.REFUND_PAYMENT_NOT_SUCCESS);
   });
@@ -291,7 +299,7 @@ describe('RefundService.request', () => {
   it('refuses cash for a VNPay order (D58)', async () => {
     const { store } = buildStore(loadedReturn({ payment: { method: 'VNPAY' } }));
     const error = await rejection(
-      new RefundService(store).request('1', { ...input, method: 'CASH' }, 'refund-key-05', 'req', refundPermissions),
+      new RefundService(store, evidence).request('1', { ...input, method: 'CASH' }, 'refund-key-05', 'req', refundPermissions),
     );
     expect(codeOf(error)).toBe(RETURN_ERROR_CODE.REFUND_METHOD_NOT_ALLOWED);
   });
@@ -301,7 +309,7 @@ describe('RefundService.request', () => {
     const hash = probe.store.intent('refund-key-06', 'REFUND_REQUEST', '1', input).hash;
     const { store, tx } = buildStore(loadedReturn({ history: [{ idempotencyKey: 'refund-key-06', requestHash: hash }] }));
 
-    const result = await new RefundService(store).request('1', input, 'refund-key-06', 'req', refundPermissions);
+    const result = await new RefundService(store, evidence).request('1', input, 'refund-key-06', 'req', refundPermissions);
 
     expect(result.returnNo).toBe('RMA-20260924-000001');
     expect(tx.refund.create).not.toHaveBeenCalled();
@@ -311,20 +319,20 @@ describe('RefundService.request', () => {
     const { store, tx } = buildStore(
       loadedReturn({ history: [{ idempotencyKey: 'refund-key-07', requestHash: 'other-payload-hash' }] }),
     );
-    const error = await rejection(new RefundService(store).request('1', input, 'refund-key-07', 'req', refundPermissions));
+    const error = await rejection(new RefundService(store, evidence).request('1', input, 'refund-key-07', 'req', refundPermissions));
     expect(codeOf(error)).toBe(RETURN_ERROR_CODE.IDEMPOTENCY_CONFLICT);
     expect(tx.refund.create).not.toHaveBeenCalled();
   });
 
   it('rejects a stale version', async () => {
     const { store } = buildStore(loadedReturn({ version: 4n }));
-    const error = await rejection(new RefundService(store).request('1', input, 'refund-key-08', 'req', refundPermissions));
+    const error = await rejection(new RefundService(store, evidence).request('1', input, 'refund-key-08', 'req', refundPermissions));
     expect(codeOf(error)).toBe(RETURN_ERROR_CODE.VERSION_CONFLICT);
   });
 
   it('only refunds after the goods were received', async () => {
     const { store } = buildStore(loadedReturn({ status: 'APPROVED', refundCap: null }));
-    const error = await rejection(new RefundService(store).request('1', input, 'refund-key-09', 'req', refundPermissions));
+    const error = await rejection(new RefundService(store, evidence).request('1', input, 'refund-key-09', 'req', refundPermissions));
     expect(codeOf(error)).toBe(RETURN_ERROR_CODE.INVALID_TRANSITION);
   });
 });
@@ -333,7 +341,7 @@ describe('RefundService.confirm', () => {
   it('requires a bank reference for a transfer', async () => {
     const { store, tx } = buildStore(loadedReturn({ refunds: [refundRow({})] }));
     const error = await rejection(
-      new RefundService(store).confirm('1', '70', { expectedVersion: '3' }, 'confirm-key-1', 'req', refundPermissions),
+      new RefundService(store, evidence).confirm('1', '70', { expectedVersion: '3' }, 'confirm-key-1', 'req', refundPermissions),
     );
     expect(codeOf(error)).toBe(RETURN_ERROR_CODE.REFUND_REFERENCE_REQUIRED);
     expect(tx.refund.update).not.toHaveBeenCalled();
@@ -344,7 +352,7 @@ describe('RefundService.confirm', () => {
       loadedReturn({ payment: { method: 'COD' }, refunds: [refundRow({ method: 'CASH' })] }),
     );
     const error = await rejection(
-      new RefundService(store).confirm('1', '70', { expectedVersion: '3' }, 'confirm-key-2', 'req', refundPermissions),
+      new RefundService(store, evidence).confirm('1', '70', { expectedVersion: '3' }, 'confirm-key-2', 'req', refundPermissions),
     );
     expect(codeOf(error)).toBe(RETURN_ERROR_CODE.REFUND_REFERENCE_REQUIRED);
   });
@@ -355,7 +363,7 @@ describe('RefundService.confirm', () => {
       refundNo: 'RF-20260920-000011',
     });
     const error = await rejection(
-      new RefundService(store).confirm('1', '70', { expectedVersion: '3', externalRef: 'FT123' }, 'confirm-key-3', 'req', refundPermissions),
+      new RefundService(store, evidence).confirm('1', '70', { expectedVersion: '3', externalRef: 'FT123' }, 'confirm-key-3', 'req', refundPermissions),
     );
     expect(codeOf(error)).toBe(RETURN_ERROR_CODE.REFUND_REFERENCE_USED);
   });
@@ -368,7 +376,7 @@ describe('RefundService.confirm', () => {
     });
     const { store, tx, outbox } = buildStore(current);
 
-    await new RefundService(store).confirm('1', '70', { expectedVersion: '3', externalRef: 'FT123' }, 'confirm-key-4', 'req', refundPermissions);
+    await new RefundService(store, evidence).confirm('1', '70', { expectedVersion: '3', externalRef: 'FT123' }, 'confirm-key-4', 'req', refundPermissions);
 
     expect(written(tx.refund.update)).toMatchObject({ status: 'SUCCEEDED', externalRef: 'FT123' });
     expect(written(tx.returnRequest.update)).toMatchObject({ status: 'REFUNDED' });
@@ -380,7 +388,7 @@ describe('RefundService.confirm', () => {
   it('keeps the payment SUCCESS after a partial refund', async () => {
     const { store, tx } = buildStore(loadedReturn({ refunds: [refundRow({ amount: D('100000') })] }));
 
-    await new RefundService(store).confirm('1', '70', { expectedVersion: '3', externalRef: 'FT124' }, 'confirm-key-5', 'req', refundPermissions);
+    await new RefundService(store, evidence).confirm('1', '70', { expectedVersion: '3', externalRef: 'FT124' }, 'confirm-key-5', 'req', refundPermissions);
 
     expect(written(tx.returnRequest.update)).toMatchObject({ status: 'RECEIVED' });
     expect(tx.payment.update).not.toHaveBeenCalled();
@@ -409,7 +417,7 @@ describe('ReturnService.receive', () => {
       { id: 2n, productVariantId: 22n, onHand: 5 },
     ]);
 
-    await new ReturnService(store, parameters).receive('1', {
+    await new ReturnService(store, parameters, evidence).receive('1', {
       expectedVersion: '3',
       items: [
         { returnItemId: '1', condition: 'SELLABLE' },
@@ -438,7 +446,7 @@ describe('ReturnService.receive', () => {
       ],
     });
     const { store, tx } = buildStore(current);
-    const error = await rejection(new ReturnService(store, parameters).receive('1', {
+    const error = await rejection(new ReturnService(store, parameters, evidence).receive('1', {
       expectedVersion: '3',
       items: [{ returnItemId: '1', condition: 'SELLABLE' }],
     }, 'receive-key-2', 'req', receiver));
@@ -461,7 +469,7 @@ describe('ReturnService.createAdmin guards', () => {
   }
 
   it('forbids a window override without the override permission', async () => {
-    const error = await rejection(new ReturnService(storeWithOrder(), parameters).createAdmin(
+    const error = await rejection(new ReturnService(storeWithOrder(), parameters, evidence).createAdmin(
       { ...input, windowOverrideNote: 'Khách quen, lỗi sản xuất' },
       'create-key-1',
       'req',
@@ -471,12 +479,93 @@ describe('ReturnService.createAdmin guards', () => {
   });
 
   it('requires a fault when the creator can approve (D56 auto-approval)', async () => {
-    const error = await rejection(new ReturnService(storeWithOrder(), parameters).createAdmin(
+    const error = await rejection(new ReturnService(storeWithOrder(), parameters, evidence).createAdmin(
       input,
       'create-key-2',
       'req',
       principalWith(['return.create', 'return.decide']),
     ));
     expect(error).toBeInstanceOf(BadRequestException);
+  });
+});
+
+describe('return notifications and summaries', () => {
+  const parameters = { getInteger: jest.fn().mockResolvedValue(7) } as unknown as SystemParameterService;
+
+  it('emails the customer once the goods were received and inspected', async () => {
+    const current = loadedReturn({
+      status: 'APPROVED',
+      refundCap: null,
+      items: [returnItem({ id: 1n, quantity: 1, orderQuantity: 1, lineTotal: '100000' })],
+    });
+    const { store, outbox } = buildStore(current);
+    await new ReturnService(store, parameters, evidence).receive('1', {
+      expectedVersion: '3',
+      items: [{ returnItemId: '1', condition: 'DAMAGED', disposition: 'WRITE_OFF' }],
+    }, 'receive-key-3', 'req', principalWith(['return.receive']));
+
+    const appended = (outbox.append.mock.calls as [{ eventType: string; payload: Record<string, unknown> }][])[0][0];
+    expect(appended.eventType).toBe('return.received');
+    // Trần = 100.000 + phí giao 30.000 vì phiếu mẫu có fault SHOP.
+    expect(appended.payload).toMatchObject({ returnNo: 'RMA-20260924-000001', refundCap: '130000.00' });
+  });
+
+  it('shows an estimate before inspection and the cap afterwards', () => {
+    const items = [returnItem({ id: 1n, quantity: 1, orderQuantity: 2, lineTotal: '200000' })];
+    const { store } = buildStore(loadedReturn());
+    const requested = store.toDetail(loadedReturn({ status: 'APPROVED', refundCap: null, items }), true);
+    expect(requested.estimatedRefundAmount).toBe('130000.00');
+    const received = store.toDetail(loadedReturn({ refundCap: D('90000'), items }), true);
+    expect(received.estimatedRefundAmount).toBe('90000.00');
+  });
+
+  it('counts queue work inside the branch scope', async () => {
+    const { store, prisma } = buildStore(loadedReturn(), {
+      returnRequest: {
+        groupBy: jest.fn().mockResolvedValue([
+          { status: 'REQUESTED', _count: { _all: 3 } },
+          { status: 'RECEIVED', _count: { _all: 1 } },
+        ]),
+      },
+      refund: { count: jest.fn().mockResolvedValueOnce(4).mockResolvedValueOnce(2) },
+    });
+    const summary = await new ReturnService(store, parameters, evidence).queueSummary(principalWith(['return.view']));
+    expect(summary).toEqual({
+      awaitingDecision: 3, awaitingReceipt: 0, awaitingRefund: 1, awaitingClose: 0, pendingRefunds: 4, overdueRefunds: 2,
+    });
+    const refundCount = (prisma as unknown as { refund: { count: jest.Mock } }).refund.count;
+    expect((refundCount.mock.calls as [{ where: Record<string, unknown> }][])[1][0].where).toHaveProperty('createdAt');
+  });
+});
+
+describe('refund proof for reconciliation', () => {
+  it('keeps verified proof images on the refund when it is confirmed', async () => {
+    const proof = [{ publicId: 'shop/refund-proof/r1/receipt', url: 'https://x/receipt.jpg', thumbnailUrl: 'https://x/t.jpg', width: 1, height: 1, sizeBytes: 1, uploaderType: 'USER', uploadedBy: '10' }];
+    const verify = jest.fn().mockResolvedValue(proof);
+    const proofEvidence = { verify, createUpload: jest.fn() } as unknown as ReturnEvidenceService;
+    const { store, tx } = buildStore(loadedReturn({ refunds: [refundRow({})] }));
+
+    await new RefundService(store, proofEvidence).confirm('1', '70', {
+      expectedVersion: '3',
+      externalRef: 'FT777',
+      proofImages: [{ publicId: 'shop/refund-proof/r1/receipt', providerVersion: 1, providerSignature: 'sig' }],
+    }, 'confirm-key-6', 'req', refundPermissions);
+
+    expect((verify.mock.calls as [{ kind: string; returnId: bigint }][])[0][0]).toEqual({ kind: 'REFUND_PROOF', returnId: 1n });
+    expect(written(tx.refund.update)).toMatchObject({ status: 'SUCCEEDED', externalRef: 'FT777', proofImages: proof });
+  });
+
+  it('hides refund proof from the customer view', () => {
+    const { store } = buildStore(loadedReturn());
+    const detail = store.toDetail(
+      loadedReturn({ refunds: [refundRow({ status: 'SUCCEEDED', proofImages: [{ url: 'https://x/receipt.jpg' }] })] }),
+      true,
+    );
+    expect(detail.refunds[0].proofImages).toEqual([]);
+    const admin = store.toDetail(
+      loadedReturn({ refunds: [refundRow({ status: 'SUCCEEDED', proofImages: [{ url: 'https://x/receipt.jpg' }] })] }),
+      false,
+    );
+    expect(admin.refunds[0].proofImages).toEqual([{ url: 'https://x/receipt.jpg', thumbnailUrl: 'https://x/receipt.jpg', width: 0, height: 0 }]);
   });
 });
