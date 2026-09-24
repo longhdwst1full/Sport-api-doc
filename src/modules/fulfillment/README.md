@@ -1,10 +1,10 @@
 # Fulfillment module — maintenance note
 
-> **Document version:** 1.1.0
+> **Document version:** 1.2.0
 >
-> **Last updated:** 2026-09-17
+> **Last updated:** 2026-09-24
 >
-> **Change summary:** Nối hãng vận chuyển GHN: tạo/huỷ vận đơn, webhook đồng bộ trạng thái và in phiếu giao.
+> **Change summary:** Vận đơn dùng cân nặng và kích thước đã khai ở sản phẩm, kèm trọng lượng quy đổi thể tích.
 
 ## Phạm vi và ranh giới
 
@@ -34,6 +34,24 @@
 - Transition do webhook kích hoạt đứng tên tài khoản dịch vụ `GHN_WEBHOOK_ACTOR_USER_ID` vì `audit_logs` khoá ngoại tới `users`; không cấu hình thì webhook từ chối thay vì bịa actor.
 - URL in phiếu giao do hãng phát hành và sống rất ngắn: không lưu DB, không đưa vào audit.
 
+## Cân nặng và kích thước kiện hàng
+
+Cước vận chuyển tính trên số này, nên nó là dữ liệu nghiệp vụ chứ không phải tham số kỹ thuật.
+
+- Nguồn là **cân nặng và kích thước đã khai ở `product_variants`** (`weight_grams`, `length_mm`,
+  `width_mm`, `height_mm`). Trước đây chỗ tạo vận đơn nhân tổng số lượng với hằng số 500g và không
+  gửi kích thước, nên cổng GHN rơi về mức tối thiểu 1cm và hãng báo cước trên một kiện tưởng tượng.
+- **Xếp kiện**: dài/rộng lấy món lớn nhất, chiều cao cộng dồn theo số lượng — coi như xếp chồng.
+  Đây là xấp xỉ, chọn vì nó không bao giờ khai NHỎ hơn kiện thật; khai nhỏ hơn mới là thứ khiến
+  hãng cân lại rồi truy thu cửa hàng. Đổi mm sang cm luôn làm tròn LÊN, cùng một lý do.
+- **Trọng lượng tính cước = số lớn hơn** giữa khối lượng thật và khối lượng quy đổi thể tích
+  (`dài × rộng × cao ÷ 5000`, đơn vị cm và kg). `weightType` ghi lại vế nào thắng (`ACTUAL` hay
+  `VOLUMETRIC`) để đối soát khi hãng báo lại số khác. Hàng cồng kềnh nhẹ cân — thảm tập, giàn tạ —
+  luôn rơi vào vế quy đổi.
+- Sản phẩm chưa khai cân nặng rơi về 500g. Không món nào khai đủ **cả ba** chiều thì **không gửi
+  kích thước**: để hãng áp mức tối thiểu của họ, vì một con số tự nghĩ ra cũng là một con số sai.
+- `measurePackageFrom` là hàm thuần, test không cần database. Sửa cách xếp kiện phải sửa test đi kèm.
+
 ## Checklist khi sửa
 
 - [ ] Impact analysis trước khi sửa transition/lock/mapping.
@@ -48,5 +66,6 @@
 
 | Version | Date | Change summary | Source |
 | --- | --- | --- | --- |
+| 1.2.0 | 2026-09-24 | Cân nặng/kích thước vận đơn lấy từ sản phẩm; thêm trọng lượng quy đổi thể tích. | API-20260924-SHIPMENT-WEIGHT-AND-DIMENSIONS |
 | 1.1.0 | 2026-09-17 | Tạo/huỷ vận đơn GHN ngoài transaction kèm huỷ bù, webhook đồng bộ trạng thái và in phiếu giao. | API-20260916-GHN-SHIPPING |
 | 1.0.0 | 2026-09-13 | Fulfillment persisted, transition API, stock commit/return và Admin workflow. | DBAPI-20260913-FULFILLMENT-S43 |

@@ -1,9 +1,9 @@
-import { ForbiddenException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import { Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { toDatabaseId } from '../../common/identifiers/entity-id';
 import { PrismaService } from '../../database/prisma.service';
 import type { AuthPrincipal } from '../auth/auth.types';
-import { ScopeType } from '../iam/iam.types';
+import { requireVisibleBranchIds } from '../../common/security/branch-scope';
 import { StockTransferDetailDto, StockTransferListDto, StockTransferQueryDto } from './stock-transfer.dto';
 import { mapStockTransferDetail, mapStockTransferSummary, stockTransferInclude } from './stock-transfer.mapper';
 
@@ -54,11 +54,10 @@ export class StockTransferQueryService {
   }
 
   private scopeWhere(principal: AuthPrincipal): Prisma.StockTransferWhereInput {
-    if (principal.scopes.some(({ type }) => type === ScopeType.GLOBAL)) return {};
-    const branchIds = principal.scopes
-      .filter((scope) => scope.type === ScopeType.BRANCH && scope.branchId)
-      .map((scope) => toDatabaseId(scope.branchId!));
-    if (branchIds.length === 0) throw new ForbiddenException('No branch scope is assigned');
+    // Hình dạng bộ lọc riêng (kho gửi HOẶC kho nhận), nhưng phần tính danh sách chi nhánh vẫn
+    // dùng chung một nguồn với mọi module khác.
+    const branchIds = requireVisibleBranchIds(principal);
+    if (!branchIds) return {};
     return {
       OR: [
         { fromWarehouse: { branchId: { in: branchIds } } },

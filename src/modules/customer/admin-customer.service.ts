@@ -11,6 +11,10 @@ import { PrismaService } from '../../database/prisma.service';
 import { toDatabaseId, toEntityId } from '../../common/identifiers/entity-id';
 import type { MutationContext } from '../../common/request/request-context';
 import type { AuthPrincipal } from '../auth/auth.types';
+import {
+  customerBranchScopeWhere,
+  visibleBranchIds,
+} from '../../common/security/branch-scope';
 import { AuditWriter } from '../audit/audit.writer';
 import { ScopeType } from '../iam/iam.types';
 import { normalizeVietnamesePhone } from '../auth/phone-normalization';
@@ -74,23 +78,10 @@ export class AdminCustomerService {
    * Chi nhánh mà tài khoản được phép nhìn thấy; `undefined` nghĩa là toàn hệ thống.
    * Khách hàng không gắn trực tiếp vào chi nhánh nào — quan hệ đi qua đơn hàng của họ.
    */
-  private visibleBranchIds(actor: AuthPrincipal): bigint[] | undefined {
-    if (actor.scopes.some(({ type }) => type === ScopeType.GLOBAL)) return undefined;
-    return actor.scopes.flatMap(({ type, branchId }) =>
-      type === ScopeType.BRANCH && branchId ? [toDatabaseId(branchId)] : [],
-    );
-  }
-
-  /** Nhân viên chi nhánh chỉ thấy khách đã từng mua ở chi nhánh mình phụ trách. */
-  private customerScopeWhere(branchIds: bigint[] | undefined): Prisma.CustomerWhereInput {
-    if (!branchIds) return {};
-    return { orders: { some: { branchId: { in: branchIds } } } };
-  }
-
   async list(query: AdminCustomerQueryDto, actor: AuthPrincipal): Promise<AdminCustomerListDto> {
-    const branchIds = this.visibleBranchIds(actor);
+    const branchIds = visibleBranchIds(actor);
     const where: Prisma.CustomerWhereInput = {
-      ...this.customerScopeWhere(branchIds),
+      ...customerBranchScopeWhere(actor),
       ...(query.name ? { name: { contains: query.name.trim(), mode: 'insensitive' } } : {}),
       ...(query.phone ? { phone: { contains: query.phone.trim() } } : {}),
       ...(query.email ? { email: { contains: query.email.trim(), mode: 'insensitive' } } : {}),
@@ -121,11 +112,11 @@ export class AdminCustomerService {
 
   async get(id: string, actor: AuthPrincipal): Promise<AdminCustomerDetailDto> {
     const databaseId = toDatabaseId(id);
-    const branchIds = this.visibleBranchIds(actor);
+    const branchIds = visibleBranchIds(actor);
     // Dùng `findFirst` kèm điều kiện phạm vi: khách ngoài chi nhánh trả "không tìm thấy"
     // thay vì "không có quyền", để không lộ việc khách đó có tồn tại hay không.
     const customer = await this.prisma.customer.findFirst({
-      where: { id: databaseId, ...this.customerScopeWhere(branchIds) },
+      where: { id: databaseId, ...customerBranchScopeWhere(actor) },
       include: {
         avatarAsset: { select: { id: true, secureUrl: true, thumbnailUrl: true } },
         addresses: {
@@ -454,9 +445,8 @@ export class AdminCustomerService {
     marketingConsent: boolean;
     version: bigint;
   }> {
-    const branchIds = this.visibleBranchIds(actor);
     const customer = await this.prisma.customer.findFirst({
-      where: { id: toDatabaseId(id), ...this.customerScopeWhere(branchIds) },
+      where: { id: toDatabaseId(id), ...customerBranchScopeWhere(actor) },
       select: {
         id: true,
         status: true,

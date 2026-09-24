@@ -12,6 +12,7 @@ import { Prisma } from '@prisma/client';
 import { toActorDatabaseId, toDatabaseId, toEntityId } from '../../../common/identifiers/entity-id';
 import { PrismaService } from '../../../database/prisma.service';
 import type { AuthPrincipal } from '../../auth/auth.types';
+import { branchScopeWhere } from '../../../common/security/branch-scope';
 import { AuditWriter } from '../../audit/audit.writer';
 import { FlashSaleService } from '../../promotion/services/flash-sale.service';
 import { CartService } from '../../cart/cart.service';
@@ -996,13 +997,9 @@ export class OrderService {
     return { AND: filters };
   }
 
+  /** `strict`: đây là màn thao tác, tài khoản chưa có phạm vi nhận 403 thay vì một bảng rỗng. */
   private scopeWhere(principal: AuthPrincipal): Prisma.OrderWhereInput {
-    if (principal.scopes.some(({ type }) => type === ScopeType.GLOBAL)) return {};
-    const branchIds = principal.scopes
-      .filter((scope) => scope.type === ScopeType.BRANCH && scope.branchId)
-      .map((scope) => toDatabaseId(scope.branchId!));
-    if (branchIds.length === 0) throw new ForbiddenException('Tài khoản chưa được gán phạm vi chi nhánh');
-    return { branchId: { in: branchIds } };
+    return branchScopeWhere(principal, { strict: true });
   }
 
   private assertPlacementOwnership(cartId: bigint, cartUserId: bigint | null, actor: PlacementActor): void {

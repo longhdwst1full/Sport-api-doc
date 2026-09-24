@@ -45,5 +45,18 @@ export const OUTBOX_BACKOFF_SECONDS = [30, 120, 600, 3600] as const;
 /** Một lượt worker xử lý tối đa ngần này sự kiện, để lượt chạy không kéo dài vô hạn. */
 export const OUTBOX_BATCH_SIZE = 20;
 
+/**
+ * Sau ngần này giây, một dòng còn nằm `PROCESSING` được coi là do tiến trình chết giữa chừng và
+ * được lấy lại.
+ *
+ * Không có cơ chế này thì dòng đó nằm `PROCESSING` VĨNH VIỄN: điều kiện lấy việc chỉ nhận
+ * `PENDING`, nên không lỗi, không log, không retry — khách đơn giản là không nhận được email.
+ * Và nó chắc chắn xảy ra: đo trên production cho thấy 3/20 lượt gọi cron bị timeout vì cold start.
+ *
+ * Giá trị phải LỚN HƠN thời gian chạy tối đa của một lượt worker, nếu không hai replica sẽ giành
+ * nhau một dòng đang được xử lý bình thường và gửi email hai lần.
+ */
+export const OUTBOX_LOCK_TIMEOUT_SECONDS = 300;
+
 /** Link đặt lại mật khẩu sống ngắn: đủ để mở hộp thư, không đủ để nằm lại trong hộp thư. */
 export const PASSWORD_RESET_TTL_MINUTES = 30;

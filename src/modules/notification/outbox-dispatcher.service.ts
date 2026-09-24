@@ -8,11 +8,18 @@ import {
   NOTIFICATION_STATUS,
   OUTBOX_BACKOFF_SECONDS,
   OUTBOX_BATCH_SIZE,
+  OUTBOX_LOCK_TIMEOUT_SECONDS,
   OUTBOX_MAX_ATTEMPTS,
   OUTBOX_STATUS,
   type OutboxEventType,
 } from './notification.constants';
-import { maskEmail, recipientOf, renderEmail } from './notification.templates';
+import {
+  carriesSecret,
+  maskEmail,
+  recipientOf,
+  redactSensitivePayload,
+  renderEmail,
+} from './notification.templates';
 
 export interface OutboxRunResult {
   claimed: number;
@@ -28,6 +35,7 @@ interface ClaimedEvent {
   event_type: string;
   payload_json: unknown;
   attempts: number;
+  status?: string;
 }
 
 @Injectable()
@@ -69,6 +77,11 @@ export class OutboxDispatcherService {
             lockedAt: null,
             lockedBy: null,
             lastError: null,
+            // SECURITY: dòng outbox ở trạng thái DONE nằm lại vĩnh viễn. Sự kiện mang bí mật phải
+            // được xoá phần bí mật ngay khi không còn cần để gửi; giữ lại chỉ còn là rủi ro.
+            ...(carriesSecret(event.payload_json)
+              ? { payloadJson: redactSensitivePayload(event.payload_json) as Prisma.InputJsonValue }
+              : {}),
           },
         });
       } catch (error) {
@@ -116,36 +129,70 @@ export class OutboxDispatcherService {
   private async claim(runId: string): Promise<ClaimedEvent[]> {
     return this.prisma.$transaction(async (transaction) => {
       const rows = await transaction.$queryRaw<ClaimedEvent[]>`
-        SELECT id, event_type, payload_json, attempts
+        SELECT id, event_type, payload_json, attempts, status
         FROM public.outbox_events
-        WHERE status = ${OUTBOX_STATUS.PENDING}
-          AND available_at <= NOW()
+        WHERE (
+          (status = ${OUTBOX_STATUS.PENDING} AND available_at <= NOW())
+          -- Thu hồi dòng do tiến trình chết giữa chừng. Thiếu nhánh này thì dòng đó nằm
+          -- PROCESSING vĩnh viễn và email biến mất không dấu vết.
+          OR (
+            status = ${OUTBOX_STATUS.PROCESSING}
+            AND locked_at < NOW() - make_interval(secs => ${OUTBOX_LOCK_TIMEOUT_SECONDS})
+          )
+        )
         ORDER BY available_at, id
         LIMIT ${OUTBOX_BATCH_SIZE}
         FOR UPDATE SKIP LOCKED
       `;
       if (rows.length === 0) return [];
-      await transaction.outboxEvent.updateMany({
-        where: { id: { in: rows.map((row) => row.id) } },
-        data: { status: OUTBOX_STATUS.PROCESSING, lockedAt: new Date(), lockedBy: runId },
-      });
-      return rows;
+
+      const now = new Date();
+      const reclaimed = rows.filter((row) => row.status === OUTBOX_STATUS.PROCESSING);
+      const fresh = rows.filter((row) => row.status !== OUTBOX_STATUS.PROCESSING);
+
+      if (fresh.length > 0) {
+        await transaction.outboxEvent.updateMany({
+          where: { id: { in: fresh.map((row) => row.id) } },
+          data: { status: OUTBOX_STATUS.PROCESSING, lockedAt: now, lockedBy: runId },
+        });
+      }
+      if (reclaimed.length > 0) {
+        // Đếm lần chết dở như một lần thử. Không đếm thì một sự kiện luôn làm tiến trình chết sẽ
+        // được lấy lại vô hạn, và không bao giờ tới được DEAD để vận hành nhìn thấy.
+        await transaction.outboxEvent.updateMany({
+          where: { id: { in: reclaimed.map((row) => row.id) } },
+          data: {
+            status: OUTBOX_STATUS.PROCESSING,
+            lockedAt: now,
+            lockedBy: runId,
+            attempts: { increment: 1 },
+          },
+        });
+      }
+
+      return rows.map((row) =>
+        row.status === OUTBOX_STATUS.PROCESSING ? { ...row, attempts: row.attempts + 1 } : row,
+      );
     });
   }
 
   /**
    * Gửi một sự kiện và ghi nhật ký.
    *
-   * IDEMPOTENCY: `dedup_key` dựng từ loại sự kiện + id outbox, unique theo kênh. Worker chạy lại
-   * cùng một dòng — vì gửi xong mà cập nhật trạng thái lỗi chẳng hạn — sẽ vi phạm unique và dừng
-   * lại thay vì gửi thêm một email nữa cho khách.
+   * IDEMPOTENCY: `dedup_key` dựng từ loại sự kiện + id outbox, unique theo kênh. Hai worker chạy
+   * song song trên cùng một dòng thì đúng một cái tạo được bản ghi, cái còn lại vi phạm unique và
+   * dừng — không có hai email cho cùng một sự kiện.
+   *
+   * Giới hạn: bảo vệ này dựa trên trạng thái đã GHI được. Nhà cung cấp nhận email xong mà tiến
+   * trình chết trước khi ghi SENT thì lần thử sau vẫn gửi lại. Xem chú thích ở dưới.
    */
   private async deliver(event: ClaimedEvent): Promise<'sent' | 'duplicate'> {
     const eventType = event.event_type as OutboxEventType;
     const payload = event.payload_json;
     const recipient = recipientOf(payload);
     if (!recipient.email) {
-      // Không có địa chỉ nhận thì thử lại bao nhiêu lần cũng vậy; để nó chết luôn ở lần đầu.
+      // Thiếu địa chỉ nhận là lỗi dữ liệu, thử lại bao nhiêu lần cũng vậy. Hiện vẫn đi qua đủ
+      // vòng backoff rồi mới tới DEAD — chấp nhận được vì nó vẫn dừng, chỉ là dừng muộn hơn cần.
       throw new Error('Sự kiện không có địa chỉ người nhận');
     }
 
@@ -154,9 +201,14 @@ export class OutboxDispatcherService {
     /**
      * Một dòng nhật ký cho mỗi sự kiện, dùng lại qua các lần thử.
      *
-     * Đã gửi thành công rồi thì dừng ngay: worker có thể lấy lại đúng dòng outbox đó nếu lần trước
-     * gửi xong mà cập nhật trạng thái hỏng giữa chừng, và khách không nên nhận email thứ hai vì
-     * một sự cố của chúng ta.
+     * Đã ghi nhận SENT rồi thì dừng ngay, nên worker lấy lại cùng một dòng outbox không gửi thêm
+     * email nữa.
+     *
+     * **Đây là at-least-once, KHÔNG phải exactly-once.** Vẫn còn một khoảng hở không đóng được ở
+     * tầng này: nhà cung cấp đã nhận email rồi nhưng tiến trình chết TRƯỚC khi kịp ghi SENT. Lần
+     * sau dòng này được lấy lại, `existing.status` không phải SENT nên email được gửi lần hai.
+     * Đóng hẳn khoảng đó cần khoá idempotency phía nhà cung cấp (Mailtrap `message_id` do ta sinh
+     * và gửi kèm), không phải thêm một lần kiểm ở database.
      */
     const existing = await this.prisma.notification.findUnique({
       where: { channel_dedupKey: { channel: NOTIFICATION_CHANNEL.EMAIL, dedupKey } },
@@ -176,7 +228,9 @@ export class OutboxDispatcherService {
             channel: NOTIFICATION_CHANNEL.EMAIL,
             dedupKey,
             recipientMasked: maskEmail(recipient.email),
-            payloadJson: payload as Prisma.InputJsonValue,
+            // SECURITY: nhật ký thông báo sống lâu và không có hạn dọn, nên không được giữ link
+            // đặt lại mật khẩu ở dạng rõ. Che ở đây, không che ở chỗ render email.
+            payloadJson: redactSensitivePayload(payload) as Prisma.InputJsonValue,
             status: NOTIFICATION_STATUS.PENDING,
             attemptCount: 1,
           },

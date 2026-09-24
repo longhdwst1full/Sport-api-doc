@@ -2,7 +2,6 @@ import { createHash } from 'node:crypto';
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -17,9 +16,9 @@ import {
 } from '../../../integrations/shipping-partner/shipping-partner.client';
 import { PrismaService } from '../../../database/prisma.service';
 import type { AuthPrincipal } from '../../auth/auth.types';
+import { orderBranchScopeWhere } from '../../../common/security/branch-scope';
 import { AuditWriter } from '../../audit/audit.writer';
 import { INVENTORY_RESERVATION_STATUS } from '../../checkout/checkout.constants';
-import { ScopeType } from '../../iam/iam.types';
 import { INVENTORY_MOVEMENT_TYPE, INVENTORY_REFERENCE_TYPE } from '../../inventory/inventory.constants';
 import { ORDER_FULFILLMENT_STATUS, ORDER_PAYMENT_STATUS, ORDER_STATUS } from '../../order/order.constants';
 import { PAYMENT_METHOD } from '../../payment/payment.constants';
@@ -43,7 +42,98 @@ import {
 } from '../fulfillment.constants';
 
 /** Khối lượng quy ước cho mỗi sản phẩm khi kiện hàng chưa được cân thật. */
+/** Khối lượng dùng khi sản phẩm chưa khai cân nặng. Chỉ là đường lùi, không phải cách tính chính. */
 const DEFAULT_ITEM_WEIGHT_GRAMS = 500;
+
+/**
+ * Hệ số quy đổi trọng lượng thể tích: cm³ chia 5000 ra kg. Đây là hệ số GHN và phần lớn hãng nội
+ * địa đang dùng cho hàng tiêu chuẩn.
+ */
+const VOLUMETRIC_DIVISOR = 5000;
+
+/** Một dòng hàng cần đo, đã tách khỏi Prisma để hàm đo kiện test được mà không cần database. */
+export interface MeasurableLine {
+  quantity: number;
+  weightGrams: number;
+  lengthMm: number | null;
+  widthMm: number | null;
+  heightMm: number | null;
+}
+
+export interface PackageMeasurement {
+  /** Tổng khối lượng thật của hàng trong kiện. */
+  actualWeightGrams: number;
+  /** Khối lượng quy đổi từ thể tích kiện. */
+  volumetricWeightGrams: number;
+  /** Số hãng vận chuyển thực sự tính tiền: số lớn hơn giữa hai loại trên. */
+  chargeableWeightGrams: number;
+  /** Loại trọng lượng quyết định cước, để đối soát khi hãng báo lại số khác. */
+  weightType: 'ACTUAL' | 'VOLUMETRIC';
+  lengthCm: number;
+  widthCm: number;
+  heightCm: number;
+  /** Không sản phẩm nào khai kích thước: để hãng áp kích thước tối thiểu thay vì bịa số. */
+  hasDimensions: boolean;
+}
+
+const mmToCm = (mm: number): number => Math.ceil(mm / 10);
+
+/**
+ * Đo kiện hàng từ khối lượng và kích thước ĐÃ KHAI của từng sản phẩm.
+ *
+ * Xếp kiện theo cách đơn giản và đoán được: dài/rộng lấy số lớn nhất trong các món, cao cộng dồn
+ * theo số lượng — tức coi như xếp chồng lên nhau. Đây là xấp xỉ, không phải bài toán xếp thùng
+ * tối ưu; chọn nó vì nó không bao giờ khai NHỎ hơn kiện thật, mà khai nhỏ hơn mới là thứ khiến
+ * hãng cân lại rồi truy thu cửa hàng.
+ *
+ * Cước thực tế tính theo số lớn hơn giữa khối lượng thật và khối lượng quy đổi thể tích. Hàng cồng
+ * kềnh nhẹ cân — thảm tập, giàn tạ — luôn rơi vào vế quy đổi, và đó chính là nhóm hàng mà cách
+ * tính cũ (nhân số lượng với 500g, không gửi kích thước) sai nhiều nhất.
+ */
+export function measurePackageFrom(lines: readonly MeasurableLine[]): PackageMeasurement {
+  let actualWeightGrams = 0;
+  let lengthCm = 0;
+  let widthCm = 0;
+  let heightCm = 0;
+
+  /**
+   * Đo được kiện chỉ khi **MỌI** dòng đều khai đủ ba chiều.
+   *
+   * Chỉ cần một món thiếu kích thước là phần kiện của món đó không được cộng vào, nên con số gửi
+   * đi NHỎ hơn kiện thật — đúng thứ mà cách tính này tồn tại để tránh. Thà không khai kích thước và
+   * để hãng áp mức tối thiểu, còn hơn khai một con số chắc chắn thiếu.
+   */
+  const hasDimensions =
+    lines.length > 0 && lines.every((line) => line.lengthMm && line.widthMm && line.heightMm);
+
+  for (const line of lines) {
+    const unitWeight = line.weightGrams > 0 ? line.weightGrams : DEFAULT_ITEM_WEIGHT_GRAMS;
+    actualWeightGrams += unitWeight * line.quantity;
+
+    if (hasDimensions) {
+      lengthCm = Math.max(lengthCm, mmToCm(line.lengthMm!));
+      widthCm = Math.max(widthCm, mmToCm(line.widthMm!));
+      heightCm += mmToCm(line.heightMm!) * line.quantity;
+    }
+  }
+
+  actualWeightGrams = Math.max(DEFAULT_ITEM_WEIGHT_GRAMS, actualWeightGrams);
+  const volumetricWeightGrams = hasDimensions
+    ? Math.ceil((lengthCm * widthCm * heightCm) / VOLUMETRIC_DIVISOR) * 1000
+    : 0;
+  const chargeableWeightGrams = Math.max(actualWeightGrams, volumetricWeightGrams);
+
+  return {
+    actualWeightGrams,
+    volumetricWeightGrams,
+    chargeableWeightGrams,
+    weightType: volumetricWeightGrams > actualWeightGrams ? 'VOLUMETRIC' : 'ACTUAL',
+    lengthCm,
+    widthCm,
+    heightCm,
+    hasDimensions,
+  };
+}
 
 /**
  * Trạng thái đáng gửi email cho khách.
@@ -66,7 +156,20 @@ const fulfillmentInclude = {
       addresses: { orderBy: { id: 'asc' as const }, take: 1 },
       checkoutSession: { select: { paymentMethod: true } },
       payment: { select: { status: true } },
-      reservation: { include: { items: { orderBy: { productVariantId: 'asc' as const } } } },
+      reservation: {
+        include: {
+          items: {
+            orderBy: { productVariantId: 'asc' as const },
+            // Kích thước và khối lượng đã khai ở sản phẩm là dữ liệu tính cước, nên phải đi cùng
+            // đơn ngay từ lúc đọc: hãng vận chuyển tính tiền theo số này.
+            include: {
+              productVariant: {
+                select: { weightGrams: true, lengthMm: true, widthMm: true, heightMm: true },
+              },
+            },
+          },
+        },
+      },
       statusHistory: { orderBy: { sequenceNo: 'asc' as const } },
     },
   },
@@ -204,6 +307,7 @@ export class FulfillmentService {
     }
 
     const pickup = this.branchPickupPoint(fulfillment);
+    const measurement = this.measurePackage(fulfillment);
     const isCod = fulfillment.order.checkoutSession.paymentMethod === PAYMENT_METHOD.COD;
     const grandTotal = Math.round(Number(fulfillment.order.grandTotal));
     return this.shippingPartner.createShipment({
@@ -216,7 +320,18 @@ export class FulfillmentService {
       provinceCode: address.provinceCode,
       ...(address.districtCode ? { districtCode: address.districtCode } : {}),
       ...(address.wardCode ? { wardCode: address.wardCode } : {}),
-      weightGrams: this.estimateWeightGrams(fulfillment),
+      // Khối lượng và kích thước lấy từ đúng số đã khai ở sản phẩm. Trước đây chỗ này nhân số
+      // lượng với một hằng số 500g và KHÔNG gửi kích thước, nên hãng vận chuyển báo cước trên một
+      // kiện tưởng tượng: hàng cồng kềnh nhẹ cân bị tính như bao diêm, và phần chênh sau khi hãng
+      // cân lại rơi vào cửa hàng.
+      weightGrams: measurement.chargeableWeightGrams,
+      ...(measurement.hasDimensions
+        ? {
+            lengthCm: measurement.lengthCm,
+            widthCm: measurement.widthCm,
+            heightCm: measurement.heightCm,
+          }
+        : {}),
       // COD chỉ thu khi chưa thanh toán trước; chuyển khoản/VNPay đã thu nên cod_amount phải là 0.
       codAmount: isCod ? grandTotal : 0,
       declaredValue: grandTotal,
@@ -274,12 +389,16 @@ export class FulfillmentService {
   }
 
   /** GHN tính cước theo gram; chưa có cân thật nên dùng khối lượng tối thiểu cho mỗi sản phẩm. */
-  private estimateWeightGrams(fulfillment: LoadedFulfillment): number {
-    const quantity = fulfillment.order.reservation.items.reduce(
-      (total, item) => total + item.quantity,
-      0,
+  private measurePackage(fulfillment: LoadedFulfillment): PackageMeasurement {
+    return measurePackageFrom(
+      fulfillment.order.reservation.items.map((item) => ({
+        quantity: item.quantity,
+        weightGrams: item.productVariant.weightGrams,
+        lengthMm: item.productVariant.lengthMm,
+        widthMm: item.productVariant.widthMm,
+        heightMm: item.productVariant.heightMm,
+      })),
     );
-    return Math.max(DEFAULT_ITEM_WEIGHT_GRAMS, quantity * DEFAULT_ITEM_WEIGHT_GRAMS);
   }
 
   private shipWithinTransaction(
@@ -754,13 +873,9 @@ export class FulfillmentService {
     return { AND: filters };
   }
 
+  /** `strict`: đây là màn thao tác, tài khoản chưa có phạm vi nhận 403 thay vì một bảng rỗng. */
   private scopeWhere(principal: AuthPrincipal): Prisma.FulfillmentWhereInput {
-    if (principal.scopes.some((scope) => scope.type === ScopeType.GLOBAL)) return {};
-    const branchIds = principal.scopes
-      .filter((scope) => scope.type === ScopeType.BRANCH && scope.branchId)
-      .map((scope) => toDatabaseId(scope.branchId!));
-    if (branchIds.length === 0) throw new ForbiddenException('Tài khoản chưa được gán phạm vi chi nhánh');
-    return { order: { branchId: { in: branchIds } } };
+    return orderBranchScopeWhere(principal, { strict: true });
   }
 
   private toSummary(fulfillment: LoadedFulfillmentSummary) {

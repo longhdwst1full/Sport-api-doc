@@ -178,3 +178,42 @@ export function maskEmail(email: string): string {
   const head = name.slice(0, 1);
   return `${head}${'*'.repeat(Math.max(name.length - 1, 1))}@${domain}`;
 }
+
+/**
+ * Trường mang bí mật dùng được ngay nếu đọc trộm được database.
+ *
+ * `resetUrl` chứa token đặt lại mật khẩu ở dạng RÕ. Bảng `password_reset_tokens` đã cẩn thận chỉ
+ * lưu hash, nhưng chính cái link đầy đủ lại được chép sang `outbox_events.payload_json` rồi sang
+ * `notifications.payload_json` — mà `notifications` là nhật ký sống lâu, không có hạn dọn. Ai đọc
+ * được database trong vòng 30 phút có thể dùng thẳng link đó để đổi mật khẩu người khác.
+ */
+const SENSITIVE_PAYLOAD_FIELDS = ['resetUrl', 'token', 'rawToken', 'password'] as const;
+
+export const REDACTED_PLACEHOLDER = '[redacted]';
+
+/**
+ * Bản payload dùng được cho nhật ký: giữ nguyên mọi thứ cần để tra cứu, che đúng phần bí mật.
+ *
+ * Che thay vì bỏ hẳn trường, để khi đọc log còn biết là sự kiện này CÓ mang link — bỏ trường đi
+ * thì người đọc tưởng dữ liệu bị thiếu.
+ */
+export function redactSensitivePayload(payload: unknown): unknown {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return payload;
+  const source = payload as Record<string, unknown>;
+  let changed = false;
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(source)) {
+    if ((SENSITIVE_PAYLOAD_FIELDS as readonly string[]).includes(key) && value !== undefined) {
+      result[key] = REDACTED_PLACEHOLDER;
+      changed = true;
+      continue;
+    }
+    result[key] = value;
+  }
+  return changed ? result : payload;
+}
+
+/** Sự kiện có mang bí mật thì payload trong outbox phải được xoá ngay sau khi gửi xong. */
+export function carriesSecret(payload: unknown): boolean {
+  return redactSensitivePayload(payload) !== payload;
+}

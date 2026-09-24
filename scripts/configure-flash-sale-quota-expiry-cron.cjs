@@ -26,13 +26,20 @@ function validateUrl(value) {
   return url.toString();
 }
 
+/**
+ * Ghi secret vào Supabase Vault.
+ *
+ * `vault.update_secret` và `vault.create_secret` trả về void, nên phải dùng `$executeRawUnsafe`:
+ * `$queryRawUnsafe` cố deserialize cột void rồi ném lỗi. Lần chạy ĐẦU đi nhánh create nên không lộ
+ * ra; chỉ tới lần chạy lại — đúng lúc cần đổi cấu hình — mới hỏng.
+ */
 async function upsertVaultSecret(prisma, name, value, description) {
   const rows = await prisma.$queryRawUnsafe(
     'SELECT id::text AS id FROM vault.decrypted_secrets WHERE name = $1 LIMIT 1',
     name,
   );
   if (rows[0]?.id) {
-    await prisma.$queryRawUnsafe(
+    await prisma.$executeRawUnsafe(
       'SELECT vault.update_secret($1::uuid, $2, $3, $4)',
       rows[0].id,
       value,
@@ -41,7 +48,7 @@ async function upsertVaultSecret(prisma, name, value, description) {
     );
     return;
   }
-  await prisma.$queryRawUnsafe(
+  await prisma.$executeRawUnsafe(
     'SELECT vault.create_secret($1, $2, $3)',
     value,
     name,

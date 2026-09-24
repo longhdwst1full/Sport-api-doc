@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
   ServiceUnavailableException,
@@ -9,7 +8,7 @@ import { Prisma } from '@prisma/client';
 import { toDatabaseId, toEntityId } from '../../common/identifiers/entity-id';
 import { PrismaService } from '../../database/prisma.service';
 import type { AuthPrincipal } from '../auth/auth.types';
-import { ScopeType } from '../iam/iam.types';
+import { warehouseBranchScopeWhere } from '../../common/security/branch-scope';
 import { InventoryBalanceListDto, InventoryBalanceSummaryDto } from './inventory.dto';
 import { classifyInventoryBalance } from './inventory.constants';
 import {
@@ -273,13 +272,12 @@ export class InventoryQueryService {
     };
   }
 
+  /**
+   * `strict`: tồn kho là màn thao tác, nên tài khoản chưa được gán chi nhánh nhận 403 thay vì một
+   * bảng rỗng không giải thích được.
+   */
   private scopeWhere(principal: AuthPrincipal): { warehouse?: Prisma.WarehouseWhereInput } {
-    if (principal.scopes.some((scope) => scope.type === ScopeType.GLOBAL)) return {};
-    const branchIds = principal.scopes
-      .filter((scope) => scope.type === ScopeType.BRANCH && scope.branchId)
-      .map((scope) => toDatabaseId(scope.branchId!));
-    if (branchIds.length === 0) throw new ForbiddenException('Branch scope is required');
-    return { warehouse: { branchId: { in: branchIds } } };
+    return warehouseBranchScopeWhere(principal, { strict: true });
   }
 
   private adjustmentSummary(row: {

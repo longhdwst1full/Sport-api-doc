@@ -44,7 +44,16 @@ function buildFulfillment(paymentMethod: 'COD' | 'BANK_TRANSFER') {
           wardCode: '1A0607',
         },
       ],
-      reservation: { items: [{ productVariantId: 7n, quantity: 2 }] },
+      reservation: {
+        items: [
+          {
+            productVariantId: 7n,
+            quantity: 2,
+            // Cân nặng và kích thước ĐÃ KHAI ở sản phẩm; vận đơn phải dùng đúng số này.
+            productVariant: { weightGrams: 1_200, lengthMm: 300, widthMm: 200, heightMm: 150 },
+          },
+        ],
+      },
     },
   };
 }
@@ -106,6 +115,29 @@ describe('FulfillmentService partner shipment', () => {
       // COD thu hộ đúng tổng tiền đơn.
       codAmount: 450_000,
       declaredValue: 450_000,
+    });
+  });
+
+  /**
+   * Hồi quy: chỗ tạo vận đơn từng nhân số lượng với hằng số 500g và KHÔNG gửi kích thước, nên hãng
+   * báo cước trên một kiện tưởng tượng. Cân nặng và kích thước khai ở sản phẩm phải đi tới hãng.
+   */
+  it('gửi đúng cân nặng và kích thước đã khai ở sản phẩm', async () => {
+    const { service, createShipment } = buildService({});
+
+    await service.ship('5', shipInput, 'idem-key-weight', 'req-w', principal);
+
+    expect(createShipment.mock.calls[0]?.[0]).toMatchObject({
+      /**
+       * Cân nặng thật 1.200g × 2 món = 2.400g, nhưng kiện 30 × 20 × 30 cm = 18.000 cm³, quy đổi
+       * 18.000 ÷ 5000 = 3,6 → 4 kg. Hãng tính tiền theo số LỚN HƠN, nên gửi 4.000g.
+       *
+       * Đây đúng là nhóm hàng mà cách tính cũ sai nhiều nhất: cồng kềnh nhưng nhẹ cân.
+       */
+      weightGrams: 4_000,
+      lengthCm: 30,
+      widthCm: 20,
+      heightCm: 30,
     });
   });
 

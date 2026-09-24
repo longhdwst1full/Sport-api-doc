@@ -9,9 +9,13 @@ import {
   vietnamQuarterKey,
   vietnamYearKey,
 } from '../../common/time/vietnam-time';
-import { toDatabaseId } from '../../common/identifiers/entity-id';
 import type { AuthPrincipal } from '../auth/auth.types';
-import { ScopeType } from '../iam/iam.types';
+import {
+  branchScopeWhere,
+  customerBranchScopeWhere,
+  visibleBranchIds,
+  warehouseBranchScopeWhere,
+} from '../../common/security/branch-scope';
 import {
   InventoryReportDto,
   OverviewReportDto,
@@ -51,7 +55,7 @@ export class ReportingService {
   constructor(private readonly prisma: PrismaService) {}
 
   async overview(actor: AuthPrincipal): Promise<OverviewReportDto> {
-    const branchIds = this.visibleBranchIds(actor);
+    const branchIds = visibleBranchIds(actor);
     const now = new Date();
     // Cắt ngày theo giờ cửa hàng, không theo giờ máy chủ: máy chủ chạy UTC thì "hôm nay"
     // bắt đầu lúc 7h sáng giờ Việt Nam và bỏ sót đơn đặt trước đó.
@@ -89,10 +93,10 @@ export class ReportingService {
 
     const [publishedProducts, customers, grouped] = await Promise.all([
       this.prisma.product.count({ where: { status: 'PUBLISHED' } }),
-      this.prisma.customer.count({ where: this.customerScopeWhere(branchIds) }),
+      this.prisma.customer.count({ where: customerBranchScopeWhere(actor) }),
       this.prisma.order.groupBy({
         by: ['status'],
-        where: { ...this.scopeWhere(actor), placedAt: { gte: since } },
+        where: { ...branchScopeWhere(actor), placedAt: { gte: since } },
         orderBy: { status: 'asc' },
         _count: { status: true },
       }),
@@ -113,7 +117,7 @@ export class ReportingService {
 
   async revenue(query: RevenueReportQueryDto, actor: AuthPrincipal): Promise<RevenueReportDto> {
     const { from, to } = this.resolveRange(query);
-    const scope = this.scopeWhere(actor);
+    const scope = branchScopeWhere(actor);
     const granularity = query.granularity ?? 'DAY';
     const periodKey = PERIOD_KEY[granularity];
 
@@ -230,7 +234,7 @@ export class ReportingService {
    */
   async topCustomers(query: TopProductQueryDto, actor: AuthPrincipal): Promise<TopCustomerListDto> {
     const { from, to } = this.resolveRange(query);
-    const scope = this.scopeWhere(actor);
+    const scope = branchScopeWhere(actor);
 
     const orders = await this.prisma.order.findMany({
       where: {
@@ -276,7 +280,7 @@ export class ReportingService {
   }
 
   async inventory(actor: AuthPrincipal): Promise<InventoryReportDto> {
-    const where = this.inventoryScopeWhere(actor);
+    const where = warehouseBranchScopeWhere(actor);
 
     const balances = await this.prisma.inventoryBalance.findMany({
       where,
@@ -312,7 +316,7 @@ export class ReportingService {
 
   async topProducts(query: TopProductQueryDto, actor: AuthPrincipal): Promise<TopProductListDto> {
     const { from, to } = this.resolveRange(query);
-    const scope = this.scopeWhere(actor);
+    const scope = branchScopeWhere(actor);
 
     const items = await this.prisma.orderItem.findMany({
       where: {
@@ -355,43 +359,6 @@ export class ReportingService {
         .sort((left, right) => right.quantitySold - left.quantitySold)
         .slice(0, query.limit),
     };
-  }
-
-  /**
-   * Khách hàng thuộc phạm vi một chi nhánh khi đã từng đặt đơn ở chi nhánh đó — cùng quy tắc với
-   * `AdminCustomerService`. Trước đây `overview` đếm toàn bộ bảng khách, nên quản lý chi nhánh nhìn
-   * thấy tổng số khách toàn hệ thống trong khi danh sách khách của họ chỉ hiện một phần.
-   *
-   * SECURITY: quy tắc này phải trùng với quy tắc của màn hình danh sách khách; lệch nhau là rò rỉ
-   * quy mô dữ liệu của chi nhánh khác qua con số tổng.
-   */
-  private customerScopeWhere(branchIds: bigint[] | undefined): Prisma.CustomerWhereInput {
-    if (!branchIds) return {};
-    return { orders: { some: { branchId: { in: branchIds } } } };
-  }
-
-  /** Quản lý chi nhánh chỉ thấy số của chi nhánh mình, không thấy doanh thu toàn hệ thống. */
-  private scopeWhere(actor: AuthPrincipal): Prisma.OrderWhereInput {
-    const branchIds = this.visibleBranchIds(actor);
-    return branchIds ? { branchId: { in: branchIds } } : {};
-  }
-
-  private visibleBranchIds(actor: AuthPrincipal): bigint[] | undefined {
-    if (actor.scopes.some(({ type }) => type === ScopeType.GLOBAL)) return undefined;
-    return actor.scopes.flatMap(({ type, branchId }) =>
-      type === ScopeType.BRANCH && branchId ? [toDatabaseId(branchId)] : [],
-    );
-  }
-
-  /**
-   * Tồn kho lọc qua quan hệ `warehouse.branchId`, KHÔNG phải `warehouseId`.
-   * `Warehouse.id` và `Warehouse.branch_id` là hai cột khác nhau; đem branch id
-   * so với warehouse id sẽ trả về kho của chi nhánh khác hoặc rỗng.
-   */
-  private inventoryScopeWhere(actor: AuthPrincipal): Prisma.InventoryBalanceWhereInput {
-    const branchIds = this.visibleBranchIds(actor);
-    if (!branchIds) return {};
-    return { warehouse: { branchId: { in: branchIds } } };
   }
 
   /**

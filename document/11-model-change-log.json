@@ -3880,6 +3880,99 @@
         "test:src/modules/iam/iam.role-administration.spec.ts"
       ],
       "targets": []
+    },
+    {
+      "id": "API-20260924-SHIPMENT-WEIGHT-AND-DIMENSIONS",
+      "date": "2026-09-24",
+      "scope": "FULFILLMENT+SHIPPING",
+      "summary": "Vận đơn dùng cân nặng và kích thước ĐÃ KHAI ở sản phẩm. Trước đó estimateWeightGrams nhân tổng số lượng với hằng số 500g và KHÔNG gửi kích thước, nên cổng GHN rơi về kích thước tối thiểu 1cm: hãng báo cước trên một kiện tưởng tượng, hàng cồng kềnh nhẹ cân bị tính như bao diêm và phần chênh sau khi hãng cân lại rơi vào cửa hàng. measurePackageFrom cộng khối lượng theo số lượng, xếp kiện bằng dài/rộng lớn nhất và chiều cao cộng dồn, rồi tính trọng lượng quy đổi thể tích theo hệ số 5000; cước gửi đi là số lớn hơn giữa khối lượng thật và khối lượng quy đổi, kèm weightType ACTUAL/VOLUMETRIC để đối soát. Sản phẩm chưa khai cân nặng rơi về 500g; không món nào khai đủ ba chiều thì KHÔNG gửi kích thước để hãng áp mức tối thiểu thay vì bịa số. fulfillmentInclude nạp thêm weight_grams/length_mm/width_mm/height_mm của product_variants. Không thay đổi schema hay contract.",
+      "sources": [
+        "source:src/modules/fulfillment/services/fulfillment.service.ts",
+        "test:src/modules/fulfillment/services/package-measurement.spec.ts",
+        "test:src/modules/fulfillment/services/fulfillment-partner-shipment.spec.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260924-CLIENT-COOKIE-SESSION-STATE",
+      "date": "2026-09-24",
+      "scope": "STOREFRONT+AUTH",
+      "summary": "Storefront nhận ra được phiên đăng nhập ở transport COOKIE. isCustomerAuthenticated trả Boolean(readCustomerAuthTokens()), mà hàm đó luôn trả undefined khi transport là COOKIE — cấu hình thật của .env.local và .env.production. Hậu quả: khách đăng nhập thành công nhưng toàn bộ giao diện coi như chưa đăng nhập, header hiện nút đăng nhập, /profile đá ngược về /login, và lời gọi lấy hồ sơ bị chặn bởi chính cờ đó. Thay bằng cờ phiên trong localStorage (KHÔNG phải credential; token thật vẫn nằm trong cookie HttpOnly) cộng với hồ sơ đọc từ server; 401 ở hồ sơ thì dọn cờ để giao diện tự trở về trạng thái chưa đăng nhập. hasCustomerRefreshCredential cũng thôi trả true vô điều kiện ở chế độ COOKIE, nên khách vãng lai gặp 401 ở trang công khai không còn kéo theo một lời gọi /auth/refresh vô nghĩa. useCustomerAuth trả thêm customer để header và trang hồ sơ hiển thị đúng người đang đăng nhập.",
+      "sources": [
+        "source:client/src/features/auth/model/auth-token.store.ts",
+        "source:client/src/features/auth/hooks/use-customer-auth.ts",
+        "test:client/src/features/auth/model/auth-token.store.cookie.test.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260924-OUTBOX-LOCK-RECOVERY",
+      "date": "2026-09-24",
+      "scope": "NOTIFICATION+OPERATIONS",
+      "summary": "Worker outbox thu hồi dòng PROCESSING quá hạn (OUTBOX_LOCK_TIMEOUT_SECONDS = 300). Trước đó claim đặt status PROCESSING còn điều kiện lấy việc chỉ nhận PENDING, và không có đường nào đưa PROCESSING trở lại: tiến trình chết giữa chừng là email mất vĩnh viễn, không lỗi không log không retry. Đo trên production cho thấy 3/20 lượt gọi cron bị timeout vì cold start nên tình huống này chắc chắn xảy ra. Dòng thu hồi được cộng thêm một lần thử để sự kiện luôn làm chết tiến trình vẫn tiến tới DEAD thay vì lặp vô hạn. Đồng thời sửa lại các comment mô tả mạnh hơn khả năng thật: cơ chế này là at-least-once, không phải exactly-once — nhà cung cấp đã nhận email mà tiến trình chết trước khi ghi SENT thì lần sau vẫn gửi lại; đóng hẳn cần khoá idempotency phía nhà cung cấp.",
+      "sources": [
+        "source:src/modules/notification/outbox-dispatcher.service.ts",
+        "test:src/modules/notification/outbox-lock-recovery.spec.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260924-RESET-TOKEN-REDACTION",
+      "date": "2026-09-24",
+      "scope": "AUTH+NOTIFICATION+SECURITY",
+      "summary": "Che token đặt lại mật khẩu trong nhật ký thông báo. password_reset_tokens chỉ lưu hash, nhưng link đầy đủ kèm token dạng RÕ được chép sang outbox_events.payload_json rồi sang notifications.payload_json — mà notifications là nhật ký sống lâu, không có hạn dọn. Đọc trộm được database trong 30 phút là đổi được mật khẩu người khác. notifications nay lưu bản đã che; dòng outbox mang bí mật được xoá phần bí mật ngay khi chuyển DONE, vì dòng DONE nằm lại vĩnh viễn. Che chứ không bỏ trường, để đọc log còn biết sự kiện đó có mang link.",
+      "sources": [
+        "source:src/modules/notification/notification.templates.ts",
+        "source:src/modules/notification/outbox-dispatcher.service.ts",
+        "test:src/modules/notification/payload-redaction.spec.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260924-BRANCH-SCOPE-CENTRALIZED",
+      "date": "2026-09-24",
+      "scope": "SECURITY+DATA-SCOPE",
+      "summary": "Gom quy tắc phạm vi dữ liệu theo chi nhánh về một nguồn duy nhất (src/common/security/branch-scope.ts). Trước đó quy tắc được chép lại trong 11 hàm rải khắp 9 service; một chỗ quên áp scope là rò rỉ chéo chi nhánh mà không có gì bắt được, và đã xảy ra thật ở getAdminReportOverview. Các bản sao còn lệch nhau: tài khoản không có chi nhánh nào thì order/payment/inventory/iam ném 403 còn reporting/customer trả rỗng — cả hai đều fail-closed nhưng khác kiểu. Tuỳ chọn strict giữ nguyên hành vi từng chỗ và làm chỗ lệch tra được bằng một lần grep. Đã chuyển reporting, customer, inventory, stock-transfer, order, payment, fulfillment; còn lại iam (trả entity id dạng chuỗi) và checkout. Không thay đổi hành vi, schema hay contract.",
+      "sources": [
+        "source:src/common/security/branch-scope.ts",
+        "test:src/common/security/branch-scope.spec.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260924-PACKAGE-DIMENSION-MIXED-DATA",
+      "date": "2026-09-24",
+      "scope": "FULFILLMENT+SHIPPING",
+      "summary": "Sửa tính kích thước kiện khi dữ liệu hỗn hợp. hasDimensions trở thành true chỉ cần MỘT dòng khai đủ ba chiều, nên kiện gửi lên hãng chỉ tính phần món đo được và bỏ hẳn món còn lại — khai NHỎ hơn kiện thật, đúng thứ cách tính này tồn tại để tránh (máy tập có kích thước + thảm tập thiếu kích thước). Nay chỉ khai kích thước khi MỌI dòng đều đủ ba chiều; thiếu bất kỳ dòng nào thì không gửi kích thước và để hãng áp mức tối thiểu. Cân nặng vẫn cộng đủ mọi món.",
+      "sources": [
+        "source:src/modules/fulfillment/services/fulfillment.service.ts",
+        "test:src/modules/fulfillment/services/package-measurement.spec.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260924-CLIENT-COOKIE-ACCESS-TOKEN",
+      "date": "2026-09-24",
+      "scope": "STOREFRONT+AUTH+PERFORMANCE",
+      "summary": "Storefront giữ lại access token ở transport COOKIE. Server chỉ đưa refresh token vào cookie HttpOnly; access token vẫn nằm trong response body và mọi request được bảo vệ phải tự gắn nó vào header Authorization. Bản trước bỏ luôn cả cặp token khi chạy COOKIE, nên chuỗi sau lặp lại ở MỌI lời gọi: request đi không kèm Bearer, nhận 401, fetcher xoay token, thử lại thành công, access token mới lại bị bỏ. Mỗi request tốn hai vòng mạng và một lần xoay refresh token. Nay lưu access token, và refresh token vẫn không bao giờ được ghi xuống chỗ JavaScript đọc được.",
+      "sources": [
+        "source:client/src/features/auth/model/auth-token.store.ts",
+        "test:client/src/features/auth/model/auth-token.store.cookie.test.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260924-CRON-VAULT-UPSERT-FIX",
+      "date": "2026-09-24",
+      "scope": "OPERATIONS+JOBS",
+      "summary": "Sửa lỗi chặn việc cấu hình lại cron: vault.update_secret và vault.create_secret trả về void nhưng script gọi bằng $queryRawUnsafe, nên Prisma ném lỗi deserialize cột void. Lần chạy ĐẦU đi nhánh create nên không lộ ra; chỉ tới lần chạy lại — đúng lúc cần đổi cấu hình — mới hỏng. Sau khi sửa đã đăng ký lại cả ba job với timeout 30s và lên lịch job dctd-flash-sale-quota-expiry lần đầu tiên.",
+      "sources": [
+        "source:scripts/configure-reservation-expiry-cron.cjs",
+        "source:scripts/configure-order-maintenance-cron.cjs",
+        "source:scripts/configure-flash-sale-quota-expiry-cron.cjs",
+        "source:scripts/configure-notification-dispatch-cron.cjs"
+      ],
+      "targets": []
     }
   ]
 }

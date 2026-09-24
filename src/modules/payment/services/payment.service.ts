@@ -2,7 +2,6 @@ import { createHash, randomUUID } from 'node:crypto';
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
   ServiceUnavailableException,
@@ -15,10 +14,10 @@ import { PrismaService } from '../../../database/prisma.service';
 import { ObjectStorageClient, StoredImageAsset } from '../../../integrations/object-storage/object-storage.client';
 import { AuditWriter } from '../../audit/audit.writer';
 import type { AuthPrincipal } from '../../auth/auth.types';
+import { orderBranchScopeWhere } from '../../../common/security/branch-scope';
 import { CartService } from '../../cart/cart.service';
 import type { PaymentMethod } from '../providers/payment-provider';
 import { CreateMediaUploadDto, SignedMediaUploadDto } from '../../media/media.dto';
-import { ScopeType } from '../../iam/iam.types';
 import {
   AdminPaymentListDto,
   AdminPaymentQueryDto,
@@ -516,13 +515,9 @@ export class PaymentService {
     return { AND: filters };
   }
 
+  /** `strict`: đây là màn thao tác, tài khoản chưa có phạm vi nhận 403 thay vì một bảng rỗng. */
   private scopeWhere(principal: AuthPrincipal): Prisma.PaymentWhereInput {
-    if (principal.scopes.some((scope) => scope.type === ScopeType.GLOBAL)) return {};
-    const branchIds = principal.scopes
-      .filter((scope) => scope.type === ScopeType.BRANCH && scope.branchId)
-      .map((scope) => toDatabaseId(scope.branchId!));
-    if (branchIds.length === 0) throw new ForbiddenException('Tài khoản chưa được gán phạm vi chi nhánh');
-    return { order: { branchId: { in: branchIds } } };
+    return orderBranchScopeWhere(principal, { strict: true });
   }
 
   private toDetail(payment: LoadedPayment): PaymentDetailDto {
