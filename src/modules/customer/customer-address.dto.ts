@@ -64,7 +64,7 @@ export class CreateCustomerAddressDto {
   provinceCode: string;
 
   @ApiPropertyOptional({
-    enum: ADDRESS_CODE_PROVIDERS,
+    enum: ADDRESS_CODE_PROVIDERS, enumName: 'AddressCodeProvider',
     default: 'GHN',
     description: 'Hãng đã cấp bộ mã gửi kèm; bỏ trống thì hiểu là hãng mặc định của hệ thống.',
   })
@@ -105,9 +105,8 @@ export class CustomerAddressDto {
   @ApiProperty() provinceCode: string;
 
   @ApiPropertyOptional({
-    type: String,
     nullable: true,
-    enum: ADDRESS_CODE_PROVIDERS,
+    enum: ADDRESS_CODE_PROVIDERS, enumName: 'AddressCodeProvider',
     description: 'Hãng đã cấp bộ mã địa giới của địa chỉ này.',
   })
   codeProvider: string | null;

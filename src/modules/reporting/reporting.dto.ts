@@ -31,7 +31,7 @@ export class ReportRangeQueryDto {
 
 export class RevenueReportQueryDto extends ReportRangeQueryDto {
   @ApiPropertyOptional({
-    enum: REPORT_GRANULARITIES,
+    enum: REPORT_GRANULARITIES, enumName: 'ReportGranularity',
     default: 'DAY',
     description: 'Gom biểu đồ theo ngày, tháng, quý hoặc năm.',
   })
@@ -112,7 +112,7 @@ export class RevenueReportDto {
   averageOrderValue: string;
 
   @ApiProperty({
-    enum: REPORT_GRANULARITIES,
+    enum: REPORT_GRANULARITIES, enumName: 'ReportGranularity',
     description: 'Mức gom đã áp dụng cho `series`',
   })
   granularity: ReportGranularity;
@@ -172,7 +172,7 @@ export class TopCustomerListDto {
  */
 export class ReportExportQueryDto extends RevenueReportQueryDto {
   @ApiPropertyOptional({
-    enum: REPORT_EXPORT_FORMATS,
+    enum: REPORT_EXPORT_FORMATS, enumName: 'ReportExportFormat',
     default: 'XLSX',
     description: 'Định dạng file tải về.',
   })
@@ -182,14 +182,14 @@ export class ReportExportQueryDto extends RevenueReportQueryDto {
 }
 
 export class TopReportExportQueryDto extends TopProductQueryDto {
-  @ApiPropertyOptional({ enum: REPORT_EXPORT_FORMATS, default: 'XLSX' })
+  @ApiPropertyOptional({ enum: REPORT_EXPORT_FORMATS, enumName: 'ReportExportFormat', default: 'XLSX' })
   @IsOptional()
   @IsIn(REPORT_EXPORT_FORMATS)
   format: ReportExportFormat = 'XLSX';
 }
 
 export class InventoryExportQueryDto {
-  @ApiPropertyOptional({ enum: REPORT_EXPORT_FORMATS, default: 'XLSX' })
+  @ApiPropertyOptional({ enum: REPORT_EXPORT_FORMATS, enumName: 'ReportExportFormat', default: 'XLSX' })
   @IsOptional()
   @IsIn(REPORT_EXPORT_FORMATS)
   format: ReportExportFormat = 'XLSX';

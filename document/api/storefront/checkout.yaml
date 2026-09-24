@@ -273,12 +273,9 @@ components:
         recipient:
           $ref: "#/components/schemas/CheckoutRecipientDto"
         paymentMethod:
-          type: string
-          enum:
-            - BANK_TRANSFER
-            - COD
-            - VNPAY
           example: BANK_TRANSFER
+          allOf:
+            - $ref: "#/components/schemas/CheckoutPaymentMethod"
         requestShippingConsultation:
           type: boolean
           default: false
@@ -297,10 +294,8 @@ components:
           type: string
           description: Opaque token used to confirm this exact quote
         status:
-          type: string
-          enum:
-            - QUOTED
-            - AWAITING_SHIPPING_CONSULTATION
+          allOf:
+            - $ref: "#/components/schemas/CheckoutQuoteStatus"
         branchId:
           type: string
           pattern: ^[1-9][0-9]*$
@@ -312,17 +307,11 @@ components:
         branchName:
           type: string
         paymentMethod:
-          type: string
-          enum:
-            - BANK_TRANSFER
-            - COD
+          allOf:
+            - $ref: "#/components/schemas/CheckoutQuotePaymentMethod"
         shippingMethod:
-          type: string
-          enum:
-            - BRANCH_FREE
-            - STANDARD_DELIVERY
-            - THIRD_PARTY
-            - MANUAL_EXTERNAL
+          allOf:
+            - $ref: "#/components/schemas/ShippingMethod"
         shippingProvider:
           type: string
           nullable: true
@@ -486,6 +475,29 @@ components:
         - district
         - province
         - provinceCode
+    CheckoutPaymentMethod:
+      type: string
+      enum:
+        - BANK_TRANSFER
+        - COD
+        - VNPAY
+    CheckoutQuoteStatus:
+      type: string
+      enum:
+        - QUOTED
+        - AWAITING_SHIPPING_CONSULTATION
+    CheckoutQuotePaymentMethod:
+      type: string
+      enum:
+        - BANK_TRANSFER
+        - COD
+    ShippingMethod:
+      type: string
+      enum:
+        - BRANCH_FREE
+        - STANDARD_DELIVERY
+        - THIRD_PARTY
+        - MANUAL_EXTERNAL
     CheckoutQuoteItemDto:
       type: object
       properties:

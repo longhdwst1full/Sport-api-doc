@@ -43,7 +43,7 @@ export class RoleDto {
   @ApiProperty({ example: 'BRANCH_MANAGER' }) code: string;
   @ApiProperty({ example: 'Branch Manager' }) name: string;
   @ApiPropertyOptional() description?: string;
-  @ApiProperty({ enum: Object.values(ROLE_STATUS) }) status: RoleStatus;
+  @ApiProperty({ enum: Object.values(ROLE_STATUS), enumName: 'RoleStatus' }) status: RoleStatus;
   @ApiProperty() system: boolean;
   @ApiProperty({ type: [String] }) permissionCodes: string[];
   @ApiProperty({ example: 0 }) version: number;
@@ -54,7 +54,7 @@ export class UserRoleAssignmentDto {
   @ApiProperty({ ...ENTITY_ID_OPENAPI }) userId: string;
   @ApiProperty({ ...ENTITY_ID_OPENAPI }) roleId: string;
   @ApiProperty() roleCode: string;
-  @ApiProperty({ enum: ScopeType }) scopeType: ScopeType;
+  @ApiProperty({ enum: ScopeType, enumName: 'ScopeType' }) scopeType: ScopeType;
   @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI }) branchId?: string;
   @ApiProperty({ enum: [ROLE_ASSIGNMENT_STATUS.ACTIVE] })
   status: typeof ROLE_ASSIGNMENT_STATUS.ACTIVE;
@@ -93,7 +93,7 @@ export class PermissionListDto {
 }
 
 export class AssignUserRoleDto {
-  @ApiProperty({ enum: ASSIGNABLE_STAFF_ROLE_CODES, example: SystemRoleCode.BRANCH_MANAGER })
+  @ApiProperty({ enum: ASSIGNABLE_STAFF_ROLE_CODES, enumName: 'AssignableStaffRoleCode', example: SystemRoleCode.BRANCH_MANAGER })
   @IsIn(ASSIGNABLE_STAFF_ROLE_CODES)
   roleCode: AssignableStaffRoleCode;
 
@@ -199,7 +199,7 @@ export class UpdateRoleDto {
   @MaxLength(1000)
   description?: string;
 
-  @ApiPropertyOptional({ enum: Object.values(ROLE_STATUS) })
+  @ApiPropertyOptional({ enum: Object.values(ROLE_STATUS), enumName: 'RoleStatus' })
   @IsOptional()
   @IsIn(Object.values(ROLE_STATUS))
   status?: RoleStatus;

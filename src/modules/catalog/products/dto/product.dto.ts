@@ -42,7 +42,7 @@ export class ProductVariantDto {
   @ApiPropertyOptional({ type: Number, minimum: 1, nullable: true }) lengthMm?: number | null;
   @ApiPropertyOptional({ type: Number, minimum: 1, nullable: true }) widthMm?: number | null;
   @ApiPropertyOptional({ type: Number, minimum: 1, nullable: true }) heightMm?: number | null;
-  @ApiProperty({ enum: Object.values(PRODUCT_VARIANT_STATUS) }) status: ProductVariantStatus;
+  @ApiProperty({ enum: Object.values(PRODUCT_VARIANT_STATUS), enumName: 'ProductVariantStatus' }) status: ProductVariantStatus;
   @ApiProperty({ example: 0 }) version: number;
   @ApiPropertyOptional({ type: String, example: '18990000.00', nullable: true }) effectivePrice?: string | null;
   @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI, nullable: true }) effectivePriceId?: string | null;
@@ -59,7 +59,7 @@ export class ProductMediaDto {
   @ApiPropertyOptional({ type: String, nullable: true }) altText?: string | null;
   @ApiProperty({ minimum: 0 }) sortOrder: number;
   @ApiProperty() isPrimary: boolean;
-  @ApiProperty({ enum: Object.values(PRODUCT_MEDIA_STATUS) }) status: ProductMediaStatus;
+  @ApiProperty({ enum: Object.values(PRODUCT_MEDIA_STATUS), enumName: 'ProductMediaStatus' }) status: ProductMediaStatus;
 }
 
 export class ProductCategoryDto {
@@ -76,8 +76,8 @@ export class BundleComponentDto {
 }
 
 export class ProductBundleDto {
-  @ApiProperty({ enum: Object.values(PRODUCT_BUNDLE_TYPE) }) bundleType: 'FIXED_VIRTUAL';
-  @ApiProperty({ enum: Object.values(PRODUCT_BUNDLE_STATUS) }) status: 'ACTIVE' | 'INACTIVE';
+  @ApiProperty({ enum: Object.values(PRODUCT_BUNDLE_TYPE), enumName: 'ProductBundleType' }) bundleType: 'FIXED_VIRTUAL';
+  @ApiProperty({ enum: Object.values(PRODUCT_BUNDLE_STATUS), enumName: 'ProductBundleStatus' }) status: 'ACTIVE' | 'INACTIVE';
   @ApiProperty({ type: [BundleComponentDto] }) components: BundleComponentDto[];
 }
 
@@ -100,8 +100,8 @@ export class ProductSummaryDto {
   @ApiProperty() slug: string;
   @ApiPropertyOptional() brand?: string;
   @ApiPropertyOptional() primaryCategory?: string;
-  @ApiProperty({ enum: Object.values(PRODUCT_TYPE) }) productType: ProductType;
-  @ApiProperty({ enum: Object.values(PRODUCT_STATUS) }) status: ProductStatus;
+  @ApiProperty({ enum: Object.values(PRODUCT_TYPE), enumName: 'ProductType' }) productType: ProductType;
+  @ApiProperty({ enum: Object.values(PRODUCT_STATUS), enumName: 'ProductStatus' }) status: ProductStatus;
 
   @ApiProperty({
     example: true,
@@ -112,7 +112,7 @@ export class ProductSummaryDto {
 
   @ApiProperty({ example: 0 }) version: number;
   @ApiPropertyOptional({ type: String, example: '18990000.00', nullable: true }) minPrice?: string | null;
-  @ApiProperty({ enum: Object.values(PRODUCT_CURRENCY), example: 'VND' }) currency: 'VND';
+  @ApiProperty({ enum: Object.values(PRODUCT_CURRENCY), enumName: 'CurrencyCode', example: 'VND' }) currency: 'VND';
   @ApiPropertyOptional({ type: String, format: 'uri', nullable: true }) imageUrl?: string | null;
 }
 
@@ -160,12 +160,12 @@ export class ListProductsQueryDto {
 
   @ApiPropertyOptional({ description: 'Slug danh mục; gồm cả nhánh con' })
   @IsString() @IsOptional() category?: string;
-  @ApiPropertyOptional({ enum: Object.values(PRODUCT_STATUS) })
+  @ApiPropertyOptional({ enum: Object.values(PRODUCT_STATUS), enumName: 'ProductStatus' })
   @IsIn(Object.values(PRODUCT_STATUS)) @IsOptional() status?: ProductStatus;
 }
 
 export class CreateProductDto {
-  @ApiPropertyOptional({ enum: Object.values(PRODUCT_TYPE), default: PRODUCT_TYPE.STANDARD })
+  @ApiPropertyOptional({ enum: Object.values(PRODUCT_TYPE), enumName: 'ProductType', default: PRODUCT_TYPE.STANDARD })
   @IsIn(Object.values(PRODUCT_TYPE))
   @IsOptional()
   productType?: ProductType = PRODUCT_TYPE.STANDARD;

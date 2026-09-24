@@ -269,13 +269,11 @@ components:
           pattern: ^[1-9][0-9]*$
           example: "1"
         status:
-          type: string
-          enum:
-            - ACTIVE
+          allOf:
+            - $ref: "#/components/schemas/ActiveCartStatus"
         currencyCode:
-          type: string
-          enum:
-            - VND
+          allOf:
+            - $ref: "#/components/schemas/CurrencyCode"
         version:
           type: number
           minimum: 0
@@ -308,13 +306,11 @@ components:
           pattern: ^[1-9][0-9]*$
           example: "1"
         status:
-          type: string
-          enum:
-            - ACTIVE
+          allOf:
+            - $ref: "#/components/schemas/ActiveCartStatus"
         currencyCode:
-          type: string
-          enum:
-            - VND
+          allOf:
+            - $ref: "#/components/schemas/CurrencyCode"
         version:
           type: number
           minimum: 0
@@ -412,6 +408,14 @@ components:
           example: 1
       required:
         - expectedCartVersion
+    ActiveCartStatus:
+      type: string
+      enum:
+        - ACTIVE
+    CurrencyCode:
+      type: string
+      enum:
+        - VND
     CartItemDto:
       type: object
       properties:

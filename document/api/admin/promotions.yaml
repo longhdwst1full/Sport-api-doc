@@ -32,13 +32,7 @@ paths:
           required: false
           in: query
           schema:
-            type: string
-            enum:
-              - DRAFT
-              - SCHEDULED
-              - ACTIVE
-              - ENDED
-              - CANCELLED
+            $ref: "#/components/schemas/FlashSaleCampaignStatus"
         - name: search
           required: false
           in: query
@@ -348,6 +342,14 @@ paths:
         - catalog.flash_sale.manage
 components:
   schemas:
+    FlashSaleCampaignStatus:
+      type: string
+      enum:
+        - DRAFT
+        - SCHEDULED
+        - ACTIVE
+        - ENDED
+        - CANCELLED
     FlashSaleCampaignListDto:
       type: object
       properties:
@@ -444,13 +446,8 @@ components:
           type: string
           format: date-time
         status:
-          type: string
-          enum:
-            - DRAFT
-            - SCHEDULED
-            - ACTIVE
-            - ENDED
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/FlashSaleCampaignStatus"
         itemCount:
           type: number
         version:
@@ -495,13 +492,8 @@ components:
           type: string
           pattern: ^\d+$
         status:
-          type: string
-          enum:
-            - DRAFT
-            - SCHEDULED
-            - ACTIVE
-            - ENDED
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/FlashSaleCampaignStatus"
       required:
         - expectedVersion
         - status
@@ -556,13 +548,8 @@ components:
           type: string
           format: date-time
         status:
-          type: string
-          enum:
-            - DRAFT
-            - SCHEDULED
-            - ACTIVE
-            - ENDED
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/FlashSaleCampaignStatus"
         itemCount:
           type: number
         version:
@@ -631,10 +618,8 @@ components:
           type: number
           nullable: true
         status:
-          type: string
-          enum:
-            - ACTIVE
-            - INACTIVE
+          allOf:
+            - $ref: "#/components/schemas/FlashSaleItemStatus"
         version:
           type: string
       required:
@@ -649,6 +634,11 @@ components:
         - availableQuantity
         - status
         - version
+    FlashSaleItemStatus:
+      type: string
+      enum:
+        - ACTIVE
+        - INACTIVE
   securitySchemes:
     bearer:
       scheme: bearer

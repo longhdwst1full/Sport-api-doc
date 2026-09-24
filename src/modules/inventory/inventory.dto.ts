@@ -72,7 +72,7 @@ export class CreateStockAdjustmentDto {
   warehouseCode: string;
 
   @ApiPropertyOptional({
-    enum: Object.values(STOCK_ADJUSTMENT_TYPE),
+    enum: Object.values(STOCK_ADJUSTMENT_TYPE), enumName: 'StockAdjustmentType',
     default: STOCK_ADJUSTMENT_TYPE.CORRECTION,
   })
   @IsIn(Object.values(STOCK_ADJUSTMENT_TYPE))
@@ -80,7 +80,7 @@ export class CreateStockAdjustmentDto {
   adjustmentType?: StockAdjustmentType;
 
   @ApiPropertyOptional({
-    enum: Object.values(STOCK_ADJUSTMENT_REASON),
+    enum: Object.values(STOCK_ADJUSTMENT_REASON), enumName: 'StockAdjustmentReason',
     default: STOCK_ADJUSTMENT_REASON.MANUAL,
   })
   @Transform(trimOptional)
@@ -123,7 +123,7 @@ export class CreateStockAdjustmentDto {
 export class StockAdjustmentResultDto {
   @ApiProperty() adjustmentNo: string;
   @ApiProperty({ enum: ['POSTED'] }) status: 'POSTED';
-  @ApiProperty({ enum: Object.values(STOCK_ADJUSTMENT_TYPE) }) adjustmentType: string;
+  @ApiProperty({ enum: Object.values(STOCK_ADJUSTMENT_TYPE), enumName: 'StockAdjustmentType' }) adjustmentType: string;
   @ApiProperty() reasonCode: string;
   @ApiPropertyOptional({ type: String, nullable: true }) externalReference?: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) sourceName?: string | null;

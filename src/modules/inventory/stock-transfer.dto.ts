@@ -74,7 +74,7 @@ export class StockTransferQueryDto {
   @Transform(trimOptional) @IsString() @MaxLength(100) @IsOptional() search?: string;
   @ApiPropertyOptional({ maxLength: 32 })
   @Transform(trimOptional) @IsString() @MaxLength(32) @IsOptional() warehouseCode?: string;
-  @ApiPropertyOptional({ enum: Object.values(STOCK_TRANSFER_STATUS) })
+  @ApiPropertyOptional({ enum: Object.values(STOCK_TRANSFER_STATUS), enumName: 'StockTransferStatus' })
   @IsIn(Object.values(STOCK_TRANSFER_STATUS)) @IsOptional() status?: StockTransferStatus;
 }
 
@@ -94,7 +94,7 @@ export class StockTransferSummaryDto {
   @ApiProperty() transferNo: string;
   @ApiProperty() fromWarehouseCode: string;
   @ApiProperty() toWarehouseCode: string;
-  @ApiProperty({ enum: Object.values(STOCK_TRANSFER_STATUS) }) status: StockTransferStatus;
+  @ApiProperty({ enum: Object.values(STOCK_TRANSFER_STATUS), enumName: 'StockTransferStatus' }) status: StockTransferStatus;
   @ApiProperty() reason: string;
   @ApiProperty() itemCount: number;
   @ApiProperty({ ...ENTITY_ID_OPENAPI }) version: string;

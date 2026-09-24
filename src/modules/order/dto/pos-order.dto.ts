@@ -106,7 +106,7 @@ export class CreatePosOrderDto {
   @ValidateNested({ each: true }) @Type(() => PosOrderItemDto)
   items: PosOrderItemDto[];
 
-  @ApiProperty({ enum: POS_PAYMENT_METHODS, example: 'CASH' })
+  @ApiProperty({ enum: POS_PAYMENT_METHODS, enumName: 'PosPaymentMethod', example: 'CASH' })
   @IsIn(POS_PAYMENT_METHODS)
   paymentMethod: PosPaymentMethod;
 

@@ -53,18 +53,12 @@ paths:
           required: false
           in: query
           schema:
-            type: string
-            enum:
-              - ACTIVE
-              - INACTIVE
+            $ref: "#/components/schemas/CustomerStatus"
         - name: kind
           required: false
           in: query
           schema:
-            type: string
-            enum:
-              - MEMBER
-              - GUEST
+            $ref: "#/components/schemas/CustomerKind"
       responses:
         "200":
           description: ""
@@ -370,6 +364,16 @@ paths:
         - customer.manage
 components:
   schemas:
+    CustomerStatus:
+      type: string
+      enum:
+        - ACTIVE
+        - INACTIVE
+    CustomerKind:
+      type: string
+      enum:
+        - MEMBER
+        - GUEST
     AdminCustomerListDto:
       type: object
       properties:
@@ -479,16 +483,12 @@ components:
           type: string
           nullable: true
         status:
-          type: string
-          enum:
-            - ACTIVE
-            - INACTIVE
+          allOf:
+            - $ref: "#/components/schemas/CustomerStatus"
         kind:
-          type: string
-          enum:
-            - MEMBER
-            - GUEST
           description: Suy từ việc khách có tài khoản đăng nhập hay không
+          allOf:
+            - $ref: "#/components/schemas/CustomerKind"
         marketingConsent:
           type: boolean
           description: Khách có đồng ý nhận tin khuyến mãi
@@ -613,16 +613,12 @@ components:
           type: string
           nullable: true
         status:
-          type: string
-          enum:
-            - ACTIVE
-            - INACTIVE
+          allOf:
+            - $ref: "#/components/schemas/CustomerStatus"
         kind:
-          type: string
-          enum:
-            - MEMBER
-            - GUEST
           description: Suy từ việc khách có tài khoản đăng nhập hay không
+          allOf:
+            - $ref: "#/components/schemas/CustomerKind"
         marketingConsent:
           type: boolean
           description: Khách có đồng ý nhận tin khuyến mãi
@@ -732,11 +728,10 @@ components:
           maxLength: 32
           description: Mã tỉnh/thành theo danh mục hãng vận chuyển
         codeProvider:
-          type: string
-          enum:
-            - GHN
           default: GHN
           description: Hãng đã cấp bộ mã gửi kèm. Bỏ trống thì hiểu là hãng mặc định của hệ thống.
+          allOf:
+            - $ref: "#/components/schemas/AddressCodeProvider"
         isDefault:
           type: boolean
           default: false
@@ -784,11 +779,10 @@ components:
           example: "201"
           description: Mã tỉnh/thành của hãng vận chuyển.
         codeProvider:
-          type: string
           nullable: true
-          enum:
-            - GHN
           description: Hãng đã cấp bộ mã địa giới này. Mã của hãng khác không dùng lẫn được, nên địa chỉ lưu từ hãng cũ phải chọn lại khi đổi hãng.
+          allOf:
+            - $ref: "#/components/schemas/AddressCodeProvider"
         isDefault:
           type: boolean
       required:
@@ -830,6 +824,11 @@ components:
         - paymentStatus
         - grandTotal
         - placedAt
+    AddressCodeProvider:
+      type: string
+      enum:
+        - GHN
+      description: Hãng đã cấp bộ mã địa giới của địa chỉ này.
   securitySchemes:
     bearer:
       scheme: bearer

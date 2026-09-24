@@ -81,7 +81,7 @@ export class CreateCheckoutQuoteDto {
   @Type(() => CheckoutRecipientDto)
   recipient: CheckoutRecipientDto;
 
-  @ApiProperty({ enum: Object.values(CHECKOUT_PAYMENT_METHOD), example: 'BANK_TRANSFER' })
+  @ApiProperty({ enum: Object.values(CHECKOUT_PAYMENT_METHOD), enumName: 'CheckoutPaymentMethod', example: 'BANK_TRANSFER' })
   @IsIn(Object.values(CHECKOUT_PAYMENT_METHOD))
   paymentMethod: string;
 
@@ -108,12 +108,12 @@ export class CheckoutQuoteItemDto {
 
 export class CheckoutQuoteDto {
   @ApiProperty({ description: 'Opaque token used to confirm this exact quote' }) checkoutToken: string;
-  @ApiProperty({ enum: ['QUOTED', 'AWAITING_SHIPPING_CONSULTATION'] }) status: string;
+  @ApiProperty({ enum: ['QUOTED', 'AWAITING_SHIPPING_CONSULTATION'], enumName: 'CheckoutQuoteStatus' }) status: string;
   @ApiProperty({ ...ENTITY_ID_OPENAPI }) branchId: string;
   @ApiProperty({ ...ENTITY_ID_OPENAPI }) warehouseId: string;
   @ApiProperty() branchName: string;
-  @ApiProperty({ enum: ['BANK_TRANSFER', 'COD'] }) paymentMethod: string;
-  @ApiProperty({ enum: ['BRANCH_FREE', 'STANDARD_DELIVERY', 'THIRD_PARTY', 'MANUAL_EXTERNAL'] }) shippingMethod: string;
+  @ApiProperty({ enum: ['BANK_TRANSFER', 'COD'], enumName: 'CheckoutQuotePaymentMethod' }) paymentMethod: string;
+  @ApiProperty({ enum: ['BRANCH_FREE', 'STANDARD_DELIVERY', 'THIRD_PARTY', 'MANUAL_EXTERNAL'], enumName: 'ShippingMethod' }) shippingMethod: string;
   @ApiPropertyOptional({ type: String, nullable: true }) shippingProvider: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) distanceKm: string | null;
   @ApiProperty() itemSubtotal: string;

@@ -380,29 +380,18 @@ components:
         paymentRef:
           type: string
         method:
-          type: string
-          enum:
-            - BANK_TRANSFER
-            - COD
-            - VNPAY
+          allOf:
+            - $ref: "#/components/schemas/PaymentMethod"
         status:
-          type: string
-          enum:
-            - PENDING
-            - AWAITING_CONFIRMATION
-            - NEED_REVIEW
-            - SUCCESS
-            - FAILED
-            - CANCELLED
-            - REFUNDED
+          allOf:
+            - $ref: "#/components/schemas/PaymentStatus"
         expectedAmount:
           type: string
         receivedAmount:
           type: string
         currencyCode:
-          type: string
-          enum:
-            - VND
+          allOf:
+            - $ref: "#/components/schemas/CurrencyCode"
         expiresAt:
           type: string
           format: date-time
@@ -474,13 +463,9 @@ components:
           type: string
           example: product-front.webp
         contentType:
-          type: string
-          enum:
-            - image/jpeg
-            - image/png
-            - image/webp
-            - image/avif
           example: image/webp
+          allOf:
+            - $ref: "#/components/schemas/ImageMimeType"
         sizeBytes:
           type: number
           minimum: 1
@@ -494,9 +479,8 @@ components:
       type: object
       properties:
         provider:
-          type: string
-          enum:
-            - CLOUDINARY
+          allOf:
+            - $ref: "#/components/schemas/MediaProvider"
         uploadUrl:
           type: string
           format: uri
@@ -584,15 +568,32 @@ components:
       required:
         - displayStatus
         - message
+    PaymentMethod:
+      type: string
+      enum:
+        - BANK_TRANSFER
+        - COD
+        - VNPAY
+    PaymentStatus:
+      type: string
+      enum:
+        - PENDING
+        - AWAITING_CONFIRMATION
+        - NEED_REVIEW
+        - SUCCESS
+        - FAILED
+        - CANCELLED
+        - REFUNDED
+    CurrencyCode:
+      type: string
+      enum:
+        - VND
     PaymentInstructionDto:
       type: object
       properties:
         method:
-          type: string
-          enum:
-            - BANK_TRANSFER
-            - COD
-            - VNPAY
+          allOf:
+            - $ref: "#/components/schemas/PaymentMethod"
         provider:
           type: string
         reference:
@@ -629,12 +630,8 @@ components:
         sizeBytes:
           type: number
         status:
-          type: string
-          enum:
-            - PENDING_REVIEW
-            - ACCEPTED
-            - REJECTED
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/PaymentEvidenceStatus"
         note:
           type: string
         reviewReason:
@@ -669,6 +666,24 @@ components:
       required:
         - code
         - message
+    ImageMimeType:
+      type: string
+      enum:
+        - image/jpeg
+        - image/png
+        - image/webp
+        - image/avif
+    MediaProvider:
+      type: string
+      enum:
+        - CLOUDINARY
+    PaymentEvidenceStatus:
+      type: string
+      enum:
+        - PENDING_REVIEW
+        - ACCEPTED
+        - REJECTED
+        - CANCELLED
   securitySchemes:
     bearer:
       scheme: bearer

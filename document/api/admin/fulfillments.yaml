@@ -32,17 +32,7 @@ paths:
           required: false
           in: query
           schema:
-            type: string
-            enum:
-              - PENDING
-              - PICKING
-              - PACKED
-              - SHIPPED
-              - DELIVERED
-              - DELIVERY_FAILED
-              - RETURNING_TO_WAREHOUSE
-              - RETURNED_TO_WAREHOUSE
-              - CANCELLED
+            $ref: "#/components/schemas/FulfillmentStatus"
         - name: search
           required: false
           in: query
@@ -435,6 +425,18 @@ paths:
         - fulfillment.delivery_update
 components:
   schemas:
+    FulfillmentStatus:
+      type: string
+      enum:
+        - PENDING
+        - PICKING
+        - PACKED
+        - SHIPPED
+        - DELIVERED
+        - DELIVERY_FAILED
+        - RETURNING_TO_WAREHOUSE
+        - RETURNED_TO_WAREHOUSE
+        - CANCELLED
     AdminFulfillmentListDto:
       type: object
       properties:
@@ -509,17 +511,8 @@ components:
         warehouseName:
           type: string
         status:
-          type: string
-          enum:
-            - PENDING
-            - PICKING
-            - PACKED
-            - SHIPPED
-            - DELIVERED
-            - DELIVERY_FAILED
-            - RETURNING_TO_WAREHOUSE
-            - RETURNED_TO_WAREHOUSE
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/FulfillmentStatus"
         carrierCode:
           type: string
           nullable: true
@@ -661,11 +654,8 @@ components:
           type: string
           maxLength: 500
         condition:
-          type: string
-          enum:
-            - SELLABLE
-            - DAMAGED
-            - MISSING
+          allOf:
+            - $ref: "#/components/schemas/ReturnCondition"
         reason:
           type: string
           minLength: 5
@@ -696,17 +686,8 @@ components:
         warehouseName:
           type: string
         status:
-          type: string
-          enum:
-            - PENDING
-            - PICKING
-            - PACKED
-            - SHIPPED
-            - DELIVERED
-            - DELIVERY_FAILED
-            - RETURNING_TO_WAREHOUSE
-            - RETURNED_TO_WAREHOUSE
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/FulfillmentStatus"
         carrierCode:
           type: string
           nullable: true
@@ -761,17 +742,8 @@ components:
           type: string
           nullable: true
         toStatus:
-          type: string
-          enum:
-            - PENDING
-            - PICKING
-            - PACKED
-            - SHIPPED
-            - DELIVERED
-            - DELIVERY_FAILED
-            - RETURNING_TO_WAREHOUSE
-            - RETURNED_TO_WAREHOUSE
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/FulfillmentStatus"
         reason:
           type: string
           nullable: true
@@ -782,6 +754,12 @@ components:
         - sequenceNo
         - toStatus
         - createdAt
+    ReturnCondition:
+      type: string
+      enum:
+        - SELLABLE
+        - DAMAGED
+        - MISSING
   securitySchemes:
     bearer:
       scheme: bearer

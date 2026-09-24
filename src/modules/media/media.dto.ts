@@ -16,7 +16,7 @@ export class CreateMediaUploadDto {
   @IsNotEmpty()
   fileName: string;
 
-  @ApiProperty({ enum: ALLOWED_IMAGE_MIME_TYPES, example: 'image/webp' })
+  @ApiProperty({ enum: ALLOWED_IMAGE_MIME_TYPES, enumName: 'ImageMimeType', example: 'image/webp' })
   @IsIn(ALLOWED_IMAGE_MIME_TYPES)
   contentType: (typeof ALLOWED_IMAGE_MIME_TYPES)[number];
 
@@ -28,7 +28,7 @@ export class CreateMediaUploadDto {
 }
 
 export class SignedMediaUploadDto {
-  @ApiProperty({ enum: ['CLOUDINARY'] }) provider: 'CLOUDINARY';
+  @ApiProperty({ enum: ['CLOUDINARY'], enumName: 'MediaProvider' }) provider: 'CLOUDINARY';
   @ApiProperty({ format: 'uri' }) uploadUrl: string;
   @ApiProperty() cloudName: string;
   @ApiProperty() apiKey: string;
@@ -62,7 +62,7 @@ export class FinalizeMediaUploadDto {
 
 export class MediaAssetDto {
   @ApiProperty({ ...ENTITY_ID_OPENAPI }) id: string;
-  @ApiProperty({ enum: ['CLOUDINARY'] }) provider: 'CLOUDINARY';
+  @ApiProperty({ enum: ['CLOUDINARY'], enumName: 'MediaProvider' }) provider: 'CLOUDINARY';
   @ApiProperty() providerAssetId: string;
   @ApiProperty() publicId: string;
   @ApiProperty({ format: 'uri' }) secureUrl: string;

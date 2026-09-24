@@ -13,7 +13,7 @@ export class PaymentEvidenceDto {
   @ApiProperty({ format: 'uri' }) thumbnailUrl: string;
   @ApiProperty() mimeType: string;
   @ApiProperty() sizeBytes: number;
-  @ApiProperty({ enum: Object.values(PAYMENT_EVIDENCE_STATUS) }) status: string;
+  @ApiProperty({ enum: Object.values(PAYMENT_EVIDENCE_STATUS), enumName: 'PaymentEvidenceStatus' }) status: string;
   @ApiPropertyOptional() note?: string;
   @ApiPropertyOptional() reviewReason?: string;
   @ApiProperty({ format: 'date-time' }) createdAt: string;
@@ -21,7 +21,7 @@ export class PaymentEvidenceDto {
 }
 
 export class PaymentInstructionDto {
-  @ApiProperty({ enum: Object.values(PAYMENT_METHOD) }) method: string;
+  @ApiProperty({ enum: Object.values(PAYMENT_METHOD), enumName: 'PaymentMethod' }) method: string;
   @ApiProperty() provider: string;
   @ApiProperty() reference: string;
   @ApiProperty() customerMessage: string;
@@ -35,11 +35,11 @@ export class PaymentDetailDto {
   @ApiProperty() orderNo: string;
   @ApiProperty({ description: 'Trạng thái đơn hàng dùng để kiểm soát thời điểm thu COD' }) orderStatus: string;
   @ApiProperty() paymentRef: string;
-  @ApiProperty({ enum: Object.values(PAYMENT_METHOD) }) method: string;
-  @ApiProperty({ enum: Object.values(PAYMENT_STATUS) }) status: string;
+  @ApiProperty({ enum: Object.values(PAYMENT_METHOD), enumName: 'PaymentMethod' }) method: string;
+  @ApiProperty({ enum: Object.values(PAYMENT_STATUS), enumName: 'PaymentStatus' }) status: string;
   @ApiProperty() expectedAmount: string;
   @ApiProperty() receivedAmount: string;
-  @ApiProperty({ enum: ['VND'] }) currencyCode: string;
+  @ApiProperty({ enum: ['VND'], enumName: 'CurrencyCode' }) currencyCode: string;
   @ApiPropertyOptional({ format: 'date-time' }) expiresAt?: string;
   @ApiPropertyOptional({ format: 'date-time' }) confirmedAt?: string;
   @ApiPropertyOptional() failureReason?: string;
@@ -127,12 +127,12 @@ export class AdminPaymentQueryDto {
   @Max(100)
   limit = 20;
 
-  @ApiPropertyOptional({ enum: Object.values(PAYMENT_STATUS) })
+  @ApiPropertyOptional({ enum: Object.values(PAYMENT_STATUS), enumName: 'PaymentStatus' })
   @IsOptional()
   @IsIn(Object.values(PAYMENT_STATUS))
   status?: string;
 
-  @ApiPropertyOptional({ enum: Object.values(PAYMENT_METHOD) })
+  @ApiPropertyOptional({ enum: Object.values(PAYMENT_METHOD), enumName: 'PaymentMethod' })
   @IsOptional()
   @IsIn(Object.values(PAYMENT_METHOD))
   method?: string;
@@ -150,8 +150,8 @@ export class AdminPaymentSummaryDto {
   @ApiProperty() orderNo: string;
   @ApiProperty() recipientName: string;
   @ApiProperty() recipientPhone: string;
-  @ApiProperty({ enum: Object.values(PAYMENT_METHOD) }) method: string;
-  @ApiProperty({ enum: Object.values(PAYMENT_STATUS) }) status: string;
+  @ApiProperty({ enum: Object.values(PAYMENT_METHOD), enumName: 'PaymentMethod' }) method: string;
+  @ApiProperty({ enum: Object.values(PAYMENT_STATUS), enumName: 'PaymentStatus' }) status: string;
   @ApiProperty() expectedAmount: string;
   @ApiProperty() receivedAmount: string;
   @ApiProperty({ format: 'date-time' }) createdAt: string;

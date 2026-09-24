@@ -27,7 +27,7 @@ export class CapabilityReadinessDto {
   @ApiProperty({ description: 'Năng lực có đang được bật hay không' }) enabled: boolean;
 
   @ApiProperty({
-    enum: CAPABILITY_READINESS_STATUSES,
+    enum: CAPABILITY_READINESS_STATUSES, enumName: 'CapabilityReadinessStatus',
     description:
       'READY: đủ tham số. DISABLED: cố tình tắt, không phải lỗi. MISCONFIGURED: đang bật nhưng '
       + 'thiếu tham số — đây là thứ cần sửa. UNKNOWN: chưa đọc được tham số để kết luận.',

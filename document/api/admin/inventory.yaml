@@ -183,15 +183,7 @@ paths:
           required: false
           in: query
           schema:
-            type: string
-            enum:
-              - ADJUST
-              - RECEIVE
-              - TRANSFER_OUT
-              - TRANSFER_IN
-              - SALE_SHIP
-              - DELIVERY_RETURN_RESTOCK
-              - RETURN_RESTOCK
+            $ref: "#/components/schemas/InventoryMovementType"
         - name: referenceType
           required: false
           in: query
@@ -474,12 +466,7 @@ paths:
           required: false
           in: query
           schema:
-            type: string
-            enum:
-              - DRAFT
-              - SUBMITTED
-              - SHIPPED
-              - RECEIVED
+            $ref: "#/components/schemas/StockTransferStatus"
       responses:
         "200":
           description: ""
@@ -904,6 +891,16 @@ components:
         - totalOnHand
         - totalReserved
         - totalAvailable
+    InventoryMovementType:
+      type: string
+      enum:
+        - ADJUST
+        - RECEIVE
+        - TRANSFER_OUT
+        - TRANSFER_IN
+        - SALE_SHIP
+        - DELIVERY_RETURN_RESTOCK
+        - RETURN_RESTOCK
     InventoryMovementListDto:
       type: object
       properties:
@@ -935,20 +932,13 @@ components:
           type: string
           example: KHO-HCM-01
         adjustmentType:
-          type: string
-          enum:
-            - CORRECTION
-            - OPENING_BALANCE
-            - MANUAL_RECEIPT
           default: CORRECTION
+          allOf:
+            - $ref: "#/components/schemas/StockAdjustmentType"
         reasonCode:
-          type: string
-          enum:
-            - MANUAL
-            - COUNT_CORRECTION
-            - INITIAL_STOCK
-            - EXTERNAL_RECEIPT
           default: MANUAL
+          allOf:
+            - $ref: "#/components/schemas/StockAdjustmentReason"
         externalReference:
           type: string
           maxLength: 100
@@ -977,11 +967,8 @@ components:
           enum:
             - POSTED
         adjustmentType:
-          type: string
-          enum:
-            - CORRECTION
-            - OPENING_BALANCE
-            - MANUAL_RECEIPT
+          allOf:
+            - $ref: "#/components/schemas/StockAdjustmentType"
         reasonCode:
           type: string
         externalReference:
@@ -1060,6 +1047,13 @@ components:
         - createdByDisplayName
         - postedAt
         - items
+    StockTransferStatus:
+      type: string
+      enum:
+        - DRAFT
+        - SUBMITTED
+        - SHIPPED
+        - RECEIVED
     StockTransferListDto:
       type: object
       properties:
@@ -1110,12 +1104,8 @@ components:
         toWarehouseCode:
           type: string
         status:
-          type: string
-          enum:
-            - DRAFT
-            - SUBMITTED
-            - SHIPPED
-            - RECEIVED
+          allOf:
+            - $ref: "#/components/schemas/StockTransferStatus"
         reason:
           type: string
         itemCount:
@@ -1252,15 +1242,8 @@ components:
         productName:
           type: string
         movementType:
-          type: string
-          enum:
-            - ADJUST
-            - RECEIVE
-            - TRANSFER_OUT
-            - TRANSFER_IN
-            - SALE_SHIP
-            - DELIVERY_RETURN_RESTOCK
-            - RETURN_RESTOCK
+          allOf:
+            - $ref: "#/components/schemas/InventoryMovementType"
         quantityDelta:
           type: number
         balanceAfter:
@@ -1342,6 +1325,19 @@ components:
         - createdBy
         - createdByDisplayName
         - postedAt
+    StockAdjustmentType:
+      type: string
+      enum:
+        - CORRECTION
+        - OPENING_BALANCE
+        - MANUAL_RECEIPT
+    StockAdjustmentReason:
+      type: string
+      enum:
+        - MANUAL
+        - COUNT_CORRECTION
+        - INITIAL_STOCK
+        - EXTERNAL_RECEIPT
     StockAdjustmentItemInputDto:
       type: object
       properties:
@@ -1394,12 +1390,8 @@ components:
         toWarehouseCode:
           type: string
         status:
-          type: string
-          enum:
-            - DRAFT
-            - SUBMITTED
-            - SHIPPED
-            - RECEIVED
+          allOf:
+            - $ref: "#/components/schemas/StockTransferStatus"
         reason:
           type: string
         itemCount:

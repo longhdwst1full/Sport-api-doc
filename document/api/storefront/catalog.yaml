@@ -76,11 +76,7 @@ paths:
           required: false
           in: query
           schema:
-            type: string
-            enum:
-              - DRAFT
-              - PUBLISHED
-              - ARCHIVED
+            $ref: "#/components/schemas/ProductStatus"
       responses:
         "200":
           description: ""
@@ -130,6 +126,12 @@ components:
       required:
         - items
         - total
+    ProductStatus:
+      type: string
+      enum:
+        - DRAFT
+        - PUBLISHED
+        - ARCHIVED
     ProductListResponseDto:
       type: object
       properties:
@@ -170,16 +172,11 @@ components:
         primaryCategory:
           type: string
         productType:
-          type: string
-          enum:
-            - STANDARD
-            - BUNDLE
+          allOf:
+            - $ref: "#/components/schemas/ProductType"
         status:
-          type: string
-          enum:
-            - DRAFT
-            - PUBLISHED
-            - ARCHIVED
+          allOf:
+            - $ref: "#/components/schemas/ProductStatus"
         isPublished:
           type: boolean
           example: true
@@ -192,10 +189,9 @@ components:
           example: "18990000.00"
           nullable: true
         currency:
-          type: string
-          enum:
-            - VND
           example: VND
+          allOf:
+            - $ref: "#/components/schemas/CurrencyCode"
         imageUrl:
           type: string
           format: uri
@@ -343,16 +339,11 @@ components:
         primaryCategory:
           type: string
         productType:
-          type: string
-          enum:
-            - STANDARD
-            - BUNDLE
+          allOf:
+            - $ref: "#/components/schemas/ProductType"
         status:
-          type: string
-          enum:
-            - DRAFT
-            - PUBLISHED
-            - ARCHIVED
+          allOf:
+            - $ref: "#/components/schemas/ProductStatus"
         isPublished:
           type: boolean
           example: true
@@ -365,10 +356,9 @@ components:
           example: "18990000.00"
           nullable: true
         currency:
-          type: string
-          enum:
-            - VND
           example: VND
+          allOf:
+            - $ref: "#/components/schemas/CurrencyCode"
         imageUrl:
           type: string
           format: uri
@@ -403,6 +393,15 @@ components:
         - limit
         - total
         - totalPages
+    ProductType:
+      type: string
+      enum:
+        - STANDARD
+        - BUNDLE
+    CurrencyCode:
+      type: string
+      enum:
+        - VND
     ProductVariantDto:
       type: object
       properties:
@@ -432,10 +431,8 @@ components:
           minimum: 1
           nullable: true
         status:
-          type: string
-          enum:
-            - ACTIVE
-            - INACTIVE
+          allOf:
+            - $ref: "#/components/schemas/ProductVariantStatus"
         version:
           type: number
           example: 0
@@ -496,10 +493,8 @@ components:
         isPrimary:
           type: boolean
         status:
-          type: string
-          enum:
-            - ACTIVE
-            - INACTIVE
+          allOf:
+            - $ref: "#/components/schemas/ProductMediaStatus"
       required:
         - id
         - mediaAssetId
@@ -537,18 +532,20 @@ components:
       required:
         - code
         - message
+    ProductVariantStatus:
+      type: string
+      enum:
+        - ACTIVE
+        - INACTIVE
     ProductBundleDto:
       type: object
       properties:
         bundleType:
-          type: string
-          enum:
-            - FIXED_VIRTUAL
+          allOf:
+            - $ref: "#/components/schemas/ProductBundleType"
         status:
-          type: string
-          enum:
-            - ACTIVE
-            - INACTIVE
+          allOf:
+            - $ref: "#/components/schemas/ProductBundleStatus"
         components:
           type: array
           items:
@@ -557,6 +554,20 @@ components:
         - bundleType
         - status
         - components
+    ProductMediaStatus:
+      type: string
+      enum:
+        - ACTIVE
+        - INACTIVE
+    ProductBundleType:
+      type: string
+      enum:
+        - FIXED_VIRTUAL
+    ProductBundleStatus:
+      type: string
+      enum:
+        - ACTIVE
+        - INACTIVE
     BundleComponentDto:
       type: object
       properties:

@@ -23,7 +23,7 @@ import {
   AccountOrderQueryDto,
   AdminOrderListDto,
   AdminOrderQueryDto,
-  AdminOrderSummaryDto,
+  OrderSummaryDto,
   CompleteOrderCommandDto,
   ConfirmOrderCommandDto,
   GuestOrderPlacementDto,
@@ -1105,7 +1105,7 @@ export class OrderService {
     });
   }
 
-  private toSummary(order: LoadedOrder | LoadedOrderSummary): AdminOrderSummaryDto {
+  private toSummary(order: LoadedOrder | LoadedOrderSummary): OrderSummaryDto {
     const address = order.addresses[0];
     if (!address) throw new ServiceUnavailableException('Đơn hàng thiếu địa chỉ nhận hàng.');
     return {

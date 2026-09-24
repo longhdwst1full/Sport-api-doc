@@ -264,14 +264,8 @@ components:
       type: object
       properties:
         reasonCode:
-          type: string
-          enum:
-            - DEFECTIVE
-            - WRONG_ITEM
-            - NOT_AS_DESCRIBED
-            - WRONG_SIZE
-            - CHANGED_MIND
-            - OTHER
+          allOf:
+            - $ref: "#/components/schemas/ReturnReasonCode"
         description:
           type: string
           maxLength: 2000
@@ -312,35 +306,18 @@ components:
         orderNo:
           type: string
         status:
-          type: string
-          enum:
-            - REQUESTED
-            - APPROVED
-            - REJECTED
-            - RECEIVED
-            - REFUNDED
-            - CLOSED
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/ReturnStatus"
         channel:
-          type: string
-          enum:
-            - ACCOUNT
-            - ADMIN
+          allOf:
+            - $ref: "#/components/schemas/ReturnChannel"
         reasonCode:
-          type: string
-          enum:
-            - DEFECTIVE
-            - WRONG_ITEM
-            - NOT_AS_DESCRIBED
-            - WRONG_SIZE
-            - CHANGED_MIND
-            - OTHER
+          allOf:
+            - $ref: "#/components/schemas/ReturnReasonCode"
         fault:
-          type: string
-          enum:
-            - SHOP
-            - CUSTOMER
           nullable: true
+          allOf:
+            - $ref: "#/components/schemas/ReturnFault"
         recipientName:
           type: string
         itemCount:
@@ -398,10 +375,7 @@ components:
         allowedRefundMethods:
           type: array
           items:
-            type: string
-            enum:
-              - CASH
-              - BANK_TRANSFER
+            $ref: "#/components/schemas/RefundMethod"
         items:
           type: array
           items:
@@ -496,13 +470,9 @@ components:
           type: string
           example: product-front.webp
         contentType:
-          type: string
-          enum:
-            - image/jpeg
-            - image/png
-            - image/webp
-            - image/avif
           example: image/webp
+          allOf:
+            - $ref: "#/components/schemas/ImageMimeType"
         sizeBytes:
           type: number
           minimum: 1
@@ -521,9 +491,8 @@ components:
       type: object
       properties:
         provider:
-          type: string
-          enum:
-            - CLOUDINARY
+          allOf:
+            - $ref: "#/components/schemas/MediaProvider"
         uploadUrl:
           type: string
           format: uri
@@ -583,13 +552,9 @@ components:
           type: boolean
           description: false thì FE tắt nút tạo phiếu và hiển thị reason
         reason:
-          type: string
-          enum:
-            - ORDER_NOT_RETURNABLE
-            - OPEN_RETURN_EXISTS
-            - WINDOW_EXPIRED
-            - NOTHING_RETURNABLE
           nullable: true
+          allOf:
+            - $ref: "#/components/schemas/ReturnIneligibleReason"
         deliveredAt:
           type: string
           format: date-time
@@ -634,6 +599,15 @@ components:
       required:
         - expectedVersion
         - reason
+    ReturnReasonCode:
+      type: string
+      enum:
+        - DEFECTIVE
+        - WRONG_ITEM
+        - NOT_AS_DESCRIBED
+        - WRONG_SIZE
+        - CHANGED_MIND
+        - OTHER
     ReturnEvidenceInputDto:
       type: object
       properties:
@@ -663,6 +637,26 @@ components:
       required:
         - orderItemId
         - quantity
+    ReturnStatus:
+      type: string
+      enum:
+        - REQUESTED
+        - APPROVED
+        - REJECTED
+        - RECEIVED
+        - REFUNDED
+        - CLOSED
+        - CANCELLED
+    ReturnChannel:
+      type: string
+      enum:
+        - ACCOUNT
+        - ADMIN
+    ReturnFault:
+      type: string
+      enum:
+        - SHOP
+        - CUSTOMER
     ReturnEvidenceImageDto:
       type: object
       properties:
@@ -681,6 +675,11 @@ components:
         - thumbnailUrl
         - width
         - height
+    RefundMethod:
+      type: string
+      enum:
+        - CASH
+        - BANK_TRANSFER
     ReturnItemDto:
       type: object
       properties:
@@ -699,29 +698,21 @@ components:
         variantName:
           type: string
         itemType:
-          type: string
-          enum:
-            - STANDARD
-            - BUNDLE
+          allOf:
+            - $ref: "#/components/schemas/OrderItemType"
         quantity:
           type: number
         unitPrice:
           type: string
           example: "350000.00"
         condition:
-          type: string
-          enum:
-            - SELLABLE
-            - DAMAGED
-            - MISSING
           nullable: true
+          allOf:
+            - $ref: "#/components/schemas/ReturnCondition"
         disposition:
-          type: string
-          enum:
-            - RESTOCK
-            - HOLD
-            - WRITE_OFF
           nullable: true
+          allOf:
+            - $ref: "#/components/schemas/ReturnItemDisposition"
         restockQty:
           type: number
         refundCap:
@@ -750,19 +741,14 @@ components:
         refundNo:
           type: string
         method:
-          type: string
-          enum:
-            - CASH
-            - BANK_TRANSFER
+          allOf:
+            - $ref: "#/components/schemas/RefundMethod"
         amount:
           type: string
           example: "570000.00"
         status:
-          type: string
-          enum:
-            - PENDING
-            - SUCCEEDED
-            - FAILED
+          allOf:
+            - $ref: "#/components/schemas/RefundStatus"
         externalRef:
           type: string
           nullable: true
@@ -801,30 +787,14 @@ components:
         sequenceNo:
           type: number
         action:
-          type: string
-          enum:
-            - CREATE
-            - APPROVE
-            - REJECT
-            - CANCEL
-            - RECEIVE
-            - REFUND_REQUEST
-            - REFUND_CONFIRM
-            - REFUND_FAIL
-            - CLOSE
+          allOf:
+            - $ref: "#/components/schemas/ReturnAction"
         fromStatus:
           type: string
           nullable: true
         toStatus:
-          type: string
-          enum:
-            - REQUESTED
-            - APPROVED
-            - REJECTED
-            - RECEIVED
-            - REFUNDED
-            - CLOSED
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/ReturnStatus"
         reason:
           type: string
           nullable: true
@@ -868,35 +838,18 @@ components:
         orderNo:
           type: string
         status:
-          type: string
-          enum:
-            - REQUESTED
-            - APPROVED
-            - REJECTED
-            - RECEIVED
-            - REFUNDED
-            - CLOSED
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/ReturnStatus"
         channel:
-          type: string
-          enum:
-            - ACCOUNT
-            - ADMIN
+          allOf:
+            - $ref: "#/components/schemas/ReturnChannel"
         reasonCode:
-          type: string
-          enum:
-            - DEFECTIVE
-            - WRONG_ITEM
-            - NOT_AS_DESCRIBED
-            - WRONG_SIZE
-            - CHANGED_MIND
-            - OTHER
+          allOf:
+            - $ref: "#/components/schemas/ReturnReasonCode"
         fault:
-          type: string
-          enum:
-            - SHOP
-            - CUSTOMER
           nullable: true
+          allOf:
+            - $ref: "#/components/schemas/ReturnFault"
         recipientName:
           type: string
         itemCount:
@@ -918,6 +871,24 @@ components:
         - itemCount
         - createdAt
         - version
+    ImageMimeType:
+      type: string
+      enum:
+        - image/jpeg
+        - image/png
+        - image/webp
+        - image/avif
+    MediaProvider:
+      type: string
+      enum:
+        - CLOUDINARY
+    ReturnIneligibleReason:
+      type: string
+      enum:
+        - ORDER_NOT_RETURNABLE
+        - OPEN_RETURN_EXISTS
+        - WINDOW_EXPIRED
+        - NOTHING_RETURNABLE
     ReturnEligibilityLineDto:
       type: object
       properties:
@@ -965,6 +936,41 @@ components:
         - blockedByCategory
         - unitRefundEstimate
         - maxRefundEstimate
+    OrderItemType:
+      type: string
+      enum:
+        - STANDARD
+        - BUNDLE
+    ReturnCondition:
+      type: string
+      enum:
+        - SELLABLE
+        - DAMAGED
+        - MISSING
+    ReturnItemDisposition:
+      type: string
+      enum:
+        - RESTOCK
+        - HOLD
+        - WRITE_OFF
+    RefundStatus:
+      type: string
+      enum:
+        - PENDING
+        - SUCCEEDED
+        - FAILED
+    ReturnAction:
+      type: string
+      enum:
+        - CREATE
+        - APPROVE
+        - REJECT
+        - CANCEL
+        - RECEIVE
+        - REFUND_REQUEST
+        - REFUND_CONFIRM
+        - REFUND_FAIL
+        - CLOSE
   securitySchemes:
     bearer:
       scheme: bearer

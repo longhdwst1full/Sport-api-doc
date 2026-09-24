@@ -35,7 +35,7 @@ export class FlashSaleItemDto {
   @ApiProperty() soldQuantity: number;
   @ApiProperty({ description: 'Số suất còn bán được = quota - sold - reserved' }) availableQuantity: number;
   @ApiPropertyOptional({ type: Number, nullable: true }) perCustomerLimit: number | null;
-  @ApiProperty({ enum: Object.values(FLASH_SALE_ITEM_STATUS) }) status: string;
+  @ApiProperty({ enum: Object.values(FLASH_SALE_ITEM_STATUS), enumName: 'FlashSaleItemStatus' }) status: string;
   @ApiProperty() version: string;
 }
 
@@ -46,7 +46,7 @@ export class FlashSaleCampaignSummaryDto {
   @ApiPropertyOptional({ type: String, nullable: true }) description: string | null;
   @ApiProperty({ format: 'date-time' }) startsAt: string;
   @ApiProperty({ format: 'date-time' }) endsAt: string;
-  @ApiProperty({ enum: Object.values(FLASH_SALE_CAMPAIGN_STATUS) }) status: string;
+  @ApiProperty({ enum: Object.values(FLASH_SALE_CAMPAIGN_STATUS), enumName: 'FlashSaleCampaignStatus' }) status: string;
   @ApiProperty() itemCount: number;
   @ApiProperty() version: string;
 }
@@ -69,7 +69,7 @@ export class AdminFlashSaleQueryDto {
   @ApiPropertyOptional({ type: Number, default: 20, minimum: 1, maximum: 100 })
   @Type(() => Number) @IsInt() @Min(1) @Max(100) @IsOptional() limit = 20;
 
-  @ApiPropertyOptional({ enum: Object.values(FLASH_SALE_CAMPAIGN_STATUS) })
+  @ApiPropertyOptional({ enum: Object.values(FLASH_SALE_CAMPAIGN_STATUS), enumName: 'FlashSaleCampaignStatus' })
   @IsIn(Object.values(FLASH_SALE_CAMPAIGN_STATUS)) @IsOptional() status?: string;
 
   @ApiPropertyOptional({ maxLength: 100, description: 'Mã hoặc tên chiến dịch' })
@@ -108,7 +108,7 @@ export class ChangeFlashSaleCampaignStatusDto {
   @ApiProperty({ type: String, pattern: '^\\d+$' })
   @IsString() expectedVersion: string;
 
-  @ApiProperty({ enum: Object.values(FLASH_SALE_CAMPAIGN_STATUS) })
+  @ApiProperty({ enum: Object.values(FLASH_SALE_CAMPAIGN_STATUS), enumName: 'FlashSaleCampaignStatus' })
   @IsIn(Object.values(FLASH_SALE_CAMPAIGN_STATUS)) status: string;
 }
 

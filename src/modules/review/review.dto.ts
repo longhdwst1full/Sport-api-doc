@@ -18,7 +18,7 @@ export class ProductReviewDto {
   @ApiProperty() content: string;
   @ApiProperty() verifiedPurchase: boolean;
   @ApiProperty({
-    enum: ['APPROVED', 'REJECTED'],
+    enum: ['APPROVED', 'REJECTED'], enumName: 'ReviewModerationStatus',
     description: 'Đánh giá hiển thị ngay khi gửi; REJECTED là đã bị Admin gỡ khỏi website',
   })
   status: 'APPROVED' | 'REJECTED';
@@ -36,7 +36,7 @@ export class ProductReviewListDto {
 }
 
 export class ModerateReviewDto {
-  @ApiProperty({ enum: ['APPROVED', 'REJECTED'] })
+  @ApiProperty({ enum: ['APPROVED', 'REJECTED'], enumName: 'ReviewModerationStatus' })
   @IsIn(['APPROVED', 'REJECTED'])
   status: 'APPROVED' | 'REJECTED';
   @ApiPropertyOptional() @IsString() @IsOptional() reason?: string;

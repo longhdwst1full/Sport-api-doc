@@ -152,12 +152,7 @@ paths:
           in: query
           description: Nhóm trạng thái dùng trực tiếp cho các tab màn quản lý đơn hàng
           schema:
-            type: string
-            enum:
-              - PENDING_CONFIRMATION
-              - CONFIRMED
-              - IN_TRANSIT
-              - DELIVERED
+            $ref: "#/components/schemas/OrderStatusGroup"
         - name: search
           required: false
           in: query
@@ -528,12 +523,9 @@ components:
           items:
             $ref: "#/components/schemas/PosOrderItemDto"
         paymentMethod:
-          type: string
-          enum:
-            - CASH
-            - BANK_TRANSFER
-            - COD
           example: CASH
+          allOf:
+            - $ref: "#/components/schemas/PosPaymentMethod"
         delivery:
           description: "Bỏ trống: khách nhận ngay tại quầy như cũ. Có giá trị: đơn đi giao hàng, tồn kho vẫn đặt chỗ như luồng checkout của khách."
           allOf:
@@ -564,37 +556,14 @@ components:
         orderNo:
           type: string
         status:
-          type: string
-          enum:
-            - PENDING_CONFIRMATION
-            - CONFIRMED
-            - PICKING
-            - PACKED
-            - SHIPPED
-            - DELIVERED
-            - COMPLETED
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/OrderStatus"
         paymentStatus:
-          type: string
-          enum:
-            - PENDING
-            - AWAITING_CONFIRMATION
-            - NEED_REVIEW
-            - SUCCESS
-            - FAILED
-            - CANCELLED
-            - REFUNDED
+          allOf:
+            - $ref: "#/components/schemas/PaymentStatus"
         fulfillmentStatus:
-          type: string
-          enum:
-            - PENDING
-            - PICKING
-            - PACKED
-            - SHIPPED
-            - DELIVERED
-            - FAILED
-            - RETURNED
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/OrderFulfillmentStatus"
         paymentMethod:
           type: string
         shippingMethod:
@@ -665,13 +634,20 @@ components:
         - taxTotal
         - items
         - statusHistory
+    OrderStatusGroup:
+      type: string
+      enum:
+        - PENDING_CONFIRMATION
+        - CONFIRMED
+        - IN_TRANSIT
+        - DELIVERED
     AdminOrderListDto:
       type: object
       properties:
         items:
           type: array
           items:
-            $ref: "#/components/schemas/AdminOrderSummaryDto"
+            $ref: "#/components/schemas/OrderSummaryDto"
         page:
           type: number
         limit:
@@ -822,6 +798,12 @@ components:
       required:
         - productVariantId
         - quantity
+    PosPaymentMethod:
+      type: string
+      enum:
+        - CASH
+        - BANK_TRANSFER
+        - COD
     PosDeliveryAddressDto:
       type: object
       properties:
@@ -867,6 +849,38 @@ components:
         - addressLine
         - province
         - provinceCode
+    OrderStatus:
+      type: string
+      enum:
+        - PENDING_CONFIRMATION
+        - CONFIRMED
+        - PICKING
+        - PACKED
+        - SHIPPED
+        - DELIVERED
+        - COMPLETED
+        - CANCELLED
+    PaymentStatus:
+      type: string
+      enum:
+        - PENDING
+        - AWAITING_CONFIRMATION
+        - NEED_REVIEW
+        - SUCCESS
+        - FAILED
+        - CANCELLED
+        - REFUNDED
+    OrderFulfillmentStatus:
+      type: string
+      enum:
+        - PENDING
+        - PICKING
+        - PACKED
+        - SHIPPED
+        - DELIVERED
+        - FAILED
+        - RETURNED
+        - CANCELLED
     OrderRecipientDto:
       type: object
       properties:
@@ -939,28 +953,12 @@ components:
         sequenceNo:
           type: number
         fromStatus:
-          type: string
-          enum:
-            - PENDING_CONFIRMATION
-            - CONFIRMED
-            - PICKING
-            - PACKED
-            - SHIPPED
-            - DELIVERED
-            - COMPLETED
-            - CANCELLED
           nullable: true
+          allOf:
+            - $ref: "#/components/schemas/OrderStatus"
         toStatus:
-          type: string
-          enum:
-            - PENDING_CONFIRMATION
-            - CONFIRMED
-            - PICKING
-            - PACKED
-            - SHIPPED
-            - DELIVERED
-            - COMPLETED
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/OrderStatus"
         reason:
           type: string
           nullable: true
@@ -974,7 +972,7 @@ components:
         - toStatus
         - actorType
         - createdAt
-    AdminOrderSummaryDto:
+    OrderSummaryDto:
       type: object
       properties:
         id:
@@ -984,37 +982,14 @@ components:
         orderNo:
           type: string
         status:
-          type: string
-          enum:
-            - PENDING_CONFIRMATION
-            - CONFIRMED
-            - PICKING
-            - PACKED
-            - SHIPPED
-            - DELIVERED
-            - COMPLETED
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/OrderStatus"
         paymentStatus:
-          type: string
-          enum:
-            - PENDING
-            - AWAITING_CONFIRMATION
-            - NEED_REVIEW
-            - SUCCESS
-            - FAILED
-            - CANCELLED
-            - REFUNDED
+          allOf:
+            - $ref: "#/components/schemas/PaymentStatus"
         fulfillmentStatus:
-          type: string
-          enum:
-            - PENDING
-            - PICKING
-            - PACKED
-            - SHIPPED
-            - DELIVERED
-            - FAILED
-            - RETURNED
-            - CANCELLED
+          allOf:
+            - $ref: "#/components/schemas/OrderFulfillmentStatus"
         paymentMethod:
           type: string
         shippingMethod:

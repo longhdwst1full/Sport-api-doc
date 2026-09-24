@@ -852,10 +852,8 @@ components:
         description:
           type: string
         status:
-          type: string
-          enum:
-            - ACTIVE
-            - INACTIVE
+          allOf:
+            - $ref: "#/components/schemas/RoleStatus"
         system:
           type: boolean
         permissionCodes:
@@ -908,10 +906,8 @@ components:
           type: string
           maxLength: 1000
         status:
-          type: string
-          enum:
-            - ACTIVE
-            - INACTIVE
+          allOf:
+            - $ref: "#/components/schemas/RoleStatus"
         permissionCodes:
           description: Danh sách quyền thay thế toàn bộ. Bỏ trống để giữ nguyên quyền hiện tại.
           type: array
@@ -944,11 +940,9 @@ components:
       type: object
       properties:
         roleCode:
-          type: string
-          enum:
-            - BRANCH_MANAGER
-            - STAFF
           example: BRANCH_MANAGER
+          allOf:
+            - $ref: "#/components/schemas/AssignableStaffRoleCode"
         scopeType:
           type: string
           enum:
@@ -979,10 +973,8 @@ components:
         roleCode:
           type: string
         scopeType:
-          type: string
-          enum:
-            - GLOBAL
-            - BRANCH
+          allOf:
+            - $ref: "#/components/schemas/ScopeType"
         branchId:
           type: string
           pattern: ^[1-9][0-9]*$
@@ -1027,6 +1019,11 @@ components:
       required:
         - code
         - message
+    RoleStatus:
+      type: string
+      enum:
+        - ACTIVE
+        - INACTIVE
     PermissionDto:
       type: object
       properties:
@@ -1088,6 +1085,16 @@ components:
         - limit
         - total
         - hasMore
+    AssignableStaffRoleCode:
+      type: string
+      enum:
+        - BRANCH_MANAGER
+        - STAFF
+    ScopeType:
+      type: string
+      enum:
+        - GLOBAL
+        - BRANCH
   securitySchemes:
     bearer:
       scheme: bearer

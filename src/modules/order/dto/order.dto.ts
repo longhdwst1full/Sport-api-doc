@@ -29,7 +29,7 @@ export class AdminOrderQueryDto {
   limit = 20;
 
   @ApiPropertyOptional({
-    enum: Object.values(ORDER_STATUS_GROUP),
+    enum: Object.values(ORDER_STATUS_GROUP), enumName: 'OrderStatusGroup',
     description: 'Nhóm trạng thái dùng trực tiếp cho các tab màn quản lý đơn hàng',
   })
   @IsIn(Object.values(ORDER_STATUS_GROUP))
@@ -164,19 +164,19 @@ export class OrderItemDto {
 
 export class OrderStatusHistoryDto {
   @ApiProperty() sequenceNo: number;
-  @ApiPropertyOptional({ enum: Object.values(ORDER_STATUS), nullable: true }) fromStatus: string | null;
-  @ApiProperty({ enum: Object.values(ORDER_STATUS) }) toStatus: string;
+  @ApiPropertyOptional({ enum: Object.values(ORDER_STATUS), enumName: 'OrderStatus', nullable: true }) fromStatus: string | null;
+  @ApiProperty({ enum: Object.values(ORDER_STATUS), enumName: 'OrderStatus' }) toStatus: string;
   @ApiPropertyOptional({ type: String, nullable: true }) reason: string | null;
   @ApiProperty() actorType: string;
   @ApiProperty({ format: 'date-time' }) createdAt: string;
 }
 
-export class AdminOrderSummaryDto {
+export class OrderSummaryDto {
   @ApiProperty({ ...ENTITY_ID_OPENAPI }) id: string;
   @ApiProperty() orderNo: string;
-  @ApiProperty({ enum: Object.values(ORDER_STATUS) }) status: string;
-  @ApiProperty({ enum: Object.values(ORDER_PAYMENT_STATUS) }) paymentStatus: string;
-  @ApiProperty({ enum: Object.values(ORDER_FULFILLMENT_STATUS) }) fulfillmentStatus: string;
+  @ApiProperty({ enum: Object.values(ORDER_STATUS), enumName: 'OrderStatus' }) status: string;
+  @ApiProperty({ enum: Object.values(ORDER_PAYMENT_STATUS), enumName: 'PaymentStatus' }) paymentStatus: string;
+  @ApiProperty({ enum: Object.values(ORDER_FULFILLMENT_STATUS), enumName: 'OrderFulfillmentStatus' }) fulfillmentStatus: string;
   @ApiProperty() paymentMethod: string;
   @ApiProperty() shippingMethod: string;
   @ApiProperty({ ...ENTITY_ID_OPENAPI }) branchId: string;
@@ -190,7 +190,7 @@ export class AdminOrderSummaryDto {
 }
 
 export class AdminOrderListDto {
-  @ApiProperty({ type: [AdminOrderSummaryDto] }) items: AdminOrderSummaryDto[];
+  @ApiProperty({ type: [OrderSummaryDto] }) items: OrderSummaryDto[];
   @ApiProperty() page: number;
   @ApiProperty() limit: number;
   @ApiProperty() total: number;
@@ -198,7 +198,7 @@ export class AdminOrderListDto {
 
 export class AccountOrderListDto extends AdminOrderListDto {}
 
-export class OrderDetailDto extends AdminOrderSummaryDto {
+export class OrderDetailDto extends OrderSummaryDto {
   @ApiProperty() currencyCode: string;
   @ApiProperty() pricesIncludeTax: boolean;
   @ApiProperty() subtotal: string;

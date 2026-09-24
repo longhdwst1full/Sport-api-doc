@@ -18,6 +18,8 @@ import {
 } from 'class-validator';
 import { ENTITY_ID_OPENAPI, IsEntityId } from '../../../common/identifiers/entity-id';
 import { CreateMediaUploadDto } from '../../media/media.dto';
+import { CHECKOUT_ITEM_TYPE } from '../../checkout/checkout.constants';
+import { RETURN_INELIGIBLE_REASON } from '../return.policy';
 import {
   REFUND_METHOD,
   REFUND_STATUS,
@@ -49,7 +51,7 @@ class PageQueryDto {
 export class AccountReturnQueryDto extends PageQueryDto {}
 
 export class AdminReturnQueryDto extends PageQueryDto {
-  @ApiPropertyOptional({ enum: Object.values(RETURN_STATUS) })
+  @ApiPropertyOptional({ enum: Object.values(RETURN_STATUS), enumName: 'ReturnStatus' })
   @IsIn(Object.values(RETURN_STATUS)) @IsOptional() status?: string;
 
   @ApiPropertyOptional({ maxLength: 100, description: 'Mã phiếu trả, mã đơn hoặc tên/SĐT người nhận' })
@@ -83,7 +85,7 @@ export class CreateAdminReturnEvidenceUploadDto extends CreateMediaUploadDto {
 }
 
 class CreateReturnBaseDto {
-  @ApiProperty({ enum: Object.values(RETURN_REASON_CODE) })
+  @ApiProperty({ enum: Object.values(RETURN_REASON_CODE), enumName: 'ReturnReasonCode' })
   @IsIn(Object.values(RETURN_REASON_CODE)) reasonCode: string;
 
   @ApiPropertyOptional({ maxLength: 2000 })
@@ -113,7 +115,7 @@ export class CreateAdminReturnDto extends CreateReturnBaseDto {
   @ApiProperty({ ...ENTITY_ID_OPENAPI }) @IsEntityId() orderId: string;
 
   @ApiPropertyOptional({
-    enum: Object.values(RETURN_FAULT),
+    enum: Object.values(RETURN_FAULT), enumName: 'ReturnFault',
     description: 'Bắt buộc khi người tạo có quyền return.decide: phiếu được duyệt ngay (D56)',
   })
   @IsIn(Object.values(RETURN_FAULT)) @IsOptional() fault?: string;
@@ -134,7 +136,7 @@ export class ReturnCommandDto {
 }
 
 export class ApproveReturnDto extends ReturnCommandDto {
-  @ApiProperty({ enum: Object.values(RETURN_FAULT), description: 'SHOP thì hoàn thêm phí giao ban đầu (D57)' })
+  @ApiProperty({ enum: Object.values(RETURN_FAULT), enumName: 'ReturnFault', description: 'SHOP thì hoàn thêm phí giao ban đầu (D57)' })
   @IsIn(Object.values(RETURN_FAULT)) fault: string;
 }
 
@@ -148,11 +150,11 @@ export class ReturnReasonCommandDto {
 export class InspectReturnItemDto {
   @ApiProperty({ ...ENTITY_ID_OPENAPI }) @IsEntityId() returnItemId: string;
 
-  @ApiProperty({ enum: Object.values(RETURN_ITEM_CONDITION) })
+  @ApiProperty({ enum: Object.values(RETURN_ITEM_CONDITION), enumName: 'ReturnCondition' })
   @IsIn(Object.values(RETURN_ITEM_CONDITION)) condition: string;
 
   @ApiPropertyOptional({
-    enum: Object.values(RETURN_ITEM_DISPOSITION),
+    enum: Object.values(RETURN_ITEM_DISPOSITION), enumName: 'ReturnItemDisposition',
     description: 'Bắt buộc với DAMAGED (HOLD hoặc WRITE_OFF); SELLABLE luôn RESTOCK, MISSING luôn WRITE_OFF',
   })
   @IsIn(Object.values(RETURN_ITEM_DISPOSITION)) @IsOptional() disposition?: string;
@@ -169,7 +171,7 @@ export class InspectReturnDto extends ReturnCommandDto {
 }
 
 export class CreateRefundDto extends ReturnCommandDto {
-  @ApiProperty({ enum: Object.values(REFUND_METHOD) })
+  @ApiProperty({ enum: Object.values(REFUND_METHOD), enumName: 'RefundMethod' })
   @IsIn(Object.values(REFUND_METHOD)) method: string;
 
   @ApiProperty({ type: String, pattern: MONEY_PATTERN.source, example: '570000.00' })
@@ -211,11 +213,11 @@ export class ReturnItemDto {
   @ApiProperty() sku: string;
   @ApiProperty() productName: string;
   @ApiProperty() variantName: string;
-  @ApiProperty({ enum: ['STANDARD', 'BUNDLE'] }) itemType: string;
+  @ApiProperty({ enum: Object.values(CHECKOUT_ITEM_TYPE), enumName: 'OrderItemType' }) itemType: string;
   @ApiProperty() quantity: number;
   @ApiProperty({ type: String, example: '350000.00' }) unitPrice: string;
-  @ApiPropertyOptional({ enum: Object.values(RETURN_ITEM_CONDITION), nullable: true }) condition: string | null;
-  @ApiPropertyOptional({ enum: Object.values(RETURN_ITEM_DISPOSITION), nullable: true }) disposition: string | null;
+  @ApiPropertyOptional({ enum: Object.values(RETURN_ITEM_CONDITION), enumName: 'ReturnCondition', nullable: true }) condition: string | null;
+  @ApiPropertyOptional({ enum: Object.values(RETURN_ITEM_DISPOSITION), enumName: 'ReturnItemDisposition', nullable: true }) disposition: string | null;
   @ApiProperty() restockQty: number;
   @ApiPropertyOptional({ type: String, nullable: true }) refundCap: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) note: string | null;
@@ -224,9 +226,9 @@ export class ReturnItemDto {
 export class RefundDto {
   @ApiProperty({ ...ENTITY_ID_OPENAPI }) id: string;
   @ApiProperty() refundNo: string;
-  @ApiProperty({ enum: Object.values(REFUND_METHOD) }) method: string;
+  @ApiProperty({ enum: Object.values(REFUND_METHOD), enumName: 'RefundMethod' }) method: string;
   @ApiProperty({ type: String, example: '570000.00' }) amount: string;
-  @ApiProperty({ enum: Object.values(REFUND_STATUS) }) status: string;
+  @ApiProperty({ enum: Object.values(REFUND_STATUS), enumName: 'RefundStatus' }) status: string;
   @ApiPropertyOptional({ type: String, nullable: true }) externalRef: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) note: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) failureReason: string | null;
@@ -239,9 +241,9 @@ export class RefundDto {
 
 export class ReturnHistoryDto {
   @ApiProperty() sequenceNo: number;
-  @ApiProperty({ enum: Object.values(RETURN_ACTION) }) action: string;
+  @ApiProperty({ enum: Object.values(RETURN_ACTION), enumName: 'ReturnAction' }) action: string;
   @ApiPropertyOptional({ type: String, nullable: true }) fromStatus: string | null;
-  @ApiProperty({ enum: Object.values(RETURN_STATUS) }) toStatus: string;
+  @ApiProperty({ enum: Object.values(RETURN_STATUS), enumName: 'ReturnStatus' }) toStatus: string;
   @ApiPropertyOptional({ type: String, nullable: true }) reason: string | null;
   @ApiProperty({ format: 'date-time' }) createdAt: string;
 }
@@ -251,10 +253,10 @@ export class ReturnSummaryDto {
   @ApiProperty({ example: 'RMA-20260924-000001' }) returnNo: string;
   @ApiProperty({ ...ENTITY_ID_OPENAPI }) orderId: string;
   @ApiProperty() orderNo: string;
-  @ApiProperty({ enum: Object.values(RETURN_STATUS) }) status: string;
-  @ApiProperty({ enum: Object.values(RETURN_CHANNEL) }) channel: string;
-  @ApiProperty({ enum: Object.values(RETURN_REASON_CODE) }) reasonCode: string;
-  @ApiPropertyOptional({ enum: Object.values(RETURN_FAULT), nullable: true }) fault: string | null;
+  @ApiProperty({ enum: Object.values(RETURN_STATUS), enumName: 'ReturnStatus' }) status: string;
+  @ApiProperty({ enum: Object.values(RETURN_CHANNEL), enumName: 'ReturnChannel' }) channel: string;
+  @ApiProperty({ enum: Object.values(RETURN_REASON_CODE), enumName: 'ReturnReasonCode' }) reasonCode: string;
+  @ApiPropertyOptional({ enum: Object.values(RETURN_FAULT), enumName: 'ReturnFault', nullable: true }) fault: string | null;
   @ApiProperty() recipientName: string;
   @ApiProperty() itemCount: number;
   @ApiProperty({ format: 'date-time' }) createdAt: string;
@@ -281,7 +283,7 @@ export class ReturnDetailDto extends ReturnSummaryDto {
   @ApiProperty({ type: String }) pendingRefundAmount: string;
   @ApiProperty({ type: String, description: 'Số tiền còn được hoàn, đã chặn theo cả phiếu và số tiền đã thu' })
   refundableAmount: string;
-  @ApiProperty({ enum: Object.values(REFUND_METHOD), isArray: true }) allowedRefundMethods: string[];
+  @ApiProperty({ enum: Object.values(REFUND_METHOD), enumName: 'RefundMethod', isArray: true }) allowedRefundMethods: string[];
   @ApiProperty({ type: [ReturnItemDto] }) items: ReturnItemDto[];
   @ApiProperty({ type: [RefundDto] }) refunds: RefundDto[];
   @ApiProperty({ type: [ReturnHistoryDto] }) history: ReturnHistoryDto[];
@@ -314,7 +316,7 @@ export class ReturnEligibilityDto {
   @ApiProperty() orderNo: string;
   @ApiProperty({ description: 'false thì FE tắt nút tạo phiếu và hiển thị reason' }) eligible: boolean;
   @ApiPropertyOptional({
-    enum: ['ORDER_NOT_RETURNABLE', 'OPEN_RETURN_EXISTS', 'WINDOW_EXPIRED', 'NOTHING_RETURNABLE'],
+    enum: Object.values(RETURN_INELIGIBLE_REASON), enumName: 'ReturnIneligibleReason',
     nullable: true,
   })
   reason: string | null;
