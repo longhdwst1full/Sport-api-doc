@@ -6,6 +6,7 @@ import { PrismaService } from '../src/database/prisma.service';
 import { AuditWriter } from '../src/modules/audit/audit.writer';
 import { FlashSaleService } from '../src/modules/promotion/services/flash-sale.service';
 import { InventoryReservationService } from '../src/modules/checkout/inventory-reservation.service';
+import { SystemParameterService } from '../src/modules/system/parameters/system-parameter.service';
 
 describe('Checkout reservation concurrency and idempotency', () => {
   const cleanup = new PrismaClient();
@@ -30,7 +31,12 @@ describe('Checkout reservation concurrency and idempotency', () => {
     prisma,
     config,
     { write: auditWrite } as unknown as AuditWriter,
-    new FlashSaleService(prisma, { write: auditWrite } as unknown as AuditWriter),
+    new FlashSaleService(
+      prisma,
+      { write: auditWrite } as unknown as AuditWriter,
+      // Tham số hệ thống đi đúng đường đọc của production; bài test này chạy trên PostgreSQL thật.
+      new SystemParameterService(prisma, { write: auditWrite } as unknown as AuditWriter),
+    ),
   );
 
   let branchId = 0n;

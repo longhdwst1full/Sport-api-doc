@@ -7,6 +7,8 @@ import { AuditWriter } from '../src/modules/audit/audit.writer';
 import { FlashSaleService } from '../src/modules/promotion/services/flash-sale.service';
 import { CartService } from '../src/modules/cart/cart.service';
 import { OrderService } from '../src/modules/order/services/order.service';
+import { OutboxWriter } from '../src/modules/notification/outbox.writer';
+import { OUTBOX_EVENT_TYPE } from '../src/modules/notification/notification.constants';
 import { ScopeType } from '../src/modules/iam/iam.types';
 import { createApplication } from '../src/platform/app.factory';
 import request from 'supertest';
@@ -44,6 +46,9 @@ describe('Order placement persistence and idempotency', () => {
       commitQuota: jest.fn().mockResolvedValue(0),
       revertCommittedQuota: jest.fn().mockResolvedValue(0),
     } as unknown as FlashSaleService,
+    // OutboxWriter THẬT, không mock: giá trị của bài test này là chứng minh ý định gửi email được
+    // ghi trong CÙNG transaction đặt đơn. Mock ở đây sẽ làm đúng cái cần chứng minh biến mất.
+    new OutboxWriter(prisma),
   );
 
   beforeAll(async () => {
@@ -186,6 +191,21 @@ describe('Order placement persistence and idempotency', () => {
     });
     await cleanup.paymentEvidence.deleteMany({ where: { payment: { order: { checkoutSessionId: checkoutId } } } });
     await cleanup.payment.deleteMany({ where: { order: { checkoutSessionId: checkoutId } } });
+    // Đặt đơn ghi ý định gửi email vào outbox trong cùng transaction; dọn theo đúng đơn của fixture
+    // này. Lọc thêm theo `eventType` để không chạm dòng của aggregate khác trùng id.
+    const fixtureOrderIds = (
+      await cleanup.order.findMany({ where: { checkoutSessionId: checkoutId }, select: { id: true } })
+    ).map((row) => row.id);
+    if (fixtureOrderIds.length > 0) {
+      await cleanup.outboxEvent.deleteMany({
+        where: {
+          aggregateId: { in: fixtureOrderIds },
+          eventType: {
+            in: [OUTBOX_EVENT_TYPE.ORDER_PLACED, OUTBOX_EVENT_TYPE.ORDER_FULFILLMENT_UPDATED],
+          },
+        },
+      });
+    }
     await cleanup.order.deleteMany({ where: { checkoutSessionId: checkoutId } });
     if (reservationId) await cleanup.inventoryReservationItem.deleteMany({ where: { reservationId } });
     if (reservationId) await cleanup.inventoryReservation.delete({ where: { id: reservationId } });

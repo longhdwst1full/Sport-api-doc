@@ -5,6 +5,7 @@ import { Prisma, PrismaClient } from '@prisma/client';
 import { PrismaService } from '../src/database/prisma.service';
 import { AuditWriter } from '../src/modules/audit/audit.writer';
 import { FlashSaleService } from '../src/modules/promotion/services/flash-sale.service';
+import { SystemParameterService } from '../src/modules/system/parameters/system-parameter.service';
 
 /**
  * Kiểm chứng quota flash sale trên PostgreSQL thật.
@@ -26,7 +27,11 @@ describe('Flash sale quota trên PostgreSQL', () => {
   } as unknown as ConfigService;
   const prisma = new PrismaService(config);
   const audit = { write: jest.fn().mockResolvedValue({ id: 'integration', createdAt: '' }) };
-  const service = new FlashSaleService(prisma, audit as unknown as AuditWriter);
+  // Dùng SystemParameterService THẬT, không mock: bài test này chạy trên PostgreSQL thật nên
+  // tham số cũng phải đi đúng đường đọc của production (bảng `system_parameters`, thiếu bản ghi
+  // thì rơi về mặc định trong catalog).
+  const parameters = new SystemParameterService(prisma, audit as unknown as AuditWriter);
+  const service = new FlashSaleService(prisma, audit as unknown as AuditWriter, parameters);
 
   const now = new Date();
   const CAMPAIGN_QUOTA = 3;

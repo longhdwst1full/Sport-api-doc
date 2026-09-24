@@ -105,9 +105,9 @@ async function set(prisma) {
         'Authorization',
         'Bearer ' || (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = '${authSecretName}' LIMIT 1)
       ),
-      -- 30s, không phải 10s: bản deploy serverless có cold start, và `net._http_response` cho
-      -- thấy 3/20 lượt gọi bị timeout ở mốc 10s trong khi `cron.job_run_details` vẫn báo
-      -- `succeeded` — lượt đó bị bỏ lặng lẽ.
+      -- 30s, khong phai 10s: ban deploy serverless co cold start, va net._http_response cho thay
+      -- 3/20 luot goi bi timeout o moc 10s trong khi cron.job_run_details van bao succeeded --
+      -- luot do bi bo lang le. Comment nay nam trong template string JS nen khong duoc chua backtick.
       timeout_milliseconds := 30000
     ) AS request_id;
   `;
