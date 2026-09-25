@@ -163,6 +163,19 @@ describe('FulfillmentService partner shipment', () => {
     expect(createShipment).not.toHaveBeenCalled();
   });
 
+  it('không đặt vận đơn khi hàng giao ngay tại quầy, nhưng vẫn xuất kho', async () => {
+    // Chi nhánh thiếu mã quận/phường: nếu còn gọi hãng thì lệnh này sẽ vỡ 409.
+    const counter = buildFulfillment('COD');
+    counter.warehouse.branch.addressJson = {};
+    const { service, createShipment } = buildService({ fulfillment: counter });
+
+    await expect(
+      service.ship('5', shipInput, 'idem-key-counter', 'req-c', principal, { handedOverAtCounter: true }),
+    ).resolves.toEqual({ id: '5' });
+
+    expect(createShipment).not.toHaveBeenCalled();
+  });
+
   it('skips the carrier when the integration is disabled', async () => {
     const { service, createShipment } = buildService({ partnerEnabled: false });
 

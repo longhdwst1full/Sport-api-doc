@@ -159,19 +159,29 @@ export class FulfillmentService {
     return this.simpleTransition(id, input, key, requestId, principal, FULFILLMENT_ACTION.DELIVER);
   }
 
+  /**
+   * Xuất kho và bàn giao vận chuyển.
+   *
+   * `options.handedOverAtCounter` chỉ dành cho luồng bán tại quầy (không đi qua HTTP/DTO): khách
+   * cầm hàng về ngay nên không được đặt vận đơn ở hãng, nhưng vẫn phải trừ tồn như mọi đơn.
+   */
   async ship(
     id: string,
     input: ShipFulfillmentDto,
     key: string,
     requestId: string,
     principal: AuthPrincipal,
+    options: { handedOverAtCounter?: boolean } = {},
   ): Promise<FulfillmentDetailDto> {
     this.ensurePersistence();
     const fulfillmentId = toDatabaseId(id);
     const intent = this.intent(key, FULFILLMENT_ACTION.SHIP, id, input);
     // PROVIDER: vận đơn phải tạo NGOÀI transaction. Gọi HTTP bên trong sẽ giữ khoá tồn kho suốt
     // vòng mạng, và mỗi lần serializable retry sẽ tạo thêm một vận đơn trùng ở hãng giao hàng.
-    const partnerShipment = await this.createPartnerShipment(fulfillmentId, input, intent, principal);
+    // Giao tại quầy thì bỏ hẳn bước này: gọi hãng sẽ sinh vận đơn thật cho kiện không bao giờ gửi.
+    const partnerShipment = options.handedOverAtCounter
+      ? undefined
+      : await this.createPartnerShipment(fulfillmentId, input, intent, principal);
     const carrierCode = input.carrierCode?.trim() || partnerShipment?.provider || null;
     const trackingNo = input.trackingNo?.trim() || partnerShipment?.trackingCode || null;
     try {

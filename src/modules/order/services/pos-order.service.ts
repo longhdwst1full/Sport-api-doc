@@ -774,13 +774,17 @@ export class PosOrderService {
 
     let fulfillment = await this.fulfillments.getByOrder(placed.id, principal);
     for (const step of ['pick', 'pack', 'ship', 'deliver'] as const) {
-      fulfillment = await this.fulfillments[step](
-        fulfillment.id,
-        { expectedVersion: fulfillment.version },
-        `${key}:${step}`,
-        requestId,
-        principal,
-      );
+      const input = { expectedVersion: fulfillment.version };
+      const stepKey = `${key}:${step}`;
+      // PROVIDER: hàng giao ngay tại quầy, không đặt vận đơn ở hãng vận chuyển. Trước đây bước
+      // ship gọi GHN thật: chi nhánh thiếu mã quận/phường thì POS vỡ 409, đủ mã thì mỗi đơn quầy
+      // đẻ ra một vận đơn GHN không bao giờ gửi (phát hiện khi nghiệm thu 2026-09-25).
+      fulfillment =
+        step === 'ship'
+          ? await this.fulfillments.ship(fulfillment.id, input, stepKey, requestId, principal, {
+              handedOverAtCounter: true,
+            })
+          : await this.fulfillments[step](fulfillment.id, input, stepKey, requestId, principal);
     }
 
     return this.orders.getAdmin(placed.id, principal);
