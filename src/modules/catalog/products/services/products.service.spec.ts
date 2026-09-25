@@ -564,4 +564,52 @@ describe('ProductsService', () => {
     const prismaTransactions = (service: ProductsService) =>
       ((service as unknown as { prisma: { $transaction: jest.Mock } }).prisma.$transaction).mock.calls.length;
   });
+
+  describe('manual SKU', () => {
+    const build = () => {
+      const transaction = {
+        $queryRaw: jest.fn().mockResolvedValue([{ '?column?': 1 }]),
+        brand: { count: jest.fn() },
+        category: { count: jest.fn().mockResolvedValue(1) },
+        product: { create: jest.fn().mockResolvedValue({ id: 1n }) },
+        productCategory: { createMany: jest.fn().mockResolvedValue({ count: 1 }) },
+        productVariant: { create: jest.fn().mockResolvedValueOnce({ id: 11n }).mockResolvedValueOnce({ id: 12n }) },
+      };
+      const prisma = {
+        $transaction: jest.fn((work: (client: typeof transaction) => unknown) => work(transaction)),
+      } as unknown as PrismaService;
+      const service = new ProductsService(
+        prisma,
+        { write: jest.fn().mockResolvedValue(undefined) } as unknown as AuditWriter,
+        { findByRequestId: jest.fn().mockResolvedValue([]) } as unknown as AuditReader,
+        {} as ProductMediaService,
+      );
+      jest.spyOn(service as unknown as { getById(id: bigint): Promise<unknown> }, 'getById').mockResolvedValue({ id: '1' });
+      return { service, transaction };
+    };
+
+    it('keeps the store code when given and generates a short code when blank', async () => {
+      const { service, transaction } = build();
+
+      await service.create({
+        name: 'Trụ bóng chuyền', categoryIds: ['1'], primaryCategoryId: '1',
+        variants: [{ name: 'Tiêu chuẩn', sku: 'TD-02' }, { name: 'Pro' }],
+      }, { requestId: 'req-sku', actorUserId: '2' });
+
+      const skus = (transaction.productVariant.create.mock.calls as unknown as Array<[{ data: { sku: string } }]>)
+        .map(([call]) => call.data.sku);
+      expect(skus[0]).toBe('TD-02');
+      expect(skus[1]).toMatch(/^[A-HJ-NP-Z2-9]{8}$/);
+    });
+
+    it('rejects two variants with the same SKU before opening a transaction', async () => {
+      const { service, transaction } = build();
+
+      await expect(service.create({
+        name: 'x', categoryIds: ['1'], primaryCategoryId: '1',
+        variants: [{ name: 'a', sku: 'TD-02' }, { name: 'b', sku: 'TD-02' }],
+      }, { requestId: 'req-sku-dup', actorUserId: '2' })).rejects.toBeInstanceOf(UnprocessableEntityException);
+      expect(transaction.product.create).not.toHaveBeenCalled();
+    });
+  });
 });

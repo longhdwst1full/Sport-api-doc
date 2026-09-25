@@ -317,6 +317,7 @@ export const ERROR_KEY = {
   CATALOG_BRAND_VERSION_CONFLICT: 'Brand version conflict',
   CATALOG_BUNDLE_COMPONENTS_MUST_BE_UNIQUE: 'Bundle components must be unique',
   CATALOG_MEDIA_ASSETS_MUST_BE_UNIQUE: 'Media assets must be unique',
+  CATALOG_SKU_MUST_BE_UNIQUE_WITHIN_THE_PRODUCT: 'SKU must be unique within the product',
   CATALOG_PRICE_MANAGE_REQUIRED_FOR_INITIAL_PRICES: 'catalog.price.manage is required to set initial prices',
   CATALOG_BUNDLE_CONTAINS_INVALID_COMPONENT: 'Bundle contains invalid component',
   CATALOG_NESTED_BUNDLES_ARE_NOT_ALLOWED: 'Nested bundles are not allowed',
@@ -656,6 +657,7 @@ const EXACT_MESSAGES: Readonly<Record<string, string>> = {
   [ERROR_KEY.CATALOG_BRAND_VERSION_CONFLICT]:
     'Thương hiệu vừa được cập nhật. Vui lòng tải lại rồi thử lại.',
   [ERROR_KEY.CATALOG_MEDIA_ASSETS_MUST_BE_UNIQUE]: 'Mỗi ảnh chỉ được chọn một lần.',
+  [ERROR_KEY.CATALOG_SKU_MUST_BE_UNIQUE_WITHIN_THE_PRODUCT]: 'Hai biến thể không được dùng cùng một mã SKU.',
   [ERROR_KEY.CATALOG_PRICE_MANAGE_REQUIRED_FOR_INITIAL_PRICES]:
     'Tài khoản chưa có quyền quản lý giá. Bỏ trống giá ban đầu hoặc nhờ người có quyền nhập giá.',
   [ERROR_KEY.CATALOG_BUNDLE_COMPONENTS_MUST_BE_UNIQUE]:

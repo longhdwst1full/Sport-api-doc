@@ -868,6 +868,23 @@ describe('Admin v1 contract', () => {
       })
       .expect(422);
     expect(await prisma.product.count({ where: { name: brokenName } })).toBe(0);
+
+    // SKU nhập tay: lưu đúng mã cửa hàng (tự viết hoa); dùng lại mã đã có → 409 từ unique constraint.
+    const manualSku = `e2e-${suffix}`.toUpperCase();
+    const manual = await request(server())
+      .post('/api/v1/admin/products')
+      .set(authorization)
+      .send({ name: `Manual SKU ${suffix}`, categoryIds: [categoryId], primaryCategoryId: categoryId, variants: [{ name: 'Std', sku: ` e2e-${suffix} ` }] })
+      .expect(201);
+    const manualProduct = manual.body as { id: string; variants: Array<{ sku: string }> };
+    concurrencyProductIds.push(manualProduct.id);
+    expect(manualProduct.variants[0].sku).toBe(manualSku);
+    await request(server())
+      .post('/api/v1/admin/products')
+      .set(authorization)
+      .send({ name: `Manual SKU dup ${suffix}`, categoryIds: [categoryId], primaryCategoryId: categoryId, variants: [{ name: 'Std', sku: manualSku }] })
+      .expect(409);
+    expect(await prisma.product.count({ where: { name: `Manual SKU dup ${suffix}` } })).toBe(0);
   });
 
   it('creates, updates and changes branch plus warehouse status atomically', async () => {

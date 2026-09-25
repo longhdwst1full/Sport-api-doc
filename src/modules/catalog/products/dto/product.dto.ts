@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional, OmitType, PartialType } from '@nestjs/swagger';
 import {
   ArrayNotEmpty,
@@ -23,6 +23,7 @@ import {
   PRODUCT_BUNDLE_STATUS,
   PRODUCT_BUNDLE_TYPE,
   PRODUCT_CURRENCY,
+  PRODUCT_IDENTIFIER,
   PRODUCT_MEDIA_STATUS,
   PRODUCT_STATUS,
   PRODUCT_TYPE,
@@ -32,6 +33,7 @@ import {
   ProductType,
   ProductVariantStatus,
 } from '../product.constants';
+import { normalizeSku } from '../product-identifiers';
 
 export class ProductVariantDto {
   @ApiProperty({ ...ENTITY_ID_OPENAPI }) id: string;
@@ -241,6 +243,16 @@ export class UpdateProductDto extends UpdateProductFieldsDto {
 }
 
 export class CreateVariantDto {
+  @ApiPropertyOptional({
+    example: 'TD-02',
+    maxLength: 40,
+    description: 'Mã hàng của cửa hàng; tự viết hoa. Bỏ trống thì backend sinh mã 8 ký tự. Không sửa được sau khi tạo.',
+  })
+  @Transform(({ value }) => normalizeSku(value))
+  @IsString()
+  @Matches(PRODUCT_IDENTIFIER.SKU_PATTERN, { message: 'SKU chỉ gồm A-Z, 0-9, . _ + - và dài 2-40 ký tự' })
+  @IsOptional()
+  sku?: string;
   @ApiPropertyOptional() @IsString() @MaxLength(64) @IsOptional() barcode?: string;
   @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(255) name: string;
   @ApiPropertyOptional({ default: 0 }) @IsInt() @Min(0) @IsOptional() weightGrams?: number = 0;

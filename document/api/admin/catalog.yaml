@@ -2442,6 +2442,11 @@ components:
     CreateVariantDto:
       type: object
       properties:
+        sku:
+          type: string
+          example: TD-02
+          maxLength: 40
+          description: Mã hàng của cửa hàng; tự viết hoa. Bỏ trống thì backend sinh mã 8 ký tự. Không sửa được sau khi tạo.
         barcode:
           type: string
         name:
@@ -2822,6 +2827,11 @@ components:
     CreateProductVariantDto:
       type: object
       properties:
+        sku:
+          type: string
+          example: TD-02
+          maxLength: 40
+          description: Mã hàng của cửa hàng; tự viết hoa. Bỏ trống thì backend sinh mã 8 ký tự. Không sửa được sau khi tạo.
         barcode:
           type: string
         name:

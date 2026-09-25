@@ -38,4 +38,14 @@ describe('CreateProductDto', () => {
     expect(variantsError?.children?.[0]?.children?.some(({ property }) => property === 'name'))
       .toBe(true);
   });
+
+  it('normalizes a manual SKU to upper case and rejects spaces or symbols', async () => {
+    const valid = plainToInstance(CreateProductDto, { ...base, variants: [{ name: 'TD-02', sku: ' td-02 ' }] });
+    await expect(validate(valid)).resolves.toHaveLength(0);
+    expect(valid.variants[0].sku).toBe('TD-02');
+
+    const invalid = plainToInstance(CreateProductDto, { ...base, variants: [{ name: 'x', sku: 'TD 02' }] });
+    const errors = await validate(invalid);
+    expect(JSON.stringify(errors)).toContain('matches');
+  });
 });

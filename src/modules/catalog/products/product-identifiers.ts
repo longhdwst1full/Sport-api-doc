@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { randomInt, randomUUID } from 'node:crypto';
 import { PRODUCT_IDENTIFIER } from './product.constants';
 
 const randomToken = (length: number): string =>
@@ -24,5 +24,15 @@ export const generateProductSlug = (name: string, productNo: string): string => 
   return `${nameSlug}-${suffix}`;
 };
 
-export const generateSku = (productNo: string): string =>
-  `${productNo}-${PRODUCT_IDENTIFIER.SKU_PREFIX}-${randomToken(PRODUCT_IDENTIFIER.SKU_RANDOM_LENGTH)}`;
+/**
+ * SKU tự sinh khi admin bỏ trống: 8 ký tự từ bảng chữ không gây nhầm (~40 bit). Trùng (rất hiếm) bị
+ * unique `product_variants.sku` chặn và trả 409 như SKU nhập tay trùng; admin chỉ cần gửi lại.
+ */
+export const generateSku = (): string => {
+  const alphabet = PRODUCT_IDENTIFIER.SKU_GENERATED_ALPHABET;
+  return Array.from({ length: PRODUCT_IDENTIFIER.SKU_GENERATED_LENGTH }, () => alphabet[randomInt(alphabet.length)]).join('');
+};
+
+/** Chuẩn hoá SKU nhập tay: bỏ khoảng trắng hai đầu, viết hoa. */
+export const normalizeSku = (value: unknown): unknown =>
+  typeof value === 'string' ? value.trim().toUpperCase() : value;

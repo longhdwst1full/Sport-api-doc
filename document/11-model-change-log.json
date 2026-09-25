@@ -5873,6 +5873,32 @@
         "test:src/modules/checkout/inventory-reservation.service.spec.ts"
       ],
       "targets": []
+    },
+    {
+      "id": "API-20260925-SKU-MANUAL-SHORT",
+      "date": "2026-09-25",
+      "scope": "API+CATALOG+OPENAPI+ADMIN",
+      "summary": "SKU là mã hàng của cửa hàng: CreateVariantDto (dùng cho createAdminProduct và createAdminProductVariant) nhận sku tuỳ chọn, tự viết hoa, ^[A-Z0-9][A-Z0-9._+-]{1,39}$, không trùng trong cùng request (422), trùng SKU đã có → 409 qua unique. Bỏ trống thì backend sinh 8 ký tự không nhầm lẫn (bỏ 0/O/1/I) thay cho {product_no}-SKU-<20 hex> (53 ký tự). Lý do: dữ liệu 2026-09-25 có 618/619 sản phẩm 1 SKU và 616 SKU là mã cửa hàng trung bình 7 ký tự. SKU vẫn immutable; 4 SKU dạng cũ giữ nguyên. Không đổi schema.",
+      "sources": [
+        "OpenAPI:createAdminProduct/createAdminProductVariant",
+        "source:src/modules/catalog/products/product-identifiers.ts",
+        "test:src/modules/catalog/products/product-identifiers.spec.ts",
+        "document:document/27-catalog-identifier-business-rules.md"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": {
+            "Tên bảng": "product_variants"
+          },
+          "columns": [
+            "Ý nghĩa"
+          ],
+          "set": {
+            "Ý nghĩa": "Sellable SKU; sku do admin nhập (mã cửa hàng) hoặc backend sinh mã ngắn khi tạo"
+          }
+        }
+      ]
     }
   ]
 }

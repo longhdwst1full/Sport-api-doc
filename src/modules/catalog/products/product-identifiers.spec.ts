@@ -2,7 +2,9 @@ import {
   generateProductNo,
   generateProductSlug,
   generateSku,
+  normalizeSku,
 } from './product-identifiers';
+import { PRODUCT_IDENTIFIER } from './product.constants';
 
 describe('catalog product identifiers', () => {
   it('generates a unique-format immutable product number within the database limit', () => {
@@ -24,10 +26,19 @@ describe('catalog product identifiers', () => {
     expect(generateProductSlug('Sản phẩm '.repeat(80), 'PRD-ABC123')).toHaveLength(255);
   });
 
-  it('generates a SKU scoped visibly to its product number', () => {
-    const sku = generateSku('PRD-ABC123');
+  it('generates a short, unambiguous SKU that fits the manual SKU pattern', () => {
+    const skus = Array.from({ length: 200 }, () => generateSku());
 
-    expect(sku).toMatch(/^PRD-ABC123-SKU-[A-F0-9]{20}$/);
-    expect(sku.length).toBeLessThanOrEqual(64);
+    for (const sku of skus) {
+      expect(sku).toMatch(/^[A-HJ-NP-Z2-9]{8}$/);
+      expect(sku).toMatch(PRODUCT_IDENTIFIER.SKU_PATTERN);
+    }
+    expect(new Set(skus).size).toBe(skus.length);
+  });
+
+  it('normalizes a manual SKU to upper case without surrounding spaces', () => {
+    expect(normalizeSku('  td-02 ')).toBe('TD-02');
+    expect(PRODUCT_IDENTIFIER.SKU_PATTERN.test('V-40+')).toBe(true);
+    expect(PRODUCT_IDENTIFIER.SKU_PATTERN.test('TD 02')).toBe(false);
   });
 });

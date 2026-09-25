@@ -266,6 +266,10 @@ export class ProductsService {
     if (new Set(media.map(({ mediaAssetId }) => mediaAssetId)).size !== media.length) {
       throw new UnprocessableEntityException('Media assets must be unique');
     }
+    const manualSkus = variants.flatMap(({ sku }) => (sku ? [sku] : []));
+    if (new Set(manualSkus).size !== manualSkus.length) {
+      throw new UnprocessableEntityException('SKU must be unique within the product');
+    }
     try {
       const productId = await this.prisma.$transaction(async (transaction) => {
         // TRANSACTION: AuditWriter tự cấp sequence_no = MAX + 1, nên unique (request_id, sequence_no)
@@ -306,9 +310,11 @@ export class ProductsService {
         // barcode/SKU lỗi phải rollback tất cả để Admin không nhận một SPU dở dang.
         const now = new Date();
         for (const [variantIndex, { initialPriceAmount, ...variantInput }] of variants.entries()) {
-          const sku = generateSku(productNo);
+          // INVARIANT: SKU là mã hàng của cửa hàng; admin nhập tay (đã chuẩn hoá ở DTO) hoặc bỏ trống để
+          // sinh mã ngắn. Trùng → unique constraint → 409. Đặt sau spread để `sku: undefined` không đè.
+          const sku = variantInput.sku ?? generateSku();
           const variant = await transaction.productVariant.create({
-            data: { productId: product.id, sku, ...variantInput },
+            data: { productId: product.id, ...variantInput, sku },
           });
           // TRANSACTION: giá ban đầu tạo cùng SKU; không còn SKU "chưa có giá" khi mạng rớt giữa chừng.
           // Chưa có giá tham chiếu nên không áp luật giảm >20% phải có lý do.
@@ -709,9 +715,9 @@ export class ProductsService {
           where: { id: databaseProductId, status: { not: PRODUCT_STATUS.ARCHIVED } },
         });
         if (!product) throw new NotFoundException(PRODUCT_ERROR.NOT_FOUND);
-        const sku = generateSku(product.productNo);
+        const sku = input.sku ?? generateSku();
         const variant = await transaction.productVariant.create({
-          data: { productId: databaseProductId, sku, ...input },
+          data: { productId: databaseProductId, ...input, sku },
         });
         await this.audit.write(
           {

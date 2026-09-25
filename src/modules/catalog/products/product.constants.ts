@@ -60,8 +60,12 @@ export const PRODUCT_CURRENCY = {
 export const PRODUCT_IDENTIFIER = {
   PRODUCT_NO_PREFIX: 'PRD',
   PRODUCT_NO_RANDOM_LENGTH: 24,
-  SKU_PREFIX: 'SKU',
-  SKU_RANDOM_LENGTH: 20,
+  /** Mã tự sinh khi admin bỏ trống SKU; ngắn để in tem/gõ ở quầy như mã hàng cửa hàng đang dùng. */
+  SKU_GENERATED_LENGTH: 8,
+  /** Bỏ 0/O và 1/I để đọc qua điện thoại hay nhìn trên tem không nhầm. */
+  SKU_GENERATED_ALPHABET: 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789',
+  /** SKU nhập tay: viết hoa, bắt đầu bằng chữ/số, cho phép . _ + - (mã cũ có dạng `V-40+`). */
+  SKU_PATTERN: /^[A-Z0-9][A-Z0-9._+-]{1,39}$/,
   MAX_PRODUCT_NO_LENGTH: 32,
   MAX_SKU_LENGTH: 64,
   MAX_SLUG_LENGTH: 255,
