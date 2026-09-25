@@ -1,10 +1,10 @@
 # Order module — maintenance note
 
-> **Document version:** 1.4.0
+> **Document version:** 1.4.1
 >
-> **Last updated:** 2026-09-17
+> **Last updated:** 2026-09-25
 >
-> **Change summary:** Nhân viên lập đơn có giao hàng, thêm COD và tuỳ chọn giao ngay; màn Bán tại quầy gộp vào Đơn hàng.
+> **Change summary:** Giao ngay tại quầy không đặt vận đơn ở hãng vận chuyển.
 
 ## Phạm vi hiện tại
 
@@ -44,7 +44,7 @@
 - Client/Admin chỉ dùng SDK sinh từ OpenAPI, không tự khai báo path/DTO.
 - `resolveOrderCreationPlan` là nơi duy nhất quyết định ba việc của đơn nhân viên lập: thu tiền ngay hay không, giao ngay hay không, và phương thức giao. Sửa quy tắc phải sửa ở đó, đừng rải điều kiện vào `create`.
 - COD chỉ dành cho đơn có giao hàng và **không** ghi nhận đã thu: tiền về lúc giao, đánh dấu SUCCESS sớm sẽ làm báo cáo doanh thu đếm tiền chưa có.
-- Đơn tại quầy mặc định chạy hết vòng giao hàng; đơn giao hàng mặc định dừng lại cho kho xử lý, trừ khi nhân viên bật `handOverImmediately` vì khách lấy ngay tại cửa hàng.
+- Đơn tại quầy mặc định chạy hết vòng giao hàng; đơn giao hàng mặc định dừng lại cho kho xử lý, trừ khi nhân viên bật `handOverImmediately` vì khách lấy ngay tại cửa hàng. Giao ngay (`handOver`) không bao giờ đặt vận đơn GHN: bước ship truyền `handedOverAtCounter`.
 - Đơn có giao hàng dùng `STANDARD_DELIVERY` và snapshot địa chỉ của khách; đơn tại quầy dùng `BRANCH_FREE` và snapshot địa chỉ chi nhánh — không bịa địa chỉ giao cho khách cầm hàng về.
 
 ## Checklist khi sửa
@@ -60,6 +60,7 @@
 
 | Version | Date | Change summary | Source |
 | --- | --- | --- | --- |
+| 1.4.1 | 2026-09-25 | Giao ngay tại quầy không gọi hãng vận chuyển. | API-20260925-POS-NO-CARRIER |
 | 1.4.0 | 2026-09-17 | Đơn nhân viên lập có địa chỉ giao, COD và tuỳ chọn giao ngay; quy tắc gom vào `resolveOrderCreationPlan`. | API-20260917-STAFF-DELIVERY-ORDER |
 | 1.3.0 | 2026-09-13 | Admin confirm và worker auto-complete sau hold time. | DBAPI-20260913-FULFILLMENT-S43 |
 | 1.2.0 | 2026-09-12 | Bỏ giới hạn complete trong ngày; giữ DELIVERED, Payment SUCCESS, reason và audit. | API-20260912-ORDER-GUEST-HARDENING |
