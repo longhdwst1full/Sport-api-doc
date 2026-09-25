@@ -80,7 +80,7 @@ function buildHarness({
 describe('CartService.mergeGuestCartIntoAccount', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('cộng dồn số lượng khi cùng một biến thể có ở cả hai giỏ', async () => {
+  it('lấy số lượng lớn hơn khi cùng một biến thể có ở cả hai giỏ', async () => {
     const harness = buildHarness({
       guestItems: [
         {
@@ -101,9 +101,9 @@ describe('CartService.mergeGuestCartIntoAccount', () => {
 
     await harness.service.mergeGuestCartIntoAccount(FIXTURE.GUEST_TOKEN, FIXTURE.USER_ID);
 
-    // Cộng dồn chứ không ghi đè: khách đã chủ động chọn ở cả hai phiên.
+    // Lấy số lớn hơn, không cộng dồn (quyết định 2026-09-25).
     expect(harness.itemUpdate.mock.calls[0][0].data.quantity).toBe(
-      FIXTURE.GUEST_QUANTITY + FIXTURE.ACCOUNT_QUANTITY,
+      Math.max(FIXTURE.GUEST_QUANTITY, FIXTURE.ACCOUNT_QUANTITY),
     );
     expect(harness.itemCreate).not.toHaveBeenCalled();
   });

@@ -96,7 +96,8 @@ describe('Cart guest merge concurrency (PostgreSQL)', () => {
       select: { productVariantId: true, quantity: true },
     });
     expect(items).toEqual([
-      { productVariantId: sharedVariantId, quantity: 5 },
+      // max(3 ở giỏ tài khoản, 2 ở giỏ khách) — không cộng dồn, và chỉ áp một lần dù gộp song song.
+      { productVariantId: sharedVariantId, quantity: 3 },
       { productVariantId: guestOnlyVariantId, quantity: 1 },
     ]);
     const guestCart = await cleanup.cart.findUniqueOrThrow({ where: { id: guestCartId } });

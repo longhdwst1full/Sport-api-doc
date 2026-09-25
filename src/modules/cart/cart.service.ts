@@ -11,7 +11,7 @@ import { Prisma } from '@prisma/client';
 
 import { toDatabaseId, toEntityId } from '../../common/identifiers/entity-id';
 import { PrismaService } from '../../database/prisma.service';
-import { PRODUCT_STATUS, PRODUCT_TYPE, PRODUCT_VARIANT_STATUS } from '../catalog/products/product.constants';
+import { PRODUCT_STATUS, PRODUCT_TYPE, PRODUCT_VARIANT_STATUS, type ProductType } from '../catalog/products/product.constants';
 import { USER_STATUS, USER_TYPE } from '../iam/iam.constants';
 import { CART_CURRENCY, CART_STATUS } from './cart.constants';
 import { CartDto, GuestCartDto } from './cart.dto';
@@ -222,10 +222,12 @@ export class CartService {
       for (const item of guest.items) {
         const existing = existingByVariant.get(item.productVariantId);
         if (existing) {
+          // INVARIANT (quyết định chủ dự án 2026-09-25): cùng SKU có ở cả hai giỏ thì lấy số lượng LỚN HƠN,
+          // không cộng dồn — khách thường bỏ lại cùng món trên máy khác, cộng dồn làm tăng số lượng ngoài ý muốn.
           await transaction.cartItem.update({
             where: { id: existing.id },
             data: {
-              quantity: existing.quantity + item.quantity,
+              quantity: Math.max(existing.quantity, item.quantity),
               priceSeenAt: new Date(),
               version: { increment: 1 },
             },
@@ -464,6 +466,8 @@ export class CartService {
       return {
         id: toEntityId(item.id),
         productVariantId: toEntityId(item.productVariantId),
+        productId: toEntityId(item.productVariant.product.id),
+        productType: item.productVariant.product.productType as ProductType,
         sku: item.productVariant.sku,
         name: item.productVariant.name,
         productName: item.productVariant.product.name,

@@ -21665,6 +21665,18 @@
             "pattern": "^[1-9][0-9]*$",
             "example": "1"
           },
+          "productId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
+          },
+          "productType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProductType"
+              }
+            ]
+          },
           "sku": {
             "type": "string"
           },
@@ -21700,6 +21712,8 @@
         "required": [
           "id",
           "productVariantId",
+          "productId",
+          "productType",
           "sku",
           "name",
           "productName",

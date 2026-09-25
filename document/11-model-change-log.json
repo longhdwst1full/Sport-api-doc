@@ -5833,6 +5833,20 @@
         "test:src/modules/system/job-health/job-health.service.spec.ts"
       ],
       "targets": []
+    },
+    {
+      "id": "API-20260925-CART-MULTI-DEVICE-SYNC",
+      "date": "2026-09-25",
+      "scope": "API+CART+OPENAPI+STOREFRONT",
+      "summary": "Đồng bộ giỏ giữa các thiết bị theo quyết định chủ dự án: chưa đăng nhập thì giỏ chỉ nằm trên máy; đăng nhập thì storefront đẩy giỏ trên máy lên giỏ khách, gọi mergeGuestCartIntoAccount rồi tải giỏ tài khoản về; đang đăng nhập thì mỗi thay đổi ghi lên giỏ tài khoản (debounce 400ms) và mở app thì tải giỏ tài khoản; đăng xuất/đổi tài khoản thì xoá giỏ trên máy (giỏ vẫn trong tài khoản). API: khi gộp, cùng SKU lấy số lượng LỚN HƠN thay vì cộng dồn; CartItemDto thêm productId và productType (enum ProductType dùng chung) để dựng lại giỏ local. Checkout dùng chung hàm đồng bộ, chỉ ghi dòng thay đổi. Contract chỉ thêm field; đổi quy tắc gộp là thay đổi hành vi.",
+      "sources": [
+        "OpenAPI:mergeGuestCartIntoAccount/getAccountCart",
+        "source:src/modules/cart/cart.service.ts",
+        "test:src/modules/cart/cart-merge.service.spec.ts",
+        "test:test/cart-merge.integration-spec.ts",
+        "client:src/features/cart/api/cart-sync.ts"
+      ],
+      "targets": []
     }
   ]
 }

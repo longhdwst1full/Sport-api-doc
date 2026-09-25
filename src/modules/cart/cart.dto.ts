@@ -3,6 +3,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsInt, Min } from 'class-validator';
 
 import { ENTITY_ID_OPENAPI, IsEntityId } from '../../common/identifiers/entity-id';
+import { PRODUCT_TYPE, type ProductType } from '../catalog/products/product.constants';
 
 export class SetCartItemDto {
   @ApiProperty({ ...ENTITY_ID_OPENAPI })
@@ -47,6 +48,9 @@ export class MutateCartDto {
 export class CartItemDto {
   @ApiProperty({ ...ENTITY_ID_OPENAPI }) id: string;
   @ApiProperty({ ...ENTITY_ID_OPENAPI }) productVariantId: string;
+  /** CONTRACT: đủ để storefront dựng lại giỏ local từ giỏ tài khoản khi đăng nhập trên máy khác. */
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) productId: string;
+  @ApiProperty({ enum: Object.values(PRODUCT_TYPE), enumName: 'ProductType' }) productType: ProductType;
   @ApiProperty() sku: string;
   @ApiProperty() name: string;
   @ApiProperty() productName: string;
