@@ -1,10 +1,10 @@
 # Catalog Products module maintenance note
 
-> **Document version:** 1.3.0
+> **Document version:** 1.4.0
 >
 > **Last updated:** 2026-09-25
 >
-> **Change summary:** `createAdminProduct` tạo luôn giá ban đầu và ảnh cấp sản phẩm trong cùng transaction.
+> **Change summary:** Policy xuất bản dùng chung (`product-publish.policy.ts`) cho publish và setup-status; bắt buộc ảnh chính, tồn chỉ cảnh báo; SKU nhập tay hoặc mã ngắn.
 
 ## Phạm vi và entrypoint
 
@@ -50,6 +50,19 @@ bundle use case; `ProductMediaService` sở hữu media link lifecycle.
   bộ/outbox sẽ làm mất idempotency; khi đó cần kho khoá riêng.
 - Chỉ bao phủ bước tạo Product + SKU. Tồn đầu có khoá riêng; giá và ảnh gọi sau vẫn chưa idempotent.
 
+## Policy xuất bản
+
+- `evaluatePublishReadiness` là nguồn quyết định duy nhất: `publish` ném câu của lỗi chặn đầu tiên,
+  `getAdminProductSetupStatus` trả toàn bộ `blockingIssues` + `warnings`. Admin không tự tính điều kiện.
+- Chặn: không có SKU ACTIVE có giá hiệu lực; STANDARD chứa SKU combo; combo sai cấu hình; thiếu ảnh chính.
+- Cảnh báo: chưa chi nhánh nào có tồn khả dụng (publish cho cả chuỗi, tồn theo chi nhánh).
+- Đọc tổng tồn từ `inventory_balances` chỉ để cảnh báo; Catalog không ghi bảng của Inventory.
+
+## SKU
+
+- SKU là mã hàng của cửa hàng: nhập tay khi tạo (tự viết hoa, `^[A-Z0-9][A-Z0-9._+-]{1,39}$`) hoặc bỏ
+  trống để sinh 8 ký tự không nhầm lẫn. Unique và immutable (BR-SKU-02, doc 27).
+
 ## Permission, concurrency và lỗi
 
 - Create/update/variant mutation yêu cầu `catalog.product.manage`; publish/archive yêu cầu
@@ -84,6 +97,7 @@ bundle use case; `ProductMediaService` sở hữu media link lifecycle.
 
 | Version | Date | Change summary |
 | --- | --- | --- |
+| 1.4.0 | 2026-09-25 | Policy xuất bản dùng chung + setup-status; SKU nhập tay/mã ngắn. |
 | 1.3.0 | 2026-09-25 | Giá ban đầu + ảnh gắn trong transaction tạo sản phẩm. |
 | 1.2.0 | 2026-09-25 | createAdminProduct idempotent theo x-request-id + audit, advisory lock, 409 PRODUCT_IDEMPOTENCY_CONFLICT. |
 | 1.1.0 | 2026-09-21 | DELETE Product Media gọi Cloudinary, chặn asset dùng chung và compensation khi provider lỗi. |

@@ -32,6 +32,7 @@ import {
   CreateVariantDto,
   ListProductsQueryDto,
   ProductDetailDto,
+  ProductSetupStatusDto,
   ProductListResponseDto,
   ProductMediaDto,
   ProductPriceTimelineDto,
@@ -82,6 +83,18 @@ export class AdminProductsController {
   @ApiOkResponse({ type: ProductDetailDto })
   getAdminProduct(@Param('slug') slug: string): Promise<ProductDetailDto> {
     return this.products.getBySlug(slug, false);
+  }
+
+  @Get(':id/setup-status')
+  @RequirePermissions('catalog.product.view')
+  @ApiOperation({
+    operationId: 'getAdminProductSetupStatus',
+    summary: 'Publish checklist: blocking issues and warnings, same policy as publish',
+  })
+  @ApiOkResponse({ type: ProductSetupStatusDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  getAdminProductSetupStatus(@Param('id', new ParseEntityIdPipe()) id: string): Promise<ProductSetupStatusDto> {
+    return this.products.setupStatus(id);
   }
 
   @Post()

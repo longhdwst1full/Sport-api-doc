@@ -5899,6 +5899,19 @@
           }
         }
       ]
+    },
+    {
+      "id": "API-20260925-PRODUCT-PUBLISH-POLICY",
+      "date": "2026-09-25",
+      "scope": "API+CATALOG+OPENAPI+ADMIN",
+      "summary": "Thêm GET /admin/products/:id/setup-status (getAdminProductSetupStatus, quyền catalog.product.view) trả canPublish, blockingIssues và warnings theo mã (NO_SELLABLE_VARIANT, STANDARD_HAS_BUNDLE_VARIANT, INVALID_BUNDLE, MISSING_PRIMARY_IMAGE, NO_AVAILABLE_STOCK). publishAdminProduct và setup-status dùng chung evaluatePublishReadiness; điều kiện mới: bắt buộc ảnh chính (dữ liệu 2026-09-25: 0/596 sản phẩm đang bán thiếu ảnh chính nên không ảnh hưởng hàng đang bán); chưa có tồn chỉ là cảnh báo (593/596 sản phẩm đang bán chưa có tồn). Admin bỏ hàm tự tính isProductPublishReady, hiển thị checklist từ API.",
+      "sources": [
+        "OpenAPI:getAdminProductSetupStatus/publishAdminProduct",
+        "source:src/modules/catalog/products/product-publish.policy.ts",
+        "test:src/modules/catalog/products/product-publish.policy.spec.ts",
+        "test:test/admin-contract.e2e-spec.ts"
+      ],
+      "targets": []
     }
   ]
 }

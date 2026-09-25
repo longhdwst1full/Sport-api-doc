@@ -344,6 +344,8 @@ describe('ProductsService', () => {
           ],
         }),
       },
+      productMedia: { count: jest.fn().mockResolvedValue(1) },
+      inventoryBalance: { aggregate: jest.fn().mockResolvedValue({ _sum: { onHand: 0, reserved: 0 } }) },
     };
     const prisma = {
       $transaction: jest.fn((work: (client: typeof transaction) => unknown) => work(transaction)),

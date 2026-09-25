@@ -496,7 +496,8 @@ describe('Admin v1 contract', () => {
     expect(slug).toMatch(/^e2e-product-prd-[a-f0-9]{24}$/);
 
     const createdVariant = createdProduct.variants.find(({ name }) => name === 'Default SKU');
-    expect(createdVariant?.sku).toMatch(new RegExp(`^${createdProduct.productNo}-SKU-[A-F0-9]{20}$`));
+    // SKU bỏ trống → mã ngắn 8 ký tự không nhầm lẫn (BR-SKU-02, 2026-09-25).
+    expect(createdVariant?.sku).toMatch(/^[A-HJ-NP-Z2-9]{8}$/);
     catalogFixture.variantId = createdVariant!.id;
 
     const updatedVariant = await request(server())

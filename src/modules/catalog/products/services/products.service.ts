@@ -38,6 +38,7 @@ import {
   ReplacePriceDto,
   UpdateProductDto,
   UpdateVariantDto,
+  ProductSetupStatusDto,
 } from '../dto/product.dto';
 import {
   PRODUCT_AUDIT_ACTION,
@@ -47,6 +48,7 @@ import {
   PRODUCT_CURRENCY,
   PRODUCT_ERROR,
   PRODUCT_ERROR_CODE,
+  PRODUCT_MEDIA_STATUS,
   PRODUCT_PRICE_STATUS,
   PRODUCT_PRICE_TYPE,
   PRODUCT_SALES_CHANNEL,
@@ -61,6 +63,7 @@ import {
   generateProductSlug,
   generateSku,
 } from '../product-identifiers';
+import { evaluatePublishReadiness, type ProductPublishSnapshot } from '../product-publish.policy';
 
 const effectivePriceWhere = (now: Date): Prisma.ProductPriceWhereInput => ({
   status: { in: [PRODUCT_PRICE_STATUS.ACTIVE, PRODUCT_PRICE_STATUS.SCHEDULED] },
@@ -528,7 +531,13 @@ export class ProductsService {
       if (product.status !== PRODUCT_STATUS.DRAFT) {
         throw new UnprocessableEntityException('Only DRAFT product can be published');
       }
-      this.assertPublishable(product.productType as ProductType, product.variants);
+      // INVARIANT: cùng policy với getAdminProductSetupStatus — checklist "đủ" thì publish chắc chắn qua.
+      const readiness = evaluatePublishReadiness(
+        await this.publishSnapshot(transaction, product.id, product.status, product.productType as ProductType, product.variants),
+      );
+      if (readiness.blockingIssues.length > 0) {
+        throw new UnprocessableEntityException(readiness.blockingIssues[0].message);
+      }
       const updated = await transaction.product.updateMany({
         where: {
           id: databaseId,
@@ -1389,49 +1398,60 @@ export class ProductsService {
     );
   }
 
-  private assertPublishable(
+  /** Ảnh chính và tồn khả dụng của sản phẩm cho policy publish (đọc trong transaction của nơi gọi). */
+  private async publishSnapshot(
+    client: Prisma.TransactionClient | PrismaService,
+    productId: bigint,
+    status: string,
     productType: ProductType,
-    variants: Array<{
-      prices: unknown[];
-      bundleDefinition: null | {
-        status: string;
-        items: Array<{
-          componentVariant: { status: string; product: { status: string } };
-        }>;
-      };
-    }>,
-  ): void {
-    if (variants.length === 0 || !variants.some(({ prices }) => prices.length > 0)) {
-      throw new UnprocessableEntityException(
-        'Published product requires an active variant and effective price',
-      );
-    }
-    if (productType === PRODUCT_TYPE.STANDARD) {
-      if (variants.some(({ bundleDefinition }) => bundleDefinition !== null)) {
-        throw new UnprocessableEntityException(
-          'STANDARD product cannot contain a bundle variant',
-        );
-      }
-      return;
-    }
-    if (
-      variants.some(
-        ({ prices, bundleDefinition }) =>
-          prices.length === 0 ||
-          !bundleDefinition ||
-          bundleDefinition.status !== PRODUCT_BUNDLE_STATUS.ACTIVE ||
-          bundleDefinition.items.length === 0 ||
-          bundleDefinition.items.some(
-            ({ componentVariant }) =>
-              componentVariant.status !== PRODUCT_VARIANT_STATUS.ACTIVE ||
-              componentVariant.product.status === PRODUCT_STATUS.ARCHIVED,
-          ),
-      )
-    ) {
-      throw new UnprocessableEntityException(
-        'Every active BUNDLE variant requires an active non-empty definition, effective price and active components',
-      );
-    }
+    activeVariants: ProductPublishSnapshot['activeVariants'],
+  ): Promise<ProductPublishSnapshot> {
+    const [primaryImages, stock] = await Promise.all([
+      client.productMedia.count({
+        where: { productId, status: PRODUCT_MEDIA_STATUS.ACTIVE, isPrimary: true },
+      }),
+      // Đọc tổng hợp tồn (chỉ đọc) để cảnh báo; Catalog không ghi bảng của Inventory.
+      client.inventoryBalance.aggregate({
+        where: { productVariant: { productId, status: PRODUCT_VARIANT_STATUS.ACTIVE } },
+        _sum: { onHand: true, reserved: true },
+      }),
+    ]);
+    return {
+      status,
+      productType,
+      activeVariants,
+      hasPrimaryImage: primaryImages > 0,
+      availableStock: (stock._sum.onHand ?? 0) - (stock._sum.reserved ?? 0),
+    };
+  }
+
+  /**
+   * Checklist trước khi xuất bản cho Admin: điều gì còn chặn và điều gì chỉ là cảnh báo.
+   * Dùng cùng `evaluatePublishReadiness` với `publish`.
+   */
+  async setupStatus(id: string): Promise<ProductSetupStatusDto> {
+    const now = new Date();
+    const product = await this.prisma.product.findFirst({
+      where: { id: toDatabaseId(id) },
+      include: {
+        variants: {
+          where: { status: PRODUCT_VARIANT_STATUS.ACTIVE },
+          include: {
+            prices: { where: effectivePriceWhere(now) },
+            bundleDefinition: { include: { items: { include: { componentVariant: { include: { product: true } } } } } },
+          },
+        },
+      },
+    });
+    if (!product) throw new NotFoundException(PRODUCT_ERROR.NOT_FOUND);
+    const readiness = evaluatePublishReadiness(
+      await this.publishSnapshot(this.prisma, product.id, product.status, product.productType as ProductType, product.variants),
+    );
+    return {
+      productId: toEntityId(product.id),
+      status: product.status as ProductStatus,
+      ...readiness,
+    };
   }
 
   private async lockProductIds(

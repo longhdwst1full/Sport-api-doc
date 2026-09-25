@@ -917,6 +917,47 @@ paths:
         - Admin Products
       x-required-permissions:
         - catalog.product.view
+  /api/v1/admin/products/{id}/setup-status:
+    get:
+      operationId: getAdminProductSetupStatus
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductSetupStatusDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: "Publish checklist: blocking issues and warnings, same policy as publish"
+      tags:
+        - Admin Products
+      x-required-permissions:
+        - catalog.product.view
   /api/v1/admin/products/{id}:
     patch:
       operationId: updateAdminProduct
@@ -2389,6 +2430,35 @@ components:
         - media
         - categories
         - categoryIds
+    ProductSetupStatusDto:
+      type: object
+      properties:
+        productId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        status:
+          allOf:
+            - $ref: "#/components/schemas/ProductStatus"
+        canPublish:
+          type: boolean
+          description: DRAFT và không còn điều kiện chặn
+        blockingIssues:
+          description: Điều kiện chặn xuất bản
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductReadinessIssueDto"
+        warnings:
+          description: Chỉ cảnh báo, không chặn (ví dụ chưa có tồn)
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductReadinessIssueDto"
+      required:
+        - productId
+        - status
+        - canPublish
+        - blockingIssues
+        - warnings
     UpdateProductDto:
       type: object
       properties:
@@ -2941,6 +3011,18 @@ components:
         - id
         - name
         - isPrimary
+    ProductReadinessIssueDto:
+      type: object
+      properties:
+        code:
+          allOf:
+            - $ref: "#/components/schemas/ProductReadinessIssueCode"
+        message:
+          type: string
+          description: Câu mô tả ổn định (tiếng Anh); UI hiển thị theo `code`
+      required:
+        - code
+        - message
     ProductMediaStatus:
       type: string
       enum:
@@ -3026,6 +3108,14 @@ components:
         - bundleType
         - status
         - components
+    ProductReadinessIssueCode:
+      type: string
+      enum:
+        - NO_SELLABLE_VARIANT
+        - STANDARD_HAS_BUNDLE_VARIANT
+        - INVALID_BUNDLE
+        - MISSING_PRIMARY_IMAGE
+        - NO_AVAILABLE_STOCK
     ProductBundleType:
       type: string
       enum:

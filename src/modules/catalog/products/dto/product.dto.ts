@@ -34,6 +34,7 @@ import {
   ProductVariantStatus,
 } from '../product.constants';
 import { normalizeSku } from '../product-identifiers';
+import { PRODUCT_READINESS_ISSUE, type ProductReadinessIssueCode } from '../product-publish.policy';
 
 export class ProductVariantDto {
   @ApiProperty({ ...ENTITY_ID_OPENAPI }) id: string;
@@ -387,4 +388,21 @@ export class CreateBundleDto {
   @ValidateNested({ each: true })
   @Type(() => CreateBundleItemDto)
   items: CreateBundleItemDto[];
+}
+
+export class ProductReadinessIssueDto {
+  @ApiProperty({ enum: Object.values(PRODUCT_READINESS_ISSUE), enumName: 'ProductReadinessIssueCode' })
+  code: ProductReadinessIssueCode;
+  @ApiProperty({ description: 'Câu mô tả ổn định (tiếng Anh); UI hiển thị theo `code`' }) message: string;
+}
+
+/** Checklist xuất bản; cùng policy với publishAdminProduct. */
+export class ProductSetupStatusDto {
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) productId: string;
+  @ApiProperty({ enum: Object.values(PRODUCT_STATUS), enumName: 'ProductStatus' }) status: ProductStatus;
+  @ApiProperty({ description: 'DRAFT và không còn điều kiện chặn' }) canPublish: boolean;
+  @ApiProperty({ type: [ProductReadinessIssueDto], description: 'Điều kiện chặn xuất bản' })
+  blockingIssues: ProductReadinessIssueDto[];
+  @ApiProperty({ type: [ProductReadinessIssueDto], description: 'Chỉ cảnh báo, không chặn (ví dụ chưa có tồn)' })
+  warnings: ProductReadinessIssueDto[];
 }

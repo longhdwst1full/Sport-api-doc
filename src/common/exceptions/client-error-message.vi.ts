@@ -377,6 +377,7 @@ export const ERROR_KEY = {
   CATALOG_VARIANT_IS_USED_BY_AN_ACTIVE_PUBLISHED_COMBO_ARCHIVE_THE_C: 'Variant is used by an active published combo; archive the combo first',
   CATALOG_PRODUCT_TYPE_CANNOT_CHANGE_AFTER_VARIANTS_HAVE_BEEN_CREATE: 'Product type cannot change after variants have been created',
   CATALOG_PUBLISHED_PRODUCT_REQUIRES_AN_ACTIVE_VARIANT_AND_EFFECTIVE: 'Published product requires an active variant and effective price',
+  CATALOG_PUBLISHED_PRODUCT_REQUIRES_A_PRIMARY_IMAGE: 'Published product requires a primary image',
   CATALOG_REPLACEMENT_PRICE_MUST_START_AFTER_THE_CURRENT_PRICE_START: 'Replacement price must start after the current price starts',
 
   // --- MEDIA ---
@@ -721,6 +722,7 @@ const EXACT_MESSAGES: Readonly<Record<string, string>> = {
     'Phiên bản đang nằm trong một combo đang bán. Hãy lưu trữ combo đó trước.',
   [ERROR_KEY.CATALOG_PRODUCT_TYPE_CANNOT_CHANGE_AFTER_VARIANTS_HAVE_BEEN_CREATE]:
     'Không đổi được loại sản phẩm sau khi đã tạo phiên bản.',
+  [ERROR_KEY.CATALOG_PUBLISHED_PRODUCT_REQUIRES_A_PRIMARY_IMAGE]: 'Sản phẩm cần có ảnh chính trước khi xuất bản.',
   [ERROR_KEY.CATALOG_PUBLISHED_PRODUCT_REQUIRES_AN_ACTIVE_VARIANT_AND_EFFECTIVE]:
     'Sản phẩm đăng bán cần có phiên bản đang hoạt động và giá hiệu lực.',
   [ERROR_KEY.CATALOG_REPLACEMENT_PRICE_MUST_START_AFTER_THE_CURRENT_PRICE_START]:
