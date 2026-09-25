@@ -329,6 +329,7 @@ Table products {
   is_published boolean [not null, default: false, note: 'Cờ hiển thị trên website, tách khỏi status vòng đời']
   published_at timestamptz
   seo_json jsonb
+  specifications jsonb [not null, default: '[]', note: '[{code, values[]}] theo attributes.code; chỉ giá trị, không nhãn/đơn vị; ghi qua Catalog service (D61)']
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
   created_by bigint
@@ -406,47 +407,29 @@ Table product_media {
 
 Table attributes {
   id bigint [pk, increment]
-  code varchar(64) [not null, unique]
+  code varchar(64) [not null, unique, note: 'Bất biến; CHECK ^[A-Z][A-Z0-9_]{1,63}$']
   name varchar(255) [not null]
-  data_type varchar(24) [not null]
-  is_variant_axis boolean [not null, default: false]
-  status varchar(24) [not null, default: 'ACTIVE']
+  data_type varchar(24) [not null, note: 'TEXT | NUMBER | BOOLEAN | OPTION']
+  unit varchar(16) [note: 'Đơn vị cho NUMBER; khoá khi đã có sản phẩm dùng']
+  is_variant_axis boolean [not null, default: false, note: 'Có thể dùng làm trục biến thể (Option, chưa dùng V1)']
+  options jsonb [note: 'Chỉ OPTION: [{code,label,colorHex}]; không bỏ được lựa chọn đang dùng']
+  status varchar(24) [not null, default: 'ACTIVE', note: 'ACTIVE | INACTIVE; không xoá cứng']
   sort_order int [not null, default: 0]
+  version bigint [not null, default: 0]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
-  Note: '[P1] Size/color/material hoặc specification.'
+  Note: '[P1] Từ điển thuộc tính dùng chung (D61). Thay attribute_values bằng options JSONB; thông số lưu ở products.specifications.'
 }
 
-Table attribute_values {
-  id bigint [pk, increment]
-  attribute_id bigint [not null]
-  code varchar(64) [not null]
-  label varchar(255) [not null]
-  color_hex varchar(16)
-  sort_order int [not null, default: 0]
-  status varchar(24) [not null, default: 'ACTIVE']
-  indexes { (attribute_id, code) [unique] }
   Note: '[P1] Giá trị lựa chọn.'
-}
-
-Table product_attribute_values {
-  id bigint [pk, increment]
-  product_id bigint [not null]
-  attribute_id bigint [not null]
-  attribute_value_id bigint
-  value_text text
-  value_number decimal(19,4)
-  value_boolean boolean
-  created_at timestamptz [not null]
-  Note: '[P1] CHECK đúng một loại value; unique theo product+attribute+value.'
 }
 
 Table variant_attribute_values {
   variant_id bigint [not null]
   attribute_id bigint [not null]
-  attribute_value_id bigint [not null]
+  option_code varchar(64) [not null, note: 'Mã trong attributes.options (D61); thiết kế chốt khi làm Option']
   indexes { (variant_id, attribute_id) [pk] }
-  Note: '[P1] Mỗi variant chỉ một value cho mỗi variant axis.'
+  Note: '[P1] Mỗi variant chỉ một value cho mỗi variant axis. Bảng liên kết, không dùng JSONB làm khoá tổ hợp (D61).'
 }
 
 Table product_reviews {
@@ -1390,13 +1373,8 @@ Ref: bundle_items.component_variant_id > product_variants.id [delete: restrict]
 Ref: product_media.product_id > products.id [delete: cascade]
 Ref: product_media.variant_id > product_variants.id [delete: cascade]
 Ref: product_media.media_asset_id > media_assets.id [delete: restrict]
-Ref: attribute_values.attribute_id > attributes.id [delete: cascade]
-Ref: product_attribute_values.product_id > products.id [delete: cascade]
-Ref: product_attribute_values.attribute_id > attributes.id [delete: restrict]
-Ref: product_attribute_values.attribute_value_id > attribute_values.id [delete: restrict]
 Ref: variant_attribute_values.variant_id > product_variants.id [delete: cascade]
 Ref: variant_attribute_values.attribute_id > attributes.id [delete: restrict]
-Ref: variant_attribute_values.attribute_value_id > attribute_values.id [delete: restrict]
 Ref: product_reviews.product_id > products.id [delete: restrict]
 Ref: product_reviews.customer_id > customers.id [delete: restrict]
 Ref: product_reviews.order_item_id > order_items.id [delete: restrict]

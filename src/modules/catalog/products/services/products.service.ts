@@ -22,6 +22,9 @@ import { PrismaService } from '../../../../database/prisma.service';
 import { AuditReader } from '../../../audit/audit.reader';
 import { AuditWriter } from '../../../audit/audit.writer';
 import { ProductMediaService } from './product-media.service';
+import { AttributesService } from '../../attributes/attributes.service';
+import { ATTRIBUTE_AUDIT_ACTION } from '../../attributes/attribute.constants';
+import type { ReplaceProductSpecificationsDto } from '../../attributes/attribute.dto';
 import { CATALOG_REFERENCE_STATUS } from '../../catalog.constants';
 import {
   ChangeProductStatusDto,
@@ -78,6 +81,7 @@ export class ProductsService {
     private readonly audit: AuditWriter,
     private readonly auditReader: AuditReader,
     private readonly media: ProductMediaService,
+    private readonly attributes: AttributesService,
   ) {}
 
   async searchActiveVariants(query: ActiveSearchQueryDto): Promise<ActiveLookupResponseDto> {
@@ -244,7 +248,7 @@ export class ProductsService {
       include: this.productInclude(now, storefront),
     });
     if (!row) throw new NotFoundException(PRODUCT_ERROR.NOT_FOUND);
-    return this.toDetail(row, storefront);
+    return { ...this.toDetail(row, storefront), specifications: await this.attributes.resolve(row.specifications) };
   }
 
   /**
@@ -1113,7 +1117,60 @@ export class ProductsService {
       include: this.productInclude(new Date(), false),
     });
     if (!row) throw new NotFoundException(PRODUCT_ERROR.NOT_FOUND);
-    return this.toDetail(row, false);
+    // Thông số rỗng thì resolve trả [] ngay, không query thêm — các lệnh ghi dùng getById không chậm đi.
+    return { ...this.toDetail(row, false), specifications: await this.attributes.resolve(row.specifications) };
+  }
+
+  /**
+   * Ghi đè toàn bộ thông số kỹ thuật của sản phẩm.
+   *
+   * INVARIANT: JSONB chỉ nhận giá trị đã qua `AttributesService.validateSpecifications` (decision D61).
+   * TRANSACTION: khoá sản phẩm và tăng version cùng lúc với ghi thông số để hai người sửa song song không
+   * đè lên nhau im lặng (optimistic version như các lệnh sửa sản phẩm khác).
+   */
+  async replaceSpecifications(
+    id: string,
+    input: ReplaceProductSpecificationsDto,
+    context: MutationContext,
+  ): Promise<ProductDetailDto> {
+    const databaseId = toDatabaseId(id);
+    await this.prisma.$transaction(async (transaction) => {
+      await this.lockProductIds(transaction, [databaseId]);
+      const current = await transaction.product.findUnique({
+        where: { id: databaseId },
+        select: { id: true, version: true, status: true, specifications: true },
+      });
+      if (!current) throw new NotFoundException(PRODUCT_ERROR.NOT_FOUND);
+      if (current.status === PRODUCT_STATUS.ARCHIVED) {
+        throw new UnprocessableEntityException('Archived product cannot be edited');
+      }
+      if (Number(current.version) !== input.expectedVersion) throw new ConflictException(PRODUCT_ERROR.VERSION_CONFLICT);
+      const before = this.attributes.readStored(current.specifications);
+      const specifications = await this.attributes.validateSpecifications(transaction, input.specifications, before);
+      await transaction.product.update({
+        where: { id: databaseId },
+        data: {
+          specifications: specifications as unknown as Prisma.InputJsonValue,
+          version: { increment: 1 },
+          updatedBy: toOptionalDatabaseId(context.actorUserId),
+        },
+      });
+      await this.audit.write(
+        {
+          requestId: context.requestId,
+          sequenceNo: 1,
+          actorType: 'USER',
+          actorUserId: context.actorUserId,
+          action: ATTRIBUTE_AUDIT_ACTION.PRODUCT_SPECIFICATIONS_REPLACE,
+          entityType: 'PRODUCT',
+          entityId: id,
+          before: before as unknown as Prisma.InputJsonValue,
+          after: specifications as unknown as Prisma.InputJsonValue,
+        },
+        transaction,
+      );
+    });
+    return this.getById(id);
   }
 
   private async changeProductStatus(
@@ -1307,7 +1364,7 @@ export class ProductsService {
   private toDetail(
     row: Awaited<ReturnType<ProductsService['findProductForMapping']>>,
     storefront: boolean,
-  ): ProductDetailDto {
+  ): Omit<ProductDetailDto, 'specifications'> {
     const variants = storefront
       ? row.variants.filter((variant) =>
           this.isLoadedVariantSellable(row.productType as ProductType, variant),

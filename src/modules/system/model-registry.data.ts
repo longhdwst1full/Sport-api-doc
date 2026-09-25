@@ -62,9 +62,9 @@ export const BUSINESS_MODEL_REGISTRY: BusinessModuleDefinition[] = [
       model('product_categories', 'P0'),
       model('product_variants', 'P0'),
       model('product_media', 'P0'),
+      // D61: attribute_values + product_attribute_values gộp vào attributes.options và
+      // products.specifications (JSONB). variant_attribute_values giữ cho bước Option (bảng liên kết).
       model('attributes', 'P1'),
-      model('attribute_values', 'P1'),
-      model('product_attribute_values', 'P1'),
       model('variant_attribute_values', 'P1'),
       model('product_bundles', 'P0'),
       model('bundle_items', 'P0'),

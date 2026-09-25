@@ -5912,6 +5912,199 @@
         "test:test/admin-contract.e2e-spec.ts"
       ],
       "targets": []
+    },
+    {
+      "id": "API-20260925-CATALOG-SPECIFICATIONS",
+      "date": "2026-09-25",
+      "scope": "DATABASE+CATALOG+API+OPENAPI+ADMIN+STOREFRONT",
+      "summary": "Decision D61 (phương án C): thông số kỹ thuật lưu ở products.specifications JSONB [{code, values[]}] theo từ điển attributes, bỏ attribute_values và product_attribute_values. attributes thêm unit, options JSONB (chỉ OPTION), version; CHECK code/data_type/status/options. Chấp nhận mất FK ở DB: AttributesService là chốt chặn (code bất biến, không xoá cứng, không đổi unit của NUMBER đang dùng, không bỏ lựa chọn đang dùng, kiểm kiểu/lựa chọn trước mọi lần ghi). JSONB chỉ chứa giá trị; nhãn/đơn vị ghép lúc đọc. Chưa thêm GIN index. variant_attribute_values giữ cho Option, cột attribute_value_id đổi thành option_code. API: listAdminAttributes, createAdminAttribute, updateAdminAttribute, replaceAdminProductSpecifications; ProductDetailDto thêm specifications. Migration 20260925200000 chỉ thêm bảng/cột, đã áp trên DB. Registry 76→74 bảng.",
+      "sources": [
+        "migration:prisma/migrations/20260925200000_catalog_attributes_specifications",
+        "OpenAPI:listAdminAttributes/createAdminAttribute/updateAdminAttribute/replaceAdminProductSpecifications/getAdminProduct/getCatalogProduct",
+        "source:src/modules/catalog/attributes/attributes.service.ts",
+        "test:src/modules/catalog/attributes/attributes.service.spec.ts",
+        "test:test/admin-contract.e2e-spec.ts",
+        "document:document/08-open-decisions.csv#D61",
+        "document:document/10-v1-model-relationship-review.md"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": {
+            "Tên bảng": "attributes"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Unique / CHECK",
+            "Các cột chính",
+            "Retention"
+          ],
+          "set": {
+            "Ý nghĩa": "Từ điển thuộc tính dùng chung; options JSONB cho OPTION; thông số ở products.specifications (D61)",
+            "Unique / CHECK": "code UQ immutable; data_type/status/code format/options CHECK",
+            "Các cột chính": "code,name,data_type,unit,is_variant_axis,options,status,sort_order,version",
+            "Retention": "không xoá cứng; INACTIVE"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": {
+            "Tên bảng": "products"
+          },
+          "columns": [
+            "Các cột chính"
+          ],
+          "set": {
+            "Các cột chính": "product_no,name,slug,product_type,brand_id,short_description,description,status,is_published,published_at,seo_json,specifications,version"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": {
+            "Tên bảng": "variant_attribute_values"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Khóa ngoại quan trọng",
+            "Các cột chính"
+          ],
+          "set": {
+            "Ý nghĩa": "Tổ hợp variant (chốt khi làm Option)",
+            "Khóa ngoại quan trọng": "variant_id->product_variants; attribute_id->attributes",
+            "Các cột chính": "option_code"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": {
+            "Tên bảng": [
+              "attribute_values",
+              "product_attribute_values"
+            ]
+          },
+          "columns": "*",
+          "archiveRemovedRowsTo": "Removed Tables"
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": [
+              "attribute_values",
+              "product_attribute_values"
+            ]
+          },
+          "columns": "*",
+          "archiveRemovedRowsTo": "Removed Columns"
+        },
+        {
+          "sheet": "Relationships",
+          "match": {
+            "Bảng con": [
+              "attribute_values",
+              "product_attribute_values"
+            ]
+          },
+          "columns": "*",
+          "archiveRemovedRowsTo": "Removed Relationships"
+        },
+        {
+          "sheet": "Relationships",
+          "match": {
+            "Bảng con": "variant_attribute_values",
+            "Cột FK": "attribute_value_id"
+          },
+          "columns": "*",
+          "archiveRemovedRowsTo": "Removed Relationships"
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "variant_attribute_values",
+            "Tên cột": "attribute_value_id"
+          },
+          "columns": "*",
+          "archiveRemovedRowsTo": "Removed Columns"
+        }
+      ],
+      "upsertRows": [
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "attributes",
+            "Tên cột": "unit"
+          },
+          "values": {
+            "Tên bảng": "attributes",
+            "STT": "10",
+            "Tên cột": "unit",
+            "Kiểu dữ liệu": "varchar(16)",
+            "Cho phép NULL": "YES",
+            "Ý nghĩa / trạng thái cho phép": "Đơn vị cho NUMBER; khoá khi đã có sản phẩm dùng"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "attributes",
+            "Tên cột": "options"
+          },
+          "values": {
+            "Tên bảng": "attributes",
+            "STT": "11",
+            "Tên cột": "options",
+            "Kiểu dữ liệu": "jsonb",
+            "Cho phép NULL": "YES",
+            "Ý nghĩa / trạng thái cho phép": "Chỉ OPTION: [{code,label,colorHex}]; không bỏ lựa chọn đang dùng"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "attributes",
+            "Tên cột": "version"
+          },
+          "values": {
+            "Tên bảng": "attributes",
+            "STT": "12",
+            "Tên cột": "version",
+            "Kiểu dữ liệu": "bigint",
+            "Cho phép NULL": "NO",
+            "Default": "0",
+            "Ý nghĩa / trạng thái cho phép": "Optimistic lock khi sửa định nghĩa"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "products",
+            "Tên cột": "specifications"
+          },
+          "values": {
+            "Tên bảng": "products",
+            "STT": "20",
+            "Tên cột": "specifications",
+            "Kiểu dữ liệu": "jsonb",
+            "Cho phép NULL": "NO",
+            "Default": "'[]'",
+            "Ý nghĩa / trạng thái cho phép": "[{code, values[]}] theo attributes.code; chỉ giá trị; ghi qua Catalog service (D61)"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "variant_attribute_values",
+            "Tên cột": "option_code"
+          },
+          "values": {
+            "Tên bảng": "variant_attribute_values",
+            "STT": "3",
+            "Tên cột": "option_code",
+            "Kiểu dữ liệu": "varchar(64)",
+            "Cho phép NULL": "NO",
+            "Ý nghĩa / trạng thái cho phép": "Mã trong attributes.options (D61); chốt khi làm Option"
+          }
+        }
+      ]
     }
   ]
 }

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, ForbiddenException, Get, HttpCode, Param, Patch, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, Delete, ForbiddenException, Get, HttpCode, Param, Patch, Post, Put, Query, Req } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -44,6 +44,7 @@ import {
 } from '../dto/product.dto';
 import { ProductMediaService } from '../services/product-media.service';
 import { ProductsService } from '../services/products.service';
+import { ReplaceProductSpecificationsDto } from '../../attributes/attribute.dto';
 
 @ApiTags('Admin Products')
 @ApiBearerAuth()
@@ -95,6 +96,24 @@ export class AdminProductsController {
   @ApiNotFoundResponse({ type: ErrorResponseDto })
   getAdminProductSetupStatus(@Param('id', new ParseEntityIdPipe()) id: string): Promise<ProductSetupStatusDto> {
     return this.products.setupStatus(id);
+  }
+
+  @Put(':id/specifications')
+  @RequirePermissions('catalog.product.manage')
+  @ApiOperation({
+    operationId: 'replaceAdminProductSpecifications',
+    summary: 'Replace product specifications; values are validated against attribute definitions',
+  })
+  @ApiOkResponse({ type: ProductDetailDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  @ApiUnprocessableEntityResponse({ type: ErrorResponseDto })
+  replaceAdminProductSpecifications(
+    @Param('id', new ParseEntityIdPipe()) id: string,
+    @Body() input: ReplaceProductSpecificationsDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ProductDetailDto> {
+    return this.products.replaceSpecifications(id, input, getMutationContext(request));
   }
 
   @Post()

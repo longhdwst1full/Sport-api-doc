@@ -34,6 +34,7 @@ import {
   ProductVariantStatus,
 } from '../product.constants';
 import { normalizeSku } from '../product-identifiers';
+import { ProductSpecificationDto } from '../../attributes/attribute.dto';
 import { PRODUCT_READINESS_ISSUE, type ProductReadinessIssueCode } from '../product-publish.policy';
 
 export class ProductVariantDto {
@@ -120,6 +121,11 @@ export class ProductSummaryDto {
 }
 
 export class ProductDetailDto extends ProductSummaryDto {
+  @ApiProperty({
+    type: [ProductSpecificationDto],
+    description: 'Thông số kỹ thuật đã ghép nhãn/đơn vị từ từ điển thuộc tính; rỗng nếu chưa nhập',
+  })
+  specifications: ProductSpecificationDto[];
   @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI, nullable: true }) brandId?: string | null;
   @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI, nullable: true }) primaryCategoryId?: string | null;
   @ApiPropertyOptional() shortDescription?: string;

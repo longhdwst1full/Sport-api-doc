@@ -4952,6 +4952,233 @@
         ]
       }
     },
+    "/api/v1/admin/catalog/attributes": {
+      "get": {
+        "operationId": "listAdminAttributes",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttributeListDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List attribute definitions (active and inactive)",
+        "tags": [
+          "Admin Catalog"
+        ],
+        "x-required-permissions": [
+          "catalog.product.view"
+        ]
+      },
+      "post": {
+        "operationId": "createAdminAttribute",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAttributeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttributeDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create an attribute definition; code is immutable",
+        "tags": [
+          "Admin Catalog"
+        ],
+        "x-required-permissions": [
+          "catalog.product.manage"
+        ]
+      }
+    },
+    "/api/v1/admin/catalog/attributes/{id}": {
+      "patch": {
+        "operationId": "updateAdminAttribute",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAttributeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttributeDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update name/unit/options/status; unit and used options are locked once products use them",
+        "tags": [
+          "Admin Catalog"
+        ],
+        "x-required-permissions": [
+          "catalog.product.manage"
+        ]
+      }
+    },
     "/api/v1/catalog/products": {
       "get": {
         "operationId": "listCatalogProducts",
@@ -5520,6 +5747,105 @@
         ],
         "x-required-permissions": [
           "catalog.product.view"
+        ]
+      }
+    },
+    "/api/v1/admin/products/{id}/specifications": {
+      "put": {
+        "operationId": "replaceAdminProductSpecifications",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplaceProductSpecificationsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDetailDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Replace product specifications; values are validated against attribute definitions",
+        "tags": [
+          "Admin Products"
+        ],
+        "x-required-permissions": [
+          "catalog.product.manage"
         ]
       }
     },
@@ -19425,6 +19751,212 @@
           "total"
         ]
       },
+      "AttributeDataType": {
+        "type": "string",
+        "enum": [
+          "TEXT",
+          "NUMBER",
+          "BOOLEAN",
+          "OPTION"
+        ]
+      },
+      "AttributeOptionDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "WHITE",
+            "description": "Mã lựa chọn, bất biến khi đã có sản phẩm dùng"
+          },
+          "label": {
+            "type": "string",
+            "example": "Trắng"
+          },
+          "colorHex": {
+            "type": "string",
+            "example": "#FFFFFF",
+            "nullable": true
+          }
+        },
+        "required": [
+          "code",
+          "label"
+        ]
+      },
+      "AttributeStatus": {
+        "type": "string",
+        "enum": [
+          "ACTIVE",
+          "INACTIVE"
+        ]
+      },
+      "AttributeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
+          },
+          "code": {
+            "type": "string",
+            "example": "ADJUSTABLE_HEIGHT"
+          },
+          "name": {
+            "type": "string",
+            "example": "Chiều cao điều chỉnh"
+          },
+          "dataType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AttributeDataType"
+              }
+            ]
+          },
+          "unit": {
+            "type": "string",
+            "example": "m",
+            "nullable": true
+          },
+          "isVariantAxis": {
+            "type": "boolean",
+            "description": "Có thể dùng làm trục biến thể (Option) — chưa dùng ở V1"
+          },
+          "options": {
+            "description": "Chỉ với OPTION; rỗng với kiểu khác",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AttributeOptionDto"
+            }
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AttributeStatus"
+              }
+            ]
+          },
+          "sortOrder": {
+            "type": "number"
+          },
+          "version": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "dataType",
+          "isVariantAxis",
+          "options",
+          "status",
+          "sortOrder",
+          "version"
+        ]
+      },
+      "AttributeListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AttributeDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "CreateAttributeDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "ADJUSTABLE_HEIGHT",
+            "description": "Chữ hoa, số, gạch dưới; bất biến sau khi tạo"
+          },
+          "name": {
+            "type": "string",
+            "example": "Chiều cao điều chỉnh"
+          },
+          "dataType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AttributeDataType"
+              }
+            ]
+          },
+          "unit": {
+            "type": "string",
+            "example": "m",
+            "maxLength": 16
+          },
+          "isVariantAxis": {
+            "type": "boolean",
+            "default": false
+          },
+          "options": {
+            "description": "Bắt buộc (≥1) với OPTION, bỏ trống với kiểu khác",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AttributeOptionDto"
+            }
+          },
+          "sortOrder": {
+            "type": "number",
+            "default": 0
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "dataType"
+        ]
+      },
+      "UpdateAttributeDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string",
+            "nullable": true,
+            "description": "Không đổi được khi thuộc tính NUMBER đã có sản phẩm dùng"
+          },
+          "isVariantAxis": {
+            "type": "boolean"
+          },
+          "options": {
+            "description": "Danh sách đầy đủ; không được bỏ lựa chọn đang có sản phẩm dùng",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AttributeOptionDto"
+            }
+          },
+          "status": {
+            "description": "Ngừng dùng thay cho xoá",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AttributeStatus"
+              }
+            ]
+          },
+          "sortOrder": {
+            "type": "number"
+          },
+          "expectedVersion": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ]
+      },
       "ProductStatus": {
         "type": "string",
         "enum": [
@@ -19578,6 +20110,69 @@
         "required": [
           "items",
           "meta"
+        ]
+      },
+      "ProductSpecificationValueDto": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "label": {
+            "type": "string",
+            "example": "2.25 m",
+            "description": "Nhãn hiển thị đã ghép đơn vị / nhãn lựa chọn"
+          }
+        },
+        "required": [
+          "value",
+          "label"
+        ]
+      },
+      "ProductSpecificationDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "ADJUSTABLE_HEIGHT"
+          },
+          "name": {
+            "type": "string",
+            "example": "Chiều cao điều chỉnh"
+          },
+          "dataType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AttributeDataType"
+              }
+            ]
+          },
+          "unit": {
+            "type": "string",
+            "nullable": true
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductSpecificationValueDto"
+            }
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "dataType",
+          "values"
         ]
       },
       "ProductVariantStatus": {
@@ -19898,6 +20493,13 @@
             "format": "uri",
             "nullable": true
           },
+          "specifications": {
+            "description": "Thông số kỹ thuật đã ghép nhãn/đơn vị từ từ điển thuộc tính; rỗng nếu chưa nhập",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductSpecificationDto"
+            }
+          },
           "brandId": {
             "type": "string",
             "pattern": "^[1-9][0-9]*$",
@@ -19955,6 +20557,7 @@
           "isPublished",
           "version",
           "currency",
+          "specifications",
           "variants",
           "media",
           "categories",
@@ -20031,6 +20634,60 @@
           "canPublish",
           "blockingIssues",
           "warnings"
+        ]
+      },
+      "ProductSpecificationInputDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "ADJUSTABLE_HEIGHT"
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "example": [
+              1.55,
+              2.25,
+              2.44
+            ],
+            "description": "TEXT: chuỗi; NUMBER: số (đơn vị lấy từ thuộc tính); BOOLEAN: một giá trị; OPTION: mã lựa chọn"
+          }
+        },
+        "required": [
+          "code",
+          "values"
+        ]
+      },
+      "ReplaceProductSpecificationsDto": {
+        "type": "object",
+        "properties": {
+          "specifications": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductSpecificationInputDto"
+            }
+          },
+          "expectedVersion": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "specifications",
+          "expectedVersion"
         ]
       },
       "CreateProductVariantDto": {

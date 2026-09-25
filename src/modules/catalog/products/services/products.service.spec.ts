@@ -4,11 +4,12 @@ import { PrismaService } from '../../../../database/prisma.service';
 import { AuditReader } from '../../../audit/audit.reader';
 import { AuditWriter } from '../../../audit/audit.writer';
 import { CreateProductDto } from '../dto/product.dto';
+import { AttributesService } from '../../attributes/attributes.service';
 import { ProductMediaService } from './product-media.service';
 import { ProductsService } from './products.service';
 
 describe('ProductsService', () => {
-  const service = new ProductsService({} as PrismaService, {} as AuditWriter, {} as AuditReader, {} as ProductMediaService);
+  const service = new ProductsService({} as PrismaService, {} as AuditWriter, {} as AuditReader, {} as ProductMediaService, { resolve: jest.fn().mockResolvedValue([]), readStored: jest.fn().mockReturnValue([]) } as unknown as AttributesService);
 
   it('maps minPrice and quick-add identifiers from the same sellable offer', () => {
     const row = {
@@ -80,7 +81,7 @@ describe('ProductsService', () => {
     const auditWrite = jest.fn().mockResolvedValue(undefined);
     const audit = { write: auditWrite } as unknown as AuditWriter;
     const auditReader = { findByRequestId: jest.fn().mockResolvedValue([]) } as unknown as AuditReader;
-    const catalog = new ProductsService(prisma, audit, auditReader, {} as ProductMediaService);
+    const catalog = new ProductsService(prisma, audit, auditReader, {} as ProductMediaService, { resolve: jest.fn().mockResolvedValue([]), readStored: jest.fn().mockReturnValue([]) } as unknown as AttributesService);
     const catalogInternals = catalog as unknown as {
       getById(id: bigint): Promise<unknown>;
     };
@@ -130,7 +131,7 @@ describe('ProductsService', () => {
     const prisma = {
       $transaction: jest.fn((work: (client: typeof transaction) => unknown) => work(transaction)),
     } as unknown as PrismaService;
-    const catalog = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader, {} as ProductMediaService);
+    const catalog = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader, {} as ProductMediaService, { resolve: jest.fn().mockResolvedValue([]), readStored: jest.fn().mockReturnValue([]) } as unknown as AttributesService);
 
     await expect(
       catalog.update(
@@ -162,7 +163,7 @@ describe('ProductsService', () => {
     const prisma = {
       $transaction: jest.fn((work: (client: typeof transaction) => unknown) => work(transaction)),
     } as unknown as PrismaService;
-    const pricing = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader, {} as ProductMediaService);
+    const pricing = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader, {} as ProductMediaService, { resolve: jest.fn().mockResolvedValue([]), readStored: jest.fn().mockReturnValue([]) } as unknown as AttributesService);
 
     await expect(
       pricing.createPrice(
@@ -183,7 +184,7 @@ describe('ProductsService', () => {
     const prisma = {
       $transaction: jest.fn((work: (client: typeof transaction) => unknown) => work(transaction)),
     } as unknown as PrismaService;
-    const lifecycle = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader, {} as ProductMediaService);
+    const lifecycle = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader, {} as ProductMediaService, { resolve: jest.fn().mockResolvedValue([]), readStored: jest.fn().mockReturnValue([]) } as unknown as AttributesService);
 
     await expect(
       lifecycle.archiveProduct(
@@ -211,7 +212,7 @@ describe('ProductsService', () => {
     const prisma = {
       $transaction: jest.fn((work: (client: typeof transaction) => unknown) => work(transaction)),
     } as unknown as PrismaService;
-    const lifecycle = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader, {} as ProductMediaService);
+    const lifecycle = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader, {} as ProductMediaService, { resolve: jest.fn().mockResolvedValue([]), readStored: jest.fn().mockReturnValue([]) } as unknown as AttributesService);
 
     await expect(
       lifecycle.reactivateVariant(
@@ -240,7 +241,7 @@ describe('ProductsService', () => {
     const prisma = {
       $transaction: jest.fn((work: (client: typeof transaction) => unknown) => work(transaction)),
     } as unknown as PrismaService;
-    const lifecycle = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader, {} as ProductMediaService);
+    const lifecycle = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader, {} as ProductMediaService, { resolve: jest.fn().mockResolvedValue([]), readStored: jest.fn().mockReturnValue([]) } as unknown as AttributesService);
 
     await expect(
       lifecycle.archiveVariant(
@@ -298,7 +299,7 @@ describe('ProductsService', () => {
       product,
       $transaction: transactionSpy,
     } as unknown as PrismaService;
-    const storefront = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader, {} as ProductMediaService);
+    const storefront = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader, {} as ProductMediaService, { resolve: jest.fn().mockResolvedValue([]), readStored: jest.fn().mockReturnValue([]) } as unknown as AttributesService);
 
     const result = await storefront.list({ page: 1, limit: 12 }, true);
 
@@ -350,7 +351,7 @@ describe('ProductsService', () => {
     const prisma = {
       $transaction: jest.fn((work: (client: typeof transaction) => unknown) => work(transaction)),
     } as unknown as PrismaService;
-    const lifecycle = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader, {} as ProductMediaService);
+    const lifecycle = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader, {} as ProductMediaService, { resolve: jest.fn().mockResolvedValue([]), readStored: jest.fn().mockReturnValue([]) } as unknown as AttributesService);
 
     await expect(
       lifecycle.publish(
@@ -390,6 +391,7 @@ describe('ProductsService', () => {
         { write: auditWrite } as unknown as AuditWriter,
         { findByRequestId } as unknown as AuditReader,
         { attachInitialMedia } as unknown as ProductMediaService,
+        { resolve: jest.fn().mockResolvedValue([]), readStored: jest.fn().mockReturnValue([]) } as unknown as AttributesService,
       );
       const getById = jest
         .spyOn(service as unknown as { getById(id: bigint): Promise<unknown> }, 'getById')
@@ -522,6 +524,7 @@ describe('ProductsService', () => {
         { write: jest.fn().mockResolvedValue(undefined) } as unknown as AuditWriter,
         { findByRequestId: jest.fn().mockResolvedValue([]) } as unknown as AuditReader,
         { attachInitialMedia } as unknown as ProductMediaService,
+        { resolve: jest.fn().mockResolvedValue([]), readStored: jest.fn().mockReturnValue([]) } as unknown as AttributesService,
       );
       jest.spyOn(service as unknown as { getById(id: bigint): Promise<unknown> }, 'getById').mockResolvedValue({ id: '1' });
       return { service, transaction, attachInitialMedia };
@@ -585,6 +588,7 @@ describe('ProductsService', () => {
         { write: jest.fn().mockResolvedValue(undefined) } as unknown as AuditWriter,
         { findByRequestId: jest.fn().mockResolvedValue([]) } as unknown as AuditReader,
         {} as ProductMediaService,
+        { resolve: jest.fn().mockResolvedValue([]), readStored: jest.fn().mockReturnValue([]) } as unknown as AttributesService,
       );
       jest.spyOn(service as unknown as { getById(id: bigint): Promise<unknown> }, 'getById').mockResolvedValue({ id: '1' });
       return { service, transaction };

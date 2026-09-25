@@ -371,6 +371,10 @@ model Product {
   isPublished      Boolean   @default(false) @map("is_published")
   publishedAt      DateTime? @map("published_at") @db.Timestamptz(6)
   seoJson          Json?     @map("seo_json") @db.JsonB
+  /// Thông số kỹ thuật: [{ code, values[] }] tham chiếu `attributes.code`; CHỈ chứa giá trị, nhãn/đơn
+  /// vị đọc từ `attributes`. Mọi lần ghi phải qua Catalog service để kiểm code/kiểu/lựa chọn (không có FK,
+  /// decision D61). Không dùng để sinh SKU; trục biến thể sẽ có mô hình riêng.
+  specifications   Json      @default("[]") @db.JsonB
   version          BigInt    @default(0)
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   createdBy        BigInt?   @map("created_by")
@@ -390,6 +394,29 @@ model Product {
   @@index([isPublished, status], map: "products_is_published_idx")
   @@index([name])
   @@map("products")
+}
+
+/// Từ điển thuộc tính dùng chung cho thông số kỹ thuật (và trục biến thể về sau).
+///
+/// INVARIANT: `code` bất biến và không xoá cứng — ngừng dùng bằng status INACTIVE, vì
+/// `products.specifications` tham chiếu theo code thay cho bảng liên kết (decision D61).
+/// `options` chỉ có với data_type OPTION: [{ code, label, colorHex?, sortOrder }].
+model Attribute {
+  id            BigInt   @id @default(autoincrement())
+  code          String   @unique @db.VarChar(64)
+  name          String   @db.VarChar(255)
+  dataType      String   @map("data_type") @db.VarChar(24)
+  unit          String?  @db.VarChar(16)
+  isVariantAxis Boolean  @default(false) @map("is_variant_axis")
+  options       Json?    @db.JsonB
+  status        String   @default("ACTIVE") @db.VarChar(24)
+  sortOrder     Int      @default(0) @map("sort_order")
+  version       BigInt   @default(0)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([status, sortOrder])
+  @@map("attributes")
 }
 
 model ProductCategory {
