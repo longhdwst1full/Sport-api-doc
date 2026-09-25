@@ -317,6 +317,7 @@ export const ERROR_KEY = {
   CATALOG_BRAND_VERSION_CONFLICT: 'Brand version conflict',
   CATALOG_BUNDLE_COMPONENTS_MUST_BE_UNIQUE: 'Bundle components must be unique',
   CATALOG_MEDIA_ASSETS_MUST_BE_UNIQUE: 'Media assets must be unique',
+  MEDIA_MODE_MUST_BE_DRY_RUN_OR_DELETE: 'mode must be dry-run or delete',
   CATALOG_ARCHIVED_PRODUCT_CANNOT_BE_EDITED: 'Archived product cannot be edited',
   CATALOG_ATTRIBUTE_CODE_ALREADY_EXISTS: 'Attribute code already exists',
   CATALOG_ATTRIBUTE_NOT_FOUND: 'Attribute not found',
@@ -664,6 +665,7 @@ const EXACT_MESSAGES: Readonly<Record<string, string>> = {
   [ERROR_KEY.CATALOG_BRAND_VERSION_CONFLICT]:
     'Thương hiệu vừa được cập nhật. Vui lòng tải lại rồi thử lại.',
   [ERROR_KEY.CATALOG_MEDIA_ASSETS_MUST_BE_UNIQUE]: 'Mỗi ảnh chỉ được chọn một lần.',
+  [ERROR_KEY.MEDIA_MODE_MUST_BE_DRY_RUN_OR_DELETE]: 'Chế độ chạy chỉ nhận dry-run hoặc delete.',
   [ERROR_KEY.CATALOG_ARCHIVED_PRODUCT_CANNOT_BE_EDITED]: 'Sản phẩm đã lưu trữ, không sửa được. Đưa về bản nháp trước.',
   [ERROR_KEY.CATALOG_ATTRIBUTE_CODE_ALREADY_EXISTS]: 'Mã thuộc tính đã tồn tại.',
   [ERROR_KEY.CATALOG_ATTRIBUTE_NOT_FOUND]: 'Không tìm thấy thuộc tính.',
