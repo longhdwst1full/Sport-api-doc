@@ -406,6 +406,7 @@ describe('ProductsService', () => {
           entityId: '1',
           actorUserId,
           after: productAudit?.after,
+          createdAt: new Date(),
         } as AuditEntry,
       };
     };
@@ -465,7 +466,7 @@ describe('ProductsService', () => {
 
     it('rejects a key already bound to another operation', async () => {
       const retry = harness([
-        { action: 'catalog.price.create', entityType: 'PRODUCT_PRICE', entityId: '5', actorUserId: '2', after: {} },
+        { action: 'catalog.price.create', entityType: 'PRODUCT_PRICE', entityId: '5', actorUserId: '2', after: {}, createdAt: new Date() },
       ]);
 
       await expect(

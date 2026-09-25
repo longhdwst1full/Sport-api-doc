@@ -3,6 +3,8 @@ import { Controller, Get, Headers, Req, UnauthorizedException } from '@nestjs/co
 import { ConfigService } from '@nestjs/config';
 import { ApiExcludeController } from '@nestjs/swagger';
 import type { Request } from 'express';
+import { JOB_NAME } from '../system/job-health/job-health.constants';
+import { JobHealthService } from '../system/job-health/job-health.service';
 import { OutboxDispatcherService, type OutboxRunResult } from './outbox-dispatcher.service';
 
 function secretsMatch(actual: string, expected: string): boolean {
@@ -25,6 +27,7 @@ export class NotificationMaintenanceController {
   constructor(
     private readonly config: ConfigService,
     private readonly dispatcher: OutboxDispatcherService,
+    private readonly jobHealth: JobHealthService,
   ) {}
 
   @Get('dispatch')
@@ -40,6 +43,6 @@ export class NotificationMaintenanceController {
       typeof request.id === 'string' || typeof request.id === 'number'
         ? String(request.id)
         : `outbox-${Date.now()}`;
-    return this.dispatcher.run(runId);
+    return this.jobHealth.track(JOB_NAME.NOTIFICATION_DISPATCH, runId, () => this.dispatcher.run(runId));
   }
 }

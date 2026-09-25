@@ -5785,6 +5785,54 @@
         "test:src/modules/reporting/report-export.service.spec.ts"
       ],
       "targets": []
+    },
+    {
+      "id": "API-20260925-CART-MERGE-LOCK",
+      "date": "2026-09-25",
+      "scope": "API+CART",
+      "summary": "mergeGuestCartIntoAccount khoá cả giỏ khách và giỏ tài khoản (SELECT … FOR UPDATE theo thứ tự id) rồi đọc lại giỏ khách ACTIVE trước khi cộng dòng. Trước đây hai lần gộp song song (hai tab, retry) có thể cộng giỏ khách hai lần hoặc vấp unique (cart_id, product_variant_id) thành 500: integration test PostgreSQL với 3 lần gộp song song cho 2/3 rejected trên code cũ, 3/3 fulfilled và cộng đúng một lần trên code mới. Không đổi contract/schema.",
+      "sources": [
+        "OpenAPI:mergeGuestCartIntoAccount",
+        "source:src/modules/cart/cart.service.ts",
+        "test:src/modules/cart/cart-merge.service.spec.ts",
+        "test:test/cart-merge.integration-spec.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260925-CHECKOUT-SPLIT-STOCK-CONSULTATION",
+      "date": "2026-09-25",
+      "scope": "API+CHECKOUT+OPENAPI+ADMIN",
+      "summary": "Chuỗi nhiều chi nhánh: không kho nào đủ cả giỏ nhưng cộng cả chuỗi đủ thì quoteGuestCheckout/quoteAccountCheckout không còn trả 409 mà tạo checkout AWAITING_SHIPPING_CONSULTATION ở kho đáp ứng nhiều nhất, lưu shipping_rule_snapshot.consultationReason = STOCK_SPLIT_ACROSS_BRANCHES và stockShortages. AdminShippingConsultationDto thêm consultationReason (CUSTOMER_REQUESTED | SHIPPING_RULE | STOCK_SPLIT_ACROSS_BRANCHES, nullable) và stockShortages; updateAdminManualShippingQuote trả 409 CHECKOUT_STOCK_NOT_TRANSFERRED tới khi kho đủ hàng. Cả chuỗi thiếu thì vẫn 409 như cũ. Contract chỉ thêm field; không đổi schema.",
+      "sources": [
+        "OpenAPI:quoteGuestCheckout/quoteAccountCheckout/listAdminShippingConsultations/updateAdminManualShippingQuote",
+        "source:src/modules/checkout/checkout.service.ts",
+        "test:src/modules/checkout/checkout.service.spec.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "OPS-20260925-CRON-STAGGER",
+      "date": "2026-09-25",
+      "scope": "OPS+CRON",
+      "summary": "net._http_response 10 phút cho thấy 6/16 lượt cron hỏng (4 kẹt DNS 30s trong pg_net, 2 API >30s) và các lượt hỏng cùng created_at: phút chia hết cho 5 có 4 job bắn cùng lúc. Lệch lịch: flash-sale-quota-expiry 1-59/5, order-maintenance 2-59/5, reservation-expiry */5, notification-dispatch mỗi phút; mỗi phút tối đa 2 job. Áp bằng cron.alter_job và đổi mặc định trong scripts/configure-*-cron.cjs. Chưa có heartbeat/cảnh báo.",
+      "sources": [
+        "script:scripts/configure-flash-sale-quota-expiry-cron.cjs",
+        "script:scripts/configure-order-maintenance-cron.cjs"
+      ],
+      "targets": []
+    },
+    {
+      "id": "OPS-20260925-CRON-JOB-HEALTH",
+      "date": "2026-09-25",
+      "scope": "API+OPS+AUDIT+TELEGRAM",
+      "summary": "Heartbeat và cảnh báo cho 4 job cron mà không thêm bảng: JobHealthService (SystemModule) bọc reservation-expiry, flash-sale-quota-expiry, order-maintenance, notification-dispatch SAU khi kiểm Bearer secret. Mỗi lượt ghi audit system.job.run (actorType SYSTEM, entity JOB/<tên job>, after {status, durationMs, error?, consecutiveFailures?}); lượt thành công liên tiếp chỉ ghi mỗi 10 phút để không phình audit. Lỗi 2 lượt liên tiếp → Telegram một lần mỗi đợt; hồi phục → Telegram. Job khác không có lượt thành công quá 25 phút (kể cả không tới được API) → audit system.job.stale-alert + Telegram, tối đa mỗi 60 phút; bỏ qua job đang tắt bằng tham số. Nhận tin qua TELEGRAM_ALERT_CHAT_ID (fallback TELEGRAM_ALLOWED_USER_ID); Telegram lỗi/chưa cấu hình chỉ log, không làm hỏng job. AuditReader thêm findRecentForEntity. Giới hạn: nếu mọi job cùng không tới được API thì không có ai báo.",
+      "sources": [
+        "source:src/modules/system/job-health/job-health.service.ts",
+        "source:src/modules/audit/audit.reader.ts",
+        "test:src/modules/system/job-health/job-health.service.spec.ts"
+      ],
+      "targets": []
     }
   ]
 }

@@ -18,11 +18,19 @@ import type { AuthPrincipal } from '../auth/auth.types';
 import { ScopeType } from '../iam/iam.types';
 import { distanceKm } from '../shipping/shipping-distance';
 import { DeliveryQuoteOption, ShippingQuoteService } from '../shipping/shipping-quote.service';
-import { CHECKOUT_AUDIT_ACTION, CHECKOUT_ITEM_TYPE, CHECKOUT_STATUS } from './checkout.constants';
+import {
+  CHECKOUT_AUDIT_ACTION,
+  CHECKOUT_CONSULTATION_REASON,
+  CHECKOUT_ERROR_CODE,
+  CHECKOUT_ITEM_TYPE,
+  CHECKOUT_STATUS,
+  type CheckoutConsultationReason,
+} from './checkout.constants';
 import { AdminShippingConsultationDto, AdminShippingConsultationListDto, AdminShippingConsultationQueryDto, CheckoutQuoteDto, CheckoutRecipientDto, CreateCheckoutQuoteDto, UpdateManualShippingQuoteDto } from './checkout.dto';
 
 type ActorContext = { type: 'GUEST' | 'USER'; userId?: string; requestId: string };
 type Demand = { productVariantId: bigint; quantity: number };
+type StockShortage = { productVariantId: string; sku: string; name: string; requested: number; availableAtBranch: number };
 
 @Injectable()
 export class CheckoutService {
@@ -90,6 +98,7 @@ export class CheckoutService {
       if (!scoped) throw new ForbiddenException('Checkout is outside the assigned branch scope');
       if (current.status !== CHECKOUT_STATUS.AWAITING_SHIPPING_CONSULTATION) throw new ConflictException('Checkout is not awaiting shipping consultation');
       if (Number(current.version) !== input.expectedVersion) throw new ConflictException('Checkout changed; reload and retry');
+      await this.assertShortagesTransferred(transaction, current.warehouseId, current.shippingRuleSnapshot);
       const updated = await transaction.checkoutSession.update({
         where: { id: current.id },
         data: {
@@ -157,8 +166,17 @@ export class CheckoutService {
     const demand = this.physicalDemand(cart.items);
     const itemSubtotal = items.reduce((total, item) => total.add(item.lineTotal), new Prisma.Decimal(0));
     const packageInput = this.packageInput(cart.items, itemSubtotal, input.paymentMethod === 'COD');
-    const warehouses = await this.findEligibleWarehouses(demand);
-    if (warehouses.length === 0) throw new ConflictException('No branch currently has enough stock for the entire cart');
+    let warehouses = await this.findEligibleWarehouses(demand);
+    let stockShortages: StockShortage[] = [];
+    if (warehouses.length === 0) {
+      // INVARIANT: chuỗi nhiều chi nhánh — hàng thường nằm rải ở nhiều kho. Cả chuỗi còn đủ thì không từ
+      // chối khách: chọn kho đáp ứng nhiều nhất và chuyển sang chờ tư vấn để nhân viên chuyển kho phần
+      // thiếu. Chỉ khi cộng cả chuỗi vẫn thiếu mới là hết hàng thật (409 như cũ).
+      const fallback = await this.findSplitStockFallback(demand);
+      if (!fallback) throw new ConflictException('No branch currently has enough stock for the entire cart');
+      warehouses = [fallback.warehouse];
+      stockShortages = fallback.shortages;
+    }
 
     const recipientPoint = input.recipient.latitude !== undefined && input.recipient.longitude !== undefined
       ? { latitude: input.recipient.latitude, longitude: input.recipient.longitude }
@@ -179,7 +197,7 @@ export class CheckoutService {
     let delivery: DeliveryQuoteOption;
     const distanceCandidates = candidates.filter((candidate) => candidate.distance !== null)
       .sort((left, right) => left.distance! - right.distance!);
-    if (input.requestShippingConsultation) {
+    if (input.requestShippingConsultation || stockShortages.length > 0) {
       selected = distanceCandidates[0] ?? [...candidates].sort((left, right) => left.warehouse.id < right.warehouse.id ? -1 : 1)[0];
       delivery = {
         method: 'MANUAL_EXTERNAL',
@@ -243,6 +261,12 @@ export class CheckoutService {
               method: delivery.method,
               provider: delivery.provider,
               requiresConsultation: delivery.requiresConsultation,
+              consultationReason: stockShortages.length > 0
+                ? CHECKOUT_CONSULTATION_REASON.STOCK_SPLIT_ACROSS_BRANCHES
+                : input.requestShippingConsultation
+                  ? CHECKOUT_CONSULTATION_REASON.CUSTOMER_REQUESTED
+                  : delivery.requiresConsultation ? CHECKOUT_CONSULTATION_REASON.SHIPPING_RULE : null,
+              stockShortages,
               distanceKm: delivery.distanceKm,
               quotedAt: new Date().toISOString(),
             },
@@ -435,15 +459,97 @@ export class CheckoutService {
   }
 
   private async findEligibleWarehouses(demand: Demand[]) {
+    const warehouses = await this.loadActiveWarehouses(demand);
+    return warehouses.filter((warehouse) => demand.every((item) =>
+      this.availableAt(warehouse, item.productVariantId) >= item.quantity));
+  }
+
+  /**
+   * Không kho nào đủ cả giỏ: chọn kho đáp ứng được nhiều số lượng nhất (hoà thì id nhỏ hơn cho kết
+   * quả ổn định) và liệt kê phần còn thiếu. Trả null khi cộng cả chuỗi vẫn thiếu — hết hàng thật.
+   */
+  private async findSplitStockFallback(demand: Demand[]) {
+    const warehouses = await this.loadActiveWarehouses(demand);
+    const chainShort = demand.some((item) =>
+      warehouses.reduce((sum, warehouse) => sum + this.availableAt(warehouse, item.productVariantId), 0) < item.quantity);
+    if (warehouses.length === 0 || chainShort) return null;
+    const [best] = warehouses
+      .map((warehouse) => ({
+        warehouse,
+        covered: demand.reduce((sum, item) => sum + Math.min(this.availableAt(warehouse, item.productVariantId), item.quantity), 0),
+      }))
+      .sort((left, right) => right.covered - left.covered || (left.warehouse.id < right.warehouse.id ? -1 : 1));
+    const missing = demand.filter((item) => this.availableAt(best.warehouse, item.productVariantId) < item.quantity);
+    const variants = await this.prisma.productVariant.findMany({
+      where: { id: { in: missing.map(({ productVariantId }) => productVariantId) } },
+      select: { id: true, sku: true, name: true },
+    });
+    return {
+      warehouse: best.warehouse,
+      shortages: missing.map((item): StockShortage => {
+        const variant = variants.find(({ id }) => id === item.productVariantId);
+        return {
+          productVariantId: toEntityId(item.productVariantId),
+          sku: variant?.sku ?? '',
+          name: variant?.name ?? '',
+          requested: item.quantity,
+          availableAtBranch: this.availableAt(best.warehouse, item.productVariantId),
+        };
+      }),
+    };
+  }
+
+  private loadActiveWarehouses(demand: Demand[]) {
     const ids = demand.map(({ productVariantId }) => productVariantId);
-    const warehouses = await this.prisma.warehouse.findMany({
+    return this.prisma.warehouse.findMany({
       where: { status: 'ACTIVE', branch: { status: 'ACTIVE' } },
       include: { branch: true, inventoryBalances: { where: { productVariantId: { in: ids } } } },
     });
-    return warehouses.filter((warehouse) => demand.every((item) => {
-      const balance = warehouse.inventoryBalances.find((candidate) => candidate.productVariantId === item.productVariantId);
-      return balance !== undefined && balance.onHand - balance.reserved >= item.quantity;
-    }));
+  }
+
+  private availableAt(
+    warehouse: { inventoryBalances: Array<{ productVariantId: bigint; onHand: number; reserved: number }> },
+    productVariantId: bigint,
+  ): number {
+    const balance = warehouse.inventoryBalances.find((candidate) => candidate.productVariantId === productVariantId);
+    return balance ? Math.max(balance.onHand - balance.reserved, 0) : 0;
+  }
+
+  /**
+   * INVARIANT: báo giá chờ chuyển kho chỉ được chốt khi kho đã chọn đủ hàng cho phần từng thiếu; nếu
+   * không, khách xác nhận xong sẽ vấp lỗi giữ hàng. Đọc lại tồn ngay trong transaction báo giá.
+   */
+  private async assertShortagesTransferred(
+    transaction: Prisma.TransactionClient,
+    warehouseId: bigint,
+    snapshot: Prisma.JsonValue,
+  ): Promise<void> {
+    const shortages = this.readShortages(snapshot);
+    if (shortages.length === 0) return;
+    const balances = await transaction.inventoryBalance.findMany({
+      where: { warehouseId, productVariantId: { in: shortages.map(({ productVariantId }) => toDatabaseId(productVariantId)) } },
+      select: { productVariantId: true, onHand: true, reserved: true },
+    });
+    const stillShort = shortages.filter((shortage) =>
+      this.availableAt({ inventoryBalances: balances }, toDatabaseId(shortage.productVariantId)) < shortage.requested);
+    if (stillShort.length > 0) {
+      throw new ConflictException({
+        code: CHECKOUT_ERROR_CODE.STOCK_NOT_TRANSFERRED,
+        message: `Kho chi nhánh chưa đủ hàng (${stillShort.map(({ sku }) => sku).join(', ')}); chuyển kho phần thiếu rồi báo giá lại.`,
+      });
+    }
+  }
+
+  private readShortages(snapshot: Prisma.JsonValue): StockShortage[] {
+    const value = (snapshot as { stockShortages?: unknown } | null)?.stockShortages;
+    return Array.isArray(value) ? (value as StockShortage[]) : [];
+  }
+
+  private readConsultationReason(snapshot: Prisma.JsonValue): CheckoutConsultationReason | null {
+    const value = (snapshot as { consultationReason?: unknown } | null)?.consultationReason;
+    return typeof value === 'string' && (Object.values(CHECKOUT_CONSULTATION_REASON) as string[]).includes(value)
+      ? (value as CheckoutConsultationReason)
+      : null;
   }
 
   private asAddress(value: Prisma.JsonValue) {
@@ -546,10 +652,12 @@ export class CheckoutService {
     };
   }
 
-  private toAdminDto(checkout: Parameters<CheckoutService['toDto']>[0] & { version: bigint; recipientSnapshot: Prisma.JsonValue; customerNote: string | null; createdAt: Date }): AdminShippingConsultationDto {
+  private toAdminDto(checkout: Parameters<CheckoutService['toDto']>[0] & { version: bigint; recipientSnapshot: Prisma.JsonValue; shippingRuleSnapshot: Prisma.JsonValue; customerNote: string | null; createdAt: Date }): AdminShippingConsultationDto {
     return {
       ...this.toDto(checkout),
       version: Number(checkout.version),
+      consultationReason: this.readConsultationReason(checkout.shippingRuleSnapshot),
+      stockShortages: this.readShortages(checkout.shippingRuleSnapshot),
       recipient: checkout.recipientSnapshot as unknown as CheckoutRecipientDto,
       customerNote: checkout.customerNote,
       createdAt: checkout.createdAt.toISOString(),

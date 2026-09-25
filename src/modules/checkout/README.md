@@ -1,17 +1,18 @@
 # Checkout module — maintenance note
 
-> **Document version:** 1.1.0
+> **Document version:** 1.2.0
 >
-> **Last updated:** 2026-09-10
+> **Last updated:** 2026-09-25
 >
-> **Change summary:** Bổ sung semantics lỗi cạnh tranh PostgreSQL và evidence không oversell/idempotency trên Supabase.
+> **Change summary:** Không chi nhánh nào đủ cả giỏ nhưng cả chuỗi đủ thì chuyển chờ tư vấn (tách kho) thay vì 409.
 
 ## Trách nhiệm
 
 Module này sở hữu vòng đời trước Order:
 
 1. Đồng bộ giỏ hàng và tạo báo giá checkout.
-2. Chọn một branch/warehouse đủ toàn bộ hàng; V1 giữ invariant `1 Branch = 1 Warehouse`.
+2. Chọn một branch/warehouse đủ toàn bộ hàng; V1 giữ invariant `1 Branch = 1 Warehouse`. Không kho nào
+   đủ nhưng cộng cả chuỗi đủ thì chọn kho đáp ứng nhiều nhất và chờ tư vấn (xem "Tách kho").
 3. Tính hoặc chờ tư vấn phí giao hàng.
 4. Khách xác nhận để tạo inventory reservation có TTL.
 5. Release thủ công hoặc expire tự động để trả `reserved`.
@@ -42,6 +43,17 @@ QUOTED ──confirm──> CONFIRMED ──TTL worker──> EXPIRED
 - `CONFIRMED` nghĩa là hàng đang được giữ qua `inventory_balances.reserved`; chưa giảm `on_hand`.
 - `available = on_hand - reserved`; mọi thay đổi reserved phải atomic và dùng optimistic/concurrency guard.
 - Khi Sprint Order được triển khai, thời điểm commit/trừ `on_hand` phải theo rule thanh toán/giao hàng đã chốt, không nhét tạm vào Checkout.
+
+## Tách kho giữa các chi nhánh
+
+- Chỉ khi cộng `available` của mọi kho ACTIVE vẫn thiếu mới trả 409 "No branch currently has enough stock…".
+- Ngược lại checkout được tạo ở kho đáp ứng nhiều số lượng nhất (hoà thì id nhỏ), status
+  `AWAITING_SHIPPING_CONSULTATION`, `shipping_rule_snapshot.consultationReason = STOCK_SPLIT_ACROSS_BRANCHES`
+  và `stockShortages` (theo số lượng vật lý, combo đã tách linh kiện). Không gọi carrier.
+- Admin thấy lý do + phần thiếu qua `AdminShippingConsultationDto`. `updateManualShipping` đọc lại tồn
+  trong transaction và trả 409 `CHECKOUT_STOCK_NOT_TRANSFERRED` tới khi kho đã nhận đủ hàng chuyển sang
+  (phiếu chuyển kho thuộc Inventory, checkout không tự tạo).
+- Storefront không nhận chi tiết tồn; chỉ thấy trạng thái chờ tư vấn như trường hợp giao hàng.
 
 ## Reservation expiry worker
 
@@ -81,5 +93,6 @@ Giá trị phải được đồng bộ ở `.env.example`, `.env.local.example`
 
 | Version | Date | Change summary | Source |
 | --- | --- | --- | --- |
+| 1.2.0 | 2026-09-25 | Tách kho → chờ tư vấn + chặn chốt phí khi chưa chuyển kho. | API-20260925-CHECKOUT-SPLIT-STOCK-CONSULTATION |
 | 1.1.0 | 2026-09-10 | Ghi nhận mapping lỗi serialization và integration test tranh SKU cuối/idempotency trên Supabase. | API-20260910-CHECKOUT-CONCURRENCY |
 | 1.0.0 | 2026-09-09 | Tạo maintenance note cho Checkout/Reservation expiry. | DOC-20260909-FEATURE-MAINTENANCE-NOTES |

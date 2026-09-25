@@ -1,6 +1,8 @@
 import { timingSafeEqual } from 'node:crypto';
 import { SYSTEM_PARAMETER_CODE } from '../../system/parameters/system-parameter.catalog';
 import { SystemParameterService } from '../../system/parameters/system-parameter.service';
+import { JOB_NAME } from '../../system/job-health/job-health.constants';
+import { JobHealthService } from '../../system/job-health/job-health.service';
 import { Controller, Get, Headers, Req, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiExcludeController } from '@nestjs/swagger';
@@ -27,6 +29,7 @@ export class OrderMaintenanceController {
     private readonly paymentExpiry: PaymentExpiryService,
     private readonly orderCompletion: OrderCompletionService,
     private readonly parameters: SystemParameterService,
+    private readonly jobHealth: JobHealthService,
   ) {}
 
   @Get('maintenance')
@@ -47,9 +50,11 @@ export class OrderMaintenanceController {
     const requestId = typeof request.id === 'string' || typeof request.id === 'number'
       ? String(request.id)
       : `order-maintenance-${Date.now()}`;
-    return {
+    const work = async (): Promise<OrderMaintenanceResult> => ({
       paymentExpiry: await this.paymentExpiry.run(`${requestId}:payment-expiry`),
       orderCompletion: await this.orderCompletion.run(`${requestId}:order-completion`),
-    };
+    });
+    // SECURITY: chỉ ghi heartbeat khi request đã qua kiểm secret (job bật); job tắt là no-op không ghi.
+    return enabled ? this.jobHealth.track(JOB_NAME.ORDER_MAINTENANCE, requestId, work) : work();
   }
 }

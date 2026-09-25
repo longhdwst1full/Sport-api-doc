@@ -6,5 +6,6 @@ import { TelegramWebhookController } from './telegram-webhook.controller';
 @Module({
   controllers: [TelegramWebhookController],
   providers: [TelegramBotClient, TelegramUpdateService],
+  exports: [TelegramBotClient],
 })
 export class TelegramModule {}

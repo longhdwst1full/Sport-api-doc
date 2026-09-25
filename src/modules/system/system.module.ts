@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
+import { TelegramModule } from '../../integrations/telegram/telegram.module';
 import { AuditModule } from '../audit/audit.module';
+import { JobHealthService } from './job-health/job-health.service';
 import {
   PublicSystemParameterController,
   SystemParameterController,
@@ -10,9 +12,9 @@ import { SystemController } from './system.controller';
 import { SystemService } from './system.service';
 
 @Module({
-  imports: [AuditModule],
+  imports: [AuditModule, TelegramModule],
   controllers: [SystemController, SystemParameterController, PublicSystemParameterController],
-  providers: [SystemService, SystemParameterService, IntegrationConfigService],
-  exports: [SystemParameterService, IntegrationConfigService],
+  providers: [SystemService, SystemParameterService, IntegrationConfigService, JobHealthService],
+  exports: [SystemParameterService, IntegrationConfigService, JobHealthService],
 })
 export class SystemModule {}

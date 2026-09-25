@@ -1,3 +1,4 @@
+import type { JobHealthService } from '../system/job-health/job-health.service';
 import { UnauthorizedException } from '@nestjs/common';
 import type { SystemParameterService } from '../system/parameters/system-parameter.service';
 import { ConfigService } from '@nestjs/config';
@@ -26,6 +27,7 @@ describe('ReservationExpiryController', () => {
     config,
     { run } as unknown as ReservationExpiryService,
     parameters,
+    { track: jest.fn((_job: string, _id: string, work: () => Promise<unknown>) => work()) } as unknown as JobHealthService,
   );
   const request = {
     id: 'request-1',

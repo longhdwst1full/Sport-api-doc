@@ -2,7 +2,12 @@ import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsBoolean, IsEmail, IsIn, IsInt, IsNumber, IsNumberString, IsOptional, IsString, Length, Max, MaxLength, Min, ValidateNested } from 'class-validator';
 import { ENTITY_ID_OPENAPI, IsEntityId } from '../../common/identifiers/entity-id';
-import { CHECKOUT_PAYMENT_METHOD, CHECKOUT_STATUS } from './checkout.constants';
+import {
+  CHECKOUT_CONSULTATION_REASON,
+  CHECKOUT_PAYMENT_METHOD,
+  CHECKOUT_STATUS,
+  type CheckoutConsultationReason,
+} from './checkout.constants';
 
 export class CheckoutRecipientDto {
   @ApiProperty({ example: 'Nguyễn Văn An' })
@@ -126,8 +131,26 @@ export class CheckoutQuoteDto {
   @ApiProperty({ format: 'date-time' }) expiresAt: string;
 }
 
+export class CheckoutStockShortageDto {
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) productVariantId: string;
+  @ApiProperty({ example: 'PRD-XXXX-SKU-YYYY' }) sku: string;
+  @ApiProperty() name: string;
+  @ApiProperty({ description: 'Số lượng vật lý cần giao (combo đã tách thành linh kiện)' }) requested: number;
+  @ApiProperty({ description: 'Còn bán được tại kho đã chọn lúc báo giá' }) availableAtBranch: number;
+}
+
 export class AdminShippingConsultationDto extends CheckoutQuoteDto {
   @ApiProperty({ example: 0 }) version: number;
+  @ApiProperty({
+    enum: Object.values(CHECKOUT_CONSULTATION_REASON),
+    enumName: 'CheckoutConsultationReason',
+    nullable: true,
+    type: String,
+    description: 'STOCK_SPLIT_ACROSS_BRANCHES: không chi nhánh nào đủ cả giỏ; phải chuyển kho phần thiếu trước khi báo giá',
+  })
+  consultationReason: CheckoutConsultationReason | null;
+  @ApiProperty({ type: [CheckoutStockShortageDto], description: 'Hàng còn thiếu tại kho đã chọn; rỗng nếu đủ' })
+  stockShortages: CheckoutStockShortageDto[];
   @ApiProperty({ type: CheckoutRecipientDto }) recipient: CheckoutRecipientDto;
   @ApiPropertyOptional({ type: String, nullable: true }) customerNote: string | null;
   @ApiProperty({ format: 'date-time' }) createdAt: string;

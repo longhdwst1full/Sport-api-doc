@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { EmailModule } from '../../integrations/email/email.module';
+import { SystemModule } from '../system/system.module';
 import { NotificationMaintenanceController } from './notification-maintenance.controller';
 import { OutboxDispatcherService } from './outbox-dispatcher.service';
 import { OutboxWriter } from './outbox.writer';
@@ -13,7 +14,7 @@ import { OutboxWriter } from './outbox.writer';
  * một lần gửi mail hỏng.
  */
 @Module({
-  imports: [EmailModule],
+  imports: [EmailModule, SystemModule],
   controllers: [NotificationMaintenanceController],
   providers: [OutboxWriter, OutboxDispatcherService],
   exports: [OutboxWriter],

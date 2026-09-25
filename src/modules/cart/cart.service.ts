@@ -184,15 +184,31 @@ export class CartService {
     if (!trimmed) return this.toDto(await this.getOrCreateAccountRow(userId));
 
     return this.prisma.$transaction(async (transaction) => {
-      const guest = await transaction.cart.findFirst({
+      const candidate = await transaction.cart.findFirst({
         where: {
           anonymousTokenHash: this.hashToken(trimmed),
           status: CART_STATUS.ACTIVE,
           userId: null,
         },
-        include: { items: true },
+        select: { id: true },
       });
       // Token sai, hết hạn, hoặc giỏ đã gộp rồi: không phải lỗi, chỉ là không có gì để làm.
+      if (!candidate) return this.toDto(await this.findById(transaction, accountCartId));
+
+      // TRANSACTION: khoá CẢ HAI giỏ theo thứ tự id trước khi đọc dòng hàng. Không khoá thì hai lần
+      // gộp song song (hai tab cùng đăng nhập, retry sau timeout) có thể cùng thấy giỏ khách ACTIVE;
+      // lần sau đọc số lượng đã được lần trước cộng rồi cộng thêm lần nữa, hoặc cùng tạo một dòng và
+      // vấp unique (cart_id, product_variant_id). Thứ tự id cố định để không deadlock với nhau.
+      const lockIds = [candidate.id, accountCartId].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
+      await transaction.$queryRaw(
+        Prisma.sql`SELECT id FROM carts WHERE id IN (${Prisma.join(lockIds)}) ORDER BY id FOR UPDATE`,
+      );
+      // INVARIANT: đọc lại sau khi giữ khoá; request vừa thắng đã chuyển giỏ khách sang CONVERTED thì
+      // đây là no-op và trả giỏ tài khoản hiện tại — đây là bước compare-and-set của lần gộp.
+      const guest = await transaction.cart.findFirst({
+        where: { id: candidate.id, status: CART_STATUS.ACTIVE, userId: null },
+        include: { items: true },
+      });
       if (!guest || guest.items.length === 0) {
         if (guest) await this.markGuestConverted(transaction, guest.id);
         return this.toDto(await this.findById(transaction, accountCartId));
