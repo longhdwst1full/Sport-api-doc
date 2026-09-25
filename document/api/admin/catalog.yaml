@@ -881,6 +881,28 @@ paths:
           in: query
           schema:
             $ref: "#/components/schemas/ProductStatus"
+        - name: sort
+          required: false
+          in: query
+          description: Giá so theo minPrice; sản phẩm chưa có giá luôn xếp cuối
+          schema:
+            $ref: "#/components/schemas/ProductListSort"
+        - name: minPrice
+          required: false
+          in: query
+          description: minPrice ≥ giá trị này (VND)
+          schema:
+            pattern: ^\d+(\.\d{1,2})?$
+            example: "1000000"
+            type: string
+        - name: maxPrice
+          required: false
+          in: query
+          description: minPrice ≤ giá trị này (VND)
+          schema:
+            pattern: ^\d+(\.\d{1,2})?$
+            example: "5000000"
+            type: string
       responses:
         "200":
           description: ""
@@ -2594,6 +2616,13 @@ components:
         - DRAFT
         - PUBLISHED
         - ARCHIVED
+    ProductListSort:
+      type: string
+      enum:
+        - NEWEST
+        - PRICE_ASC
+        - PRICE_DESC
+        - NAME_ASC
     ProductListResponseDto:
       type: object
       properties:
@@ -2704,6 +2733,13 @@ components:
           type: string
           format: uri
           nullable: true
+        shortDescription:
+          type: string
+          nullable: true
+          description: Mô tả ngắn cho thẻ sản phẩm
+        inStock:
+          type: boolean
+          description: Có ít nhất một SKU đang bán còn hàng ở một kho chi nhánh đang hoạt động. Có trong mọi response danh sách và chi tiết; response của lệnh ghi không tính. Không lộ số lượng tồn.
         specifications:
           description: Thông số kỹ thuật đã ghép nhãn/đơn vị từ từ điển thuộc tính; rỗng nếu chưa nhập
           type: array
@@ -2719,8 +2755,6 @@ components:
           pattern: ^[1-9][0-9]*$
           example: "1"
           nullable: true
-        shortDescription:
-          type: string
         description:
           type: string
         variants:
@@ -3228,6 +3262,13 @@ components:
           type: string
           format: uri
           nullable: true
+        shortDescription:
+          type: string
+          nullable: true
+          description: Mô tả ngắn cho thẻ sản phẩm
+        inStock:
+          type: boolean
+          description: Có ít nhất một SKU đang bán còn hàng ở một kho chi nhánh đang hoạt động. Có trong mọi response danh sách và chi tiết; response của lệnh ghi không tính. Không lộ số lượng tồn.
       required:
         - id
         - productNo
@@ -3382,6 +3423,9 @@ components:
           type: object
           allOf:
             - $ref: "#/components/schemas/ProductBundleDto"
+        inStock:
+          type: boolean
+          description: Còn hàng ở ít nhất một kho chi nhánh đang hoạt động (tồn thực − đang giữ ≥ 1; combo tính theo thành phần thiếu nhất). Chỉ có ở getCatalogProduct/getAdminProduct; response của lệnh ghi không tính.
       required:
         - id
         - sku

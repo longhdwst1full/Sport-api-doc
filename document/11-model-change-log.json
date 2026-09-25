@@ -6132,6 +6132,20 @@
         "test:test/admin-contract.e2e-spec.ts"
       ],
       "targets": []
+    },
+    {
+      "id": "API-20260925-CATALOG-STOCK-SORT",
+      "date": "2026-09-25",
+      "scope": "API+CATALOG+OPENAPI+CLIENT",
+      "summary": "listCatalogProducts/listAdminProducts nhận thêm sort (NEWEST mặc định, PRICE_ASC, PRICE_DESC, NAME_ASC) và minPrice/maxPrice (so theo minPrice; chưa có giá xếp cuối, bị loại khi lọc khoảng giá). ProductSummaryDto thêm shortDescription (nullable) và inStock; ProductVariantDto thêm inStock ở getCatalogProduct/getAdminProduct. inStock = còn ≥ 1 (onHand − reserved) ở một kho có kho và chi nhánh ACTIVE, không cộng giữa các kho, combo cần một kho đủ thành phần; chỉ đọc inventory_balances, chỉ trả boolean. Thay đổi bổ sung, tương thích ngược; shortDescription ở chi tiết giờ khai nullable. Không đổi schema.",
+      "sources": [
+        "OpenAPI:listCatalogProducts/getCatalogProduct/listAdminProducts/getAdminProduct",
+        "source:src/modules/catalog/products/services/products.service.ts",
+        "source:src/modules/catalog/products/services/product-availability.ts",
+        "test:src/modules/catalog/products/services/products.service.spec.ts",
+        "test:src/modules/catalog/products/services/product-availability.spec.ts"
+      ],
+      "targets": []
     }
   ]
 }

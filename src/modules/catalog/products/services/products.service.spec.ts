@@ -295,18 +295,113 @@ describe('ProductsService', () => {
       count: jest.fn().mockResolvedValue(1),
     };
     const transactionSpy = jest.fn((operations: Promise<unknown>[]) => Promise.all(operations));
+    const inventoryBalance = {
+      findMany: jest.fn().mockResolvedValue([
+        // Chỉ SKU đang bán có hàng mới làm thẻ "còn hàng"; SKU ngưng bán có tồn không được tính.
+        { warehouseId: 9n, productVariantId: 2n, onHand: 5, reserved: 0 },
+      ]),
+    };
     const prisma = {
       product,
+      inventoryBalance,
       $transaction: transactionSpy,
     } as unknown as PrismaService;
     const storefront = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader, {} as ProductMediaService, { resolve: jest.fn().mockResolvedValue([]), readStored: jest.fn().mockReturnValue([]) } as unknown as AttributesService);
 
     const result = await storefront.list({ page: 1, limit: 12 }, true);
 
-    expect(result.items[0]).toMatchObject({ minPrice: '500000.00' });
+    expect(result.items[0]).toMatchObject({ minPrice: '500000.00', inStock: false, shortDescription: null });
+    expect(inventoryBalance.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          productVariantId: { in: [3n] },
+          warehouse: { status: 'ACTIVE', branch: { status: 'ACTIVE' } },
+        },
+      }),
+    );
     expect(product.findMany).toHaveBeenCalledTimes(1);
     // List đọc độc lập; không giữ transaction của Supabase pooler chỉ để đếm dòng.
     expect(transactionSpy).not.toHaveBeenCalled();
+  });
+
+  describe('storefront list sorted or filtered by price', () => {
+    const light = (id: bigint, amount: string | null, createdAt: string) => ({
+      id,
+      productType: 'STANDARD',
+      createdAt: new Date(createdAt),
+      variants: [
+        {
+          status: 'ACTIVE',
+          prices: amount === null ? [] : [{ amount: new Prisma.Decimal(amount) }],
+          bundleDefinition: null,
+        },
+      ],
+    });
+    const full = (id: bigint) => ({
+      id,
+      productType: 'STANDARD',
+      productNo: `SP-${id}`,
+      name: `P${id}`,
+      slug: `p${id}`,
+      brand: null,
+      status: 'PUBLISHED',
+      isPublished: true,
+      version: 1n,
+      shortDescription: 'Mô tả',
+      categories: [],
+      media: [],
+      variants: [],
+    });
+    const build = () => {
+      const product = {
+        findMany: jest
+          .fn()
+          .mockResolvedValueOnce([
+            light(1n, '300000', '2026-09-01'),
+            light(2n, null, '2026-09-03'),
+            light(3n, '100000', '2026-09-02'),
+            light(4n, '200000', '2026-09-04'),
+          ])
+          // Truy vấn thứ hai nạp trang theo id; cố tình trả sai thứ tự để kiểm việc sắp lại.
+          .mockImplementationOnce(({ where }: { where: { id: { in: bigint[] } } }) =>
+            Promise.resolve([...where.id.in].reverse().map(full))),
+        count: jest.fn(),
+      };
+      const prisma = { product, inventoryBalance: { findMany: jest.fn() } } as unknown as PrismaService;
+      const service = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader, {} as ProductMediaService, {} as AttributesService);
+      return { service, product };
+    };
+
+    it('sorts by minPrice ascending and keeps unpriced products last', async () => {
+      const { service, product } = build();
+
+      const result = await service.list({ page: 1, limit: 10, sort: 'PRICE_ASC' }, true);
+
+      expect(result.items.map(({ id }) => id)).toEqual(['3', '4', '1', '2']);
+      expect(result.meta).toMatchObject({ total: 4, totalPages: 1 });
+      expect(product.count).not.toHaveBeenCalled();
+    });
+
+    it('keeps unpriced products last when sorting descending too', async () => {
+      const { service } = build();
+
+      const result = await service.list({ page: 1, limit: 10, sort: 'PRICE_DESC' }, true);
+
+      expect(result.items.map(({ id }) => id)).toEqual(['1', '4', '3', '2']);
+    });
+
+    it('filters by an inclusive price range and paginates after filtering', async () => {
+      const { service } = build();
+
+      const result = await service.list(
+        { page: 2, limit: 1, sort: 'PRICE_ASC', minPrice: '100000', maxPrice: '200000' },
+        true,
+      );
+
+      // Chỉ 3 (100k) và 4 (200k) trong khoảng; sản phẩm chưa có giá bị loại khỏi khoảng giá.
+      expect(result.items.map(({ id }) => id)).toEqual(['4']);
+      expect(result.meta).toMatchObject({ page: 2, total: 2, totalPages: 2 });
+    });
   });
 
   it('rejects publishing a combo when one component variant is inactive', async () => {
