@@ -1,10 +1,10 @@
 # Bảo An Sport demo seed
 
-> **Document version:** 1.1.0
+> **Document version:** 1.2.0
 >
-> **Last updated:** 2026-09-06
+> **Last updated:** 2026-09-25
 >
-> **Change summary:** Khóa seed ở chế độ manual-only; mặc định create-only và tái sử dụng ảnh Cloudinary.
+> **Change summary:** Thêm reset catalog demo (`db:catalog:reset`): xoá catalog + giao dịch thử, seed lại 95 sản phẩm từ snapshot crawl.
 
 ## Phạm vi
 
@@ -57,9 +57,28 @@ yêu cầu mới của người phụ trách.
 
 Sau khi chạy cần kiểm tra tổng 20 product demo, 16 media Cloudinary nguồn Bảo An và reconciliation `on_hand = SUM(quantity_delta)`.
 
+## Reset catalog demo (SEED-20260925-CATALOG-RESET)
+
+Chỉ dùng cho môi trường demo/đồ án, theo quyết định của chủ dự án ngày 2026-09-25.
+
+```bash
+yarn db:catalog:reset --confirm-destructive-reset
+```
+
+- Nguồn: `prisma/demo-data/catalog-demo.json`, snapshot ngày 2026-09-25 của catalog crawl. Gồm 2 sản phẩm tốt nhất mỗi danh mục lá (ưu tiên có thương hiệu thật, nhiều thông số, nhiều ảnh): 95 sản phẩm, 20 thương hiệu, 380 ảnh.
+- Trước khi xoá luôn ghi backup JSON của mọi bảng bị xoá vào `.backups/pre-catalog-reset-*.json`.
+- Xoá: catalog (sản phẩm, SKU, giá, media link, danh mục, thương hiệu, thuộc tính), tồn kho, giỏ/checkout, đơn, thanh toán, fulfillment, phiếu trả, review, flash sale; outbox chưa gửi của đơn/phiếu trả.
+- Giữ: kho/chi nhánh, user/phân quyền, khách hàng, audit log, `media_assets` (ảnh Cloudinary dùng lại theo `publicId`), bài viết (bỏ slug sản phẩm không còn).
+- Thông số: ~150 nhãn crawl gom về 28 thuộc tính TEXT; nhãn không map và bảng gốc giữ trong `seoJson`. Cân nặng và kích thước kiện của SKU chỉ lấy khi parse chắc chắn.
+- Tồn: 10–30 mỗi SKU tại mỗi kho `ACTIVE`, cố định theo hash SKU + kho, ghi qua phiếu `OPENING_BALANCE` và movement `ADJUST`. Đây là số demo, không phải tồn thật.
+- Ảnh Cloudinary của sản phẩm bị xoá không bị script này xoá; dọn riêng sau khi kiểm tra không còn tham chiếu.
+- Ba bảng sổ cái `payment_transactions`, `fulfillment_status_history`, `inventory_movements` có trigger chặn DELETE. Chủ dự án tự tắt trigger trong Supabase SQL editor trước khi chạy và bật lại ngay sau đó; script không tự tắt trigger. `audit_logs` không bị xoá.
+- Lần chạy 2026-09-25 10:11 UTC: 95 sản phẩm, 20 thương hiệu, 60 danh mục, 28 thuộc tính, 190 movement; backup `.backups/pre-catalog-reset-2026-09-25T10-07-45-421Z.json`.
+
 ## Revision history
 
 | Version | Date | Change summary |
 | --- | --- | --- |
+| 1.2.0 | 2026-09-25 | Thêm reset catalog demo từ snapshot crawl, backup bắt buộc và tồn demo. |
 | 1.1.0 | 2026-09-06 | Manual-only guard, create-only mặc định, scoped price và Cloudinary reuse. |
 | 1.0.0 | 2026-09-06 | Tạo manifest và quy tắc import 16 sản phẩm Bảo An Sport. |
