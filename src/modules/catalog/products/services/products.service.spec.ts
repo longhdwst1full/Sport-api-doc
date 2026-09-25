@@ -1,11 +1,13 @@
-import { UnprocessableEntityException } from '@nestjs/common';
+import { BadRequestException, ConflictException, UnprocessableEntityException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../database/prisma.service';
+import { AuditReader } from '../../../audit/audit.reader';
 import { AuditWriter } from '../../../audit/audit.writer';
+import { CreateProductDto } from '../dto/product.dto';
 import { ProductsService } from './products.service';
 
 describe('ProductsService', () => {
-  const service = new ProductsService({} as PrismaService, {} as AuditWriter);
+  const service = new ProductsService({} as PrismaService, {} as AuditWriter, {} as AuditReader);
 
   it('maps minPrice and quick-add identifiers from the same sellable offer', () => {
     const row = {
@@ -61,6 +63,7 @@ describe('ProductsService', () => {
       .mockResolvedValueOnce({ id: 11n })
       .mockResolvedValueOnce({ id: 12n });
     const transaction = {
+      $queryRaw: jest.fn().mockResolvedValue([{ '?column?': 1 }]),
       brand: { count: jest.fn() },
       category: { count: jest.fn().mockResolvedValue(1) },
       product: { create: productCreate },
@@ -75,7 +78,8 @@ describe('ProductsService', () => {
     } as unknown as PrismaService;
     const auditWrite = jest.fn().mockResolvedValue(undefined);
     const audit = { write: auditWrite } as unknown as AuditWriter;
-    const catalog = new ProductsService(prisma, audit);
+    const auditReader = { findByRequestId: jest.fn().mockResolvedValue([]) } as unknown as AuditReader;
+    const catalog = new ProductsService(prisma, audit, auditReader);
     const catalogInternals = catalog as unknown as {
       getById(id: bigint): Promise<unknown>;
     };
@@ -125,7 +129,7 @@ describe('ProductsService', () => {
     const prisma = {
       $transaction: jest.fn((work: (client: typeof transaction) => unknown) => work(transaction)),
     } as unknown as PrismaService;
-    const catalog = new ProductsService(prisma, {} as AuditWriter);
+    const catalog = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader);
 
     await expect(
       catalog.update(
@@ -157,7 +161,7 @@ describe('ProductsService', () => {
     const prisma = {
       $transaction: jest.fn((work: (client: typeof transaction) => unknown) => work(transaction)),
     } as unknown as PrismaService;
-    const pricing = new ProductsService(prisma, {} as AuditWriter);
+    const pricing = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader);
 
     await expect(
       pricing.createPrice(
@@ -178,7 +182,7 @@ describe('ProductsService', () => {
     const prisma = {
       $transaction: jest.fn((work: (client: typeof transaction) => unknown) => work(transaction)),
     } as unknown as PrismaService;
-    const lifecycle = new ProductsService(prisma, {} as AuditWriter);
+    const lifecycle = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader);
 
     await expect(
       lifecycle.archiveProduct(
@@ -206,7 +210,7 @@ describe('ProductsService', () => {
     const prisma = {
       $transaction: jest.fn((work: (client: typeof transaction) => unknown) => work(transaction)),
     } as unknown as PrismaService;
-    const lifecycle = new ProductsService(prisma, {} as AuditWriter);
+    const lifecycle = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader);
 
     await expect(
       lifecycle.reactivateVariant(
@@ -235,7 +239,7 @@ describe('ProductsService', () => {
     const prisma = {
       $transaction: jest.fn((work: (client: typeof transaction) => unknown) => work(transaction)),
     } as unknown as PrismaService;
-    const lifecycle = new ProductsService(prisma, {} as AuditWriter);
+    const lifecycle = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader);
 
     await expect(
       lifecycle.archiveVariant(
@@ -293,7 +297,7 @@ describe('ProductsService', () => {
       product,
       $transaction: transactionSpy,
     } as unknown as PrismaService;
-    const storefront = new ProductsService(prisma, {} as AuditWriter);
+    const storefront = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader);
 
     const result = await storefront.list({ page: 1, limit: 12 }, true);
 
@@ -343,7 +347,7 @@ describe('ProductsService', () => {
     const prisma = {
       $transaction: jest.fn((work: (client: typeof transaction) => unknown) => work(transaction)),
     } as unknown as PrismaService;
-    const lifecycle = new ProductsService(prisma, {} as AuditWriter);
+    const lifecycle = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader);
 
     await expect(
       lifecycle.publish(
@@ -352,5 +356,143 @@ describe('ProductsService', () => {
         { requestId: 'request', actorUserId: '2' },
       ),
     ).rejects.toThrow('Every active BUNDLE variant requires');
+  });
+
+  describe('createAdminProduct idempotency (x-request-id + audit)', () => {
+    const payload = (): CreateProductDto => ({
+      name: 'Trụ bóng chuyền TD-02',
+      categoryIds: ['1'],
+      primaryCategoryId: '1',
+      variants: [{ name: 'TD-02', weightGrams: 160000 }],
+    });
+    type AuditEntry = Awaited<ReturnType<AuditReader['findByRequestId']>>[number];
+
+    const harness = (entries: AuditEntry[] = []) => {
+      const transaction = {
+        $queryRaw: jest.fn().mockResolvedValue([{ '?column?': 1 }]),
+        brand: { count: jest.fn() },
+        category: { count: jest.fn().mockResolvedValue(1) },
+        product: { create: jest.fn().mockResolvedValue({ id: 1n }) },
+        productCategory: { createMany: jest.fn().mockResolvedValue({ count: 1 }) },
+        productVariant: { create: jest.fn().mockResolvedValue({ id: 11n }) },
+      };
+      const prisma = {
+        $transaction: jest.fn((work: (client: typeof transaction) => unknown) => work(transaction)),
+      } as unknown as PrismaService;
+      const auditWrite = jest.fn().mockResolvedValue(undefined);
+      const findByRequestId = jest.fn().mockResolvedValue(entries);
+      const service = new ProductsService(
+        prisma,
+        { write: auditWrite } as unknown as AuditWriter,
+        { findByRequestId } as unknown as AuditReader,
+      );
+      const getById = jest
+        .spyOn(service as unknown as { getById(id: bigint): Promise<unknown> }, 'getById')
+        .mockResolvedValue({ id: '1' });
+      return { service, transaction, auditWrite, findByRequestId, getById };
+    };
+
+    /** Tạo một lần để lấy audit sản phẩm (có dấu vân tay) mà lần gửi lại sẽ đọc được. */
+    const firstCreateAudit = async (input: CreateProductDto, actorUserId = '2') => {
+      const first = harness();
+      await first.service.create(input, { requestId: 'req-product-1', actorUserId });
+      const calls = first.auditWrite.mock.calls as unknown as Array<[{ action: string; after: unknown }]>;
+      const productAudit = calls.find(([entry]) => entry.action === 'catalog.product.create')?.[0];
+      return {
+        first,
+        entry: {
+          action: 'catalog.product.create',
+          entityType: 'PRODUCT',
+          entityId: '1',
+          actorUserId,
+          after: productAudit?.after,
+        } as AuditEntry,
+      };
+    };
+
+    it('locks by request id and stores the fingerprint on the product audit', async () => {
+      const { first, entry } = await firstCreateAudit(payload());
+
+      expect(first.transaction.$queryRaw).toHaveBeenCalledTimes(1);
+      expect(first.findByRequestId).toHaveBeenCalledWith('req-product-1', first.transaction);
+      const fingerprint = (entry.after as { idempotency: { fingerprintVersion: number; requestHash: string } })
+        .idempotency;
+      expect(fingerprint.fingerprintVersion).toBe(1);
+      expect(fingerprint.requestHash).toMatch(/^[0-9a-f]{64}$/);
+    });
+
+    it('replays the created product for the same key, actor and payload without writing again', async () => {
+      const { entry } = await firstCreateAudit(payload());
+      const retry = harness([entry]);
+
+      await retry.service.create(payload(), { requestId: 'req-product-1', actorUserId: '2' });
+
+      expect(retry.transaction.product.create).not.toHaveBeenCalled();
+      expect(retry.auditWrite).not.toHaveBeenCalled();
+      expect(retry.getById).toHaveBeenCalledWith(1n);
+    });
+
+    it('treats reordered object keys as the same payload', async () => {
+      const { entry } = await firstCreateAudit(payload());
+      const retry = harness([entry]);
+      const reordered = {
+        variants: [{ weightGrams: 160000, name: 'TD-02' }],
+        primaryCategoryId: '1',
+        categoryIds: ['1'],
+        name: 'Trụ bóng chuyền TD-02',
+      } as CreateProductDto;
+
+      await retry.service.create(reordered, { requestId: 'req-product-1', actorUserId: '2' });
+
+      expect(retry.transaction.product.create).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['a different payload', { ...payload(), name: 'Trụ bóng chuyền TD-03' }, '2'],
+      ['a different actor', payload(), '99'],
+    ])('rejects the same key with %s as PRODUCT_IDEMPOTENCY_CONFLICT', async (_case, input, actorUserId) => {
+      const { entry } = await firstCreateAudit(payload());
+      const retry = harness([entry]);
+
+      const attempt = retry.service.create(input, { requestId: 'req-product-1', actorUserId });
+
+      await expect(attempt).rejects.toBeInstanceOf(ConflictException);
+      await expect(attempt).rejects.toMatchObject({
+        response: { code: 'PRODUCT_IDEMPOTENCY_CONFLICT' },
+      });
+      expect(retry.transaction.product.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects a key already bound to another operation', async () => {
+      const retry = harness([
+        { action: 'catalog.price.create', entityType: 'PRODUCT_PRICE', entityId: '5', actorUserId: '2', after: {} },
+      ]);
+
+      await expect(
+        retry.service.create(payload(), { requestId: 'req-product-1', actorUserId: '2' }),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(retry.transaction.product.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects a fingerprint written by another hash version instead of guessing', async () => {
+      const { entry } = await firstCreateAudit(payload());
+      const after = entry.after as { idempotency: { fingerprintVersion: number } };
+      const retry = harness([
+        { ...entry, after: { ...after, idempotency: { ...after.idempotency, fingerprintVersion: 0 } } },
+      ]);
+
+      await expect(
+        retry.service.create(payload(), { requestId: 'req-product-1', actorUserId: '2' }),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('rejects a request id longer than the audit column before persistence', async () => {
+      const { service, transaction } = harness();
+
+      await expect(
+        service.create(payload(), { requestId: 'x'.repeat(101), actorUserId: '2' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(transaction.$queryRaw).not.toHaveBeenCalled();
+    });
   });
 });

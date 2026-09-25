@@ -5216,7 +5216,17 @@
       },
       "post": {
         "operationId": "createAdminProduct",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-request-id",
+            "in": "header",
+            "description": "Khoá idempotency (≤100 ký tự). Gửi lại cùng giá trị với cùng payload trả sản phẩm đã tạo; cùng giá trị nhưng payload/người tạo/thao tác khác trả 409 PRODUCT_IDEMPOTENCY_CONFLICT. Bỏ trống thì server tự sinh id và mỗi lần gọi tạo một sản phẩm mới.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {

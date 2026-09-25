@@ -5757,6 +5757,20 @@
         "document:document/15-architecture-contract-codegen.md"
       ],
       "targets": []
+    },
+    {
+      "id": "API-20260925-PRODUCT-CREATE-IDEMPOTENCY",
+      "date": "2026-09-25",
+      "scope": "API+CATALOG+AUDIT+OPENAPI+ADMIN",
+      "summary": "createAdminProduct idempotent mà không thêm cột: khoá là header x-request-id (tuỳ chọn, ≤100 ký tự), kết quả lưu là audit catalog.product.create của request đó với after_json.idempotency = {fingerprintVersion, requestHash}; requestHash = SHA-256(operation + method + actor + payload với key sắp xếp). Transaction lấy pg_advisory_xact_lock theo request id rồi mới tra audit qua AuditReader (cổng đọc mới của module Audit), vì AuditWriter tự cấp sequence_no = MAX+1 nên unique (request_id, sequence_no) không chặn được request thứ hai. Cùng id + cùng hash trả sản phẩm đã tạo; id đã gắn thao tác khác, khác actor, khác payload hoặc khác fingerprintVersion trả 409 PRODUCT_IDEMPOTENCY_CONFLICT; id >100 ký tự trả 400. Contract chỉ thêm header tuỳ chọn, không phá vỡ; không đổi schema/migration.",
+      "sources": [
+        "OpenAPI:createAdminProduct",
+        "source:src/modules/catalog/products/services/products.service.ts",
+        "source:src/modules/audit/audit.reader.ts",
+        "test:src/modules/catalog/products/services/products.service.spec.ts",
+        "document:src/modules/catalog/products/README.md"
+      ],
+      "targets": []
     }
   ]
 }
