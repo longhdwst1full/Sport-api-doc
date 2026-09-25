@@ -195,9 +195,18 @@ export function refundableRemaining(input: RefundableInput): Prisma.Decimal {
  * chưa tích hợp. COD/tiền mặt hoàn tiền mặt tại quầy, hoặc chuyển khoản nếu hai bên thoả thuận.
  */
 export function allowedRefundMethods(paymentMethod: string): readonly RefundMethod[] {
-  if (paymentMethod === PAYMENT_METHOD.COD) return [REFUND_METHOD.CASH, REFUND_METHOD.BANK_TRANSFER];
+  if ((CASH_COLLECTED_PAYMENT_METHODS as readonly string[]).includes(paymentMethod)) {
+    return [REFUND_METHOD.CASH, REFUND_METHOD.BANK_TRANSFER];
+  }
   return [REFUND_METHOD.BANK_TRANSFER];
 }
+
+/**
+ * Phương thức mà cửa hàng thu tiền mặt: COD (giao hàng) và `CASH` của đơn bán tại quầy (POS lưu
+ * nguyên phương thức quầy vào payment). Thiếu `CASH` ở đây thì khách trả tiền mặt tại quầy chỉ được
+ * hoàn chuyển khoản — trái D58 (phát hiện khi nghiệm thu 2026-09-25).
+ */
+const CASH_COLLECTED_PAYMENT_METHODS = [PAYMENT_METHOD.COD, 'CASH'] as const;
 
 export function assertRefundMethod(paymentMethod: string, method: string): void {
   if (!allowedRefundMethods(paymentMethod).includes(method as RefundMethod)) {
