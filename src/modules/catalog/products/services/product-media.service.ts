@@ -14,7 +14,9 @@ import {
 import { MutationContext } from '../../../../common/request/request-context';
 import { PrismaService } from '../../../../database/prisma.service';
 import { ObjectStorageClient } from '../../../../integrations/object-storage/object-storage.client';
+import { AuditReader } from '../../../audit/audit.reader';
 import { AuditWriter } from '../../../audit/audit.writer';
+import { findReplay, lockRequest, requestFingerprint } from '../request-idempotency';
 import { MEDIA_ASSET_STATUS } from '../../../media/media.constants';
 import {
   AttachProductMediaDto,
@@ -25,6 +27,7 @@ import {
 import {
   PRODUCT_AUDIT_ACTION,
   PRODUCT_ERROR,
+  PRODUCT_ERROR_CODE,
   PRODUCT_MEDIA_STATUS,
   PRODUCT_STATUS,
 } from '../product.constants';
@@ -35,6 +38,7 @@ export class ProductMediaService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditWriter,
     private readonly objectStorage: ObjectStorageClient,
+    private readonly auditReader: AuditReader,
   ) {}
 
   /**
@@ -86,7 +90,19 @@ export class ProductMediaService {
     const databaseProductId = toDatabaseId(productId);
     const databaseVariantId = input.variantId ? toDatabaseId(input.variantId) : undefined;
     const databaseMediaAssetId = toDatabaseId(input.mediaAssetId);
+    // IDEMPOTENCY: nhận diện lần gửi lại TRƯỚC khi kiểm expectedProductVersion — lần đầu đã tăng version nên
+    // bấm lại sau khi mất response sẽ luôn trượt version và nhận 409 khó hiểu. Cùng id khác payload → 409.
+    const fingerprint = requestFingerprint('attachAdminProductMedia', 'POST', context, { productId, input });
     return this.prisma.$transaction(async (transaction) => {
+      await lockRequest(transaction, 'catalog.product-media.attach', context.requestId);
+      const replayed = await findReplay(transaction, this.auditReader, context, {
+        action: PRODUCT_AUDIT_ACTION.MEDIA_ATTACH,
+        entityType: 'PRODUCT_MEDIA',
+        fingerprint,
+        conflictCode: PRODUCT_ERROR_CODE.IDEMPOTENCY_CONFLICT,
+        conflictMessage: 'Yêu cầu gắn ảnh này đã được dùng cho dữ liệu khác. Vui lòng tải lại rồi thử lại.',
+      });
+      if (replayed !== undefined) return this.listActive(transaction, databaseProductId);
       await this.claimProductVersion(transaction, databaseProductId, input.expectedProductVersion);
       await this.lockMediaAsset(transaction, databaseMediaAssetId);
       const [asset, variant, duplicate, targetMedia, maxSort] = await Promise.all([
@@ -145,7 +161,7 @@ export class ProductMediaService {
         PRODUCT_AUDIT_ACTION.MEDIA_ATTACH,
         media.id,
         undefined,
-        { mediaAssetId: input.mediaAssetId, variantId: input.variantId ?? null, sortOrder },
+        { mediaAssetId: input.mediaAssetId, variantId: input.variantId ?? null, sortOrder, idempotency: fingerprint } as unknown as Prisma.InputJsonValue,
       );
       return this.listActive(transaction, databaseProductId);
     });

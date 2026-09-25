@@ -6118,6 +6118,20 @@
         "document:src/modules/media/README.md"
       ],
       "targets": []
+    },
+    {
+      "id": "API-20260925-PRICE-MEDIA-IDEMPOTENCY",
+      "date": "2026-09-25",
+      "scope": "API+CATALOG+OPENAPI+ADMIN",
+      "summary": "createAdminProductPrice và attachAdminProductMedia idempotent theo x-request-id (header tuỳ chọn, khai trong OpenAPI) bằng helper dùng chung request-idempotency.ts: advisory lock theo request id, tra audit của request, so fingerprint (operation + method + actor + input). Gửi lại cùng id + payload trả kết quả hiện tại (không tạo bản giá thứ hai; gắn ảnh không còn 409 vì version đã tăng ở lần đầu); khác payload → 409 PRODUCT_IDEMPOTENCY_CONFLICT. createAdminProduct chuyển sang cùng helper với hash không đổi. Admin gửi x-request-id cố định cho mỗi lần thao tác ở panel giá/ảnh. E2e PostgreSQL: 2 lần cùng id → 1 bản giá; khác số tiền → 409. Không đổi schema.",
+      "sources": [
+        "OpenAPI:createAdminProductPrice/attachAdminProductMedia/createAdminProduct",
+        "source:src/modules/catalog/products/request-idempotency.ts",
+        "test:src/modules/catalog/products/services/products.service.spec.ts",
+        "test:src/modules/catalog/products/services/product-media.service.spec.ts",
+        "test:test/admin-contract.e2e-spec.ts"
+      ],
+      "targets": []
     }
   ]
 }

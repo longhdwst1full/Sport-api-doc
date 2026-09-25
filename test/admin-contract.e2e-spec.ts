@@ -881,7 +881,7 @@ describe('Admin v1 contract', () => {
       .set(authorization)
       .send({ name: `Manual SKU ${suffix}`, categoryIds: [categoryId], primaryCategoryId: categoryId, variants: [{ name: 'Std', sku: ` e2e-${suffix} ` }] })
       .expect(201);
-    const manualProduct = manual.body as { id: string; variants: Array<{ sku: string }> };
+    const manualProduct = manual.body as { id: string; variants: Array<{ id: string; sku: string }> };
     concurrencyProductIds.push(manualProduct.id);
     expect(manualProduct.variants[0].sku).toBe(manualSku);
     await request(server())
@@ -890,6 +890,15 @@ describe('Admin v1 contract', () => {
       .send({ name: `Manual SKU dup ${suffix}`, categoryIds: [categoryId], primaryCategoryId: categoryId, variants: [{ name: 'Std', sku: manualSku }] })
       .expect(409);
     expect(await prisma.product.count({ where: { name: `Manual SKU dup ${suffix}` } })).toBe(0);
+
+    // Tạo giá ở màn sửa: gửi lại cùng x-request-id → một bản giá; cùng id khác số tiền → 409.
+    const priceKey = `e2e-price-${uuidv7()}`;
+    const priceBody = { amount: '450000', startsAt: new Date(Date.now() + 3_600_000).toISOString() };
+    const priceUrl = `/api/v1/admin/products/variants/${manualProduct.variants[0].id}/prices`;
+    await request(server()).post(priceUrl).set(authorization).set('x-request-id', priceKey).send(priceBody).expect(201);
+    await request(server()).post(priceUrl).set(authorization).set('x-request-id', priceKey).send(priceBody).expect(201);
+    await request(server()).post(priceUrl).set(authorization).set('x-request-id', priceKey).send({ ...priceBody, amount: '999000' }).expect(409);
+    expect(await prisma.productPrice.count({ where: { productVariantId: BigInt(manualProduct.variants[0].id) } })).toBe(1);
   });
 
   it('stores TD-02 specifications as validated JSONB and resolves labels from the attribute dictionary', async () => {

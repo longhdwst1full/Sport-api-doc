@@ -1,6 +1,7 @@
 import { ConflictException, UnprocessableEntityException } from '@nestjs/common';
 import { PrismaService } from '../../../../database/prisma.service';
 import { ObjectStorageClient } from '../../../../integrations/object-storage/object-storage.client';
+import { AuditReader } from '../../../audit/audit.reader';
 import { AuditWriter } from '../../../audit/audit.writer';
 import { ProductMediaService } from './product-media.service';
 
@@ -29,6 +30,7 @@ describe('ProductMediaService', () => {
       prisma,
       {} as AuditWriter,
       {} as ObjectStorageClient,
+      { findByRequestId: jest.fn().mockResolvedValue([]) } as unknown as AuditReader,
     );
 
     await expect(service.attach(
@@ -44,6 +46,7 @@ describe('ProductMediaService', () => {
 
   it('detects concurrent product media changes through product version', async () => {
     const transaction = {
+      $queryRaw: jest.fn().mockResolvedValue([]),
       product: {
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
         findUnique: jest.fn().mockResolvedValue({ status: 'DRAFT', version: 2n }),
@@ -63,6 +66,7 @@ describe('ProductMediaService', () => {
       prisma,
       {} as AuditWriter,
       {} as ObjectStorageClient,
+      { findByRequestId: jest.fn().mockResolvedValue([]) } as unknown as AuditReader,
     );
 
     await expect(service.attach(
@@ -118,7 +122,7 @@ describe('ProductMediaService', () => {
     const audit = { write: jest.fn().mockResolvedValue(undefined) } as unknown as AuditWriter;
     const deleteImage = jest.fn().mockResolvedValue(undefined);
     const objectStorage = { deleteImage } as unknown as ObjectStorageClient;
-    const service = new ProductMediaService(prisma, audit, objectStorage);
+    const service = new ProductMediaService(prisma, audit, objectStorage, { findByRequestId: jest.fn().mockResolvedValue([]) } as unknown as AuditReader);
 
     await expect(service.delete('10', '12', 0, context)).resolves.toEqual([]);
 
@@ -160,7 +164,7 @@ describe('ProductMediaService', () => {
     } as unknown as PrismaService;
     const deleteImage = jest.fn();
     const objectStorage = { deleteImage } as unknown as ObjectStorageClient;
-    const service = new ProductMediaService(prisma, {} as AuditWriter, objectStorage);
+    const service = new ProductMediaService(prisma, {} as AuditWriter, objectStorage, { findByRequestId: jest.fn().mockResolvedValue([]) } as unknown as AuditReader);
 
     await expect(service.delete('10', '12', 0, context)).rejects.toBeInstanceOf(
       ConflictException,
@@ -214,6 +218,7 @@ describe('ProductMediaService', () => {
       prisma,
       audit,
       { deleteImage } as unknown as ObjectStorageClient,
+      { findByRequestId: jest.fn().mockResolvedValue([]) } as unknown as AuditReader,
     );
 
     await expect(service.delete('10', '12', 0, context)).rejects.toMatchObject({
@@ -244,7 +249,7 @@ describe('ProductMediaService.attachInitialMedia', () => {
       productMedia: { create: jest.fn().mockImplementation(({ data }: { data: { sortOrder: number } }) => Promise.resolve({ id: BigInt(100 + data.sortOrder) })) },
     };
     const write = jest.fn().mockResolvedValue(undefined);
-    const service = new ProductMediaService({} as PrismaService, { write } as unknown as AuditWriter, {} as ObjectStorageClient);
+    const service = new ProductMediaService({} as PrismaService, { write } as unknown as AuditWriter, {} as ObjectStorageClient, { findByRequestId: jest.fn().mockResolvedValue([]) } as unknown as AuditReader);
     return { service, transaction, write };
   };
   const context = { requestId: 'req-media', actorUserId: '2' };
@@ -271,5 +276,50 @@ describe('ProductMediaService.attachInitialMedia', () => {
       service.attachInitialMedia(transaction as never, 1n, [{ mediaAssetId: '9' }, { mediaAssetId: '5' }], context),
     ).rejects.toBeInstanceOf(UnprocessableEntityException);
     expect(transaction.productMedia.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('ProductMediaService.attach idempotency', () => {
+  const input = { mediaAssetId: '11', expectedProductVersion: 1, isPrimary: false };
+  const context = { requestId: 'req-media-attach', actorUserId: '2' };
+  const build = (entries: unknown[]) => {
+    const transaction = {
+      $queryRaw: jest.fn().mockResolvedValue([]),
+      product: { updateMany: jest.fn().mockResolvedValue({ count: 0 }), findUnique: jest.fn() },
+      productMedia: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+    const prisma = {
+      $transaction: jest.fn((work: (client: typeof transaction) => unknown) => work(transaction)),
+    } as unknown as PrismaService;
+    const service = new ProductMediaService(
+      prisma,
+      {} as AuditWriter,
+      {} as ObjectStorageClient,
+      { findByRequestId: jest.fn().mockResolvedValue(entries) } as unknown as AuditReader,
+    );
+    return { service, transaction };
+  };
+
+  it('returns current media for a retried attach instead of failing on the already-bumped version', async () => {
+    const { requestFingerprint } = jest.requireActual<typeof import('../request-idempotency')>('../request-idempotency');
+    const fingerprint = requestFingerprint('attachAdminProductMedia', 'POST', context, { productId: '10', input });
+    const { service, transaction } = build([
+      { action: 'catalog.product-media.attach', entityType: 'PRODUCT_MEDIA', entityId: '50', actorUserId: '2', after: { idempotency: fingerprint }, createdAt: new Date() },
+    ]);
+
+    await expect(service.attach('10', input, context)).resolves.toEqual([]);
+    // Không chạm claimProductVersion (updateMany) — version đã tăng ở lần đầu.
+    expect(transaction.product.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('rejects the same request id attaching another asset', async () => {
+    const { requestFingerprint } = jest.requireActual<typeof import('../request-idempotency')>('../request-idempotency');
+    const fingerprint = requestFingerprint('attachAdminProductMedia', 'POST', context, { productId: '10', input });
+    const { service } = build([
+      { action: 'catalog.product-media.attach', entityType: 'PRODUCT_MEDIA', entityId: '50', actorUserId: '2', after: { idempotency: fingerprint }, createdAt: new Date() },
+    ]);
+
+    await expect(service.attach('10', { ...input, mediaAssetId: '12' }, context))
+      .rejects.toMatchObject({ response: { code: 'PRODUCT_IDEMPOTENCY_CONFLICT' } });
   });
 });

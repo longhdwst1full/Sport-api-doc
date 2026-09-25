@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import {
   BadRequestException,
   ConflictException,
@@ -67,6 +66,7 @@ import {
   generateSku,
 } from '../product-identifiers';
 import { evaluatePublishReadiness, type ProductPublishSnapshot } from '../product-publish.policy';
+import { findReplay, lockRequest, requestFingerprint } from '../request-idempotency';
 
 const effectivePriceWhere = (now: Date): Prisma.ProductPriceWhereInput => ({
   status: { in: [PRODUCT_PRICE_STATUS.ACTIVE, PRODUCT_PRICE_STATUS.SCHEDULED] },
@@ -266,7 +266,7 @@ export class ProductsService {
       );
     }
     this.validateCategorySelection(input.categoryIds, input.primaryCategoryId);
-    const requestHash = this.createRequestHash(input, context);
+    const fingerprint = requestFingerprint(PRODUCT_CREATE_IDEMPOTENCY.OPERATION, 'POST', context, input);
     const productNo = generateProductNo();
     const slug = generateProductSlug(input.name, productNo);
     const { variants, media = [], ...productInput } = input;
@@ -284,12 +284,15 @@ export class ProductsService {
         // transaction để các request cùng id chạy tuần tự; lần tra audit ngay sau đó vì vậy luôn
         // thấy kết quả đã commit của request trước. Va hash giữa hai id khác nhau chỉ làm chúng
         // chờ nhau, không sai dữ liệu.
-        await transaction.$queryRaw`
-          SELECT 1 FROM (
-            SELECT pg_advisory_xact_lock(hashtextextended(${`catalog.product.create:${context.requestId}`}, 0))
-          ) AS locked`;
-        const replayedId = await this.findCreatedProduct(transaction, context, requestHash);
-        if (replayedId !== undefined) return replayedId;
+        await lockRequest(transaction, 'catalog.product.create', context.requestId);
+        const replayedId = await findReplay(transaction, this.auditReader, context, {
+          action: PRODUCT_AUDIT_ACTION.CREATE,
+          entityType: 'PRODUCT',
+          fingerprint,
+          conflictCode: PRODUCT_ERROR_CODE.IDEMPOTENCY_CONFLICT,
+          conflictMessage: 'Yêu cầu tạo sản phẩm này đã được dùng cho dữ liệu khác. Vui lòng tải lại form rồi thử lại.',
+        });
+        if (replayedId !== undefined) return toDatabaseId(replayedId);
 
         await this.validateReferences(transaction, input.brandId, input.categoryIds);
         const product = await transaction.product.create({
@@ -380,10 +383,7 @@ export class ProductsService {
               variantCount: variants.length,
               mediaCount: media.length,
               // IDEMPOTENCY: dấu vân tay để lần gửi lại cùng x-request-id so với payload gốc.
-              idempotency: {
-                fingerprintVersion: PRODUCT_CREATE_IDEMPOTENCY.FINGERPRINT_VERSION,
-                requestHash,
-              },
+              idempotency: fingerprint,
             } as unknown as Prisma.InputJsonValue,
           },
           transaction,
@@ -812,10 +812,22 @@ export class ProductsService {
     const endsAt = input.endsAt ? new Date(input.endsAt) : undefined;
     this.ensurePriceIsNotRetroactive(startsAt);
     if (endsAt && endsAt <= startsAt) throw new UnprocessableEntityException('endsAt must be after startsAt');
+    // IDEMPOTENCY: gửi lại cùng x-request-id (mất response rồi bấm lại) trả sản phẩm hiện tại thay vì tạo
+    // bản giá thứ hai; cùng id khác payload → 409. Xem request-idempotency.ts.
+    const fingerprint = requestFingerprint('createAdminProductPrice', 'POST', context, { variantId, input });
     try {
       const productId = await this.prisma.$transaction(async (transaction) => {
+        await lockRequest(transaction, 'catalog.price.create', context.requestId);
         const variant = await transaction.productVariant.findFirst({ where: { id: databaseVariantId } });
         if (!variant) throw new NotFoundException(PRODUCT_ERROR.VARIANT_NOT_FOUND);
+        const replayed = await findReplay(transaction, this.auditReader, context, {
+          action: PRODUCT_AUDIT_ACTION.PRICE_CREATE,
+          entityType: 'PRODUCT_PRICE',
+          fingerprint,
+          conflictCode: PRODUCT_ERROR_CODE.IDEMPOTENCY_CONFLICT,
+          conflictMessage: 'Yêu cầu tạo giá này đã được dùng cho dữ liệu khác. Vui lòng tải lại rồi thử lại.',
+        });
+        if (replayed !== undefined) return variant.productId;
         await this.lockProductIds(transaction, [variant.productId]);
         const reference = await transaction.productPrice.findFirst({
           where: {
@@ -849,7 +861,7 @@ export class ProductsService {
             action: PRODUCT_AUDIT_ACTION.PRICE_CREATE,
             entityType: 'PRODUCT_PRICE',
             entityId: toEntityId(price.id),
-            after: { ...input, amount: input.amount },
+            after: { ...input, amount: input.amount, idempotency: fingerprint } as unknown as Prisma.InputJsonValue,
             reason: input.reason?.trim(),
           },
           transaction,
@@ -1524,55 +1536,6 @@ export class ProductsService {
     );
   }
 
-  /**
-   * SHA-256 của thao tác + phương thức + người tạo + payload (key sắp xếp cố định; thứ tự mảng
-   * giữ nguyên vì quyết định sortOrder của category và SKU).
-   */
-  private createRequestHash(input: CreateProductDto, context: MutationContext): string {
-    return createHash('sha256')
-      .update(
-        canonicalJson({
-          fingerprintVersion: PRODUCT_CREATE_IDEMPOTENCY.FINGERPRINT_VERSION,
-          operation: PRODUCT_CREATE_IDEMPOTENCY.OPERATION,
-          method: 'POST',
-          actorUserId: context.actorUserId,
-          input,
-        }),
-      )
-      .digest('hex');
-  }
-
-  /**
-   * IDEMPOTENCY: trả id sản phẩm đã tạo dưới cùng request id, hoặc undefined nếu request id chưa
-   * được dùng. Phải gọi sau advisory lock và trong cùng transaction.
-   */
-  private async findCreatedProduct(
-    transaction: Prisma.TransactionClient,
-    context: MutationContext,
-    requestHash: string,
-  ): Promise<bigint | undefined> {
-    const entries = await this.auditReader.findByRequestId(context.requestId, transaction);
-    if (entries.length === 0) return undefined;
-    const created = entries.find(
-      (entry) => entry.action === PRODUCT_AUDIT_ACTION.CREATE && entry.entityType === 'PRODUCT',
-    );
-    const fingerprint = (created?.after as { idempotency?: { fingerprintVersion?: unknown; requestHash?: unknown } } | null)
-      ?.idempotency;
-    // INVARIANT: request id đã gắn với thao tác khác, hoặc là lần tạo khác người/khác payload/khác
-    // cách tính hash, thì không được tạo thêm sản phẩm dưới cùng khoá và cũng không trả sản phẩm cũ.
-    if (
-      !created?.entityId ||
-      fingerprint?.fingerprintVersion !== PRODUCT_CREATE_IDEMPOTENCY.FINGERPRINT_VERSION ||
-      fingerprint.requestHash !== requestHash
-    ) {
-      throw new ConflictException({
-        code: PRODUCT_ERROR_CODE.IDEMPOTENCY_CONFLICT,
-        message: 'Yêu cầu tạo sản phẩm này đã được dùng cho dữ liệu khác. Vui lòng tải lại form rồi thử lại.',
-      });
-    }
-    return toDatabaseId(created.entityId);
-  }
-
   private validateCategorySelection(categoryIds: string[], primaryCategoryId: string): void {
     if (new Set(categoryIds).size !== categoryIds.length) {
       throw new UnprocessableEntityException('Categories must be unique');
@@ -1610,17 +1573,4 @@ export class ProductsService {
     }
     throw error;
   }
-}
-
-/** JSON với key object sắp xếp cố định để cùng nội dung luôn ra cùng hash; bỏ key undefined như JSON.stringify. */
-function canonicalJson(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map((item) => canonicalJson(item ?? null)).join(',')}]`;
-  if (value !== null && typeof value === 'object') {
-    const entries = Object.entries(value as Record<string, unknown>)
-      .filter(([, item]) => item !== undefined)
-      .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
-      .map(([key, item]) => `${JSON.stringify(key)}:${canonicalJson(item)}`);
-    return `{${entries.join(',')}}`;
-  }
-  return JSON.stringify(value);
 }

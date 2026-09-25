@@ -191,6 +191,11 @@ export class AdminProductsController {
   @Post(':id/media')
   @RequirePermissions('catalog.product.manage')
   @ApiOperation({ operationId: 'attachAdminProductMedia', summary: 'Attach one finalized media asset to a product or SKU' })
+  @ApiHeader({
+    name: 'x-request-id',
+    required: false,
+    description: 'Khoá idempotency (≤100 ký tự): gửi lại cùng giá trị với cùng payload trả kết quả cũ; khác payload → 409 PRODUCT_IDEMPOTENCY_CONFLICT.',
+  })
   @ApiCreatedResponse({ type: [ProductMediaDto] })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
@@ -293,6 +298,11 @@ export class AdminProductsController {
   @Post('variants/:variantId/prices')
   @RequirePermissions('catalog.price.manage')
   @ApiOperation({ operationId: 'createAdminProductPrice', summary: 'Create a global VAT-included price window' })
+  @ApiHeader({
+    name: 'x-request-id',
+    required: false,
+    description: 'Khoá idempotency (≤100 ký tự): gửi lại cùng giá trị với cùng payload trả kết quả cũ; khác payload → 409 PRODUCT_IDEMPOTENCY_CONFLICT.',
+  })
   @ApiCreatedResponse({ type: ProductDetailDto })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   @ApiNotFoundResponse({ type: ErrorResponseDto })

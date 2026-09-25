@@ -6321,6 +6321,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "x-request-id",
+            "in": "header",
+            "description": "Khoá idempotency (≤100 ký tự): gửi lại cùng giá trị với cùng payload trả kết quả cũ; khác payload → 409 PRODUCT_IDEMPOTENCY_CONFLICT.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -6910,6 +6919,15 @@
             "name": "variantId",
             "required": true,
             "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-request-id",
+            "in": "header",
+            "description": "Khoá idempotency (≤100 ký tự): gửi lại cùng giá trị với cùng payload trả kết quả cũ; khác payload → 409 PRODUCT_IDEMPOTENCY_CONFLICT.",
+            "required": false,
             "schema": {
               "type": "string"
             }
