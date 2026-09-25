@@ -183,6 +183,8 @@ describe('refund methods (D58)', () => {
 
   it('allows cash or transfer for COD', () => {
     expect(allowedRefundMethods('COD')).toEqual(['CASH', 'BANK_TRANSFER']);
+    // Đơn bán tại quầy trả tiền mặt: hoàn tiền mặt được (D58).
+    expect(allowedRefundMethods('CASH')).toEqual(['CASH', 'BANK_TRANSFER']);
     expect(() => assertRefundMethod('COD', 'CASH')).not.toThrow();
   });
 });
