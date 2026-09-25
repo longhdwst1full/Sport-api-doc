@@ -829,6 +829,47 @@ describe('Admin v1 contract', () => {
     await create('x'.repeat(101), body(`Too long key ${suffix}`)).expect(400);
   });
 
+  it('creates product, SKU and initial price in one transaction and rolls everything back on a bad media asset', async () => {
+    const suffix = uuidv7().replaceAll('-', '').slice(-8).toUpperCase();
+    const authorization = { authorization: `Bearer ${accessToken}` };
+    const categoryId = idempotencyCategoryId || ((await request(server())
+      .post('/api/v1/admin/catalog/categories')
+      .set(authorization)
+      .send({ code: `SET-${suffix}`, name: 'Setup category', slug: `setup-${suffix.toLowerCase()}` })
+      .expect(201)).body as { id: string }).id;
+    if (!idempotencyCategoryId) idempotencyCategoryId = categoryId;
+
+    const created = await request(server())
+      .post('/api/v1/admin/products')
+      .set(authorization)
+      .send({
+        name: `Setup product ${suffix}`,
+        categoryIds: [categoryId],
+        primaryCategoryId: categoryId,
+        variants: [{ name: 'Standard', initialPriceAmount: '7800000' }],
+      })
+      .expect(201);
+    const product = created.body as { id: string; variants: Array<{ id: string }> };
+    concurrencyProductIds.push(product.id);
+    const prices = await prisma.productPrice.findMany({ where: { productVariantId: BigInt(product.variants[0].id) } });
+    expect(prices.map(({ amount, status }) => ({ amount: amount.toFixed(0), status }))).toEqual([{ amount: '7800000', status: 'ACTIVE' }]);
+
+    // Asset không tồn tại → 422 và KHÔNG còn sản phẩm/SKU/giá nào sót lại (không có sản phẩm dở dang).
+    const brokenName = `Broken setup ${suffix}`;
+    await request(server())
+      .post('/api/v1/admin/products')
+      .set(authorization)
+      .send({
+        name: brokenName,
+        categoryIds: [categoryId],
+        primaryCategoryId: categoryId,
+        variants: [{ name: 'Standard', initialPriceAmount: '100000' }],
+        media: [{ mediaAssetId: '999999999999' }],
+      })
+      .expect(422);
+    expect(await prisma.product.count({ where: { name: brokenName } })).toBe(0);
+  });
+
   it('creates, updates and changes branch plus warehouse status atomically', async () => {
     const suffix = uuidv7().replaceAll('-', '').slice(-8).toUpperCase();
     const authorization = { authorization: `Bearer ${accessToken}` };

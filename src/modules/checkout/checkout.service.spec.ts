@@ -1,4 +1,4 @@
-import { ConflictException, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
@@ -299,5 +299,17 @@ describe('CheckoutService', () => {
       });
       expect(transaction.checkoutSession.update).not.toHaveBeenCalled();
     });
+  });
+
+  it('answers 403 for a consultation outside the assigned branch', async () => {
+    transaction.checkoutSession.findUnique.mockResolvedValue({ id: 40n, branchId: 9n, status: 'AWAITING_SHIPPING_CONSULTATION', version: 0n });
+    const otherBranchManager = {
+      userId: '2', sessionId: '3', displayName: 'Manager', permissionVersion: '1',
+      permissions: [], scopes: [{ type: ScopeType.BRANCH, branchId: '3' }], mustChangePassword: false,
+    };
+
+    await expect(service.updateManualShipping('token', {
+      shippingFee: '0', etaMinDays: 1, etaMaxDays: 2, agreementNote: 'x', expectedVersion: 0,
+    }, otherBranchManager, 'request-8')).rejects.toBeInstanceOf(ForbiddenException);
   });
 });

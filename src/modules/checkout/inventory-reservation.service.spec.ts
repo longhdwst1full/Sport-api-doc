@@ -2,6 +2,7 @@ import { NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
 import {
+  flashSaleCustomerKey,
   InventoryReservationService,
   isSerializationConflict,
 } from './inventory-reservation.service';
@@ -74,5 +75,13 @@ describe('InventoryReservationService serialization conflict mapping', () => {
   it('does not classify unrelated Prisma errors as serialization conflicts', () => {
     expect(isSerializationConflict(knownError('P2002'))).toBe(false);
     expect(isSerializationConflict(new Error('40001'))).toBe(false);
+  });
+
+  it('keys the guest flash-sale limit by customer profile, not by cart', () => {
+    expect(flashSaleCustomerKey(undefined, { customerId: 44n, cartId: 12n })).toBe('customer:44');
+    // Giỏ mới (xoá cookie) nhưng cùng SĐT → cùng hồ sơ khách → cùng khoá.
+    expect(flashSaleCustomerKey(undefined, { customerId: 44n, cartId: 99n })).toBe('customer:44');
+    expect(flashSaleCustomerKey('7', { customerId: 44n, cartId: 12n })).toBe('user:7');
+    expect(flashSaleCustomerKey(undefined, { customerId: null, cartId: 12n })).toBe('cart:12');
   });
 });

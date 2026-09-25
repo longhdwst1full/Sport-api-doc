@@ -37,6 +37,47 @@ export class ProductMediaService {
     private readonly objectStorage: ObjectStorageClient,
   ) {}
 
+  /**
+   * Gắn ảnh cấp sản phẩm ngay trong transaction tạo sản phẩm (createAdminProduct).
+   *
+   * TRANSACTION: chạy trong transaction của nơi gọi, nên asset không hợp lệ làm rollback cả sản phẩm,
+   * SKU và giá — không còn sản phẩm dở dang thiếu ảnh. Khoá asset theo thứ tự id để hai lần tạo song
+   * song dùng chung ảnh không deadlock. Không claim version: sản phẩm vừa tạo trong chính transaction.
+   */
+  async attachInitialMedia(
+    transaction: Prisma.TransactionClient,
+    productId: bigint,
+    items: ReadonlyArray<{ mediaAssetId: string; altText?: string }>,
+    context: MutationContext,
+  ): Promise<void> {
+    const assetIds = items.map(({ mediaAssetId }) => toDatabaseId(mediaAssetId));
+    for (const id of [...assetIds].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0))) {
+      await this.lockMediaAsset(transaction, id);
+    }
+    const activeCount = await transaction.mediaAsset.count({
+      where: { id: { in: assetIds }, status: MEDIA_ASSET_STATUS.ACTIVE },
+    });
+    if (activeCount !== new Set(assetIds.map(String)).size) {
+      throw new UnprocessableEntityException('Media asset is not finalized or active');
+    }
+    for (const [sortOrder, item] of items.entries()) {
+      const media = await transaction.productMedia.create({
+        data: {
+          productId,
+          mediaAssetId: assetIds[sortOrder],
+          altText: item.altText?.trim() || null,
+          sortOrder,
+          isPrimary: sortOrder === 0,
+        },
+      });
+      await this.writeAudit(transaction, context, PRODUCT_AUDIT_ACTION.MEDIA_ATTACH, media.id, undefined, {
+        mediaAssetId: item.mediaAssetId,
+        variantId: null,
+        sortOrder,
+      });
+    }
+  }
+
   attach(
     productId: string,
     input: AttachProductMediaDto,

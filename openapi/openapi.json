@@ -5269,7 +5269,7 @@
             }
           },
           "403": {
-            "description": "",
+            "description": "Thiếu catalog.price.manage khi gửi initialPriceAmount",
             "content": {
               "application/json": {
                 "schema": {
@@ -19892,7 +19892,7 @@
           "categoryIds"
         ]
       },
-      "CreateVariantDto": {
+      "CreateProductVariantDto": {
         "type": "object",
         "properties": {
           "barcode": {
@@ -19913,10 +19913,32 @@
           },
           "heightMm": {
             "type": "number"
+          },
+          "initialPriceAmount": {
+            "type": "string",
+            "example": "7800000",
+            "description": "Giá bán ban đầu (VND, đã gồm VAT) có hiệu lực ngay; cần quyền catalog.price.manage"
           }
         },
         "required": [
           "name"
+        ]
+      },
+      "CreateProductMediaDto": {
+        "type": "object",
+        "properties": {
+          "mediaAssetId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1"
+          },
+          "altText": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "mediaAssetId"
         ]
       },
       "CreateProductDto": {
@@ -19965,7 +19987,15 @@
             "description": "Danh sách SKU ban đầu được tạo atomic cùng sản phẩm",
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/CreateVariantDto"
+              "$ref": "#/components/schemas/CreateProductVariantDto"
+            }
+          },
+          "media": {
+            "maxItems": 20,
+            "description": "Ảnh cấp sản phẩm (asset đã upload và ACTIVE) gắn cùng transaction; ảnh đầu tiên là ảnh chính",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateProductMediaDto"
             }
           }
         },
@@ -20034,6 +20064,33 @@
         },
         "required": [
           "expectedVersion"
+        ]
+      },
+      "CreateVariantDto": {
+        "type": "object",
+        "properties": {
+          "barcode": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "weightGrams": {
+            "type": "number",
+            "default": 0
+          },
+          "lengthMm": {
+            "type": "number"
+          },
+          "widthMm": {
+            "type": "number"
+          },
+          "heightMm": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "name"
         ]
       },
       "UpdateVariantDto": {

@@ -178,7 +178,7 @@ export class CreateProductDto {
   @ApiProperty({ ...ENTITY_ID_OPENAPI }) @IsEntityId() primaryCategoryId: string;
 
   @ApiProperty({
-    type: () => [CreateVariantDto],
+    type: () => [CreateProductVariantDto],
     minItems: 1,
     maxItems: 50,
     description: 'Danh sách SKU ban đầu được tạo atomic cùng sản phẩm',
@@ -187,12 +187,24 @@ export class CreateProductDto {
   @ArrayNotEmpty()
   @ArrayMaxSize(50)
   @ValidateNested({ each: true })
-  @Type(() => CreateVariantDto)
-  variants: CreateVariantDto[];
+  @Type(() => CreateProductVariantDto)
+  variants: CreateProductVariantDto[];
+
+  @ApiPropertyOptional({
+    type: () => [CreateProductMediaDto],
+    maxItems: 20,
+    description: 'Ảnh cấp sản phẩm (asset đã upload và ACTIVE) gắn cùng transaction; ảnh đầu tiên là ảnh chính',
+  })
+  @IsArray()
+  @ArrayMaxSize(20)
+  @ValidateNested({ each: true })
+  @Type(() => CreateProductMediaDto)
+  @IsOptional()
+  media?: CreateProductMediaDto[];
 }
 
 export class UpdateProductFieldsDto extends PartialType(
-  OmitType(CreateProductDto, ['brandId', 'shortDescription', 'description', 'variants'] as const),
+  OmitType(CreateProductDto, ['brandId', 'shortDescription', 'description', 'variants', 'media'] as const),
 ) {
   @ApiPropertyOptional({ description: 'Only mutable while the product is DRAFT' })
   @IsString()
@@ -235,6 +247,23 @@ export class CreateVariantDto {
   @ApiPropertyOptional() @IsInt() @Min(1) @IsOptional() lengthMm?: number;
   @ApiPropertyOptional() @IsInt() @Min(1) @IsOptional() widthMm?: number;
   @ApiPropertyOptional() @IsInt() @Min(1) @IsOptional() heightMm?: number;
+}
+
+/** SKU ban đầu khi tạo sản phẩm: như CreateVariantDto, cộng giá bán ban đầu tuỳ chọn. */
+export class CreateProductVariantDto extends CreateVariantDto {
+  @ApiPropertyOptional({
+    example: '7800000',
+    description: 'Giá bán ban đầu (VND, đã gồm VAT) có hiệu lực ngay; cần quyền catalog.price.manage',
+  })
+  @IsNumberString()
+  @Matches(/^(?=.*[1-9])\d+(?:\.\d{1,2})?$/)
+  @IsOptional()
+  initialPriceAmount?: string;
+}
+
+export class CreateProductMediaDto {
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) @IsEntityId() mediaAssetId: string;
+  @ApiPropertyOptional({ maxLength: 500 }) @IsString() @MaxLength(500) @IsOptional() altText?: string;
 }
 
 export class UpdateVariantFieldsDto {

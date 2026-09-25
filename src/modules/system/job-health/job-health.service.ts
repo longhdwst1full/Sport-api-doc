@@ -51,13 +51,19 @@ export class JobHealthService {
     const startedAt = Date.now();
     try {
       const result = await work();
-      await this.safely(() => this.record(job, requestId, { status: JOB_RUN_STATUS.SUCCEEDED, durationMs: Date.now() - startedAt }));
+      const durationMs = Date.now() - startedAt;
+      // Log mọi lượt (audit chỉ ghi thành công mỗi 10 phút) để tìm endpoint nào gần mốc timeout 30s
+      // của pg_net; lọc log theo `cronJob` và `durationMs`.
+      this.logger.log({ cronJob: job, requestId, status: JOB_RUN_STATUS.SUCCEEDED, durationMs }, 'cron job finished');
+      await this.safely(() => this.record(job, requestId, { status: JOB_RUN_STATUS.SUCCEEDED, durationMs }));
       await this.safely(() => this.checkStaleJobs(job, requestId));
       return result;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      const durationMs = Date.now() - startedAt;
+      this.logger.warn({ cronJob: job, requestId, status: JOB_RUN_STATUS.FAILED, durationMs, error: message.slice(0, 300) }, 'cron job failed');
       await this.safely(() =>
-        this.record(job, requestId, { status: JOB_RUN_STATUS.FAILED, durationMs: Date.now() - startedAt, error: message.slice(0, 300) }),
+        this.record(job, requestId, { status: JOB_RUN_STATUS.FAILED, durationMs, error: message.slice(0, 300) }),
       );
       throw error;
     }

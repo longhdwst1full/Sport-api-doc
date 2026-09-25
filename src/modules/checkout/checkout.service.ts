@@ -95,6 +95,7 @@ export class CheckoutService {
       const current = await transaction.checkoutSession.findUnique({ where: { checkoutToken: token }, include: { branch: true, items: true } });
       if (!current) throw new BadRequestException('Checkout session was not found');
       const scoped = principal.scopes.some((scope) => scope.type === ScopeType.GLOBAL || (scope.type === ScopeType.BRANCH && scope.branchId === toEntityId(current.branchId)));
+      // SECURITY (quy ước 2026-09-25): bản ghi cụ thể ngoài phạm vi chi nhánh trả 403.
       if (!scoped) throw new ForbiddenException('Checkout is outside the assigned branch scope');
       if (current.status !== CHECKOUT_STATUS.AWAITING_SHIPPING_CONSULTATION) throw new ConflictException('Checkout is not awaiting shipping consultation');
       if (Number(current.version) !== input.expectedVersion) throw new ConflictException('Checkout changed; reload and retry');

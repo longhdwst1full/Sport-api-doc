@@ -63,6 +63,22 @@ export interface ReservationActorContext {
   userId?: string;
 }
 
+/**
+ * Khoá tính giới hạn mỗi khách của Flash Sale.
+ *
+ * SECURITY: khách vãng lai khoá theo hồ sơ khách (tìm/tạo theo SĐT lúc báo giá), không theo giỏ —
+ * xoá cookie tạo giỏ mới không còn lách được. `cart:` chỉ là fallback cho checkout cũ chưa có
+ * customerId. Tài khoản giữ `user:` để không làm lệch số suất đã đếm của campaign đang chạy.
+ */
+export function flashSaleCustomerKey(
+  userId: string | undefined,
+  checkout: { customerId: bigint | null; cartId: bigint },
+): string {
+  if (userId) return `user:${userId}`;
+  if (checkout.customerId) return `customer:${toEntityId(checkout.customerId)}`;
+  return `cart:${toEntityId(checkout.cartId)}`;
+}
+
 @Injectable()
 export class InventoryReservationService {
   constructor(
@@ -174,7 +190,7 @@ export class InventoryReservationService {
           await this.flashSales.reserveQuota(
             transaction,
             checkout.id,
-            actor.userId ? `user:${actor.userId}` : `cart:${toEntityId(checkout.cartId)}`,
+            flashSaleCustomerKey(actor.userId, checkout),
             checkout.items.map((item) => ({
               productVariantId: item.productVariantId,
               quantity: item.quantity,

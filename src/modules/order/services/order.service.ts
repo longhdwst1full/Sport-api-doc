@@ -564,6 +564,8 @@ export class OrderService {
     const allowed = actor.principal.scopes.some(
       (scope) => scope.type === ScopeType.BRANCH && scope.branchId && toDatabaseId(scope.branchId) === order.branchId,
     );
+    // SECURITY (quy ước 2026-09-25): danh sách lọc theo phạm vi (có thể rỗng); thao tác trên bản ghi
+    // cụ thể ngoài phạm vi trả 403, không âm thầm bỏ qua và không 200 rỗng.
     if (!allowed) throw new ForbiddenException('Đơn hàng không thuộc phạm vi chi nhánh được phân quyền');
   }
 

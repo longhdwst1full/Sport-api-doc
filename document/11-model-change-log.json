@@ -5847,6 +5847,32 @@
         "client:src/features/cart/api/cart-sync.ts"
       ],
       "targets": []
+    },
+    {
+      "id": "API-20260925-PRODUCT-ATOMIC-SETUP",
+      "date": "2026-09-25",
+      "scope": "API+CATALOG+OPENAPI+ADMIN",
+      "summary": "createAdminProduct nhận thêm variants[].initialPriceAmount (CreateProductVariantDto) và media[] (CreateProductMediaDto, ≤20, không trùng). Product, category, SKU, giá ban đầu (ACTIVE từ thời điểm tạo) và liên kết ảnh (ảnh đầu là primary, khoá asset theo thứ tự id) ghi trong cùng transaction; asset không ACTIVE → 422 và rollback toàn bộ (e2e PostgreSQL xác nhận không còn sản phẩm). Gửi giá mà thiếu catalog.price.manage → 403. Admin gửi giá/ảnh trong lệnh tạo và bỏ các request giá/ảnh chạy sau; chỉ còn tồn đầu là phiếu kho riêng. Contract chỉ thêm field tuỳ chọn.",
+      "sources": [
+        "OpenAPI:createAdminProduct",
+        "source:src/modules/catalog/products/services/products.service.ts",
+        "source:src/modules/catalog/products/services/product-media.service.ts",
+        "test:src/modules/catalog/products/services/products.service.spec.ts",
+        "test:test/admin-contract.e2e-spec.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260925-FLASH-GUEST-CUSTOMER-KEY",
+      "date": "2026-09-25",
+      "scope": "API+CHECKOUT+PROMOTION",
+      "summary": "Giới hạn mỗi khách của Flash Sale cho khách vãng lai khoá theo customer:<customerId> (hồ sơ khách tìm/tạo theo SĐT lúc báo giá) thay vì cart:<cartId>; xoá cookie tạo giỏ mới không còn lách được. Tài khoản giữ user:<id>; cart: chỉ còn fallback khi checkout không có customerId.",
+      "sources": [
+        "OpenAPI:confirmGuestCheckout",
+        "source:src/modules/checkout/inventory-reservation.service.ts",
+        "test:src/modules/checkout/inventory-reservation.service.spec.ts"
+      ],
+      "targets": []
     }
   ]
 }

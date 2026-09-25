@@ -21,6 +21,7 @@ import {
 import { PrismaService } from '../../../../database/prisma.service';
 import { AuditReader } from '../../../audit/audit.reader';
 import { AuditWriter } from '../../../audit/audit.writer';
+import { ProductMediaService } from './product-media.service';
 import { CATALOG_REFERENCE_STATUS } from '../../catalog.constants';
 import {
   ChangeProductStatusDto,
@@ -73,6 +74,7 @@ export class ProductsService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditWriter,
     private readonly auditReader: AuditReader,
+    private readonly media: ProductMediaService,
   ) {}
 
   async searchActiveVariants(query: ActiveSearchQueryDto): Promise<ActiveLookupResponseDto> {
@@ -260,7 +262,10 @@ export class ProductsService {
     const requestHash = this.createRequestHash(input, context);
     const productNo = generateProductNo();
     const slug = generateProductSlug(input.name, productNo);
-    const { variants, ...productInput } = input;
+    const { variants, media = [], ...productInput } = input;
+    if (new Set(media.map(({ mediaAssetId }) => mediaAssetId)).size !== media.length) {
+      throw new UnprocessableEntityException('Media assets must be unique');
+    }
     try {
       const productId = await this.prisma.$transaction(async (transaction) => {
         // TRANSACTION: AuditWriter tự cấp sequence_no = MAX + 1, nên unique (request_id, sequence_no)
@@ -299,11 +304,39 @@ export class ProductsService {
         });
         // TRANSACTION: Product, category links và toàn bộ SKU ban đầu là một aggregate create;
         // barcode/SKU lỗi phải rollback tất cả để Admin không nhận một SPU dở dang.
-        for (const [variantIndex, variantInput] of variants.entries()) {
+        const now = new Date();
+        for (const [variantIndex, { initialPriceAmount, ...variantInput }] of variants.entries()) {
           const sku = generateSku(productNo);
           const variant = await transaction.productVariant.create({
             data: { productId: product.id, sku, ...variantInput },
           });
+          // TRANSACTION: giá ban đầu tạo cùng SKU; không còn SKU "chưa có giá" khi mạng rớt giữa chừng.
+          // Chưa có giá tham chiếu nên không áp luật giảm >20% phải có lý do.
+          if (initialPriceAmount) {
+            const price = await transaction.productPrice.create({
+              data: {
+                productVariantId: variant.id,
+                amount: new Prisma.Decimal(initialPriceAmount),
+                startsAt: now,
+                status: PRODUCT_PRICE_STATUS.ACTIVE,
+                createdBy: toDatabaseId(context.actorUserId),
+                updatedBy: toDatabaseId(context.actorUserId),
+              },
+            });
+            await this.audit.write(
+              {
+                requestId: context.requestId,
+                sequenceNo: 1,
+                actorType: 'USER',
+                actorUserId: context.actorUserId,
+                action: PRODUCT_AUDIT_ACTION.PRICE_CREATE,
+                entityType: 'PRODUCT_PRICE',
+                entityId: toEntityId(price.id),
+                after: { amount: initialPriceAmount, startsAt: now.toISOString(), initial: true },
+              },
+              transaction,
+            );
+          }
           await this.audit.write(
             {
               requestId: context.requestId,
@@ -332,6 +365,7 @@ export class ProductsService {
               productNo,
               slug,
               variantCount: variants.length,
+              mediaCount: media.length,
               // IDEMPOTENCY: dấu vân tay để lần gửi lại cùng x-request-id so với payload gốc.
               idempotency: {
                 fingerprintVersion: PRODUCT_CREATE_IDEMPOTENCY.FINGERPRINT_VERSION,
@@ -341,6 +375,7 @@ export class ProductsService {
           },
           transaction,
         );
+        if (media.length > 0) await this.media.attachInitialMedia(transaction, product.id, media, context);
         return product.id;
       });
       return this.getById(productId);

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, Delete, ForbiddenException, Get, HttpCode, Param, Patch, Post, Query, Req } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -102,10 +102,16 @@ export class AdminProductsController {
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   @ApiConflictResponse({ type: ErrorResponseDto })
   @ApiUnprocessableEntityResponse({ type: ErrorResponseDto })
+  @ApiForbiddenResponse({ type: ErrorResponseDto, description: 'Thiếu catalog.price.manage khi gửi initialPriceAmount' })
   createAdminProduct(
     @Body() input: CreateProductDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<ProductDetailDto> {
+    // SECURITY: giá ban đầu là thao tác giá — cùng quyền với createAdminProductPrice. Chỉ tạo sản phẩm
+    // (không kèm giá) thì `catalog.product.manage` là đủ như trước.
+    if (input.variants.some(({ initialPriceAmount }) => initialPriceAmount) && !request.auth?.permissions.includes('catalog.price.manage')) {
+      throw new ForbiddenException('catalog.price.manage is required to set initial prices');
+    }
     return this.products.create(input, getMutationContext(request));
   }
 

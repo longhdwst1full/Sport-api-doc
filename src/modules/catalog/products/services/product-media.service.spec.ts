@@ -235,3 +235,41 @@ describe('ProductMediaService', () => {
     });
   });
 });
+
+describe('ProductMediaService.attachInitialMedia', () => {
+  const build = (activeCount: number) => {
+    const transaction = {
+      $queryRaw: jest.fn().mockResolvedValue([]),
+      mediaAsset: { count: jest.fn().mockResolvedValue(activeCount) },
+      productMedia: { create: jest.fn().mockImplementation(({ data }: { data: { sortOrder: number } }) => Promise.resolve({ id: BigInt(100 + data.sortOrder) })) },
+    };
+    const write = jest.fn().mockResolvedValue(undefined);
+    const service = new ProductMediaService({} as PrismaService, { write } as unknown as AuditWriter, {} as ObjectStorageClient);
+    return { service, transaction, write };
+  };
+  const context = { requestId: 'req-media', actorUserId: '2' };
+
+  it('links assets in order with the first one primary, inside the caller transaction', async () => {
+    const { service, transaction, write } = build(2);
+
+    await service.attachInitialMedia(transaction as never, 1n, [{ mediaAssetId: '9' }, { mediaAssetId: '5', altText: ' Mặt bên ' }], context);
+
+    const created = (transaction.productMedia.create.mock.calls as Array<[{ data: Record<string, unknown> }]>).map(([call]) => call.data);
+    expect(created).toEqual([
+      expect.objectContaining({ productId: 1n, mediaAssetId: 9n, sortOrder: 0, isPrimary: true, altText: null }),
+      expect.objectContaining({ productId: 1n, mediaAssetId: 5n, sortOrder: 1, isPrimary: false, altText: 'Mặt bên' }),
+    ]);
+    // Khoá theo thứ tự id (5 rồi 9) để hai lần tạo song song dùng chung ảnh không deadlock.
+    expect(transaction.$queryRaw).toHaveBeenCalledTimes(2);
+    expect(write).toHaveBeenCalledTimes(2);
+  });
+
+  it('fails the whole create when an asset is not ACTIVE', async () => {
+    const { service, transaction } = build(1);
+
+    await expect(
+      service.attachInitialMedia(transaction as never, 1n, [{ mediaAssetId: '9' }, { mediaAssetId: '5' }], context),
+    ).rejects.toBeInstanceOf(UnprocessableEntityException);
+    expect(transaction.productMedia.create).not.toHaveBeenCalled();
+  });
+});

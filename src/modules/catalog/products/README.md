@@ -1,10 +1,10 @@
 # Catalog Products module maintenance note
 
-> **Document version:** 1.2.0
+> **Document version:** 1.3.0
 >
 > **Last updated:** 2026-09-25
 >
-> **Change summary:** `createAdminProduct` idempotent theo `x-request-id` + audit, có advisory lock và 409 khi khác payload/người/thao tác.
+> **Change summary:** `createAdminProduct` tạo luôn giá ban đầu và ảnh cấp sản phẩm trong cùng transaction.
 
 ## Phạm vi và entrypoint
 
@@ -23,7 +23,11 @@ bundle use case; `ProductMediaService` sở hữu media link lifecycle.
 
 ## Invariant tạo sản phẩm
 
-- `createAdminProduct` nhận thông tin Product và 1–50 initial variants.
+- `createAdminProduct` nhận thông tin Product và 1–50 initial variants; mỗi variant có thể kèm
+  `initialPriceAmount` (cần thêm `catalog.price.manage`, kiểm ở controller) và `media[]` (≤20 asset
+  ACTIVE, ảnh đầu là ảnh chính). Product, SKU, giá, ảnh và audit cùng một transaction: asset lỗi hoặc
+  giá lỗi rollback toàn bộ — không còn sản phẩm dở dang thiếu giá/ảnh. Tồn đầu vẫn là phiếu kho riêng
+  của từng chi nhánh (không gộp vào đây vì Catalog không ghi bảng của Inventory).
 - Product, category links, toàn bộ initial variants và audit ghi trong một Prisma transaction.
   Bất kỳ category/barcode/SKU/audit write lỗi đều rollback toàn aggregate.
 - Mỗi variant có audit sequence riêng; Product audit chỉ snapshot `variantCount`, không lặp
@@ -80,6 +84,7 @@ bundle use case; `ProductMediaService` sở hữu media link lifecycle.
 
 | Version | Date | Change summary |
 | --- | --- | --- |
+| 1.3.0 | 2026-09-25 | Giá ban đầu + ảnh gắn trong transaction tạo sản phẩm. |
 | 1.2.0 | 2026-09-25 | createAdminProduct idempotent theo x-request-id + audit, advisory lock, 409 PRODUCT_IDEMPOTENCY_CONFLICT. |
 | 1.1.0 | 2026-09-21 | DELETE Product Media gọi Cloudinary, chặn asset dùng chung và compensation khi provider lỗi. |
 | 1.0.0 | 2026-09-20 | Tạo note và aggregate create Product + initial variants atomic. |

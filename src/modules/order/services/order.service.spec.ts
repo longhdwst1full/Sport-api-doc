@@ -1,3 +1,4 @@
+import { ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 import { Prisma } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
@@ -79,5 +80,20 @@ describe('OrderService admin query', () => {
       principal([]),
     )).rejects.toThrow('Tài khoản chưa được gán phạm vi chi nhánh');
     expect(findMany).not.toHaveBeenCalled();
+  });
+
+  it('answers 403 when an admin acts on an order outside the assigned branch', () => {
+    const assertTransitionOwnership = (service as unknown as {
+      assertTransitionOwnership(order: { branchId: bigint }, actor: { type: 'ADMIN'; principal: AuthPrincipal }): void;
+    }).assertTransitionOwnership.bind(service);
+
+    expect(() => assertTransitionOwnership(
+      { branchId: 9n },
+      { type: 'ADMIN', principal: principal([{ type: ScopeType.BRANCH, branchId: '3' }]) },
+    )).toThrow(ForbiddenException);
+    expect(() => assertTransitionOwnership(
+      { branchId: 3n },
+      { type: 'ADMIN', principal: principal([{ type: ScopeType.BRANCH, branchId: '3' }]) },
+    )).not.toThrow();
   });
 });
