@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { AuditReader } from './audit.reader';
 import { AuditWriter, PrismaAuditWriter } from './audit.writer';
 import { AuditController } from './audit.controller';
 import { AuditService } from './audit.service';
@@ -7,6 +8,7 @@ import { AuditService } from './audit.service';
 @Module({
   providers: [
     AuditService,
+    AuditReader,
     {
       provide: AuditWriter,
       inject: [PrismaService],
@@ -14,6 +16,6 @@ import { AuditService } from './audit.service';
     },
   ],
   controllers: [AuditController],
-  exports: [AuditWriter],
+  exports: [AuditWriter, AuditReader],
 })
 export class AuditModule {}

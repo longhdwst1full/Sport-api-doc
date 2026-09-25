@@ -39,6 +39,7 @@ describe('Admin v1 contract', () => {
   };
   const concurrencyProductIds: string[] = [];
   let concurrencyCategoryId = '';
+  let idempotencyCategoryId = '';
   const organizationFixture = { branchId: '', warehouseId: '' };
 
   beforeAll(async () => {
@@ -116,6 +117,9 @@ describe('Admin v1 contract', () => {
     }
     if (concurrencyCategoryId) {
       await prisma.category.deleteMany({ where: { id: BigInt(concurrencyCategoryId) } });
+    }
+    if (idempotencyCategoryId) {
+      await prisma.category.deleteMany({ where: { id: BigInt(idempotencyCategoryId) } });
     }
     if (catalogFixture.categoryId) {
       await prisma.category.deleteMany({ where: { id: BigInt(catalogFixture.categoryId) } });
@@ -758,6 +762,71 @@ describe('Admin v1 contract', () => {
       prisma.productVariant.findUniqueOrThrow({ where: { id: BigInt(componentVariantId) } }),
     ]);
     expect(combo.status === 'PUBLISHED' && component.status === 'INACTIVE').toBe(false);
+  });
+
+  it('replays createAdminProduct by x-request-id and rejects a reused key with another payload', async () => {
+    const suffix = uuidv7().replaceAll('-', '').slice(-8).toUpperCase();
+    const authorization = { authorization: `Bearer ${accessToken}` };
+    const categoryResponse = await request(server())
+      .post('/api/v1/admin/catalog/categories')
+      .set(authorization)
+      .send({ code: `IDEM-${suffix}`, name: 'Idempotency category', slug: `idempotency-${suffix.toLowerCase()}` })
+      .expect(201);
+    idempotencyCategoryId = (categoryResponse.body as { id: string }).id;
+    const body = (name: string) => ({
+      name,
+      categoryIds: [idempotencyCategoryId],
+      primaryCategoryId: idempotencyCategoryId,
+      variants: [{ name: `${name} SKU`, weightGrams: 1200 }],
+    });
+    const create = (requestId: string, payload: ReturnType<typeof body>) =>
+      request(server()).post('/api/v1/admin/products').set(authorization).set('x-request-id', requestId).send(payload);
+    const productIdsFor = async (name: string) =>
+      (await prisma.product.findMany({ where: { name }, select: { id: true } })).map(({ id }) => id.toString());
+
+    // Lần gửi lại tuần tự (mất response rồi bấm lại): cùng khoá, cùng payload → cùng sản phẩm.
+    const sequentialKey = `e2e-product-${uuidv7()}`;
+    const sequentialName = `Idempotent product ${suffix}`;
+    const first = await create(sequentialKey, body(sequentialName)).expect(201);
+    const firstId = (first.body as { id: string }).id;
+    concurrencyProductIds.push(firstId);
+    const replay = await create(sequentialKey, body(sequentialName)).expect(201);
+    expect((replay.body as { id: string; productNo: string }).id).toBe(firstId);
+    expect((replay.body as { productNo: string }).productNo).toBe((first.body as { productNo: string }).productNo);
+    expect(await productIdsFor(sequentialName)).toEqual([firstId]);
+
+    // Cùng khoá nhưng dữ liệu khác → 409, không tạo thêm.
+    const conflict = await create(sequentialKey, body(`${sequentialName} changed`)).expect(409);
+    expect((conflict.body as ErrorBody).code).toBe('PRODUCT_IDEMPOTENCY_CONFLICT');
+    expect(await productIdsFor(`${sequentialName} changed`)).toEqual([]);
+
+    // Hai request song song cùng khoá: advisory lock bắt chạy tuần tự → đúng một sản phẩm.
+    const parallelKey = `e2e-product-${uuidv7()}`;
+    const parallelName = `Parallel product ${suffix}`;
+    const responses = await Promise.all([
+      create(parallelKey, body(parallelName)),
+      create(parallelKey, body(parallelName)),
+    ]);
+    expect(responses.map(({ status }) => status)).toEqual([201, 201]);
+    const parallelIds = responses.map(({ body: created }) => (created as { id: string }).id);
+    concurrencyProductIds.push(...new Set(parallelIds));
+    expect(new Set(parallelIds).size).toBe(1);
+    expect(await productIdsFor(parallelName)).toEqual([parallelIds[0]]);
+    const productAudits = await prisma.auditLog.count({
+      where: { requestId: parallelKey, action: 'catalog.product.create' },
+    });
+    expect(productAudits).toBe(1);
+
+    // Không gửi khoá: giữ hành vi cũ, mỗi lần gọi tạo một sản phẩm mới.
+    const withoutKeyName = `Keyless product ${suffix}`;
+    const keyless = await Promise.all([
+      request(server()).post('/api/v1/admin/products').set(authorization).send(body(withoutKeyName)).expect(201),
+      request(server()).post('/api/v1/admin/products').set(authorization).send(body(withoutKeyName)).expect(201),
+    ]);
+    concurrencyProductIds.push(...keyless.map(({ body: created }) => (created as { id: string }).id));
+    expect(await productIdsFor(withoutKeyName)).toHaveLength(2);
+
+    await create('x'.repeat(101), body(`Too long key ${suffix}`)).expect(400);
   });
 
   it('creates, updates and changes branch plus warehouse status atomically', async () => {

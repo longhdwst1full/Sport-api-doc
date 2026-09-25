@@ -89,6 +89,22 @@ export const PRODUCT_AUDIT_ACTION = {
   BUNDLE_CREATE: 'catalog.bundle.create',
 } as const;
 
+/**
+ * IDEMPOTENCY: createAdminProduct dùng `x-request-id` làm khoá và audit `catalog.product.create`
+ * làm bản ghi kết quả. Tăng `FINGERPRINT_VERSION` khi đổi cách tính hash, để bản ghi cũ không bị
+ * so nhầm thành xung đột với cách tính mới.
+ */
+export const PRODUCT_CREATE_IDEMPOTENCY = {
+  HEADER: 'x-request-id',
+  OPERATION: 'createAdminProduct',
+  FINGERPRINT_VERSION: 1,
+  MAX_KEY_LENGTH: 100,
+} as const;
+
+export const PRODUCT_ERROR_CODE = {
+  IDEMPOTENCY_CONFLICT: 'PRODUCT_IDEMPOTENCY_CONFLICT',
+} as const;
+
 export const PRODUCT_ERROR = {
   NOT_FOUND: 'Product not found',
   VARIANT_NOT_FOUND: 'Variant not found',

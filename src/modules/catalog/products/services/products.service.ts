@@ -1,4 +1,6 @@
+import { createHash } from 'node:crypto';
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -17,6 +19,7 @@ import {
   ActiveSearchQueryDto,
 } from '../../../../common/pagination/active-search.dto';
 import { PrismaService } from '../../../../database/prisma.service';
+import { AuditReader } from '../../../audit/audit.reader';
 import { AuditWriter } from '../../../audit/audit.writer';
 import { CATALOG_REFERENCE_STATUS } from '../../catalog.constants';
 import {
@@ -39,8 +42,10 @@ import {
   PRODUCT_AUDIT_ACTION,
   PRODUCT_BUNDLE_STATUS,
   PRODUCT_BUNDLE_TYPE,
+  PRODUCT_CREATE_IDEMPOTENCY,
   PRODUCT_CURRENCY,
   PRODUCT_ERROR,
+  PRODUCT_ERROR_CODE,
   PRODUCT_PRICE_STATUS,
   PRODUCT_PRICE_TYPE,
   PRODUCT_SALES_CHANNEL,
@@ -67,6 +72,7 @@ export class ProductsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditWriter,
+    private readonly auditReader: AuditReader,
   ) {}
 
   async searchActiveVariants(query: ActiveSearchQueryDto): Promise<ActiveLookupResponseDto> {
@@ -236,13 +242,39 @@ export class ProductsService {
     return this.toDetail(row, storefront);
   }
 
+  /**
+   * Tạo Product cùng 1–50 SKU ban đầu trong một transaction.
+   *
+   * IDEMPOTENCY: khoá là `x-request-id` (Admin giữ cố định cho một lần mở form tạo), kết quả lưu
+   * chính là audit `catalog.product.create` của request đó — không thêm cột. Cùng khoá + cùng người +
+   * cùng payload trả sản phẩm đã tạo; khoá đã gắn với thao tác khác, người khác hoặc payload khác trả
+   * 409. Request không gửi header nhận id ngẫu nhiên từ server nên mỗi lần gọi là một lần tạo mới.
+   */
   async create(input: CreateProductDto, context: MutationContext): Promise<ProductDetailDto> {
+    if (context.requestId.length > PRODUCT_CREATE_IDEMPOTENCY.MAX_KEY_LENGTH) {
+      throw new BadRequestException(
+        `x-request-id must not exceed ${PRODUCT_CREATE_IDEMPOTENCY.MAX_KEY_LENGTH} characters`,
+      );
+    }
     this.validateCategorySelection(input.categoryIds, input.primaryCategoryId);
+    const requestHash = this.createRequestHash(input, context);
     const productNo = generateProductNo();
     const slug = generateProductSlug(input.name, productNo);
     const { variants, ...productInput } = input;
     try {
       const productId = await this.prisma.$transaction(async (transaction) => {
+        // TRANSACTION: AuditWriter tự cấp sequence_no = MAX + 1, nên unique (request_id, sequence_no)
+        // KHÔNG chặn được request thứ hai cùng id. Advisory lock theo request id giữ tới hết
+        // transaction để các request cùng id chạy tuần tự; lần tra audit ngay sau đó vì vậy luôn
+        // thấy kết quả đã commit của request trước. Va hash giữa hai id khác nhau chỉ làm chúng
+        // chờ nhau, không sai dữ liệu.
+        await transaction.$queryRaw`
+          SELECT 1 FROM (
+            SELECT pg_advisory_xact_lock(hashtextextended(${`catalog.product.create:${context.requestId}`}, 0))
+          ) AS locked`;
+        const replayedId = await this.findCreatedProduct(transaction, context, requestHash);
+        if (replayedId !== undefined) return replayedId;
+
         await this.validateReferences(transaction, input.brandId, input.categoryIds);
         const product = await transaction.product.create({
           data: {
@@ -300,6 +332,11 @@ export class ProductsService {
               productNo,
               slug,
               variantCount: variants.length,
+              // IDEMPOTENCY: dấu vân tay để lần gửi lại cùng x-request-id so với payload gốc.
+              idempotency: {
+                fingerprintVersion: PRODUCT_CREATE_IDEMPOTENCY.FINGERPRINT_VERSION,
+                requestHash,
+              },
             } as unknown as Prisma.InputJsonValue,
           },
           transaction,
@@ -1369,6 +1406,55 @@ export class ProductsService {
     );
   }
 
+  /**
+   * SHA-256 của thao tác + phương thức + người tạo + payload (key sắp xếp cố định; thứ tự mảng
+   * giữ nguyên vì quyết định sortOrder của category và SKU).
+   */
+  private createRequestHash(input: CreateProductDto, context: MutationContext): string {
+    return createHash('sha256')
+      .update(
+        canonicalJson({
+          fingerprintVersion: PRODUCT_CREATE_IDEMPOTENCY.FINGERPRINT_VERSION,
+          operation: PRODUCT_CREATE_IDEMPOTENCY.OPERATION,
+          method: 'POST',
+          actorUserId: context.actorUserId,
+          input,
+        }),
+      )
+      .digest('hex');
+  }
+
+  /**
+   * IDEMPOTENCY: trả id sản phẩm đã tạo dưới cùng request id, hoặc undefined nếu request id chưa
+   * được dùng. Phải gọi sau advisory lock và trong cùng transaction.
+   */
+  private async findCreatedProduct(
+    transaction: Prisma.TransactionClient,
+    context: MutationContext,
+    requestHash: string,
+  ): Promise<bigint | undefined> {
+    const entries = await this.auditReader.findByRequestId(context.requestId, transaction);
+    if (entries.length === 0) return undefined;
+    const created = entries.find(
+      (entry) => entry.action === PRODUCT_AUDIT_ACTION.CREATE && entry.entityType === 'PRODUCT',
+    );
+    const fingerprint = (created?.after as { idempotency?: { fingerprintVersion?: unknown; requestHash?: unknown } } | null)
+      ?.idempotency;
+    // INVARIANT: request id đã gắn với thao tác khác, hoặc là lần tạo khác người/khác payload/khác
+    // cách tính hash, thì không được tạo thêm sản phẩm dưới cùng khoá và cũng không trả sản phẩm cũ.
+    if (
+      !created?.entityId ||
+      fingerprint?.fingerprintVersion !== PRODUCT_CREATE_IDEMPOTENCY.FINGERPRINT_VERSION ||
+      fingerprint.requestHash !== requestHash
+    ) {
+      throw new ConflictException({
+        code: PRODUCT_ERROR_CODE.IDEMPOTENCY_CONFLICT,
+        message: 'Yêu cầu tạo sản phẩm này đã được dùng cho dữ liệu khác. Vui lòng tải lại form rồi thử lại.',
+      });
+    }
+    return toDatabaseId(created.entityId);
+  }
+
   private validateCategorySelection(categoryIds: string[], primaryCategoryId: string): void {
     if (new Set(categoryIds).size !== categoryIds.length) {
       throw new UnprocessableEntityException('Categories must be unique');
@@ -1406,4 +1492,17 @@ export class ProductsService {
     }
     throw error;
   }
+}
+
+/** JSON với key object sắp xếp cố định để cùng nội dung luôn ra cùng hash; bỏ key undefined như JSON.stringify. */
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map((item) => canonicalJson(item ?? null)).join(',')}]`;
+  if (value !== null && typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([, item]) => item !== undefined)
+      .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+      .map(([key, item]) => `${JSON.stringify(key)}:${canonicalJson(item)}`);
+    return `{${entries.join(',')}}`;
+  }
+  return JSON.stringify(value);
 }

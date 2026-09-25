@@ -5,6 +5,7 @@ import {
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiForbiddenResponse,
+  ApiHeader,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -88,6 +89,14 @@ export class AdminProductsController {
   @ApiOperation({
     operationId: 'createAdminProduct',
     summary: 'Create product and its initial SKU variants atomically',
+  })
+  @ApiHeader({
+    name: 'x-request-id',
+    required: false,
+    description:
+      'Khoá idempotency (≤100 ký tự). Gửi lại cùng giá trị với cùng payload trả sản phẩm đã tạo; ' +
+      'cùng giá trị nhưng payload/người tạo/thao tác khác trả 409 PRODUCT_IDEMPOTENCY_CONFLICT. ' +
+      'Bỏ trống thì server tự sinh id và mỗi lần gọi tạo một sản phẩm mới.',
   })
   @ApiCreatedResponse({ type: ProductDetailDto })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
