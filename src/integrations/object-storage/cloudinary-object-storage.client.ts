@@ -6,6 +6,7 @@ import {
   ObjectStorageClient,
   SignedImageUploadResult,
   StoredImageAsset,
+  StoredImagePage,
   VerifyImageUploadInput,
 } from './object-storage.client';
 
@@ -119,6 +120,25 @@ export class CloudinaryObjectStorageClient extends ObjectStorageClient {
       sizeBytes: resource.bytes,
       format: resource.format,
       version: resource.version,
+    };
+  }
+
+  /** PROVIDER: Admin API `resources` (tối đa 500/trang), chỉ đọc; bị giới hạn rate theo giờ của Cloudinary. */
+  async listImages(prefix: string, cursor?: string): Promise<StoredImagePage> {
+    const response = (await cloudinary.api.resources({
+      type: 'upload',
+      resource_type: 'image',
+      prefix,
+      max_results: 500,
+      ...(cursor ? { next_cursor: cursor } : {}),
+    })) as { resources: Array<{ public_id: string; created_at: string; bytes: number }>; next_cursor?: string };
+    return {
+      items: response.resources.map((resource) => ({
+        publicId: resource.public_id,
+        createdAt: new Date(resource.created_at),
+        sizeBytes: resource.bytes,
+      })),
+      nextCursor: response.next_cursor,
     };
   }
 

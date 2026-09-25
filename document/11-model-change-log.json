@@ -5785,6 +5785,353 @@
         "test:src/modules/reporting/report-export.service.spec.ts"
       ],
       "targets": []
+    },
+    {
+      "id": "API-20260925-CART-MERGE-LOCK",
+      "date": "2026-09-25",
+      "scope": "API+CART",
+      "summary": "mergeGuestCartIntoAccount khoá cả giỏ khách và giỏ tài khoản (SELECT … FOR UPDATE theo thứ tự id) rồi đọc lại giỏ khách ACTIVE trước khi cộng dòng. Trước đây hai lần gộp song song (hai tab, retry) có thể cộng giỏ khách hai lần hoặc vấp unique (cart_id, product_variant_id) thành 500: integration test PostgreSQL với 3 lần gộp song song cho 2/3 rejected trên code cũ, 3/3 fulfilled và cộng đúng một lần trên code mới. Không đổi contract/schema.",
+      "sources": [
+        "OpenAPI:mergeGuestCartIntoAccount",
+        "source:src/modules/cart/cart.service.ts",
+        "test:src/modules/cart/cart-merge.service.spec.ts",
+        "test:test/cart-merge.integration-spec.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260925-CHECKOUT-SPLIT-STOCK-CONSULTATION",
+      "date": "2026-09-25",
+      "scope": "API+CHECKOUT+OPENAPI+ADMIN",
+      "summary": "Chuỗi nhiều chi nhánh: không kho nào đủ cả giỏ nhưng cộng cả chuỗi đủ thì quoteGuestCheckout/quoteAccountCheckout không còn trả 409 mà tạo checkout AWAITING_SHIPPING_CONSULTATION ở kho đáp ứng nhiều nhất, lưu shipping_rule_snapshot.consultationReason = STOCK_SPLIT_ACROSS_BRANCHES và stockShortages. AdminShippingConsultationDto thêm consultationReason (CUSTOMER_REQUESTED | SHIPPING_RULE | STOCK_SPLIT_ACROSS_BRANCHES, nullable) và stockShortages; updateAdminManualShippingQuote trả 409 CHECKOUT_STOCK_NOT_TRANSFERRED tới khi kho đủ hàng. Cả chuỗi thiếu thì vẫn 409 như cũ. Contract chỉ thêm field; không đổi schema.",
+      "sources": [
+        "OpenAPI:quoteGuestCheckout/quoteAccountCheckout/listAdminShippingConsultations/updateAdminManualShippingQuote",
+        "source:src/modules/checkout/checkout.service.ts",
+        "test:src/modules/checkout/checkout.service.spec.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "OPS-20260925-CRON-STAGGER",
+      "date": "2026-09-25",
+      "scope": "OPS+CRON",
+      "summary": "net._http_response 10 phút cho thấy 6/16 lượt cron hỏng (4 kẹt DNS 30s trong pg_net, 2 API >30s) và các lượt hỏng cùng created_at: phút chia hết cho 5 có 4 job bắn cùng lúc. Lệch lịch: flash-sale-quota-expiry 1-59/5, order-maintenance 2-59/5, reservation-expiry */5, notification-dispatch mỗi phút; mỗi phút tối đa 2 job. Áp bằng cron.alter_job và đổi mặc định trong scripts/configure-*-cron.cjs. Chưa có heartbeat/cảnh báo.",
+      "sources": [
+        "script:scripts/configure-flash-sale-quota-expiry-cron.cjs",
+        "script:scripts/configure-order-maintenance-cron.cjs"
+      ],
+      "targets": []
+    },
+    {
+      "id": "OPS-20260925-CRON-JOB-HEALTH",
+      "date": "2026-09-25",
+      "scope": "API+OPS+AUDIT+TELEGRAM",
+      "summary": "Heartbeat và cảnh báo cho 4 job cron mà không thêm bảng: JobHealthService (SystemModule) bọc reservation-expiry, flash-sale-quota-expiry, order-maintenance, notification-dispatch SAU khi kiểm Bearer secret. Mỗi lượt ghi audit system.job.run (actorType SYSTEM, entity JOB/<tên job>, after {status, durationMs, error?, consecutiveFailures?}); lượt thành công liên tiếp chỉ ghi mỗi 10 phút để không phình audit. Lỗi 2 lượt liên tiếp → Telegram một lần mỗi đợt; hồi phục → Telegram. Job khác không có lượt thành công quá 25 phút (kể cả không tới được API) → audit system.job.stale-alert + Telegram, tối đa mỗi 60 phút; bỏ qua job đang tắt bằng tham số. Nhận tin qua TELEGRAM_ALERT_CHAT_ID (fallback TELEGRAM_ALLOWED_USER_ID); Telegram lỗi/chưa cấu hình chỉ log, không làm hỏng job. AuditReader thêm findRecentForEntity. Giới hạn: nếu mọi job cùng không tới được API thì không có ai báo.",
+      "sources": [
+        "source:src/modules/system/job-health/job-health.service.ts",
+        "source:src/modules/audit/audit.reader.ts",
+        "test:src/modules/system/job-health/job-health.service.spec.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260925-CART-MULTI-DEVICE-SYNC",
+      "date": "2026-09-25",
+      "scope": "API+CART+OPENAPI+STOREFRONT",
+      "summary": "Đồng bộ giỏ giữa các thiết bị theo quyết định chủ dự án: chưa đăng nhập thì giỏ chỉ nằm trên máy; đăng nhập thì storefront đẩy giỏ trên máy lên giỏ khách, gọi mergeGuestCartIntoAccount rồi tải giỏ tài khoản về; đang đăng nhập thì mỗi thay đổi ghi lên giỏ tài khoản (debounce 400ms) và mở app thì tải giỏ tài khoản; đăng xuất/đổi tài khoản thì xoá giỏ trên máy (giỏ vẫn trong tài khoản). API: khi gộp, cùng SKU lấy số lượng LỚN HƠN thay vì cộng dồn; CartItemDto thêm productId và productType (enum ProductType dùng chung) để dựng lại giỏ local. Checkout dùng chung hàm đồng bộ, chỉ ghi dòng thay đổi. Contract chỉ thêm field; đổi quy tắc gộp là thay đổi hành vi.",
+      "sources": [
+        "OpenAPI:mergeGuestCartIntoAccount/getAccountCart",
+        "source:src/modules/cart/cart.service.ts",
+        "test:src/modules/cart/cart-merge.service.spec.ts",
+        "test:test/cart-merge.integration-spec.ts",
+        "client:src/features/cart/api/cart-sync.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260925-PRODUCT-ATOMIC-SETUP",
+      "date": "2026-09-25",
+      "scope": "API+CATALOG+OPENAPI+ADMIN",
+      "summary": "createAdminProduct nhận thêm variants[].initialPriceAmount (CreateProductVariantDto) và media[] (CreateProductMediaDto, ≤20, không trùng). Product, category, SKU, giá ban đầu (ACTIVE từ thời điểm tạo) và liên kết ảnh (ảnh đầu là primary, khoá asset theo thứ tự id) ghi trong cùng transaction; asset không ACTIVE → 422 và rollback toàn bộ (e2e PostgreSQL xác nhận không còn sản phẩm). Gửi giá mà thiếu catalog.price.manage → 403. Admin gửi giá/ảnh trong lệnh tạo và bỏ các request giá/ảnh chạy sau; chỉ còn tồn đầu là phiếu kho riêng. Contract chỉ thêm field tuỳ chọn.",
+      "sources": [
+        "OpenAPI:createAdminProduct",
+        "source:src/modules/catalog/products/services/products.service.ts",
+        "source:src/modules/catalog/products/services/product-media.service.ts",
+        "test:src/modules/catalog/products/services/products.service.spec.ts",
+        "test:test/admin-contract.e2e-spec.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260925-FLASH-GUEST-CUSTOMER-KEY",
+      "date": "2026-09-25",
+      "scope": "API+CHECKOUT+PROMOTION",
+      "summary": "Giới hạn mỗi khách của Flash Sale cho khách vãng lai khoá theo customer:<customerId> (hồ sơ khách tìm/tạo theo SĐT lúc báo giá) thay vì cart:<cartId>; xoá cookie tạo giỏ mới không còn lách được. Tài khoản giữ user:<id>; cart: chỉ còn fallback khi checkout không có customerId.",
+      "sources": [
+        "OpenAPI:confirmGuestCheckout",
+        "source:src/modules/checkout/inventory-reservation.service.ts",
+        "test:src/modules/checkout/inventory-reservation.service.spec.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260925-SKU-MANUAL-SHORT",
+      "date": "2026-09-25",
+      "scope": "API+CATALOG+OPENAPI+ADMIN",
+      "summary": "SKU là mã hàng của cửa hàng: CreateVariantDto (dùng cho createAdminProduct và createAdminProductVariant) nhận sku tuỳ chọn, tự viết hoa, ^[A-Z0-9][A-Z0-9._+-]{1,39}$, không trùng trong cùng request (422), trùng SKU đã có → 409 qua unique. Bỏ trống thì backend sinh 8 ký tự không nhầm lẫn (bỏ 0/O/1/I) thay cho {product_no}-SKU-<20 hex> (53 ký tự). Lý do: dữ liệu 2026-09-25 có 618/619 sản phẩm 1 SKU và 616 SKU là mã cửa hàng trung bình 7 ký tự. SKU vẫn immutable; 4 SKU dạng cũ giữ nguyên. Không đổi schema.",
+      "sources": [
+        "OpenAPI:createAdminProduct/createAdminProductVariant",
+        "source:src/modules/catalog/products/product-identifiers.ts",
+        "test:src/modules/catalog/products/product-identifiers.spec.ts",
+        "document:document/27-catalog-identifier-business-rules.md"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": {
+            "Tên bảng": "product_variants"
+          },
+          "columns": [
+            "Ý nghĩa"
+          ],
+          "set": {
+            "Ý nghĩa": "Sellable SKU; sku do admin nhập (mã cửa hàng) hoặc backend sinh mã ngắn khi tạo"
+          }
+        }
+      ]
+    },
+    {
+      "id": "API-20260925-PRODUCT-PUBLISH-POLICY",
+      "date": "2026-09-25",
+      "scope": "API+CATALOG+OPENAPI+ADMIN",
+      "summary": "Thêm GET /admin/products/:id/setup-status (getAdminProductSetupStatus, quyền catalog.product.view) trả canPublish, blockingIssues và warnings theo mã (NO_SELLABLE_VARIANT, STANDARD_HAS_BUNDLE_VARIANT, INVALID_BUNDLE, MISSING_PRIMARY_IMAGE, NO_AVAILABLE_STOCK). publishAdminProduct và setup-status dùng chung evaluatePublishReadiness; điều kiện mới: bắt buộc ảnh chính (dữ liệu 2026-09-25: 0/596 sản phẩm đang bán thiếu ảnh chính nên không ảnh hưởng hàng đang bán); chưa có tồn chỉ là cảnh báo (593/596 sản phẩm đang bán chưa có tồn). Admin bỏ hàm tự tính isProductPublishReady, hiển thị checklist từ API.",
+      "sources": [
+        "OpenAPI:getAdminProductSetupStatus/publishAdminProduct",
+        "source:src/modules/catalog/products/product-publish.policy.ts",
+        "test:src/modules/catalog/products/product-publish.policy.spec.ts",
+        "test:test/admin-contract.e2e-spec.ts"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260925-CATALOG-SPECIFICATIONS",
+      "date": "2026-09-25",
+      "scope": "DATABASE+CATALOG+API+OPENAPI+ADMIN+STOREFRONT",
+      "summary": "Decision D61 (phương án C): thông số kỹ thuật lưu ở products.specifications JSONB [{code, values[]}] theo từ điển attributes, bỏ attribute_values và product_attribute_values. attributes thêm unit, options JSONB (chỉ OPTION), version; CHECK code/data_type/status/options. Chấp nhận mất FK ở DB: AttributesService là chốt chặn (code bất biến, không xoá cứng, không đổi unit của NUMBER đang dùng, không bỏ lựa chọn đang dùng, kiểm kiểu/lựa chọn trước mọi lần ghi). JSONB chỉ chứa giá trị; nhãn/đơn vị ghép lúc đọc. Chưa thêm GIN index. variant_attribute_values giữ cho Option, cột attribute_value_id đổi thành option_code. API: listAdminAttributes, createAdminAttribute, updateAdminAttribute, replaceAdminProductSpecifications; ProductDetailDto thêm specifications. Migration 20260925200000 chỉ thêm bảng/cột, đã áp trên DB. Registry 76→74 bảng.",
+      "sources": [
+        "migration:prisma/migrations/20260925200000_catalog_attributes_specifications",
+        "OpenAPI:listAdminAttributes/createAdminAttribute/updateAdminAttribute/replaceAdminProductSpecifications/getAdminProduct/getCatalogProduct",
+        "source:src/modules/catalog/attributes/attributes.service.ts",
+        "test:src/modules/catalog/attributes/attributes.service.spec.ts",
+        "test:test/admin-contract.e2e-spec.ts",
+        "document:document/08-open-decisions.csv#D61",
+        "document:document/10-v1-model-relationship-review.md"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": {
+            "Tên bảng": "attributes"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Unique / CHECK",
+            "Các cột chính",
+            "Retention"
+          ],
+          "set": {
+            "Ý nghĩa": "Từ điển thuộc tính dùng chung; options JSONB cho OPTION; thông số ở products.specifications (D61)",
+            "Unique / CHECK": "code UQ immutable; data_type/status/code format/options CHECK",
+            "Các cột chính": "code,name,data_type,unit,is_variant_axis,options,status,sort_order,version",
+            "Retention": "không xoá cứng; INACTIVE"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": {
+            "Tên bảng": "products"
+          },
+          "columns": [
+            "Các cột chính"
+          ],
+          "set": {
+            "Các cột chính": "product_no,name,slug,product_type,brand_id,short_description,description,status,is_published,published_at,seo_json,specifications,version"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": {
+            "Tên bảng": "variant_attribute_values"
+          },
+          "columns": [
+            "Ý nghĩa",
+            "Khóa ngoại quan trọng",
+            "Các cột chính"
+          ],
+          "set": {
+            "Ý nghĩa": "Tổ hợp variant (chốt khi làm Option)",
+            "Khóa ngoại quan trọng": "variant_id->product_variants; attribute_id->attributes",
+            "Các cột chính": "option_code"
+          }
+        },
+        {
+          "sheet": "Tables",
+          "match": {
+            "Tên bảng": [
+              "attribute_values",
+              "product_attribute_values"
+            ]
+          },
+          "columns": "*",
+          "archiveRemovedRowsTo": "Removed Tables"
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": [
+              "attribute_values",
+              "product_attribute_values"
+            ]
+          },
+          "columns": "*",
+          "archiveRemovedRowsTo": "Removed Columns"
+        },
+        {
+          "sheet": "Relationships",
+          "match": {
+            "Bảng con": [
+              "attribute_values",
+              "product_attribute_values"
+            ]
+          },
+          "columns": "*",
+          "archiveRemovedRowsTo": "Removed Relationships"
+        },
+        {
+          "sheet": "Relationships",
+          "match": {
+            "Bảng con": "variant_attribute_values",
+            "Cột FK": "attribute_value_id"
+          },
+          "columns": "*",
+          "archiveRemovedRowsTo": "Removed Relationships"
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "variant_attribute_values",
+            "Tên cột": "attribute_value_id"
+          },
+          "columns": "*",
+          "archiveRemovedRowsTo": "Removed Columns"
+        }
+      ],
+      "upsertRows": [
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "attributes",
+            "Tên cột": "unit"
+          },
+          "values": {
+            "Tên bảng": "attributes",
+            "STT": "10",
+            "Tên cột": "unit",
+            "Kiểu dữ liệu": "varchar(16)",
+            "Cho phép NULL": "YES",
+            "Ý nghĩa / trạng thái cho phép": "Đơn vị cho NUMBER; khoá khi đã có sản phẩm dùng"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "attributes",
+            "Tên cột": "options"
+          },
+          "values": {
+            "Tên bảng": "attributes",
+            "STT": "11",
+            "Tên cột": "options",
+            "Kiểu dữ liệu": "jsonb",
+            "Cho phép NULL": "YES",
+            "Ý nghĩa / trạng thái cho phép": "Chỉ OPTION: [{code,label,colorHex}]; không bỏ lựa chọn đang dùng"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "attributes",
+            "Tên cột": "version"
+          },
+          "values": {
+            "Tên bảng": "attributes",
+            "STT": "12",
+            "Tên cột": "version",
+            "Kiểu dữ liệu": "bigint",
+            "Cho phép NULL": "NO",
+            "Default": "0",
+            "Ý nghĩa / trạng thái cho phép": "Optimistic lock khi sửa định nghĩa"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "products",
+            "Tên cột": "specifications"
+          },
+          "values": {
+            "Tên bảng": "products",
+            "STT": "20",
+            "Tên cột": "specifications",
+            "Kiểu dữ liệu": "jsonb",
+            "Cho phép NULL": "NO",
+            "Default": "'[]'",
+            "Ý nghĩa / trạng thái cho phép": "[{code, values[]}] theo attributes.code; chỉ giá trị; ghi qua Catalog service (D61)"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "variant_attribute_values",
+            "Tên cột": "option_code"
+          },
+          "values": {
+            "Tên bảng": "variant_attribute_values",
+            "STT": "3",
+            "Tên cột": "option_code",
+            "Kiểu dữ liệu": "varchar(64)",
+            "Cho phép NULL": "NO",
+            "Ý nghĩa / trạng thái cho phép": "Mã trong attributes.options (D61); chốt khi làm Option"
+          }
+        }
+      ]
+    },
+    {
+      "id": "OPS-20260925-MEDIA-ORPHAN-CLEANUP",
+      "date": "2026-09-25",
+      "scope": "API+MEDIA+OPS",
+      "summary": "Job dọn ảnh bằng chứng mồ côi: endpoint nội bộ GET /internal/jobs/media/orphans (CRON_SECRET, không thuộc OpenAPI), mặc định DRY_RUN, ?mode=delete mới xoá. Chỉ quét payment-evidence/, return-evidence/, refund-proof/ dưới CLOUDINARY_FOLDER; ứng viên là ảnh >24 giờ không có trong media_assets.public_id, return_requests.evidence_images, refunds.proof_images. DELETE tối đa 100/lượt, kiểm lại tham chiếu trước khi xoá, audit media.orphan.delete trước khi gọi Cloudinary. ObjectStorageClient thêm listImages (Cloudinary Admin API resources). Dry-run thật 2026-09-25: 0 ảnh trong 3 thư mục. Chưa đăng ký cron. Không đổi schema.",
+      "sources": [
+        "source:src/modules/media/orphan-cleanup/media-orphan-cleanup.service.ts",
+        "source:src/integrations/object-storage/cloudinary-object-storage.client.ts",
+        "test:src/modules/media/orphan-cleanup/media-orphan-cleanup.service.spec.ts",
+        "document:src/modules/media/README.md"
+      ],
+      "targets": []
+    },
+    {
+      "id": "API-20260925-PRICE-MEDIA-IDEMPOTENCY",
+      "date": "2026-09-25",
+      "scope": "API+CATALOG+OPENAPI+ADMIN",
+      "summary": "createAdminProductPrice và attachAdminProductMedia idempotent theo x-request-id (header tuỳ chọn, khai trong OpenAPI) bằng helper dùng chung request-idempotency.ts: advisory lock theo request id, tra audit của request, so fingerprint (operation + method + actor + input). Gửi lại cùng id + payload trả kết quả hiện tại (không tạo bản giá thứ hai; gắn ảnh không còn 409 vì version đã tăng ở lần đầu); khác payload → 409 PRODUCT_IDEMPOTENCY_CONFLICT. createAdminProduct chuyển sang cùng helper với hash không đổi. Admin gửi x-request-id cố định cho mỗi lần thao tác ở panel giá/ảnh. E2e PostgreSQL: 2 lần cùng id → 1 bản giá; khác số tiền → 409. Không đổi schema.",
+      "sources": [
+        "OpenAPI:createAdminProductPrice/attachAdminProductMedia/createAdminProduct",
+        "source:src/modules/catalog/products/request-idempotency.ts",
+        "test:src/modules/catalog/products/services/products.service.spec.ts",
+        "test:src/modules/catalog/products/services/product-media.service.spec.ts",
+        "test:test/admin-contract.e2e-spec.ts"
+      ],
+      "targets": []
     }
   ]
 }

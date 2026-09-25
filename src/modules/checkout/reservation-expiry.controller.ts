@@ -1,6 +1,8 @@
 import { Controller, Get, Headers, Req, UnauthorizedException } from '@nestjs/common';
 import { SYSTEM_PARAMETER_CODE } from '../system/parameters/system-parameter.catalog';
 import { SystemParameterService } from '../system/parameters/system-parameter.service';
+import { JOB_NAME } from '../system/job-health/job-health.constants';
+import { JobHealthService } from '../system/job-health/job-health.service';
 import { ConfigService } from '@nestjs/config';
 import { ApiExcludeController } from '@nestjs/swagger';
 import type { Request } from 'express';
@@ -35,6 +37,7 @@ export class ReservationExpiryController {
     private readonly config: ConfigService,
     private readonly expiry: ReservationExpiryService,
     private readonly parameters: SystemParameterService,
+    private readonly jobHealth: JobHealthService,
   ) {}
 
   /** Khi job bị tắt, trả kết quả no-op mà không truy cập database. */
@@ -52,6 +55,7 @@ export class ReservationExpiryController {
     if (!authorization || !secretsMatch(authorization, `Bearer ${secret}`)) {
       throw new UnauthorizedException('Valid cron authorization is required');
     }
-    return this.expiry.run(requestId(request));
+    const id = requestId(request);
+    return this.jobHealth.track(JOB_NAME.RESERVATION_EXPIRY, id, () => this.expiry.run(id));
   }
 }

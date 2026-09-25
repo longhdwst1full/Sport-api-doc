@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import {
   BadRequestException,
   ConflictException,
@@ -21,6 +20,10 @@ import {
 import { PrismaService } from '../../../../database/prisma.service';
 import { AuditReader } from '../../../audit/audit.reader';
 import { AuditWriter } from '../../../audit/audit.writer';
+import { ProductMediaService } from './product-media.service';
+import { AttributesService } from '../../attributes/attributes.service';
+import { ATTRIBUTE_AUDIT_ACTION } from '../../attributes/attribute.constants';
+import type { ReplaceProductSpecificationsDto } from '../../attributes/attribute.dto';
 import { CATALOG_REFERENCE_STATUS } from '../../catalog.constants';
 import {
   ChangeProductStatusDto,
@@ -37,6 +40,7 @@ import {
   ReplacePriceDto,
   UpdateProductDto,
   UpdateVariantDto,
+  ProductSetupStatusDto,
 } from '../dto/product.dto';
 import {
   PRODUCT_AUDIT_ACTION,
@@ -46,6 +50,7 @@ import {
   PRODUCT_CURRENCY,
   PRODUCT_ERROR,
   PRODUCT_ERROR_CODE,
+  PRODUCT_MEDIA_STATUS,
   PRODUCT_PRICE_STATUS,
   PRODUCT_PRICE_TYPE,
   PRODUCT_SALES_CHANNEL,
@@ -60,6 +65,8 @@ import {
   generateProductSlug,
   generateSku,
 } from '../product-identifiers';
+import { evaluatePublishReadiness, type ProductPublishSnapshot } from '../product-publish.policy';
+import { findReplay, lockRequest, requestFingerprint } from '../request-idempotency';
 
 const effectivePriceWhere = (now: Date): Prisma.ProductPriceWhereInput => ({
   status: { in: [PRODUCT_PRICE_STATUS.ACTIVE, PRODUCT_PRICE_STATUS.SCHEDULED] },
@@ -73,6 +80,8 @@ export class ProductsService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditWriter,
     private readonly auditReader: AuditReader,
+    private readonly media: ProductMediaService,
+    private readonly attributes: AttributesService,
   ) {}
 
   async searchActiveVariants(query: ActiveSearchQueryDto): Promise<ActiveLookupResponseDto> {
@@ -239,7 +248,7 @@ export class ProductsService {
       include: this.productInclude(now, storefront),
     });
     if (!row) throw new NotFoundException(PRODUCT_ERROR.NOT_FOUND);
-    return this.toDetail(row, storefront);
+    return { ...this.toDetail(row, storefront), specifications: await this.attributes.resolve(row.specifications) };
   }
 
   /**
@@ -257,10 +266,17 @@ export class ProductsService {
       );
     }
     this.validateCategorySelection(input.categoryIds, input.primaryCategoryId);
-    const requestHash = this.createRequestHash(input, context);
+    const fingerprint = requestFingerprint(PRODUCT_CREATE_IDEMPOTENCY.OPERATION, 'POST', context, input);
     const productNo = generateProductNo();
     const slug = generateProductSlug(input.name, productNo);
-    const { variants, ...productInput } = input;
+    const { variants, media = [], ...productInput } = input;
+    if (new Set(media.map(({ mediaAssetId }) => mediaAssetId)).size !== media.length) {
+      throw new UnprocessableEntityException('Media assets must be unique');
+    }
+    const manualSkus = variants.flatMap(({ sku }) => (sku ? [sku] : []));
+    if (new Set(manualSkus).size !== manualSkus.length) {
+      throw new UnprocessableEntityException('SKU must be unique within the product');
+    }
     try {
       const productId = await this.prisma.$transaction(async (transaction) => {
         // TRANSACTION: AuditWriter tự cấp sequence_no = MAX + 1, nên unique (request_id, sequence_no)
@@ -268,12 +284,15 @@ export class ProductsService {
         // transaction để các request cùng id chạy tuần tự; lần tra audit ngay sau đó vì vậy luôn
         // thấy kết quả đã commit của request trước. Va hash giữa hai id khác nhau chỉ làm chúng
         // chờ nhau, không sai dữ liệu.
-        await transaction.$queryRaw`
-          SELECT 1 FROM (
-            SELECT pg_advisory_xact_lock(hashtextextended(${`catalog.product.create:${context.requestId}`}, 0))
-          ) AS locked`;
-        const replayedId = await this.findCreatedProduct(transaction, context, requestHash);
-        if (replayedId !== undefined) return replayedId;
+        await lockRequest(transaction, 'catalog.product.create', context.requestId);
+        const replayedId = await findReplay(transaction, this.auditReader, context, {
+          action: PRODUCT_AUDIT_ACTION.CREATE,
+          entityType: 'PRODUCT',
+          fingerprint,
+          conflictCode: PRODUCT_ERROR_CODE.IDEMPOTENCY_CONFLICT,
+          conflictMessage: 'Yêu cầu tạo sản phẩm này đã được dùng cho dữ liệu khác. Vui lòng tải lại form rồi thử lại.',
+        });
+        if (replayedId !== undefined) return toDatabaseId(replayedId);
 
         await this.validateReferences(transaction, input.brandId, input.categoryIds);
         const product = await transaction.product.create({
@@ -299,11 +318,41 @@ export class ProductsService {
         });
         // TRANSACTION: Product, category links và toàn bộ SKU ban đầu là một aggregate create;
         // barcode/SKU lỗi phải rollback tất cả để Admin không nhận một SPU dở dang.
-        for (const [variantIndex, variantInput] of variants.entries()) {
-          const sku = generateSku(productNo);
+        const now = new Date();
+        for (const [variantIndex, { initialPriceAmount, ...variantInput }] of variants.entries()) {
+          // INVARIANT: SKU là mã hàng của cửa hàng; admin nhập tay (đã chuẩn hoá ở DTO) hoặc bỏ trống để
+          // sinh mã ngắn. Trùng → unique constraint → 409. Đặt sau spread để `sku: undefined` không đè.
+          const sku = variantInput.sku ?? generateSku();
           const variant = await transaction.productVariant.create({
-            data: { productId: product.id, sku, ...variantInput },
+            data: { productId: product.id, ...variantInput, sku },
           });
+          // TRANSACTION: giá ban đầu tạo cùng SKU; không còn SKU "chưa có giá" khi mạng rớt giữa chừng.
+          // Chưa có giá tham chiếu nên không áp luật giảm >20% phải có lý do.
+          if (initialPriceAmount) {
+            const price = await transaction.productPrice.create({
+              data: {
+                productVariantId: variant.id,
+                amount: new Prisma.Decimal(initialPriceAmount),
+                startsAt: now,
+                status: PRODUCT_PRICE_STATUS.ACTIVE,
+                createdBy: toDatabaseId(context.actorUserId),
+                updatedBy: toDatabaseId(context.actorUserId),
+              },
+            });
+            await this.audit.write(
+              {
+                requestId: context.requestId,
+                sequenceNo: 1,
+                actorType: 'USER',
+                actorUserId: context.actorUserId,
+                action: PRODUCT_AUDIT_ACTION.PRICE_CREATE,
+                entityType: 'PRODUCT_PRICE',
+                entityId: toEntityId(price.id),
+                after: { amount: initialPriceAmount, startsAt: now.toISOString(), initial: true },
+              },
+              transaction,
+            );
+          }
           await this.audit.write(
             {
               requestId: context.requestId,
@@ -332,15 +381,14 @@ export class ProductsService {
               productNo,
               slug,
               variantCount: variants.length,
+              mediaCount: media.length,
               // IDEMPOTENCY: dấu vân tay để lần gửi lại cùng x-request-id so với payload gốc.
-              idempotency: {
-                fingerprintVersion: PRODUCT_CREATE_IDEMPOTENCY.FINGERPRINT_VERSION,
-                requestHash,
-              },
+              idempotency: fingerprint,
             } as unknown as Prisma.InputJsonValue,
           },
           transaction,
         );
+        if (media.length > 0) await this.media.attachInitialMedia(transaction, product.id, media, context);
         return product.id;
       });
       return this.getById(productId);
@@ -487,7 +535,13 @@ export class ProductsService {
       if (product.status !== PRODUCT_STATUS.DRAFT) {
         throw new UnprocessableEntityException('Only DRAFT product can be published');
       }
-      this.assertPublishable(product.productType as ProductType, product.variants);
+      // INVARIANT: cùng policy với getAdminProductSetupStatus — checklist "đủ" thì publish chắc chắn qua.
+      const readiness = evaluatePublishReadiness(
+        await this.publishSnapshot(transaction, product.id, product.status, product.productType as ProductType, product.variants),
+      );
+      if (readiness.blockingIssues.length > 0) {
+        throw new UnprocessableEntityException(readiness.blockingIssues[0].message);
+      }
       const updated = await transaction.product.updateMany({
         where: {
           id: databaseId,
@@ -674,9 +728,9 @@ export class ProductsService {
           where: { id: databaseProductId, status: { not: PRODUCT_STATUS.ARCHIVED } },
         });
         if (!product) throw new NotFoundException(PRODUCT_ERROR.NOT_FOUND);
-        const sku = generateSku(product.productNo);
+        const sku = input.sku ?? generateSku();
         const variant = await transaction.productVariant.create({
-          data: { productId: databaseProductId, sku, ...input },
+          data: { productId: databaseProductId, ...input, sku },
         });
         await this.audit.write(
           {
@@ -758,10 +812,22 @@ export class ProductsService {
     const endsAt = input.endsAt ? new Date(input.endsAt) : undefined;
     this.ensurePriceIsNotRetroactive(startsAt);
     if (endsAt && endsAt <= startsAt) throw new UnprocessableEntityException('endsAt must be after startsAt');
+    // IDEMPOTENCY: gửi lại cùng x-request-id (mất response rồi bấm lại) trả sản phẩm hiện tại thay vì tạo
+    // bản giá thứ hai; cùng id khác payload → 409. Xem request-idempotency.ts.
+    const fingerprint = requestFingerprint('createAdminProductPrice', 'POST', context, { variantId, input });
     try {
       const productId = await this.prisma.$transaction(async (transaction) => {
+        await lockRequest(transaction, 'catalog.price.create', context.requestId);
         const variant = await transaction.productVariant.findFirst({ where: { id: databaseVariantId } });
         if (!variant) throw new NotFoundException(PRODUCT_ERROR.VARIANT_NOT_FOUND);
+        const replayed = await findReplay(transaction, this.auditReader, context, {
+          action: PRODUCT_AUDIT_ACTION.PRICE_CREATE,
+          entityType: 'PRODUCT_PRICE',
+          fingerprint,
+          conflictCode: PRODUCT_ERROR_CODE.IDEMPOTENCY_CONFLICT,
+          conflictMessage: 'Yêu cầu tạo giá này đã được dùng cho dữ liệu khác. Vui lòng tải lại rồi thử lại.',
+        });
+        if (replayed !== undefined) return variant.productId;
         await this.lockProductIds(transaction, [variant.productId]);
         const reference = await transaction.productPrice.findFirst({
           where: {
@@ -795,7 +861,7 @@ export class ProductsService {
             action: PRODUCT_AUDIT_ACTION.PRICE_CREATE,
             entityType: 'PRODUCT_PRICE',
             entityId: toEntityId(price.id),
-            after: { ...input, amount: input.amount },
+            after: { ...input, amount: input.amount, idempotency: fingerprint } as unknown as Prisma.InputJsonValue,
             reason: input.reason?.trim(),
           },
           transaction,
@@ -1063,7 +1129,60 @@ export class ProductsService {
       include: this.productInclude(new Date(), false),
     });
     if (!row) throw new NotFoundException(PRODUCT_ERROR.NOT_FOUND);
-    return this.toDetail(row, false);
+    // Thông số rỗng thì resolve trả [] ngay, không query thêm — các lệnh ghi dùng getById không chậm đi.
+    return { ...this.toDetail(row, false), specifications: await this.attributes.resolve(row.specifications) };
+  }
+
+  /**
+   * Ghi đè toàn bộ thông số kỹ thuật của sản phẩm.
+   *
+   * INVARIANT: JSONB chỉ nhận giá trị đã qua `AttributesService.validateSpecifications` (decision D61).
+   * TRANSACTION: khoá sản phẩm và tăng version cùng lúc với ghi thông số để hai người sửa song song không
+   * đè lên nhau im lặng (optimistic version như các lệnh sửa sản phẩm khác).
+   */
+  async replaceSpecifications(
+    id: string,
+    input: ReplaceProductSpecificationsDto,
+    context: MutationContext,
+  ): Promise<ProductDetailDto> {
+    const databaseId = toDatabaseId(id);
+    await this.prisma.$transaction(async (transaction) => {
+      await this.lockProductIds(transaction, [databaseId]);
+      const current = await transaction.product.findUnique({
+        where: { id: databaseId },
+        select: { id: true, version: true, status: true, specifications: true },
+      });
+      if (!current) throw new NotFoundException(PRODUCT_ERROR.NOT_FOUND);
+      if (current.status === PRODUCT_STATUS.ARCHIVED) {
+        throw new UnprocessableEntityException('Archived product cannot be edited');
+      }
+      if (Number(current.version) !== input.expectedVersion) throw new ConflictException(PRODUCT_ERROR.VERSION_CONFLICT);
+      const before = this.attributes.readStored(current.specifications);
+      const specifications = await this.attributes.validateSpecifications(transaction, input.specifications, before);
+      await transaction.product.update({
+        where: { id: databaseId },
+        data: {
+          specifications: specifications as unknown as Prisma.InputJsonValue,
+          version: { increment: 1 },
+          updatedBy: toOptionalDatabaseId(context.actorUserId),
+        },
+      });
+      await this.audit.write(
+        {
+          requestId: context.requestId,
+          sequenceNo: 1,
+          actorType: 'USER',
+          actorUserId: context.actorUserId,
+          action: ATTRIBUTE_AUDIT_ACTION.PRODUCT_SPECIFICATIONS_REPLACE,
+          entityType: 'PRODUCT',
+          entityId: id,
+          before: before as unknown as Prisma.InputJsonValue,
+          after: specifications as unknown as Prisma.InputJsonValue,
+        },
+        transaction,
+      );
+    });
+    return this.getById(id);
   }
 
   private async changeProductStatus(
@@ -1257,7 +1376,7 @@ export class ProductsService {
   private toDetail(
     row: Awaited<ReturnType<ProductsService['findProductForMapping']>>,
     storefront: boolean,
-  ): ProductDetailDto {
+  ): Omit<ProductDetailDto, 'specifications'> {
     const variants = storefront
       ? row.variants.filter((variant) =>
           this.isLoadedVariantSellable(row.productType as ProductType, variant),
@@ -1348,49 +1467,60 @@ export class ProductsService {
     );
   }
 
-  private assertPublishable(
+  /** Ảnh chính và tồn khả dụng của sản phẩm cho policy publish (đọc trong transaction của nơi gọi). */
+  private async publishSnapshot(
+    client: Prisma.TransactionClient | PrismaService,
+    productId: bigint,
+    status: string,
     productType: ProductType,
-    variants: Array<{
-      prices: unknown[];
-      bundleDefinition: null | {
-        status: string;
-        items: Array<{
-          componentVariant: { status: string; product: { status: string } };
-        }>;
-      };
-    }>,
-  ): void {
-    if (variants.length === 0 || !variants.some(({ prices }) => prices.length > 0)) {
-      throw new UnprocessableEntityException(
-        'Published product requires an active variant and effective price',
-      );
-    }
-    if (productType === PRODUCT_TYPE.STANDARD) {
-      if (variants.some(({ bundleDefinition }) => bundleDefinition !== null)) {
-        throw new UnprocessableEntityException(
-          'STANDARD product cannot contain a bundle variant',
-        );
-      }
-      return;
-    }
-    if (
-      variants.some(
-        ({ prices, bundleDefinition }) =>
-          prices.length === 0 ||
-          !bundleDefinition ||
-          bundleDefinition.status !== PRODUCT_BUNDLE_STATUS.ACTIVE ||
-          bundleDefinition.items.length === 0 ||
-          bundleDefinition.items.some(
-            ({ componentVariant }) =>
-              componentVariant.status !== PRODUCT_VARIANT_STATUS.ACTIVE ||
-              componentVariant.product.status === PRODUCT_STATUS.ARCHIVED,
-          ),
-      )
-    ) {
-      throw new UnprocessableEntityException(
-        'Every active BUNDLE variant requires an active non-empty definition, effective price and active components',
-      );
-    }
+    activeVariants: ProductPublishSnapshot['activeVariants'],
+  ): Promise<ProductPublishSnapshot> {
+    const [primaryImages, stock] = await Promise.all([
+      client.productMedia.count({
+        where: { productId, status: PRODUCT_MEDIA_STATUS.ACTIVE, isPrimary: true },
+      }),
+      // Đọc tổng hợp tồn (chỉ đọc) để cảnh báo; Catalog không ghi bảng của Inventory.
+      client.inventoryBalance.aggregate({
+        where: { productVariant: { productId, status: PRODUCT_VARIANT_STATUS.ACTIVE } },
+        _sum: { onHand: true, reserved: true },
+      }),
+    ]);
+    return {
+      status,
+      productType,
+      activeVariants,
+      hasPrimaryImage: primaryImages > 0,
+      availableStock: (stock._sum.onHand ?? 0) - (stock._sum.reserved ?? 0),
+    };
+  }
+
+  /**
+   * Checklist trước khi xuất bản cho Admin: điều gì còn chặn và điều gì chỉ là cảnh báo.
+   * Dùng cùng `evaluatePublishReadiness` với `publish`.
+   */
+  async setupStatus(id: string): Promise<ProductSetupStatusDto> {
+    const now = new Date();
+    const product = await this.prisma.product.findFirst({
+      where: { id: toDatabaseId(id) },
+      include: {
+        variants: {
+          where: { status: PRODUCT_VARIANT_STATUS.ACTIVE },
+          include: {
+            prices: { where: effectivePriceWhere(now) },
+            bundleDefinition: { include: { items: { include: { componentVariant: { include: { product: true } } } } } },
+          },
+        },
+      },
+    });
+    if (!product) throw new NotFoundException(PRODUCT_ERROR.NOT_FOUND);
+    const readiness = evaluatePublishReadiness(
+      await this.publishSnapshot(this.prisma, product.id, product.status, product.productType as ProductType, product.variants),
+    );
+    return {
+      productId: toEntityId(product.id),
+      status: product.status as ProductStatus,
+      ...readiness,
+    };
   }
 
   private async lockProductIds(
@@ -1404,55 +1534,6 @@ export class ProductsService {
         orderedIds.map((id) => Prisma.sql`${id}`),
       )}) ORDER BY "id" FOR UPDATE`,
     );
-  }
-
-  /**
-   * SHA-256 của thao tác + phương thức + người tạo + payload (key sắp xếp cố định; thứ tự mảng
-   * giữ nguyên vì quyết định sortOrder của category và SKU).
-   */
-  private createRequestHash(input: CreateProductDto, context: MutationContext): string {
-    return createHash('sha256')
-      .update(
-        canonicalJson({
-          fingerprintVersion: PRODUCT_CREATE_IDEMPOTENCY.FINGERPRINT_VERSION,
-          operation: PRODUCT_CREATE_IDEMPOTENCY.OPERATION,
-          method: 'POST',
-          actorUserId: context.actorUserId,
-          input,
-        }),
-      )
-      .digest('hex');
-  }
-
-  /**
-   * IDEMPOTENCY: trả id sản phẩm đã tạo dưới cùng request id, hoặc undefined nếu request id chưa
-   * được dùng. Phải gọi sau advisory lock và trong cùng transaction.
-   */
-  private async findCreatedProduct(
-    transaction: Prisma.TransactionClient,
-    context: MutationContext,
-    requestHash: string,
-  ): Promise<bigint | undefined> {
-    const entries = await this.auditReader.findByRequestId(context.requestId, transaction);
-    if (entries.length === 0) return undefined;
-    const created = entries.find(
-      (entry) => entry.action === PRODUCT_AUDIT_ACTION.CREATE && entry.entityType === 'PRODUCT',
-    );
-    const fingerprint = (created?.after as { idempotency?: { fingerprintVersion?: unknown; requestHash?: unknown } } | null)
-      ?.idempotency;
-    // INVARIANT: request id đã gắn với thao tác khác, hoặc là lần tạo khác người/khác payload/khác
-    // cách tính hash, thì không được tạo thêm sản phẩm dưới cùng khoá và cũng không trả sản phẩm cũ.
-    if (
-      !created?.entityId ||
-      fingerprint?.fingerprintVersion !== PRODUCT_CREATE_IDEMPOTENCY.FINGERPRINT_VERSION ||
-      fingerprint.requestHash !== requestHash
-    ) {
-      throw new ConflictException({
-        code: PRODUCT_ERROR_CODE.IDEMPOTENCY_CONFLICT,
-        message: 'Yêu cầu tạo sản phẩm này đã được dùng cho dữ liệu khác. Vui lòng tải lại form rồi thử lại.',
-      });
-    }
-    return toDatabaseId(created.entityId);
   }
 
   private validateCategorySelection(categoryIds: string[], primaryCategoryId: string): void {
@@ -1492,17 +1573,4 @@ export class ProductsService {
     }
     throw error;
   }
-}
-
-/** JSON với key object sắp xếp cố định để cùng nội dung luôn ra cùng hash; bỏ key undefined như JSON.stringify. */
-function canonicalJson(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map((item) => canonicalJson(item ?? null)).join(',')}]`;
-  if (value !== null && typeof value === 'object') {
-    const entries = Object.entries(value as Record<string, unknown>)
-      .filter(([, item]) => item !== undefined)
-      .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
-      .map(([key, item]) => `${JSON.stringify(key)}:${canonicalJson(item)}`);
-    return `{${entries.join(',')}}`;
-  }
-  return JSON.stringify(value);
 }

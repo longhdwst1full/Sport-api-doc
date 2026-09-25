@@ -14,7 +14,9 @@ import {
 import { MutationContext } from '../../../../common/request/request-context';
 import { PrismaService } from '../../../../database/prisma.service';
 import { ObjectStorageClient } from '../../../../integrations/object-storage/object-storage.client';
+import { AuditReader } from '../../../audit/audit.reader';
 import { AuditWriter } from '../../../audit/audit.writer';
+import { findReplay, lockRequest, requestFingerprint } from '../request-idempotency';
 import { MEDIA_ASSET_STATUS } from '../../../media/media.constants';
 import {
   AttachProductMediaDto,
@@ -25,6 +27,7 @@ import {
 import {
   PRODUCT_AUDIT_ACTION,
   PRODUCT_ERROR,
+  PRODUCT_ERROR_CODE,
   PRODUCT_MEDIA_STATUS,
   PRODUCT_STATUS,
 } from '../product.constants';
@@ -35,7 +38,49 @@ export class ProductMediaService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditWriter,
     private readonly objectStorage: ObjectStorageClient,
+    private readonly auditReader: AuditReader,
   ) {}
+
+  /**
+   * Gắn ảnh cấp sản phẩm ngay trong transaction tạo sản phẩm (createAdminProduct).
+   *
+   * TRANSACTION: chạy trong transaction của nơi gọi, nên asset không hợp lệ làm rollback cả sản phẩm,
+   * SKU và giá — không còn sản phẩm dở dang thiếu ảnh. Khoá asset theo thứ tự id để hai lần tạo song
+   * song dùng chung ảnh không deadlock. Không claim version: sản phẩm vừa tạo trong chính transaction.
+   */
+  async attachInitialMedia(
+    transaction: Prisma.TransactionClient,
+    productId: bigint,
+    items: ReadonlyArray<{ mediaAssetId: string; altText?: string }>,
+    context: MutationContext,
+  ): Promise<void> {
+    const assetIds = items.map(({ mediaAssetId }) => toDatabaseId(mediaAssetId));
+    for (const id of [...assetIds].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0))) {
+      await this.lockMediaAsset(transaction, id);
+    }
+    const activeCount = await transaction.mediaAsset.count({
+      where: { id: { in: assetIds }, status: MEDIA_ASSET_STATUS.ACTIVE },
+    });
+    if (activeCount !== new Set(assetIds.map(String)).size) {
+      throw new UnprocessableEntityException('Media asset is not finalized or active');
+    }
+    for (const [sortOrder, item] of items.entries()) {
+      const media = await transaction.productMedia.create({
+        data: {
+          productId,
+          mediaAssetId: assetIds[sortOrder],
+          altText: item.altText?.trim() || null,
+          sortOrder,
+          isPrimary: sortOrder === 0,
+        },
+      });
+      await this.writeAudit(transaction, context, PRODUCT_AUDIT_ACTION.MEDIA_ATTACH, media.id, undefined, {
+        mediaAssetId: item.mediaAssetId,
+        variantId: null,
+        sortOrder,
+      });
+    }
+  }
 
   attach(
     productId: string,
@@ -45,7 +90,19 @@ export class ProductMediaService {
     const databaseProductId = toDatabaseId(productId);
     const databaseVariantId = input.variantId ? toDatabaseId(input.variantId) : undefined;
     const databaseMediaAssetId = toDatabaseId(input.mediaAssetId);
+    // IDEMPOTENCY: nhận diện lần gửi lại TRƯỚC khi kiểm expectedProductVersion — lần đầu đã tăng version nên
+    // bấm lại sau khi mất response sẽ luôn trượt version và nhận 409 khó hiểu. Cùng id khác payload → 409.
+    const fingerprint = requestFingerprint('attachAdminProductMedia', 'POST', context, { productId, input });
     return this.prisma.$transaction(async (transaction) => {
+      await lockRequest(transaction, 'catalog.product-media.attach', context.requestId);
+      const replayed = await findReplay(transaction, this.auditReader, context, {
+        action: PRODUCT_AUDIT_ACTION.MEDIA_ATTACH,
+        entityType: 'PRODUCT_MEDIA',
+        fingerprint,
+        conflictCode: PRODUCT_ERROR_CODE.IDEMPOTENCY_CONFLICT,
+        conflictMessage: 'Yêu cầu gắn ảnh này đã được dùng cho dữ liệu khác. Vui lòng tải lại rồi thử lại.',
+      });
+      if (replayed !== undefined) return this.listActive(transaction, databaseProductId);
       await this.claimProductVersion(transaction, databaseProductId, input.expectedProductVersion);
       await this.lockMediaAsset(transaction, databaseMediaAssetId);
       const [asset, variant, duplicate, targetMedia, maxSort] = await Promise.all([
@@ -104,7 +161,7 @@ export class ProductMediaService {
         PRODUCT_AUDIT_ACTION.MEDIA_ATTACH,
         media.id,
         undefined,
-        { mediaAssetId: input.mediaAssetId, variantId: input.variantId ?? null, sortOrder },
+        { mediaAssetId: input.mediaAssetId, variantId: input.variantId ?? null, sortOrder, idempotency: fingerprint } as unknown as Prisma.InputJsonValue,
       );
       return this.listActive(transaction, databaseProductId);
     });

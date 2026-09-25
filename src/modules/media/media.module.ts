@@ -3,11 +3,13 @@ import { ObjectStorageModule } from '../../integrations/object-storage/object-st
 import { AuditModule } from '../audit/audit.module';
 import { MediaController } from './media.controller';
 import { MediaService } from './media.service';
+import { MediaOrphanCleanupController } from './orphan-cleanup/media-orphan-cleanup.controller';
+import { MediaOrphanCleanupService } from './orphan-cleanup/media-orphan-cleanup.service';
 
 @Module({
   imports: [ObjectStorageModule, AuditModule],
-  controllers: [MediaController],
-  providers: [MediaService],
+  controllers: [MediaController, MediaOrphanCleanupController],
+  providers: [MediaService, MediaOrphanCleanupService],
   exports: [MediaService],
 })
 export class MediaModule {}

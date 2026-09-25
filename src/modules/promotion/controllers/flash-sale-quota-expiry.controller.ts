@@ -1,7 +1,9 @@
 import { Controller, Get, Headers, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiExcludeController } from '@nestjs/swagger';
-import { timingSafeEqual } from 'node:crypto';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
+import { JOB_NAME } from '../../system/job-health/job-health.constants';
+import { JobHealthService } from '../../system/job-health/job-health.service';
 import {
   FlashSaleQuotaExpiryRunResult,
   FlashSaleQuotaExpiryService,
@@ -25,6 +27,7 @@ export class FlashSaleQuotaExpiryController {
   constructor(
     private readonly config: ConfigService,
     private readonly expiry: FlashSaleQuotaExpiryService,
+    private readonly jobHealth: JobHealthService,
   ) {}
 
   @Get('expire-quota')
@@ -42,6 +45,6 @@ export class FlashSaleQuotaExpiryController {
     if (!secret || !authorization || !secretsMatch(authorization, `Bearer ${secret}`)) {
       throw new UnauthorizedException('Valid cron authorization is required');
     }
-    return this.expiry.run();
+    return this.jobHealth.track(JOB_NAME.FLASH_SALE_QUOTA_EXPIRY, `flash-sale-quota-expiry-${randomUUID()}`, () => this.expiry.run());
   }
 }

@@ -19,6 +19,11 @@ export class DisabledObjectStorageClient extends ObjectStorageClient {
     throw new ServiceUnavailableException('Object storage provider is not configured');
   }
 
+  listImages(prefix: string): Promise<never> {
+    void prefix;
+    throw new ServiceUnavailableException('Object storage provider is not configured');
+  }
+
   deleteImage(publicId: string): Promise<void> {
     void publicId;
     throw new ServiceUnavailableException('Object storage provider is not configured');

@@ -333,6 +333,12 @@ class EnvironmentVariables {
   @MinLength(32)
   @Matches(/^[A-Za-z0-9_-]+$/, { message: 'TELEGRAM_WEBHOOK_SECRET is invalid' })
   TELEGRAM_WEBHOOK_SECRET?: string;
+
+  /** Chat nhận cảnh báo job cron (group chat có id âm); bỏ trống thì dùng TELEGRAM_ALLOWED_USER_ID. */
+  @IsOptional()
+  @IsString()
+  @Matches(/^-?[1-9]\d*$/, { message: 'TELEGRAM_ALERT_CHAT_ID must be a numeric chat ID' })
+  TELEGRAM_ALERT_CHAT_ID?: string;
   // VNPay: để trống thì tính năng tắt. Chỉ khi có TMN_CODE mới bắt buộc HASH_SECRET,
   // tránh trường hợp cấu hình một nửa rồi tạo lệnh thanh toán không ký được.
   @IsOptional()

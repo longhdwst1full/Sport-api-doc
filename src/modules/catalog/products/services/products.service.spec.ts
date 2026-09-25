@@ -4,10 +4,12 @@ import { PrismaService } from '../../../../database/prisma.service';
 import { AuditReader } from '../../../audit/audit.reader';
 import { AuditWriter } from '../../../audit/audit.writer';
 import { CreateProductDto } from '../dto/product.dto';
+import { AttributesService } from '../../attributes/attributes.service';
+import { ProductMediaService } from './product-media.service';
 import { ProductsService } from './products.service';
 
 describe('ProductsService', () => {
-  const service = new ProductsService({} as PrismaService, {} as AuditWriter, {} as AuditReader);
+  const service = new ProductsService({} as PrismaService, {} as AuditWriter, {} as AuditReader, {} as ProductMediaService, { resolve: jest.fn().mockResolvedValue([]), readStored: jest.fn().mockReturnValue([]) } as unknown as AttributesService);
 
   it('maps minPrice and quick-add identifiers from the same sellable offer', () => {
     const row = {
@@ -79,7 +81,7 @@ describe('ProductsService', () => {
     const auditWrite = jest.fn().mockResolvedValue(undefined);
     const audit = { write: auditWrite } as unknown as AuditWriter;
     const auditReader = { findByRequestId: jest.fn().mockResolvedValue([]) } as unknown as AuditReader;
-    const catalog = new ProductsService(prisma, audit, auditReader);
+    const catalog = new ProductsService(prisma, audit, auditReader, {} as ProductMediaService, { resolve: jest.fn().mockResolvedValue([]), readStored: jest.fn().mockReturnValue([]) } as unknown as AttributesService);
     const catalogInternals = catalog as unknown as {
       getById(id: bigint): Promise<unknown>;
     };
@@ -129,7 +131,7 @@ describe('ProductsService', () => {
     const prisma = {
       $transaction: jest.fn((work: (client: typeof transaction) => unknown) => work(transaction)),
     } as unknown as PrismaService;
-    const catalog = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader);
+    const catalog = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader, {} as ProductMediaService, { resolve: jest.fn().mockResolvedValue([]), readStored: jest.fn().mockReturnValue([]) } as unknown as AttributesService);
 
     await expect(
       catalog.update(
@@ -161,7 +163,7 @@ describe('ProductsService', () => {
     const prisma = {
       $transaction: jest.fn((work: (client: typeof transaction) => unknown) => work(transaction)),
     } as unknown as PrismaService;
-    const pricing = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader);
+    const pricing = new ProductsService(prisma, {} as AuditWriter, { findByRequestId: jest.fn().mockResolvedValue([]) } as unknown as AuditReader, {} as ProductMediaService, { resolve: jest.fn().mockResolvedValue([]), readStored: jest.fn().mockReturnValue([]) } as unknown as AttributesService);
 
     await expect(
       pricing.createPrice(
@@ -182,7 +184,7 @@ describe('ProductsService', () => {
     const prisma = {
       $transaction: jest.fn((work: (client: typeof transaction) => unknown) => work(transaction)),
     } as unknown as PrismaService;
-    const lifecycle = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader);
+    const lifecycle = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader, {} as ProductMediaService, { resolve: jest.fn().mockResolvedValue([]), readStored: jest.fn().mockReturnValue([]) } as unknown as AttributesService);
 
     await expect(
       lifecycle.archiveProduct(
@@ -210,7 +212,7 @@ describe('ProductsService', () => {
     const prisma = {
       $transaction: jest.fn((work: (client: typeof transaction) => unknown) => work(transaction)),
     } as unknown as PrismaService;
-    const lifecycle = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader);
+    const lifecycle = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader, {} as ProductMediaService, { resolve: jest.fn().mockResolvedValue([]), readStored: jest.fn().mockReturnValue([]) } as unknown as AttributesService);
 
     await expect(
       lifecycle.reactivateVariant(
@@ -239,7 +241,7 @@ describe('ProductsService', () => {
     const prisma = {
       $transaction: jest.fn((work: (client: typeof transaction) => unknown) => work(transaction)),
     } as unknown as PrismaService;
-    const lifecycle = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader);
+    const lifecycle = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader, {} as ProductMediaService, { resolve: jest.fn().mockResolvedValue([]), readStored: jest.fn().mockReturnValue([]) } as unknown as AttributesService);
 
     await expect(
       lifecycle.archiveVariant(
@@ -297,7 +299,7 @@ describe('ProductsService', () => {
       product,
       $transaction: transactionSpy,
     } as unknown as PrismaService;
-    const storefront = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader);
+    const storefront = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader, {} as ProductMediaService, { resolve: jest.fn().mockResolvedValue([]), readStored: jest.fn().mockReturnValue([]) } as unknown as AttributesService);
 
     const result = await storefront.list({ page: 1, limit: 12 }, true);
 
@@ -343,11 +345,13 @@ describe('ProductsService', () => {
           ],
         }),
       },
+      productMedia: { count: jest.fn().mockResolvedValue(1) },
+      inventoryBalance: { aggregate: jest.fn().mockResolvedValue({ _sum: { onHand: 0, reserved: 0 } }) },
     };
     const prisma = {
       $transaction: jest.fn((work: (client: typeof transaction) => unknown) => work(transaction)),
     } as unknown as PrismaService;
-    const lifecycle = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader);
+    const lifecycle = new ProductsService(prisma, {} as AuditWriter, {} as AuditReader, {} as ProductMediaService, { resolve: jest.fn().mockResolvedValue([]), readStored: jest.fn().mockReturnValue([]) } as unknown as AttributesService);
 
     await expect(
       lifecycle.publish(
@@ -381,10 +385,13 @@ describe('ProductsService', () => {
       } as unknown as PrismaService;
       const auditWrite = jest.fn().mockResolvedValue(undefined);
       const findByRequestId = jest.fn().mockResolvedValue(entries);
+      const attachInitialMedia = jest.fn().mockResolvedValue(undefined);
       const service = new ProductsService(
         prisma,
         { write: auditWrite } as unknown as AuditWriter,
         { findByRequestId } as unknown as AuditReader,
+        { attachInitialMedia } as unknown as ProductMediaService,
+        { resolve: jest.fn().mockResolvedValue([]), readStored: jest.fn().mockReturnValue([]) } as unknown as AttributesService,
       );
       const getById = jest
         .spyOn(service as unknown as { getById(id: bigint): Promise<unknown> }, 'getById')
@@ -406,6 +413,7 @@ describe('ProductsService', () => {
           entityId: '1',
           actorUserId,
           after: productAudit?.after,
+          createdAt: new Date(),
         } as AuditEntry,
       };
     };
@@ -465,7 +473,7 @@ describe('ProductsService', () => {
 
     it('rejects a key already bound to another operation', async () => {
       const retry = harness([
-        { action: 'catalog.price.create', entityType: 'PRODUCT_PRICE', entityId: '5', actorUserId: '2', after: {} },
+        { action: 'catalog.price.create', entityType: 'PRODUCT_PRICE', entityId: '5', actorUserId: '2', after: {}, createdAt: new Date() },
       ]);
 
       await expect(
@@ -493,6 +501,169 @@ describe('ProductsService', () => {
         service.create(payload(), { requestId: 'x'.repeat(101), actorUserId: '2' }),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(transaction.$queryRaw).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('createAdminProduct with initial prices and media (one transaction)', () => {
+    const build = () => {
+      const transaction = {
+        $queryRaw: jest.fn().mockResolvedValue([{ '?column?': 1 }]),
+        brand: { count: jest.fn() },
+        category: { count: jest.fn().mockResolvedValue(1) },
+        product: { create: jest.fn().mockResolvedValue({ id: 1n }) },
+        productCategory: { createMany: jest.fn().mockResolvedValue({ count: 1 }) },
+        productVariant: { create: jest.fn().mockResolvedValueOnce({ id: 11n }).mockResolvedValueOnce({ id: 12n }) },
+        productPrice: { create: jest.fn().mockResolvedValue({ id: 70n }) },
+      };
+      const prisma = {
+        $transaction: jest.fn((work: (client: typeof transaction) => unknown) => work(transaction)),
+      } as unknown as PrismaService;
+      const attachInitialMedia = jest.fn().mockResolvedValue(undefined);
+      const service = new ProductsService(
+        prisma,
+        { write: jest.fn().mockResolvedValue(undefined) } as unknown as AuditWriter,
+        { findByRequestId: jest.fn().mockResolvedValue([]) } as unknown as AuditReader,
+        { attachInitialMedia } as unknown as ProductMediaService,
+        { resolve: jest.fn().mockResolvedValue([]), readStored: jest.fn().mockReturnValue([]) } as unknown as AttributesService,
+      );
+      jest.spyOn(service as unknown as { getById(id: bigint): Promise<unknown> }, 'getById').mockResolvedValue({ id: '1' });
+      return { service, transaction, attachInitialMedia };
+    };
+
+    it('creates the price of each priced SKU and attaches media inside the create transaction', async () => {
+      const { service, transaction, attachInitialMedia } = build();
+
+      await service.create({
+        name: 'Trụ bóng chuyền TD-02',
+        categoryIds: ['1'],
+        primaryCategoryId: '1',
+        variants: [{ name: 'TD-02', initialPriceAmount: '7800000' }, { name: 'TD-02 Pro' }],
+        media: [{ mediaAssetId: '5' }, { mediaAssetId: '6', altText: 'Mặt bên' }],
+      }, { requestId: 'req-setup', actorUserId: '2' });
+
+      const variantCalls = transaction.productVariant.create.mock.calls as unknown as Array<[{ data: Record<string, unknown> }]>;
+      expect(variantCalls[0][0].data).not.toHaveProperty('initialPriceAmount');
+      expect(transaction.productPrice.create).toHaveBeenCalledTimes(1);
+      expect(transaction.productPrice.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ productVariantId: 11n, status: 'ACTIVE' }) as unknown,
+      });
+      expect(attachInitialMedia).toHaveBeenCalledWith(
+        transaction,
+        1n,
+        [{ mediaAssetId: '5' }, { mediaAssetId: '6', altText: 'Mặt bên' }],
+        expect.objectContaining({ requestId: 'req-setup' }),
+      );
+      expect(prismaTransactions(service)).toBe(1);
+    });
+
+    it('rejects duplicated media assets before opening a transaction', async () => {
+      const { service, transaction } = build();
+
+      await expect(service.create({
+        name: 'x', categoryIds: ['1'], primaryCategoryId: '1',
+        variants: [{ name: 'x' }], media: [{ mediaAssetId: '5' }, { mediaAssetId: '5' }],
+      }, { requestId: 'req-dup', actorUserId: '2' })).rejects.toBeInstanceOf(UnprocessableEntityException);
+      expect(transaction.product.create).not.toHaveBeenCalled();
+    });
+
+    const prismaTransactions = (service: ProductsService) =>
+      ((service as unknown as { prisma: { $transaction: jest.Mock } }).prisma.$transaction).mock.calls.length;
+  });
+
+  describe('manual SKU', () => {
+    const build = () => {
+      const transaction = {
+        $queryRaw: jest.fn().mockResolvedValue([{ '?column?': 1 }]),
+        brand: { count: jest.fn() },
+        category: { count: jest.fn().mockResolvedValue(1) },
+        product: { create: jest.fn().mockResolvedValue({ id: 1n }) },
+        productCategory: { createMany: jest.fn().mockResolvedValue({ count: 1 }) },
+        productVariant: { create: jest.fn().mockResolvedValueOnce({ id: 11n }).mockResolvedValueOnce({ id: 12n }) },
+      };
+      const prisma = {
+        $transaction: jest.fn((work: (client: typeof transaction) => unknown) => work(transaction)),
+      } as unknown as PrismaService;
+      const service = new ProductsService(
+        prisma,
+        { write: jest.fn().mockResolvedValue(undefined) } as unknown as AuditWriter,
+        { findByRequestId: jest.fn().mockResolvedValue([]) } as unknown as AuditReader,
+        {} as ProductMediaService,
+        { resolve: jest.fn().mockResolvedValue([]), readStored: jest.fn().mockReturnValue([]) } as unknown as AttributesService,
+      );
+      jest.spyOn(service as unknown as { getById(id: bigint): Promise<unknown> }, 'getById').mockResolvedValue({ id: '1' });
+      return { service, transaction };
+    };
+
+    it('keeps the store code when given and generates a short code when blank', async () => {
+      const { service, transaction } = build();
+
+      await service.create({
+        name: 'Trụ bóng chuyền', categoryIds: ['1'], primaryCategoryId: '1',
+        variants: [{ name: 'Tiêu chuẩn', sku: 'TD-02' }, { name: 'Pro' }],
+      }, { requestId: 'req-sku', actorUserId: '2' });
+
+      const skus = (transaction.productVariant.create.mock.calls as unknown as Array<[{ data: { sku: string } }]>)
+        .map(([call]) => call.data.sku);
+      expect(skus[0]).toBe('TD-02');
+      expect(skus[1]).toMatch(/^[A-HJ-NP-Z2-9]{8}$/);
+    });
+
+    it('rejects two variants with the same SKU before opening a transaction', async () => {
+      const { service, transaction } = build();
+
+      await expect(service.create({
+        name: 'x', categoryIds: ['1'], primaryCategoryId: '1',
+        variants: [{ name: 'a', sku: 'TD-02' }, { name: 'b', sku: 'TD-02' }],
+      }, { requestId: 'req-sku-dup', actorUserId: '2' })).rejects.toBeInstanceOf(UnprocessableEntityException);
+      expect(transaction.product.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('createAdminProductPrice idempotency', () => {
+    const input = { amount: '7800000', startsAt: new Date(Date.now() + 60_000).toISOString() };
+    const context = { requestId: 'req-price', actorUserId: '2' };
+    const build = (entries: unknown[]) => {
+      const transaction = {
+        $queryRaw: jest.fn().mockResolvedValue([]),
+        productVariant: { findFirst: jest.fn().mockResolvedValue({ productId: 1n }) },
+        productPrice: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 90n }) },
+      };
+      const prisma = {
+        $transaction: jest.fn((work: (client: typeof transaction) => unknown) => work(transaction)),
+      } as unknown as PrismaService;
+      const write = jest.fn().mockResolvedValue(undefined);
+      const service = new ProductsService(
+        prisma,
+        { write } as unknown as AuditWriter,
+        { findByRequestId: jest.fn().mockResolvedValue(entries) } as unknown as AuditReader,
+        {} as ProductMediaService,
+        { resolve: jest.fn().mockResolvedValue([]), readStored: jest.fn().mockReturnValue([]) } as unknown as AttributesService,
+      );
+      jest.spyOn(service as unknown as { getById(id: bigint): Promise<unknown> }, 'getById').mockResolvedValue({ id: '1' });
+      return { service, transaction, write };
+    };
+
+    it('replays a retried price instead of creating a second one', async () => {
+      const first = build([]);
+      await first.service.createPrice('11', input, context);
+      const after = (first.write.mock.calls[0] as [{ after: unknown }])[0].after;
+      const retry = build([{ action: 'catalog.price.create', entityType: 'PRODUCT_PRICE', entityId: '90', actorUserId: '2', after, createdAt: new Date() }]);
+
+      await retry.service.createPrice('11', input, context);
+
+      expect(first.transaction.productPrice.create).toHaveBeenCalledTimes(1);
+      expect(retry.transaction.productPrice.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects the same request id with another amount', async () => {
+      const first = build([]);
+      await first.service.createPrice('11', input, context);
+      const after = (first.write.mock.calls[0] as [{ after: unknown }])[0].after;
+      const retry = build([{ action: 'catalog.price.create', entityType: 'PRODUCT_PRICE', entityId: '90', actorUserId: '2', after, createdAt: new Date() }]);
+
+      await expect(retry.service.createPrice('11', { ...input, amount: '9000000' }, context))
+        .rejects.toMatchObject({ response: { code: 'PRODUCT_IDEMPOTENCY_CONFLICT' } });
+      expect(retry.transaction.productPrice.create).not.toHaveBeenCalled();
     });
   });
 });

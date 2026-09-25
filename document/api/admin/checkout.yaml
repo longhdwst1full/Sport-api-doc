@@ -315,6 +315,19 @@ components:
         version:
           type: number
           example: 0
+        consultationReason:
+          type: string
+          enum:
+            - CUSTOMER_REQUESTED
+            - SHIPPING_RULE
+            - STOCK_SPLIT_ACROSS_BRANCHES
+          nullable: true
+          description: "STOCK_SPLIT_ACROSS_BRANCHES: không chi nhánh nào đủ cả giỏ; phải chuyển kho phần thiếu trước khi báo giá"
+        stockShortages:
+          description: Hàng còn thiếu tại kho đã chọn; rỗng nếu đủ
+          type: array
+          items:
+            $ref: "#/components/schemas/CheckoutStockShortageDto"
         recipient:
           $ref: "#/components/schemas/CheckoutRecipientDto"
         customerNote:
@@ -336,6 +349,8 @@ components:
         - items
         - expiresAt
         - version
+        - consultationReason
+        - stockShortages
         - recipient
         - createdAt
     ErrorDetailDto:
@@ -394,6 +409,30 @@ components:
         - quantity
         - unitPrice
         - lineTotal
+    CheckoutStockShortageDto:
+      type: object
+      properties:
+        productVariantId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        sku:
+          type: string
+          example: PRD-XXXX-SKU-YYYY
+        name:
+          type: string
+        requested:
+          type: number
+          description: Số lượng vật lý cần giao (combo đã tách thành linh kiện)
+        availableAtBranch:
+          type: number
+          description: Còn bán được tại kho đã chọn lúc báo giá
+      required:
+        - productVariantId
+        - sku
+        - name
+        - requested
+        - availableAtBranch
     CheckoutRecipientDto:
       type: object
       properties:

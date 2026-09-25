@@ -42,10 +42,23 @@ export interface StoredImageAsset {
   version: number;
 }
 
+export interface StoredImageListItem {
+  publicId: string;
+  createdAt: Date;
+  sizeBytes: number;
+}
+
+export interface StoredImagePage {
+  items: StoredImageListItem[];
+  nextCursor?: string;
+}
+
 export abstract class ObjectStorageClient {
   abstract createSignedImageUpload(
     input: CreateSignedImageUploadInput,
   ): Promise<SignedImageUploadResult>;
   abstract verifyImageUpload(input: VerifyImageUploadInput): Promise<StoredImageAsset>;
   abstract deleteImage(publicId: string): Promise<void>;
+  /** Liệt kê ảnh theo tiền tố public id (chỉ đọc), phân trang bằng cursor của provider. */
+  abstract listImages(prefix: string, cursor?: string): Promise<StoredImagePage>;
 }

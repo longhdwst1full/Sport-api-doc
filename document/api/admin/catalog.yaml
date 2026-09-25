@@ -691,6 +691,142 @@ paths:
         - Admin Catalog
       x-required-permissions:
         - catalog.category.manage
+  /api/v1/admin/catalog/attributes:
+    get:
+      operationId: listAdminAttributes
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttributeListDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: List attribute definitions (active and inactive)
+      tags:
+        - Admin Catalog
+      x-required-permissions:
+        - catalog.product.view
+    post:
+      operationId: createAdminAttribute
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAttributeDto"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttributeDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "422":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Create an attribute definition; code is immutable
+      tags:
+        - Admin Catalog
+      x-required-permissions:
+        - catalog.product.manage
+  /api/v1/admin/catalog/attributes/{id}:
+    patch:
+      operationId: updateAdminAttribute
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAttributeDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttributeDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "422":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Update name/unit/options/status; unit and used options are locked once products use them
+      tags:
+        - Admin Catalog
+      x-required-permissions:
+        - catalog.product.manage
   /api/v1/admin/products:
     get:
       operationId: listAdminProducts
@@ -806,7 +942,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponseDto"
         "403":
-          description: ""
+          description: Thiếu catalog.price.manage khi gửi initialPriceAmount
           content:
             application/json:
               schema:
@@ -917,6 +1053,106 @@ paths:
         - Admin Products
       x-required-permissions:
         - catalog.product.view
+  /api/v1/admin/products/{id}/setup-status:
+    get:
+      operationId: getAdminProductSetupStatus
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductSetupStatusDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: "Publish checklist: blocking issues and warnings, same policy as publish"
+      tags:
+        - Admin Products
+      x-required-permissions:
+        - catalog.product.view
+  /api/v1/admin/products/{id}/specifications:
+    put:
+      operationId: replaceAdminProductSpecifications
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReplaceProductSpecificationsDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetailDto"
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+        "422":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponseDto"
+      security:
+        - bearer: []
+      summary: Replace product specifications; values are validated against attribute definitions
+      tags:
+        - Admin Products
+      x-required-permissions:
+        - catalog.product.manage
   /api/v1/admin/products/{id}:
     patch:
       operationId: updateAdminProduct
@@ -1199,6 +1435,12 @@ paths:
         - name: id
           required: true
           in: path
+          schema:
+            type: string
+        - name: x-request-id
+          in: header
+          description: "Khoá idempotency (≤100 ký tự): gửi lại cùng giá trị với cùng payload trả kết quả cũ; khác payload → 409 PRODUCT_IDEMPOTENCY_CONFLICT."
+          required: false
           schema:
             type: string
       requestBody:
@@ -1554,6 +1796,12 @@ paths:
         - name: variantId
           required: true
           in: path
+          schema:
+            type: string
+        - name: x-request-id
+          in: header
+          description: "Khoá idempotency (≤100 ký tự): gửi lại cùng giá trị với cùng payload trả kết quả cũ; khác payload → 409 PRODUCT_IDEMPOTENCY_CONFLICT."
+          required: false
           schema:
             type: string
       requestBody:
@@ -2226,6 +2474,120 @@ components:
           minimum: 0
       required:
         - expectedVersion
+    AttributeListDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AttributeDto"
+      required:
+        - items
+    CreateAttributeDto:
+      type: object
+      properties:
+        code:
+          type: string
+          example: ADJUSTABLE_HEIGHT
+          description: Chữ hoa, số, gạch dưới; bất biến sau khi tạo
+        name:
+          type: string
+          example: Chiều cao điều chỉnh
+        dataType:
+          allOf:
+            - $ref: "#/components/schemas/AttributeDataType"
+        unit:
+          type: string
+          example: m
+          maxLength: 16
+        isVariantAxis:
+          type: boolean
+          default: false
+        options:
+          description: Bắt buộc (≥1) với OPTION, bỏ trống với kiểu khác
+          type: array
+          items:
+            $ref: "#/components/schemas/AttributeOptionDto"
+        sortOrder:
+          type: number
+          default: 0
+      required:
+        - code
+        - name
+        - dataType
+    AttributeDto:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        code:
+          type: string
+          example: ADJUSTABLE_HEIGHT
+        name:
+          type: string
+          example: Chiều cao điều chỉnh
+        dataType:
+          allOf:
+            - $ref: "#/components/schemas/AttributeDataType"
+        unit:
+          type: string
+          example: m
+          nullable: true
+        isVariantAxis:
+          type: boolean
+          description: Có thể dùng làm trục biến thể (Option) — chưa dùng ở V1
+        options:
+          description: Chỉ với OPTION; rỗng với kiểu khác
+          type: array
+          items:
+            $ref: "#/components/schemas/AttributeOptionDto"
+        status:
+          allOf:
+            - $ref: "#/components/schemas/AttributeStatus"
+        sortOrder:
+          type: number
+        version:
+          type: number
+          minimum: 0
+      required:
+        - id
+        - code
+        - name
+        - dataType
+        - isVariantAxis
+        - options
+        - status
+        - sortOrder
+        - version
+    UpdateAttributeDto:
+      type: object
+      properties:
+        name:
+          type: string
+        unit:
+          type: string
+          nullable: true
+          description: Không đổi được khi thuộc tính NUMBER đã có sản phẩm dùng
+        isVariantAxis:
+          type: boolean
+        options:
+          description: Danh sách đầy đủ; không được bỏ lựa chọn đang có sản phẩm dùng
+          type: array
+          items:
+            $ref: "#/components/schemas/AttributeOptionDto"
+        status:
+          description: Ngừng dùng thay cho xoá
+          allOf:
+            - $ref: "#/components/schemas/AttributeStatus"
+        sortOrder:
+          type: number
+        expectedVersion:
+          type: number
+          minimum: 0
+      required:
+        - expectedVersion
     ProductStatus:
       type: string
       enum:
@@ -2278,7 +2640,13 @@ components:
           description: Danh sách SKU ban đầu được tạo atomic cùng sản phẩm
           type: array
           items:
-            $ref: "#/components/schemas/CreateVariantDto"
+            $ref: "#/components/schemas/CreateProductVariantDto"
+        media:
+          maxItems: 20
+          description: Ảnh cấp sản phẩm (asset đã upload và ACTIVE) gắn cùng transaction; ảnh đầu tiên là ảnh chính
+          type: array
+          items:
+            $ref: "#/components/schemas/CreateProductMediaDto"
       required:
         - name
         - categoryIds
@@ -2336,6 +2704,11 @@ components:
           type: string
           format: uri
           nullable: true
+        specifications:
+          description: Thông số kỹ thuật đã ghép nhãn/đơn vị từ từ điển thuộc tính; rỗng nếu chưa nhập
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductSpecificationDto"
         brandId:
           type: string
           pattern: ^[1-9][0-9]*$
@@ -2379,10 +2752,53 @@ components:
         - isPublished
         - version
         - currency
+        - specifications
         - variants
         - media
         - categories
         - categoryIds
+    ProductSetupStatusDto:
+      type: object
+      properties:
+        productId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        status:
+          allOf:
+            - $ref: "#/components/schemas/ProductStatus"
+        canPublish:
+          type: boolean
+          description: DRAFT và không còn điều kiện chặn
+        blockingIssues:
+          description: Điều kiện chặn xuất bản
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductReadinessIssueDto"
+        warnings:
+          description: Chỉ cảnh báo, không chặn (ví dụ chưa có tồn)
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductReadinessIssueDto"
+      required:
+        - productId
+        - status
+        - canPublish
+        - blockingIssues
+        - warnings
+    ReplaceProductSpecificationsDto:
+      type: object
+      properties:
+        specifications:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductSpecificationInputDto"
+        expectedVersion:
+          type: number
+          minimum: 0
+      required:
+        - specifications
+        - expectedVersion
     UpdateProductDto:
       type: object
       properties:
@@ -2436,6 +2852,11 @@ components:
     CreateVariantDto:
       type: object
       properties:
+        sku:
+          type: string
+          example: TD-02
+          maxLength: 40
+          description: Mã hàng của cửa hàng; tự viết hoa. Bỏ trống thì backend sinh mã 8 ký tự. Không sửa được sau khi tạo.
         barcode:
           type: string
         name:
@@ -2726,6 +3147,35 @@ components:
         - limit
         - total
         - hasMore
+    AttributeDataType:
+      type: string
+      enum:
+        - TEXT
+        - NUMBER
+        - BOOLEAN
+        - OPTION
+    AttributeOptionDto:
+      type: object
+      properties:
+        code:
+          type: string
+          example: WHITE
+          description: Mã lựa chọn, bất biến khi đã có sản phẩm dùng
+        label:
+          type: string
+          example: Trắng
+        colorHex:
+          type: string
+          example: "#FFFFFF"
+          nullable: true
+      required:
+        - code
+        - label
+    AttributeStatus:
+      type: string
+      enum:
+        - ACTIVE
+        - INACTIVE
     ProductSummaryDto:
       type: object
       properties:
@@ -2813,10 +3263,73 @@ components:
       enum:
         - STANDARD
         - BUNDLE
+    CreateProductVariantDto:
+      type: object
+      properties:
+        sku:
+          type: string
+          example: TD-02
+          maxLength: 40
+          description: Mã hàng của cửa hàng; tự viết hoa. Bỏ trống thì backend sinh mã 8 ký tự. Không sửa được sau khi tạo.
+        barcode:
+          type: string
+        name:
+          type: string
+        weightGrams:
+          type: number
+          default: 0
+        lengthMm:
+          type: number
+        widthMm:
+          type: number
+        heightMm:
+          type: number
+        initialPriceAmount:
+          type: string
+          example: "7800000"
+          description: Giá bán ban đầu (VND, đã gồm VAT) có hiệu lực ngay; cần quyền catalog.price.manage
+      required:
+        - name
+    CreateProductMediaDto:
+      type: object
+      properties:
+        mediaAssetId:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          example: "1"
+        altText:
+          type: string
+          maxLength: 500
+      required:
+        - mediaAssetId
     CurrencyCode:
       type: string
       enum:
         - VND
+    ProductSpecificationDto:
+      type: object
+      properties:
+        code:
+          type: string
+          example: ADJUSTABLE_HEIGHT
+        name:
+          type: string
+          example: Chiều cao điều chỉnh
+        dataType:
+          allOf:
+            - $ref: "#/components/schemas/AttributeDataType"
+        unit:
+          type: string
+          nullable: true
+        values:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductSpecificationValueDto"
+      required:
+        - code
+        - name
+        - dataType
+        - values
     ProductVariantDto:
       type: object
       properties:
@@ -2891,6 +3404,39 @@ components:
         - id
         - name
         - isPrimary
+    ProductReadinessIssueDto:
+      type: object
+      properties:
+        code:
+          allOf:
+            - $ref: "#/components/schemas/ProductReadinessIssueCode"
+        message:
+          type: string
+          description: Câu mô tả ổn định (tiếng Anh); UI hiển thị theo `code`
+      required:
+        - code
+        - message
+    ProductSpecificationInputDto:
+      type: object
+      properties:
+        code:
+          type: string
+          example: ADJUSTABLE_HEIGHT
+        values:
+          type: array
+          items:
+            oneOf:
+              - type: string
+              - type: number
+              - type: boolean
+          example:
+            - 1.55
+            - 2.25
+            - 2.44
+          description: "TEXT: chuỗi; NUMBER: số (đơn vị lấy từ thuộc tính); BOOLEAN: một giá trị; OPTION: mã lựa chọn"
+      required:
+        - code
+        - values
     ProductMediaStatus:
       type: string
       enum:
@@ -2954,6 +3500,21 @@ components:
       required:
         - componentVariantId
         - quantity
+    ProductSpecificationValueDto:
+      type: object
+      properties:
+        value:
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+        label:
+          type: string
+          example: 2.25 m
+          description: Nhãn hiển thị đã ghép đơn vị / nhãn lựa chọn
+      required:
+        - value
+        - label
     ProductVariantStatus:
       type: string
       enum:
@@ -2976,6 +3537,14 @@ components:
         - bundleType
         - status
         - components
+    ProductReadinessIssueCode:
+      type: string
+      enum:
+        - NO_SELLABLE_VARIANT
+        - STANDARD_HAS_BUNDLE_VARIANT
+        - INVALID_BUNDLE
+        - MISSING_PRIMARY_IMAGE
+        - NO_AVAILABLE_STOCK
     ProductBundleType:
       type: string
       enum:

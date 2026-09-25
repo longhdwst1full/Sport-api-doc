@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional, OmitType, PartialType } from '@nestjs/swagger';
 import {
   ArrayNotEmpty,
@@ -23,6 +23,7 @@ import {
   PRODUCT_BUNDLE_STATUS,
   PRODUCT_BUNDLE_TYPE,
   PRODUCT_CURRENCY,
+  PRODUCT_IDENTIFIER,
   PRODUCT_MEDIA_STATUS,
   PRODUCT_STATUS,
   PRODUCT_TYPE,
@@ -32,6 +33,9 @@ import {
   ProductType,
   ProductVariantStatus,
 } from '../product.constants';
+import { normalizeSku } from '../product-identifiers';
+import { ProductSpecificationDto } from '../../attributes/attribute.dto';
+import { PRODUCT_READINESS_ISSUE, type ProductReadinessIssueCode } from '../product-publish.policy';
 
 export class ProductVariantDto {
   @ApiProperty({ ...ENTITY_ID_OPENAPI }) id: string;
@@ -117,6 +121,11 @@ export class ProductSummaryDto {
 }
 
 export class ProductDetailDto extends ProductSummaryDto {
+  @ApiProperty({
+    type: [ProductSpecificationDto],
+    description: 'Thông số kỹ thuật đã ghép nhãn/đơn vị từ từ điển thuộc tính; rỗng nếu chưa nhập',
+  })
+  specifications: ProductSpecificationDto[];
   @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI, nullable: true }) brandId?: string | null;
   @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI, nullable: true }) primaryCategoryId?: string | null;
   @ApiPropertyOptional() shortDescription?: string;
@@ -178,7 +187,7 @@ export class CreateProductDto {
   @ApiProperty({ ...ENTITY_ID_OPENAPI }) @IsEntityId() primaryCategoryId: string;
 
   @ApiProperty({
-    type: () => [CreateVariantDto],
+    type: () => [CreateProductVariantDto],
     minItems: 1,
     maxItems: 50,
     description: 'Danh sách SKU ban đầu được tạo atomic cùng sản phẩm',
@@ -187,12 +196,24 @@ export class CreateProductDto {
   @ArrayNotEmpty()
   @ArrayMaxSize(50)
   @ValidateNested({ each: true })
-  @Type(() => CreateVariantDto)
-  variants: CreateVariantDto[];
+  @Type(() => CreateProductVariantDto)
+  variants: CreateProductVariantDto[];
+
+  @ApiPropertyOptional({
+    type: () => [CreateProductMediaDto],
+    maxItems: 20,
+    description: 'Ảnh cấp sản phẩm (asset đã upload và ACTIVE) gắn cùng transaction; ảnh đầu tiên là ảnh chính',
+  })
+  @IsArray()
+  @ArrayMaxSize(20)
+  @ValidateNested({ each: true })
+  @Type(() => CreateProductMediaDto)
+  @IsOptional()
+  media?: CreateProductMediaDto[];
 }
 
 export class UpdateProductFieldsDto extends PartialType(
-  OmitType(CreateProductDto, ['brandId', 'shortDescription', 'description', 'variants'] as const),
+  OmitType(CreateProductDto, ['brandId', 'shortDescription', 'description', 'variants', 'media'] as const),
 ) {
   @ApiPropertyOptional({ description: 'Only mutable while the product is DRAFT' })
   @IsString()
@@ -229,12 +250,39 @@ export class UpdateProductDto extends UpdateProductFieldsDto {
 }
 
 export class CreateVariantDto {
+  @ApiPropertyOptional({
+    example: 'TD-02',
+    maxLength: 40,
+    description: 'Mã hàng của cửa hàng; tự viết hoa. Bỏ trống thì backend sinh mã 8 ký tự. Không sửa được sau khi tạo.',
+  })
+  @Transform(({ value }) => normalizeSku(value))
+  @IsString()
+  @Matches(PRODUCT_IDENTIFIER.SKU_PATTERN, { message: 'SKU chỉ gồm A-Z, 0-9, . _ + - và dài 2-40 ký tự' })
+  @IsOptional()
+  sku?: string;
   @ApiPropertyOptional() @IsString() @MaxLength(64) @IsOptional() barcode?: string;
   @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(255) name: string;
   @ApiPropertyOptional({ default: 0 }) @IsInt() @Min(0) @IsOptional() weightGrams?: number = 0;
   @ApiPropertyOptional() @IsInt() @Min(1) @IsOptional() lengthMm?: number;
   @ApiPropertyOptional() @IsInt() @Min(1) @IsOptional() widthMm?: number;
   @ApiPropertyOptional() @IsInt() @Min(1) @IsOptional() heightMm?: number;
+}
+
+/** SKU ban đầu khi tạo sản phẩm: như CreateVariantDto, cộng giá bán ban đầu tuỳ chọn. */
+export class CreateProductVariantDto extends CreateVariantDto {
+  @ApiPropertyOptional({
+    example: '7800000',
+    description: 'Giá bán ban đầu (VND, đã gồm VAT) có hiệu lực ngay; cần quyền catalog.price.manage',
+  })
+  @IsNumberString()
+  @Matches(/^(?=.*[1-9])\d+(?:\.\d{1,2})?$/)
+  @IsOptional()
+  initialPriceAmount?: string;
+}
+
+export class CreateProductMediaDto {
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) @IsEntityId() mediaAssetId: string;
+  @ApiPropertyOptional({ maxLength: 500 }) @IsString() @MaxLength(500) @IsOptional() altText?: string;
 }
 
 export class UpdateVariantFieldsDto {
@@ -346,4 +394,21 @@ export class CreateBundleDto {
   @ValidateNested({ each: true })
   @Type(() => CreateBundleItemDto)
   items: CreateBundleItemDto[];
+}
+
+export class ProductReadinessIssueDto {
+  @ApiProperty({ enum: Object.values(PRODUCT_READINESS_ISSUE), enumName: 'ProductReadinessIssueCode' })
+  code: ProductReadinessIssueCode;
+  @ApiProperty({ description: 'Câu mô tả ổn định (tiếng Anh); UI hiển thị theo `code`' }) message: string;
+}
+
+/** Checklist xuất bản; cùng policy với publishAdminProduct. */
+export class ProductSetupStatusDto {
+  @ApiProperty({ ...ENTITY_ID_OPENAPI }) productId: string;
+  @ApiProperty({ enum: Object.values(PRODUCT_STATUS), enumName: 'ProductStatus' }) status: ProductStatus;
+  @ApiProperty({ description: 'DRAFT và không còn điều kiện chặn' }) canPublish: boolean;
+  @ApiProperty({ type: [ProductReadinessIssueDto], description: 'Điều kiện chặn xuất bản' })
+  blockingIssues: ProductReadinessIssueDto[];
+  @ApiProperty({ type: [ProductReadinessIssueDto], description: 'Chỉ cảnh báo, không chặn (ví dụ chưa có tồn)' })
+  warnings: ProductReadinessIssueDto[];
 }

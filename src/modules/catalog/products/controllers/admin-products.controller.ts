@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, Delete, ForbiddenException, Get, HttpCode, Param, Patch, Post, Put, Query, Req } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -32,6 +32,7 @@ import {
   CreateVariantDto,
   ListProductsQueryDto,
   ProductDetailDto,
+  ProductSetupStatusDto,
   ProductListResponseDto,
   ProductMediaDto,
   ProductPriceTimelineDto,
@@ -43,6 +44,7 @@ import {
 } from '../dto/product.dto';
 import { ProductMediaService } from '../services/product-media.service';
 import { ProductsService } from '../services/products.service';
+import { ReplaceProductSpecificationsDto } from '../../attributes/attribute.dto';
 
 @ApiTags('Admin Products')
 @ApiBearerAuth()
@@ -84,6 +86,36 @@ export class AdminProductsController {
     return this.products.getBySlug(slug, false);
   }
 
+  @Get(':id/setup-status')
+  @RequirePermissions('catalog.product.view')
+  @ApiOperation({
+    operationId: 'getAdminProductSetupStatus',
+    summary: 'Publish checklist: blocking issues and warnings, same policy as publish',
+  })
+  @ApiOkResponse({ type: ProductSetupStatusDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  getAdminProductSetupStatus(@Param('id', new ParseEntityIdPipe()) id: string): Promise<ProductSetupStatusDto> {
+    return this.products.setupStatus(id);
+  }
+
+  @Put(':id/specifications')
+  @RequirePermissions('catalog.product.manage')
+  @ApiOperation({
+    operationId: 'replaceAdminProductSpecifications',
+    summary: 'Replace product specifications; values are validated against attribute definitions',
+  })
+  @ApiOkResponse({ type: ProductDetailDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  @ApiUnprocessableEntityResponse({ type: ErrorResponseDto })
+  replaceAdminProductSpecifications(
+    @Param('id', new ParseEntityIdPipe()) id: string,
+    @Body() input: ReplaceProductSpecificationsDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ProductDetailDto> {
+    return this.products.replaceSpecifications(id, input, getMutationContext(request));
+  }
+
   @Post()
   @RequirePermissions('catalog.product.manage')
   @ApiOperation({
@@ -102,10 +134,16 @@ export class AdminProductsController {
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   @ApiConflictResponse({ type: ErrorResponseDto })
   @ApiUnprocessableEntityResponse({ type: ErrorResponseDto })
+  @ApiForbiddenResponse({ type: ErrorResponseDto, description: 'Thiếu catalog.price.manage khi gửi initialPriceAmount' })
   createAdminProduct(
     @Body() input: CreateProductDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<ProductDetailDto> {
+    // SECURITY: giá ban đầu là thao tác giá — cùng quyền với createAdminProductPrice. Chỉ tạo sản phẩm
+    // (không kèm giá) thì `catalog.product.manage` là đủ như trước.
+    if (input.variants.some(({ initialPriceAmount }) => initialPriceAmount) && !request.auth?.permissions.includes('catalog.price.manage')) {
+      throw new ForbiddenException('catalog.price.manage is required to set initial prices');
+    }
     return this.products.create(input, getMutationContext(request));
   }
 
@@ -153,6 +191,11 @@ export class AdminProductsController {
   @Post(':id/media')
   @RequirePermissions('catalog.product.manage')
   @ApiOperation({ operationId: 'attachAdminProductMedia', summary: 'Attach one finalized media asset to a product or SKU' })
+  @ApiHeader({
+    name: 'x-request-id',
+    required: false,
+    description: 'Khoá idempotency (≤100 ký tự): gửi lại cùng giá trị với cùng payload trả kết quả cũ; khác payload → 409 PRODUCT_IDEMPOTENCY_CONFLICT.',
+  })
   @ApiCreatedResponse({ type: [ProductMediaDto] })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
@@ -255,6 +298,11 @@ export class AdminProductsController {
   @Post('variants/:variantId/prices')
   @RequirePermissions('catalog.price.manage')
   @ApiOperation({ operationId: 'createAdminProductPrice', summary: 'Create a global VAT-included price window' })
+  @ApiHeader({
+    name: 'x-request-id',
+    required: false,
+    description: 'Khoá idempotency (≤100 ký tự): gửi lại cùng giá trị với cùng payload trả kết quả cũ; khác payload → 409 PRODUCT_IDEMPOTENCY_CONFLICT.',
+  })
   @ApiCreatedResponse({ type: ProductDetailDto })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   @ApiNotFoundResponse({ type: ErrorResponseDto })

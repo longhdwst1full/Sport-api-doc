@@ -196,6 +196,11 @@ components:
           type: string
           format: uri
           nullable: true
+        specifications:
+          description: Thông số kỹ thuật đã ghép nhãn/đơn vị từ từ điển thuộc tính; rỗng nếu chưa nhập
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductSpecificationDto"
         brandId:
           type: string
           pattern: ^[1-9][0-9]*$
@@ -239,6 +244,7 @@ components:
         - isPublished
         - version
         - currency
+        - specifications
         - variants
         - media
         - categories
@@ -402,6 +408,30 @@ components:
       type: string
       enum:
         - VND
+    ProductSpecificationDto:
+      type: object
+      properties:
+        code:
+          type: string
+          example: ADJUSTABLE_HEIGHT
+        name:
+          type: string
+          example: Chiều cao điều chỉnh
+        dataType:
+          allOf:
+            - $ref: "#/components/schemas/AttributeDataType"
+        unit:
+          type: string
+          nullable: true
+        values:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductSpecificationValueDto"
+      required:
+        - code
+        - name
+        - dataType
+        - values
     ProductVariantDto:
       type: object
       properties:
@@ -532,6 +562,28 @@ components:
       required:
         - code
         - message
+    AttributeDataType:
+      type: string
+      enum:
+        - TEXT
+        - NUMBER
+        - BOOLEAN
+        - OPTION
+    ProductSpecificationValueDto:
+      type: object
+      properties:
+        value:
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+        label:
+          type: string
+          example: 2.25 m
+          description: Nhãn hiển thị đã ghép đơn vị / nhãn lựa chọn
+      required:
+        - value
+        - label
     ProductVariantStatus:
       type: string
       enum:

@@ -40,6 +40,7 @@ describe('Admin v1 contract', () => {
   const concurrencyProductIds: string[] = [];
   let concurrencyCategoryId = '';
   let idempotencyCategoryId = '';
+  const attributeCodes: string[] = [];
   const organizationFixture = { branchId: '', warehouseId: '' };
 
   beforeAll(async () => {
@@ -117,6 +118,9 @@ describe('Admin v1 contract', () => {
     }
     if (concurrencyCategoryId) {
       await prisma.category.deleteMany({ where: { id: BigInt(concurrencyCategoryId) } });
+    }
+    if (attributeCodes.length > 0) {
+      await prisma.attribute.deleteMany({ where: { code: { in: attributeCodes } } });
     }
     if (idempotencyCategoryId) {
       await prisma.category.deleteMany({ where: { id: BigInt(idempotencyCategoryId) } });
@@ -496,7 +500,8 @@ describe('Admin v1 contract', () => {
     expect(slug).toMatch(/^e2e-product-prd-[a-f0-9]{24}$/);
 
     const createdVariant = createdProduct.variants.find(({ name }) => name === 'Default SKU');
-    expect(createdVariant?.sku).toMatch(new RegExp(`^${createdProduct.productNo}-SKU-[A-F0-9]{20}$`));
+    // SKU bỏ trống → mã ngắn 8 ký tự không nhầm lẫn (BR-SKU-02, 2026-09-25).
+    expect(createdVariant?.sku).toMatch(/^[A-HJ-NP-Z2-9]{8}$/);
     catalogFixture.variantId = createdVariant!.id;
 
     const updatedVariant = await request(server())
@@ -827,6 +832,126 @@ describe('Admin v1 contract', () => {
     expect(await productIdsFor(withoutKeyName)).toHaveLength(2);
 
     await create('x'.repeat(101), body(`Too long key ${suffix}`)).expect(400);
+  });
+
+  it('creates product, SKU and initial price in one transaction and rolls everything back on a bad media asset', async () => {
+    const suffix = uuidv7().replaceAll('-', '').slice(-8).toUpperCase();
+    const authorization = { authorization: `Bearer ${accessToken}` };
+    const categoryId = idempotencyCategoryId || ((await request(server())
+      .post('/api/v1/admin/catalog/categories')
+      .set(authorization)
+      .send({ code: `SET-${suffix}`, name: 'Setup category', slug: `setup-${suffix.toLowerCase()}` })
+      .expect(201)).body as { id: string }).id;
+    if (!idempotencyCategoryId) idempotencyCategoryId = categoryId;
+
+    const created = await request(server())
+      .post('/api/v1/admin/products')
+      .set(authorization)
+      .send({
+        name: `Setup product ${suffix}`,
+        categoryIds: [categoryId],
+        primaryCategoryId: categoryId,
+        variants: [{ name: 'Standard', initialPriceAmount: '7800000' }],
+      })
+      .expect(201);
+    const product = created.body as { id: string; variants: Array<{ id: string }> };
+    concurrencyProductIds.push(product.id);
+    const prices = await prisma.productPrice.findMany({ where: { productVariantId: BigInt(product.variants[0].id) } });
+    expect(prices.map(({ amount, status }) => ({ amount: amount.toFixed(0), status }))).toEqual([{ amount: '7800000', status: 'ACTIVE' }]);
+
+    // Asset không tồn tại → 422 và KHÔNG còn sản phẩm/SKU/giá nào sót lại (không có sản phẩm dở dang).
+    const brokenName = `Broken setup ${suffix}`;
+    await request(server())
+      .post('/api/v1/admin/products')
+      .set(authorization)
+      .send({
+        name: brokenName,
+        categoryIds: [categoryId],
+        primaryCategoryId: categoryId,
+        variants: [{ name: 'Standard', initialPriceAmount: '100000' }],
+        media: [{ mediaAssetId: '999999999999' }],
+      })
+      .expect(422);
+    expect(await prisma.product.count({ where: { name: brokenName } })).toBe(0);
+
+    // SKU nhập tay: lưu đúng mã cửa hàng (tự viết hoa); dùng lại mã đã có → 409 từ unique constraint.
+    const manualSku = `e2e-${suffix}`.toUpperCase();
+    const manual = await request(server())
+      .post('/api/v1/admin/products')
+      .set(authorization)
+      .send({ name: `Manual SKU ${suffix}`, categoryIds: [categoryId], primaryCategoryId: categoryId, variants: [{ name: 'Std', sku: ` e2e-${suffix} ` }] })
+      .expect(201);
+    const manualProduct = manual.body as { id: string; variants: Array<{ id: string; sku: string }> };
+    concurrencyProductIds.push(manualProduct.id);
+    expect(manualProduct.variants[0].sku).toBe(manualSku);
+    await request(server())
+      .post('/api/v1/admin/products')
+      .set(authorization)
+      .send({ name: `Manual SKU dup ${suffix}`, categoryIds: [categoryId], primaryCategoryId: categoryId, variants: [{ name: 'Std', sku: manualSku }] })
+      .expect(409);
+    expect(await prisma.product.count({ where: { name: `Manual SKU dup ${suffix}` } })).toBe(0);
+
+    // Tạo giá ở màn sửa: gửi lại cùng x-request-id → một bản giá; cùng id khác số tiền → 409.
+    const priceKey = `e2e-price-${uuidv7()}`;
+    const priceBody = { amount: '450000', startsAt: new Date(Date.now() + 3_600_000).toISOString() };
+    const priceUrl = `/api/v1/admin/products/variants/${manualProduct.variants[0].id}/prices`;
+    await request(server()).post(priceUrl).set(authorization).set('x-request-id', priceKey).send(priceBody).expect(201);
+    await request(server()).post(priceUrl).set(authorization).set('x-request-id', priceKey).send(priceBody).expect(201);
+    await request(server()).post(priceUrl).set(authorization).set('x-request-id', priceKey).send({ ...priceBody, amount: '999000' }).expect(409);
+    expect(await prisma.productPrice.count({ where: { productVariantId: BigInt(manualProduct.variants[0].id) } })).toBe(1);
+  });
+
+  it('stores TD-02 specifications as validated JSONB and resolves labels from the attribute dictionary', async () => {
+    const suffix = uuidv7().replaceAll('-', '').slice(-8).toUpperCase();
+    const authorization = { authorization: `Bearer ${accessToken}` };
+    const createAttribute = async (body: Record<string, unknown>) => {
+      const response = await request(server()).post('/api/v1/admin/catalog/attributes').set(authorization).send(body).expect(201);
+      attributeCodes.push((response.body as { code: string }).code);
+      return response.body as { id: string; code: string; version: number };
+    };
+    const height = await createAttribute({ code: `E2E_HEIGHT_${suffix}`, name: 'Chiều cao điều chỉnh', dataType: 'NUMBER', unit: 'm' });
+    const color = await createAttribute({
+      code: `E2E_COLOR_${suffix}`, name: 'Màu sắc', dataType: 'OPTION', options: [{ code: 'WHITE', label: 'Trắng' }, { code: 'GRAY', label: 'Xám' }],
+    });
+    await request(server()).post('/api/v1/admin/catalog/attributes').set(authorization)
+      .send({ code: height.code, name: 'Trùng', dataType: 'TEXT' }).expect(409);
+
+    const categoryId = idempotencyCategoryId || ((await request(server())
+      .post('/api/v1/admin/catalog/categories')
+      .set(authorization)
+      .send({ code: `SPEC-${suffix}`, name: 'Spec category', slug: `spec-${suffix.toLowerCase()}` })
+      .expect(201)).body as { id: string }).id;
+    if (!idempotencyCategoryId) idempotencyCategoryId = categoryId;
+    const product = (await request(server()).post('/api/v1/admin/products').set(authorization)
+      .send({ name: `Spec product ${suffix}`, categoryIds: [categoryId], primaryCategoryId: categoryId, variants: [{ name: 'Std' }] })
+      .expect(201)).body as { id: string; slug: string; version: number };
+    concurrencyProductIds.push(product.id);
+
+    // Sai kiểu (số dạng chữ) → 422 và không ghi gì.
+    await request(server()).put(`/api/v1/admin/products/${product.id}/specifications`).set(authorization)
+      .send({ expectedVersion: product.version, specifications: [{ code: height.code, values: ['2.25m'] }] })
+      .expect(422);
+    const saved = await request(server()).put(`/api/v1/admin/products/${product.id}/specifications`).set(authorization)
+      .send({ expectedVersion: product.version, specifications: [{ code: height.code, values: [1.55, 2.25] }, { code: color.code, values: ['white'] }] })
+      .expect(200);
+    const detail = saved.body as { version: number; specifications: Array<{ code: string; unit: string | null; values: Array<{ label: string }> }> };
+    expect(detail.version).toBe(product.version + 1);
+    expect(detail.specifications.find(({ code }) => code === height.code)?.values.map(({ label }) => label)).toEqual(['1,55 m', '2,25 m']);
+    expect(detail.specifications.find(({ code }) => code === color.code)?.values.map(({ label }) => label)).toEqual(['Trắng']);
+    // JSONB chỉ chứa code + giá trị, không nhãn/đơn vị.
+    const row = await prisma.product.findUniqueOrThrow({ where: { id: BigInt(product.id) }, select: { specifications: true } });
+    expect(row.specifications).toEqual([{ code: height.code, values: [1.55, 2.25] }, { code: color.code, values: ['WHITE'] }]);
+
+    // Đang có sản phẩm dùng: không đổi đơn vị, không bỏ lựa chọn đang dùng.
+    await request(server()).patch(`/api/v1/admin/catalog/attributes/${height.id}`).set(authorization)
+      .send({ unit: 'cm', expectedVersion: height.version }).expect(409);
+    await request(server()).patch(`/api/v1/admin/catalog/attributes/${color.id}`).set(authorization)
+      .send({ options: [{ code: 'GRAY', label: 'Xám' }], expectedVersion: color.version }).expect(409);
+    // Bỏ lựa chọn KHÔNG ai dùng thì được.
+    await request(server()).patch(`/api/v1/admin/catalog/attributes/${color.id}`).set(authorization)
+      .send({ options: [{ code: 'WHITE', label: 'Trắng tinh' }], expectedVersion: color.version }).expect(200);
+    const relabeled = await request(server()).get(`/api/v1/admin/products/${product.slug}`).set(authorization).expect(200);
+    expect((relabeled.body as typeof detail).specifications.find(({ code }) => code === color.code)?.values[0].label).toBe('Trắng tinh');
   });
 
   it('creates, updates and changes branch plus warehouse status atomically', async () => {

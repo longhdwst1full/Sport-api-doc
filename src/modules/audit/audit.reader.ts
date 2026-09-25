@@ -9,6 +9,7 @@ export interface RequestAuditEntry {
   entityId: string | null;
   actorUserId: string | null;
   after: Prisma.JsonValue | null;
+  createdAt: Date;
 }
 
 /**
@@ -17,6 +18,26 @@ export interface RequestAuditEntry {
  * Tách khỏi `AuditWriter` để module nghiệp vụ không truy vấn thẳng bảng của Audit và không đổi
  * hợp đồng ghi đang dùng ở mọi module.
  */
+const AUDIT_ENTRY_SELECT = {
+  action: true,
+  entityType: true,
+  entityId: true,
+  actorUserId: true,
+  afterJson: true,
+  createdAt: true,
+} satisfies Prisma.AuditLogSelect;
+
+function toEntry(row: Prisma.AuditLogGetPayload<{ select: typeof AUDIT_ENTRY_SELECT }>): RequestAuditEntry {
+  return {
+    action: row.action,
+    entityType: row.entityType,
+    entityId: row.entityId,
+    actorUserId: row.actorUserId === null ? null : toEntityId(row.actorUserId),
+    after: row.afterJson,
+    createdAt: row.createdAt,
+  };
+}
+
 @Injectable()
 export class AuditReader {
   constructor(private readonly prisma: PrismaService) {}
@@ -32,14 +53,27 @@ export class AuditReader {
     const rows = await (transaction ?? this.prisma).auditLog.findMany({
       where: { requestId },
       orderBy: { sequenceNo: 'asc' },
-      select: { action: true, entityType: true, entityId: true, actorUserId: true, afterJson: true },
+      select: AUDIT_ENTRY_SELECT,
     });
-    return rows.map((row) => ({
-      action: row.action,
-      entityType: row.entityType,
-      entityId: row.entityId,
-      actorUserId: row.actorUserId === null ? null : toEntityId(row.actorUserId),
-      after: row.afterJson,
-    }));
+    return rows.map(toEntry);
+  }
+
+  /**
+   * Các bản ghi mới nhất của một entity theo danh sách action; dùng index
+   * `(entity_type, entity_id, created_at)`. Dùng cho heartbeat job (entity `JOB/<tên job>`).
+   */
+  async findRecentForEntity(
+    entityType: string,
+    entityId: string,
+    actions: readonly string[],
+    take: number,
+  ): Promise<RequestAuditEntry[]> {
+    const rows = await this.prisma.auditLog.findMany({
+      where: { entityType, entityId, action: { in: [...actions] } },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take,
+      select: AUDIT_ENTRY_SELECT,
+    });
+    return rows.map(toEntry);
   }
 }

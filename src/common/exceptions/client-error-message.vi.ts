@@ -316,6 +316,16 @@ export const ERROR_KEY = {
   CATALOG_BRAND_IS_NOT_ACTIVE: 'Brand is not active',
   CATALOG_BRAND_VERSION_CONFLICT: 'Brand version conflict',
   CATALOG_BUNDLE_COMPONENTS_MUST_BE_UNIQUE: 'Bundle components must be unique',
+  CATALOG_MEDIA_ASSETS_MUST_BE_UNIQUE: 'Media assets must be unique',
+  MEDIA_MODE_MUST_BE_DRY_RUN_OR_DELETE: 'mode must be dry-run or delete',
+  CATALOG_ARCHIVED_PRODUCT_CANNOT_BE_EDITED: 'Archived product cannot be edited',
+  CATALOG_ATTRIBUTE_CODE_ALREADY_EXISTS: 'Attribute code already exists',
+  CATALOG_ATTRIBUTE_NOT_FOUND: 'Attribute not found',
+  CATALOG_OPTION_ATTRIBUTE_NEEDS_AT_LEAST_ONE_OPTION: 'OPTION attribute needs at least one option',
+  CATALOG_ONLY_OPTION_ATTRIBUTES_CAN_HAVE_OPTIONS: 'Only OPTION attributes can have options',
+  CATALOG_OPTION_CODES_MUST_BE_UNIQUE: 'Option codes must be unique',
+  CATALOG_SKU_MUST_BE_UNIQUE_WITHIN_THE_PRODUCT: 'SKU must be unique within the product',
+  CATALOG_PRICE_MANAGE_REQUIRED_FOR_INITIAL_PRICES: 'catalog.price.manage is required to set initial prices',
   CATALOG_BUNDLE_CONTAINS_INVALID_COMPONENT: 'Bundle contains invalid component',
   CATALOG_NESTED_BUNDLES_ARE_NOT_ALLOWED: 'Nested bundles are not allowed',
   CATALOG_AT_LEAST_ONE_MUTABLE_VARIANT_FIELD_IS_REQUIRED: 'At least one mutable variant field is required',
@@ -374,6 +384,7 @@ export const ERROR_KEY = {
   CATALOG_VARIANT_IS_USED_BY_AN_ACTIVE_PUBLISHED_COMBO_ARCHIVE_THE_C: 'Variant is used by an active published combo; archive the combo first',
   CATALOG_PRODUCT_TYPE_CANNOT_CHANGE_AFTER_VARIANTS_HAVE_BEEN_CREATE: 'Product type cannot change after variants have been created',
   CATALOG_PUBLISHED_PRODUCT_REQUIRES_AN_ACTIVE_VARIANT_AND_EFFECTIVE: 'Published product requires an active variant and effective price',
+  CATALOG_PUBLISHED_PRODUCT_REQUIRES_A_PRIMARY_IMAGE: 'Published product requires a primary image',
   CATALOG_REPLACEMENT_PRICE_MUST_START_AFTER_THE_CURRENT_PRICE_START: 'Replacement price must start after the current price starts',
 
   // --- MEDIA ---
@@ -653,6 +664,17 @@ const EXACT_MESSAGES: Readonly<Record<string, string>> = {
   [ERROR_KEY.CATALOG_BRAND_IS_NOT_ACTIVE]: 'Thương hiệu này đang ngừng hoạt động.',
   [ERROR_KEY.CATALOG_BRAND_VERSION_CONFLICT]:
     'Thương hiệu vừa được cập nhật. Vui lòng tải lại rồi thử lại.',
+  [ERROR_KEY.CATALOG_MEDIA_ASSETS_MUST_BE_UNIQUE]: 'Mỗi ảnh chỉ được chọn một lần.',
+  [ERROR_KEY.MEDIA_MODE_MUST_BE_DRY_RUN_OR_DELETE]: 'Chế độ chạy chỉ nhận dry-run hoặc delete.',
+  [ERROR_KEY.CATALOG_ARCHIVED_PRODUCT_CANNOT_BE_EDITED]: 'Sản phẩm đã lưu trữ, không sửa được. Đưa về bản nháp trước.',
+  [ERROR_KEY.CATALOG_ATTRIBUTE_CODE_ALREADY_EXISTS]: 'Mã thuộc tính đã tồn tại.',
+  [ERROR_KEY.CATALOG_ATTRIBUTE_NOT_FOUND]: 'Không tìm thấy thuộc tính.',
+  [ERROR_KEY.CATALOG_OPTION_ATTRIBUTE_NEEDS_AT_LEAST_ONE_OPTION]: 'Thuộc tính dạng lựa chọn cần ít nhất một giá trị.',
+  [ERROR_KEY.CATALOG_ONLY_OPTION_ATTRIBUTES_CAN_HAVE_OPTIONS]: 'Chỉ thuộc tính dạng lựa chọn mới có danh sách giá trị.',
+  [ERROR_KEY.CATALOG_OPTION_CODES_MUST_BE_UNIQUE]: 'Mã các giá trị lựa chọn không được trùng nhau.',
+  [ERROR_KEY.CATALOG_SKU_MUST_BE_UNIQUE_WITHIN_THE_PRODUCT]: 'Hai biến thể không được dùng cùng một mã SKU.',
+  [ERROR_KEY.CATALOG_PRICE_MANAGE_REQUIRED_FOR_INITIAL_PRICES]:
+    'Tài khoản chưa có quyền quản lý giá. Bỏ trống giá ban đầu hoặc nhờ người có quyền nhập giá.',
   [ERROR_KEY.CATALOG_BUNDLE_COMPONENTS_MUST_BE_UNIQUE]:
     'Mỗi sản phẩm chỉ được thêm một lần vào combo.',
   [ERROR_KEY.CATALOG_BUNDLE_CONTAINS_INVALID_COMPONENT]: 'Combo có thành phần không hợp lệ.',
@@ -714,6 +736,7 @@ const EXACT_MESSAGES: Readonly<Record<string, string>> = {
     'Phiên bản đang nằm trong một combo đang bán. Hãy lưu trữ combo đó trước.',
   [ERROR_KEY.CATALOG_PRODUCT_TYPE_CANNOT_CHANGE_AFTER_VARIANTS_HAVE_BEEN_CREATE]:
     'Không đổi được loại sản phẩm sau khi đã tạo phiên bản.',
+  [ERROR_KEY.CATALOG_PUBLISHED_PRODUCT_REQUIRES_A_PRIMARY_IMAGE]: 'Sản phẩm cần có ảnh chính trước khi xuất bản.',
   [ERROR_KEY.CATALOG_PUBLISHED_PRODUCT_REQUIRES_AN_ACTIVE_VARIANT_AND_EFFECTIVE]:
     'Sản phẩm đăng bán cần có phiên bản đang hoạt động và giá hiệu lực.',
   [ERROR_KEY.CATALOG_REPLACEMENT_PRICE_MUST_START_AFTER_THE_CURRENT_PRICE_START]:

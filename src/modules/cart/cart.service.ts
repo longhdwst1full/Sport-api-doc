@@ -11,7 +11,7 @@ import { Prisma } from '@prisma/client';
 
 import { toDatabaseId, toEntityId } from '../../common/identifiers/entity-id';
 import { PrismaService } from '../../database/prisma.service';
-import { PRODUCT_STATUS, PRODUCT_TYPE, PRODUCT_VARIANT_STATUS } from '../catalog/products/product.constants';
+import { PRODUCT_STATUS, PRODUCT_TYPE, PRODUCT_VARIANT_STATUS, type ProductType } from '../catalog/products/product.constants';
 import { USER_STATUS, USER_TYPE } from '../iam/iam.constants';
 import { CART_CURRENCY, CART_STATUS } from './cart.constants';
 import { CartDto, GuestCartDto } from './cart.dto';
@@ -184,15 +184,31 @@ export class CartService {
     if (!trimmed) return this.toDto(await this.getOrCreateAccountRow(userId));
 
     return this.prisma.$transaction(async (transaction) => {
-      const guest = await transaction.cart.findFirst({
+      const candidate = await transaction.cart.findFirst({
         where: {
           anonymousTokenHash: this.hashToken(trimmed),
           status: CART_STATUS.ACTIVE,
           userId: null,
         },
-        include: { items: true },
+        select: { id: true },
       });
       // Token sai, hết hạn, hoặc giỏ đã gộp rồi: không phải lỗi, chỉ là không có gì để làm.
+      if (!candidate) return this.toDto(await this.findById(transaction, accountCartId));
+
+      // TRANSACTION: khoá CẢ HAI giỏ theo thứ tự id trước khi đọc dòng hàng. Không khoá thì hai lần
+      // gộp song song (hai tab cùng đăng nhập, retry sau timeout) có thể cùng thấy giỏ khách ACTIVE;
+      // lần sau đọc số lượng đã được lần trước cộng rồi cộng thêm lần nữa, hoặc cùng tạo một dòng và
+      // vấp unique (cart_id, product_variant_id). Thứ tự id cố định để không deadlock với nhau.
+      const lockIds = [candidate.id, accountCartId].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
+      await transaction.$queryRaw(
+        Prisma.sql`SELECT id FROM carts WHERE id IN (${Prisma.join(lockIds)}) ORDER BY id FOR UPDATE`,
+      );
+      // INVARIANT: đọc lại sau khi giữ khoá; request vừa thắng đã chuyển giỏ khách sang CONVERTED thì
+      // đây là no-op và trả giỏ tài khoản hiện tại — đây là bước compare-and-set của lần gộp.
+      const guest = await transaction.cart.findFirst({
+        where: { id: candidate.id, status: CART_STATUS.ACTIVE, userId: null },
+        include: { items: true },
+      });
       if (!guest || guest.items.length === 0) {
         if (guest) await this.markGuestConverted(transaction, guest.id);
         return this.toDto(await this.findById(transaction, accountCartId));
@@ -206,10 +222,12 @@ export class CartService {
       for (const item of guest.items) {
         const existing = existingByVariant.get(item.productVariantId);
         if (existing) {
+          // INVARIANT (quyết định chủ dự án 2026-09-25): cùng SKU có ở cả hai giỏ thì lấy số lượng LỚN HƠN,
+          // không cộng dồn — khách thường bỏ lại cùng món trên máy khác, cộng dồn làm tăng số lượng ngoài ý muốn.
           await transaction.cartItem.update({
             where: { id: existing.id },
             data: {
-              quantity: existing.quantity + item.quantity,
+              quantity: Math.max(existing.quantity, item.quantity),
               priceSeenAt: new Date(),
               version: { increment: 1 },
             },
@@ -448,6 +466,8 @@ export class CartService {
       return {
         id: toEntityId(item.id),
         productVariantId: toEntityId(item.productVariantId),
+        productId: toEntityId(item.productVariant.product.id),
+        productType: item.productVariant.product.productType as ProductType,
         sku: item.productVariant.sku,
         name: item.productVariant.name,
         productName: item.productVariant.product.name,

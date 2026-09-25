@@ -1,10 +1,10 @@
 # Catalog Products module maintenance note
 
-> **Document version:** 1.2.0
+> **Document version:** 1.5.0
 >
 > **Last updated:** 2026-09-25
 >
-> **Change summary:** `createAdminProduct` idempotent theo `x-request-id` + audit, có advisory lock và 409 khi khác payload/người/thao tác.
+> **Change summary:** Idempotency theo `x-request-id` dùng chung (`request-idempotency.ts`) cho tạo sản phẩm, tạo giá và gắn ảnh.
 
 ## Phạm vi và entrypoint
 
@@ -23,7 +23,11 @@ bundle use case; `ProductMediaService` sở hữu media link lifecycle.
 
 ## Invariant tạo sản phẩm
 
-- `createAdminProduct` nhận thông tin Product và 1–50 initial variants.
+- `createAdminProduct` nhận thông tin Product và 1–50 initial variants; mỗi variant có thể kèm
+  `initialPriceAmount` (cần thêm `catalog.price.manage`, kiểm ở controller) và `media[]` (≤20 asset
+  ACTIVE, ảnh đầu là ảnh chính). Product, SKU, giá, ảnh và audit cùng một transaction: asset lỗi hoặc
+  giá lỗi rollback toàn bộ — không còn sản phẩm dở dang thiếu giá/ảnh. Tồn đầu vẫn là phiếu kho riêng
+  của từng chi nhánh (không gộp vào đây vì Catalog không ghi bảng của Inventory).
 - Product, category links, toàn bộ initial variants và audit ghi trong một Prisma transaction.
   Bất kỳ category/barcode/SKU/audit write lỗi đều rollback toàn aggregate.
 - Mỗi variant có audit sequence riêng; Product audit chỉ snapshot `variantCount`, không lặp
@@ -44,7 +48,22 @@ bundle use case; `ProductMediaService` sở hữu media link lifecycle.
   khác payload hoặc khác `fingerprintVersion` → 409 `PRODUCT_IDEMPOTENCY_CONFLICT`.
 - Phụ thuộc: audit tạo sản phẩm phải ghi đồng bộ trong cùng transaction. Chuyển audit sang ghi bất đồng
   bộ/outbox sẽ làm mất idempotency; khi đó cần kho khoá riêng.
-- Chỉ bao phủ bước tạo Product + SKU. Tồn đầu có khoá riêng; giá và ảnh gọi sau vẫn chưa idempotent.
+- Helper dùng chung `request-idempotency.ts` (lock, tra audit, fingerprint) cho `createAdminProduct`,
+  `createAdminProductPrice` và `attachAdminProductMedia`. Gắn ảnh nhận diện lần gửi lại TRƯỚC khi kiểm
+  `expectedProductVersion` (lần đầu đã tăng version). Tồn đầu có `Idempotency-Key` riêng của Inventory.
+
+## Policy xuất bản
+
+- `evaluatePublishReadiness` là nguồn quyết định duy nhất: `publish` ném câu của lỗi chặn đầu tiên,
+  `getAdminProductSetupStatus` trả toàn bộ `blockingIssues` + `warnings`. Admin không tự tính điều kiện.
+- Chặn: không có SKU ACTIVE có giá hiệu lực; STANDARD chứa SKU combo; combo sai cấu hình; thiếu ảnh chính.
+- Cảnh báo: chưa chi nhánh nào có tồn khả dụng (publish cho cả chuỗi, tồn theo chi nhánh).
+- Đọc tổng tồn từ `inventory_balances` chỉ để cảnh báo; Catalog không ghi bảng của Inventory.
+
+## SKU
+
+- SKU là mã hàng của cửa hàng: nhập tay khi tạo (tự viết hoa, `^[A-Z0-9][A-Z0-9._+-]{1,39}$`) hoặc bỏ
+  trống để sinh 8 ký tự không nhầm lẫn. Unique và immutable (BR-SKU-02, doc 27).
 
 ## Permission, concurrency và lỗi
 
@@ -80,6 +99,9 @@ bundle use case; `ProductMediaService` sở hữu media link lifecycle.
 
 | Version | Date | Change summary |
 | --- | --- | --- |
+| 1.5.0 | 2026-09-25 | Idempotency dùng chung cho tạo giá và gắn ảnh. |
+| 1.4.0 | 2026-09-25 | Policy xuất bản dùng chung + setup-status; SKU nhập tay/mã ngắn. |
+| 1.3.0 | 2026-09-25 | Giá ban đầu + ảnh gắn trong transaction tạo sản phẩm. |
 | 1.2.0 | 2026-09-25 | createAdminProduct idempotent theo x-request-id + audit, advisory lock, 409 PRODUCT_IDEMPOTENCY_CONFLICT. |
 | 1.1.0 | 2026-09-21 | DELETE Product Media gọi Cloudinary, chặn asset dùng chung và compensation khi provider lỗi. |
 | 1.0.0 | 2026-09-20 | Tạo note và aggregate create Product + initial variants atomic. |

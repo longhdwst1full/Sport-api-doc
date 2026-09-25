@@ -1,4 +1,4 @@
-import { ConflictException, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
@@ -21,15 +21,19 @@ describe('CheckoutService', () => {
   const findCustomer = jest.fn();
   const createCustomer = jest.fn();
   const shippingQuote = jest.fn();
+  const findVariants = jest.fn();
+  const resolveActiveDeals = jest.fn().mockResolvedValue(new Map());
   const transaction = {
     $queryRaw: jest.fn(),
     cart: { findFirst: jest.fn() },
-    checkoutSession: { create: jest.fn() },
+    checkoutSession: { create: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
+    inventoryBalance: { findMany: jest.fn() },
   };
   const prisma = {
     cart: { findFirst: findCart },
     checkoutSession: { findUnique: findCheckout, findFirst: findOwnedCheckout, findMany: listCheckouts, count: countCheckouts },
     warehouse: { findMany: findWarehouses },
+    productVariant: { findMany: findVariants },
     customer: { findFirst: findCustomer, create: createCustomer },
     $transaction: jest.fn((callback: (client: typeof transaction) => unknown) => callback(transaction)),
   } as unknown as PrismaService;
@@ -40,7 +44,7 @@ describe('CheckoutService', () => {
     { getOrThrow: jest.fn().mockReturnValue(30) } as unknown as ConfigService,
     { write: jest.fn() } as unknown as AuditWriter,
     // Không có campaign flash nào đang chạy trong các case này.
-    { resolveActiveDeals: jest.fn().mockResolvedValue(new Map()) } as unknown as FlashSaleService,
+    { resolveActiveDeals } as unknown as FlashSaleService,
   );
   const input: CreateCheckoutQuoteDto = {
     recipient: {
@@ -79,6 +83,7 @@ describe('CheckoutService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    resolveActiveDeals.mockResolvedValue(new Map());
     resolveGuestCartId.mockResolvedValue(1n);
     findCustomer.mockResolvedValue({ id: 20n });
     transaction.cart.findFirst.mockResolvedValue({ id: 1n });
@@ -213,5 +218,98 @@ describe('CheckoutService', () => {
     expect(listCheckouts).toHaveBeenCalledWith(expect.objectContaining({
       where: { AND: [{ branchId: { in: [12n] } }, {}, { status: 'AWAITING_SHIPPING_CONSULTATION' }] },
     }));
+  });
+
+  describe('multi-branch stock split', () => {
+    const warehouse = (id: bigint, name: string, available: number) => ({
+      id,
+      branchId: id,
+      status: 'ACTIVE',
+      branch: { id, name, status: 'ACTIVE', addressJson: { addressLine: '1', district: 'Q1', province: 'HCM' } },
+      inventoryBalances: [{ productVariantId: 7n, onHand: available, reserved: 0 }],
+    });
+    const cartOfThree = {
+      ...sellableCart,
+      items: [{ ...sellableCart.items[0], quantity: 3 }],
+    };
+    const echoCreate = () => transaction.checkoutSession.create.mockImplementation(
+      ({ data }: { data: Record<string, unknown> }) => Promise.resolve({
+        ...data,
+        id: 31n,
+        branch: { name: 'picked' },
+        items: [{ productVariantId: 7n, skuSnapshot: 'SKU-7', nameSnapshot: 'Tạ tay', quantity: 3, unitPrice: new Prisma.Decimal(500000), lineTotal: new Prisma.Decimal(1500000) }],
+      }),
+    );
+
+    it('routes to consultation at the branch covering most, instead of rejecting, when the chain has enough', async () => {
+      findCart.mockResolvedValue(cartOfThree);
+      findCheckout.mockResolvedValue(null);
+      // Hà Nội còn 2, HCM còn 1: không kho nào đủ 3 nhưng cả chuỗi đủ.
+      findWarehouses.mockResolvedValue([warehouse(5n, 'Hà Nội', 2), warehouse(6n, 'HCM', 1)]);
+      findVariants.mockResolvedValue([{ id: 7n, sku: 'SKU-7', name: 'Tạ tay' }]);
+      echoCreate();
+
+      await expect(service.quoteGuest('cart-token', input, 'split-key', 'request-5')).resolves.toMatchObject({
+        status: 'AWAITING_SHIPPING_CONSULTATION',
+        requiresShippingConsultation: true,
+        warehouseId: '5',
+      });
+      expect(shippingQuote).not.toHaveBeenCalled();
+      const created = (transaction.checkoutSession.create.mock.calls[0] as [{ data: { shippingRuleSnapshot: unknown } }])[0];
+      expect(created.data.shippingRuleSnapshot).toMatchObject({
+        consultationReason: 'STOCK_SPLIT_ACROSS_BRANCHES',
+        stockShortages: [{ productVariantId: '7', sku: 'SKU-7', requested: 3, availableAtBranch: 2 }],
+      });
+    });
+
+    it('still rejects when the whole chain does not have enough stock', async () => {
+      findCart.mockResolvedValue(cartOfThree);
+      findCheckout.mockResolvedValue(null);
+      findWarehouses.mockResolvedValue([warehouse(5n, 'Hà Nội', 1), warehouse(6n, 'HCM', 1)]);
+
+      await expect(service.quoteGuest('cart-token', input, 'short-key', 'request-6'))
+        .rejects.toBeInstanceOf(ConflictException);
+      expect(transaction.checkoutSession.create).not.toHaveBeenCalled();
+    });
+
+    it('blocks staff from quoting a split checkout until the shortage is transferred in', async () => {
+      transaction.checkoutSession.findUnique.mockResolvedValue({
+        id: 31n,
+        branchId: 5n,
+        warehouseId: 5n,
+        status: 'AWAITING_SHIPPING_CONSULTATION',
+        version: 0n,
+        itemSubtotal: new Prisma.Decimal(1500000),
+        shippingRuleSnapshot: {
+          consultationReason: 'STOCK_SPLIT_ACROSS_BRANCHES',
+          stockShortages: [{ productVariantId: '7', sku: 'SKU-7', name: 'Tạ tay', requested: 3, availableAtBranch: 2 }],
+        },
+        branch: { name: 'Hà Nội' },
+        items: [],
+      });
+      transaction.inventoryBalance.findMany.mockResolvedValue([{ productVariantId: 7n, onHand: 2, reserved: 0 }]);
+      const principal = {
+        userId: '2', sessionId: '3', displayName: 'Owner', permissionVersion: '1',
+        permissions: [], scopes: [{ type: ScopeType.GLOBAL }], mustChangePassword: false,
+      };
+      const quote = { shippingFee: '300000', etaMinDays: 2, etaMaxDays: 4, agreementNote: 'Gọi khách', expectedVersion: 0 };
+
+      await expect(service.updateManualShipping('token', quote, principal, 'request-7')).rejects.toMatchObject({
+        response: { code: 'CHECKOUT_STOCK_NOT_TRANSFERRED' },
+      });
+      expect(transaction.checkoutSession.update).not.toHaveBeenCalled();
+    });
+  });
+
+  it('answers 403 for a consultation outside the assigned branch', async () => {
+    transaction.checkoutSession.findUnique.mockResolvedValue({ id: 40n, branchId: 9n, status: 'AWAITING_SHIPPING_CONSULTATION', version: 0n });
+    const otherBranchManager = {
+      userId: '2', sessionId: '3', displayName: 'Manager', permissionVersion: '1',
+      permissions: [], scopes: [{ type: ScopeType.BRANCH, branchId: '3' }], mustChangePassword: false,
+    };
+
+    await expect(service.updateManualShipping('token', {
+      shippingFee: '0', etaMinDays: 1, etaMaxDays: 2, agreementNote: 'x', expectedVersion: 0,
+    }, otherBranchManager, 'request-8')).rejects.toBeInstanceOf(ForbiddenException);
   });
 });

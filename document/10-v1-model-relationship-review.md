@@ -1,10 +1,10 @@
 # V1 model và quan hệ — bản review
 
-> **Document version:** 3.7.0
+> **Document version:** 3.8.0
 >
-> **Last updated:** 2026-09-24
+> **Last updated:** 2026-09-25
 >
-> **Change summary:** Vật lý hoá quan hệ Return/Refund V1; refunds thuộc Return, không qua approval_requests.
+> **Change summary:** D61: thông số kỹ thuật lưu ở products.specifications JSONB theo từ điển attributes; bỏ attribute_values và product_attribute_values.
 
 File nguồn ERD: `09-v1-model.dbml`. Copy toàn bộ nội dung vào dbdiagram.io để xem và kéo thả sơ đồ.
 
@@ -37,14 +37,14 @@ Quyết định này không bổ sung bảng serial/procurement. Các bảng m�
 | Organization + IAM + Approval | 9 | 1 | Approval chỉ cần khi bật refund/threshold stock/price |
 | Customer | 2 | 0 | Customer tách User để hỗ trợ guest checkout |
 | External media | 1 | 1 | Asset provider dùng chung; không lưu binary trong DB |
-| Catalog + Pricing + Review + Flash sale + Combo | 10 | 10 | Product/Variant là ranh giới bắt buộc; combo snapshot component |
+| Catalog + Pricing + Review + Flash sale + Combo | 10 | 8 | Product/Variant là ranh giới bắt buộc; combo snapshot component |
 | Inventory | 5 | 4 | Balance + ledger + reservation là core |
 | Cart + Order | 6 | 0 | Order snapshot không phụ thuộc catalog sau đặt hàng |
 | Payment | 3 | 1 | Một payment/order nhưng nhiều transaction |
 | Fulfillment + Shipping | 5 | 0 | Một fulfillment/order ở V1 |
 | Return | 0 | 3 | Phát hành sau luồng bán thường |
 | CMS + Notification + Platform | 2 | 11 | Idempotency/outbox là P0; CMS taxonomy/relations thuộc P1 |
-| **Tổng** | **43** | **31** | **74 bảng trong DBML** |
+| **Tổng** | **43** | **29** | **72 bảng trong DBML** (D61 gộp 2 bảng thuộc tính vào JSONB) |
 
 Model vật lý hiện có 74 bảng: 43 bảng P0 và 31 bảng P1. DBML là nguồn review kỹ thuật; catalog CSV là nguồn theo dõi phạm vi/priority.
 
@@ -156,6 +156,7 @@ Lifecycle P0 sau quyết định D22:
 | `idempotency_keys.actor_id` | Actor có thể user/system/signed guest | Actor type + signed context + expiry |
 | `payment_evidences.guest_access_id` | Guest không có user | Token hash/signed access; không lưu raw secret |
 | `media_usages.owner_type/owner_id` | Ảnh nhúng trong nhiều loại rich content | Validate owner khi publish; cleanup job không xóa asset còn usage |
+| `products.specifications[].code` → `attributes.code` | D61: thông số lưu JSONB thay cho 2 bảng liên kết | `attributes.code` bất biến, không xoá cứng; mọi lần ghi qua Catalog service (kiểm kiểu/lựa chọn); không đổi unit hay bỏ lựa chọn đang được dùng |
 
 Không dùng quan hệ polymorphic cho dữ liệu lõi cần integrity như order, payment, fulfillment, balance hoặc reservation.
 
@@ -286,6 +287,7 @@ Quy tắc:
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 3.8.0 | 2026-09-25 | D61: bỏ attribute_values/product_attribute_values; thêm quan hệ không-FK products.specifications → attributes.code; variant_attribute_values dùng option_code. | API-20260925-CATALOG-SPECIFICATIONS |
 | 3.7.0 | 2026-09-24 | Return/Refund V1: thêm quan hệ return_status_history, refunds 1→n theo phiếu và payment, bỏ return_policies và liên kết approval_requests–refunds. | API-20260924-RETURN-REFUND-V1 |
 | 3.6.0 | 2026-09-21 | Product Media DELETE gọi Cloudinary có usage guard, trạng thái DELETE_PENDING và compensation. | API-20260921-PRODUCT-MEDIA-PROVIDER-DELETE |
 | 3.5.0 | 2026-09-13 | Vật lý hóa quan hệ Order–Fulfillment–History và khóa retry-safe cho transition. | DBAPI-20260913-FULFILLMENT-S43 |

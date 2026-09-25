@@ -65,7 +65,7 @@ async function set(prisma) {
   const endpoint = validateUrl(required('ORDER_MAINTENANCE_JOB_URL'));
   const cronSecret = required('CRON_SECRET');
   if (cronSecret.length < 32) throw new Error('CRON_SECRET must contain at least 32 characters');
-  const schedule = process.env.ORDER_MAINTENANCE_CRON_SCHEDULE?.trim() || '*/5 * * * *';
+  const schedule = process.env.ORDER_MAINTENANCE_CRON_SCHEDULE?.trim() || '2-59/5 * * * *'; // Lech phut voi reservation-expiry (*/5) de khong ban cung giay: 4 job cung luc tung lam pg_net ket DNS/timeout 30s.
 
   await prisma.$executeRawUnsafe('CREATE EXTENSION IF NOT EXISTS pg_cron WITH SCHEMA pg_catalog');
   await prisma.$executeRawUnsafe('CREATE EXTENSION IF NOT EXISTS pg_net WITH SCHEMA extensions');

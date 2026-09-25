@@ -44,7 +44,9 @@ function buildHarness({
     .fn<Promise<unknown>, [{ where: { id: bigint }; data: { status?: string } }]>()
     .mockResolvedValue({});
 
+  const lockCarts = jest.fn().mockResolvedValue([]);
   const transaction = {
+    $queryRaw: lockCarts,
     cart: {
       findFirst: jest.fn().mockResolvedValue(
         guestFound
@@ -72,13 +74,13 @@ function buildHarness({
   } as unknown as PrismaService;
 
   const config = { getOrThrow: jest.fn().mockReturnValue(30) } as unknown as ConfigService;
-  return { service: new CartService(prisma, config), itemUpdate, itemCreate, cartUpdate };
+  return { service: new CartService(prisma, config), itemUpdate, itemCreate, cartUpdate, lockCarts, transaction };
 }
 
 describe('CartService.mergeGuestCartIntoAccount', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('cộng dồn số lượng khi cùng một biến thể có ở cả hai giỏ', async () => {
+  it('lấy số lượng lớn hơn khi cùng một biến thể có ở cả hai giỏ', async () => {
     const harness = buildHarness({
       guestItems: [
         {
@@ -99,9 +101,9 @@ describe('CartService.mergeGuestCartIntoAccount', () => {
 
     await harness.service.mergeGuestCartIntoAccount(FIXTURE.GUEST_TOKEN, FIXTURE.USER_ID);
 
-    // Cộng dồn chứ không ghi đè: khách đã chủ động chọn ở cả hai phiên.
+    // Lấy số lớn hơn, không cộng dồn (quyết định 2026-09-25).
     expect(harness.itemUpdate.mock.calls[0][0].data.quantity).toBe(
-      FIXTURE.GUEST_QUANTITY + FIXTURE.ACCOUNT_QUANTITY,
+      Math.max(FIXTURE.GUEST_QUANTITY, FIXTURE.ACCOUNT_QUANTITY),
     );
     expect(harness.itemCreate).not.toHaveBeenCalled();
   });
@@ -163,5 +165,41 @@ describe('CartService.mergeGuestCartIntoAccount', () => {
       harness.service.mergeGuestCartIntoAccount('   ', FIXTURE.USER_ID),
     ).resolves.toBeDefined();
     expect(harness.itemCreate).not.toHaveBeenCalled();
+  });
+
+  it('khoá cả hai giỏ trước khi đọc dòng hàng', async () => {
+    const harness = buildHarness({
+      guestItems: [
+        { productVariantId: FIXTURE.GUEST_ONLY_VARIANT_ID, quantity: 1, unitPricePreview: new Prisma.Decimal('1.00') },
+      ],
+      accountItems: [],
+    });
+
+    await harness.service.mergeGuestCartIntoAccount(FIXTURE.GUEST_TOKEN, FIXTURE.USER_ID);
+
+    expect(harness.lockCarts).toHaveBeenCalledTimes(1);
+    const lockOrder = harness.lockCarts.mock.invocationCallOrder[0];
+    const itemsReadOrder = harness.transaction.cartItem.findMany.mock.invocationCallOrder[0];
+    expect(lockOrder).toBeLessThan(itemsReadOrder);
+  });
+
+  it('là no-op khi request khác đã gộp xong trong lúc chờ khoá', async () => {
+    const harness = buildHarness({
+      guestItems: [
+        { productVariantId: FIXTURE.GUEST_ONLY_VARIANT_ID, quantity: 1, unitPricePreview: new Prisma.Decimal('1.00') },
+      ],
+      accountItems: [],
+    });
+    // Lần đọc đầu thấy ACTIVE; sau khi giữ khoá thì giỏ đã CONVERTED nên không còn khớp.
+    harness.transaction.cart.findFirst
+      .mockReset()
+      .mockResolvedValueOnce({ id: FIXTURE.GUEST_CART_ID })
+      .mockResolvedValueOnce(null);
+
+    await harness.service.mergeGuestCartIntoAccount(FIXTURE.GUEST_TOKEN, FIXTURE.USER_ID);
+
+    expect(harness.itemCreate).not.toHaveBeenCalled();
+    expect(harness.itemUpdate).not.toHaveBeenCalled();
+    expect(harness.cartUpdate).not.toHaveBeenCalled();
   });
 });
