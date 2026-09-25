@@ -50,6 +50,7 @@ import {
   PRODUCT_CURRENCY,
   PRODUCT_ERROR,
   PRODUCT_ERROR_CODE,
+  PRODUCT_LIST_SORT,
   PRODUCT_MEDIA_STATUS,
   PRODUCT_PRICE_STATUS,
   PRODUCT_PRICE_TYPE,
@@ -67,12 +68,23 @@ import {
 } from '../product-identifiers';
 import { evaluatePublishReadiness, type ProductPublishSnapshot } from '../product-publish.policy';
 import { findReplay, lockRequest, requestFingerprint } from '../request-idempotency';
+import { inStockVariantIds, stockedVariantIds, type StockLine } from './product-availability';
 
 const effectivePriceWhere = (now: Date): Prisma.ProductPriceWhereInput => ({
   status: { in: [PRODUCT_PRICE_STATUS.ACTIVE, PRODUCT_PRICE_STATUS.SCHEDULED] },
   startsAt: { lte: now },
   OR: [{ endsAt: null }, { endsAt: { gt: now } }],
 });
+
+/** Đúng các trường mà luật "bán được" đọc — dùng chung cho include đầy đủ và truy vấn xếp giá. */
+interface SellabilityVariant {
+  status: string;
+  prices: ReadonlyArray<unknown>;
+  bundleDefinition: {
+    status: string;
+    items: ReadonlyArray<{ componentVariant: { status: string; product: { status: string } } }>;
+  } | null;
+}
 
 @Injectable()
 export class ProductsService {
@@ -204,24 +216,42 @@ export class ProductsService {
       ...(categoryWhere ? { categories: { some: { category: categoryWhere } } } : {}),
     };
     const skip = (query.page - 1) * query.limit;
+    const byPrice =
+      query.sort === PRODUCT_LIST_SORT.PRICE_ASC ||
+      query.sort === PRODUCT_LIST_SORT.PRICE_DESC ||
+      query.minPrice !== undefined ||
+      query.maxPrice !== undefined;
     // Trang sản phẩm và tổng số là hai phép đọc độc lập: không cần giữ transaction
     // trên pooler chỉ để đọc, nhất là khi DB ở khác region với API.
-    const [rows, total] = await Promise.all([
-      this.prisma.product.findMany({
-        where,
-        include: this.productInclude(now, storefront),
-        // Database ở xa nên chi phí chính là số vòng mạng: chiến lược mặc định
-        // tách mỗi quan hệ thành một truy vấn riêng (12 vòng cho include này),
-        // còn 'join' gộp lại còn 4. Đo được 1.930ms -> 814ms.
-        relationLoadStrategy: 'join',
-        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-        skip,
-        take: query.limit,
-      }),
-      this.prisma.product.count({ where }),
-    ]);
+    const [rows, total] = byPrice
+      ? await this.listPageByPrice(where, query, storefront, now, skip)
+      : await Promise.all([
+          this.prisma.product.findMany({
+            where,
+            include: this.productInclude(now, storefront),
+            // Database ở xa nên chi phí chính là số vòng mạng: chiến lược mặc định
+            // tách mỗi quan hệ thành một truy vấn riêng (12 vòng cho include này),
+            // còn 'join' gộp lại còn 4. Đo được 1.930ms -> 814ms.
+            relationLoadStrategy: 'join',
+            orderBy:
+              query.sort === PRODUCT_LIST_SORT.NAME_ASC
+                ? [{ name: 'asc' }, { id: 'asc' }]
+                : [{ createdAt: 'desc' }, { id: 'desc' }],
+            skip,
+            take: query.limit,
+          }),
+          this.prisma.product.count({ where }),
+        ]);
+    const inStock = await this.inStockVariantIds(rows, storefront);
     return {
-      items: rows.map((row) => this.toSummary(row, storefront)),
+      items: rows.map((row) => {
+        const summary = this.toSummary(row, storefront);
+        return {
+          ...summary,
+          shortDescription: row.shortDescription ?? null,
+          inStock: this.visibleVariants(row, storefront).some(({ id }) => inStock.has(id.toString())),
+        };
+      }),
       meta: {
         page: query.page,
         limit: query.limit,
@@ -248,7 +278,139 @@ export class ProductsService {
       include: this.productInclude(now, storefront),
     });
     if (!row) throw new NotFoundException(PRODUCT_ERROR.NOT_FOUND);
-    return { ...this.toDetail(row, storefront), specifications: await this.attributes.resolve(row.specifications) };
+    const [specifications, inStock] = await Promise.all([
+      this.attributes.resolve(row.specifications),
+      this.inStockVariantIds([row], storefront),
+    ]);
+    const detail = this.toDetail(row, storefront);
+    return {
+      ...detail,
+      specifications,
+      inStock: detail.variants.some(({ id }) => inStock.has(id)),
+      variants: detail.variants.map((variant) => ({ ...variant, inStock: inStock.has(variant.id) })),
+    };
+  }
+
+  /**
+   * Trang danh sách khi phải xếp/lọc theo giá. `minPrice` là giá thấp nhất trong các SKU bán được
+   * (khung giá hiệu lực) nên không nằm trên một cột nào để ORDER BY: đọc bản nhẹ của mọi sản phẩm
+   * khớp bộ lọc, tính đúng luật như `toSummary`, xếp rồi mới nạp đầy đủ một trang.
+   *
+   * PERFORMANCE: tuyến tính theo số sản phẩm khớp lọc (~600 ở V1, 1 truy vấn nhẹ + 1 truy vấn trang).
+   * Khi catalog lên hàng chục nghìn thì cần cột giá hiển thị được duy trì sẵn thay vì cách này.
+   */
+  private async listPageByPrice(
+    where: Prisma.ProductWhereInput,
+    query: ListProductsQueryDto,
+    storefront: boolean,
+    now: Date,
+    skip: number,
+  ) {
+    const candidates = await this.prisma.product.findMany({
+      where,
+      relationLoadStrategy: 'join',
+      select: {
+        id: true,
+        productType: true,
+        createdAt: true,
+        variants: {
+          select: {
+            status: true,
+            prices: { where: effectivePriceWhere(now), orderBy: { startsAt: 'desc' }, take: 1, select: { amount: true } },
+            bundleDefinition: {
+              select: {
+                status: true,
+                items: { select: { componentVariant: { select: { status: true, product: { select: { status: true } } } } } },
+              },
+            },
+          },
+        },
+      },
+    });
+    const minPrice = query.minPrice !== undefined ? new Prisma.Decimal(query.minPrice) : undefined;
+    const maxPrice = query.maxPrice !== undefined ? new Prisma.Decimal(query.maxPrice) : undefined;
+    const priced = candidates
+      .map((candidate) => {
+        const amounts = candidate.variants
+          .filter((variant) => this.isLoadedVariantSellable(candidate.productType as ProductType, variant))
+          .flatMap((variant) => variant.prices.map(({ amount }) => amount));
+        const lowest = amounts.reduce<Prisma.Decimal | null>(
+          (current, amount) => (current === null || amount.lessThan(current) ? amount : current),
+          null,
+        );
+        return { id: candidate.id, createdAt: candidate.createdAt, price: lowest };
+      })
+      // Có khoảng giá thì sản phẩm chưa có giá không thể nằm "trong khoảng".
+      .filter(({ price }) =>
+        (minPrice === undefined && maxPrice === undefined) ||
+        (price !== null &&
+          (minPrice === undefined || price.greaterThanOrEqualTo(minPrice)) &&
+          (maxPrice === undefined || price.lessThanOrEqualTo(maxPrice))));
+    const direction = query.sort === PRODUCT_LIST_SORT.PRICE_DESC ? -1 : 1;
+    const byPriceSort = query.sort === PRODUCT_LIST_SORT.PRICE_ASC || query.sort === PRODUCT_LIST_SORT.PRICE_DESC;
+    priced.sort((left, right) => {
+      if (byPriceSort) {
+        // Chưa có giá luôn ở cuối, bất kể chiều xếp — lên đầu "giá thấp nhất" là sai sự thật.
+        if (left.price === null || right.price === null) {
+          if (left.price !== right.price) return left.price === null ? 1 : -1;
+        } else {
+          const compared = left.price.comparedTo(right.price) * direction;
+          if (compared !== 0) return compared;
+        }
+      }
+      return right.createdAt.getTime() - left.createdAt.getTime() || (right.id > left.id ? 1 : right.id < left.id ? -1 : 0);
+    });
+    const pageIds = priced.slice(skip, skip + query.limit).map(({ id }) => id);
+    const loaded = pageIds.length
+      ? await this.prisma.product.findMany({
+          where: { id: { in: pageIds } },
+          include: this.productInclude(now, storefront),
+          relationLoadStrategy: 'join',
+        })
+      : [];
+    const byId = new Map(loaded.map((row) => [row.id, row]));
+    const rows = pageIds.flatMap((id) => byId.get(id) ?? []);
+    return [rows, priced.length] as const;
+  }
+
+  /** Các SKU mà response hiển thị: Storefront chỉ thấy SKU bán được, Admin thấy tất cả. */
+  private visibleVariants(
+    row: Awaited<ReturnType<ProductsService['findProductForMapping']>>,
+    storefront: boolean,
+  ) {
+    return storefront
+      ? row.variants.filter((variant) => this.isLoadedVariantSellable(row.productType as ProductType, variant))
+      : row.variants;
+  }
+
+  /**
+   * Một lượt đọc số dư cho cả trang. Chỉ kho và chi nhánh đang hoạt động — cùng điều kiện checkout
+   * dùng để chọn kho, để "còn hàng" trên thẻ không hứa thứ checkout sẽ từ chối.
+   */
+  private async inStockVariantIds(
+    rows: ReadonlyArray<Awaited<ReturnType<ProductsService['findProductForMapping']>>>,
+    storefront: boolean,
+  ): Promise<Set<string>> {
+    const lines: StockLine[] = rows.flatMap((row) =>
+      this.visibleVariants(row, storefront).map((variant) => ({
+        variantId: variant.id,
+        components:
+          variant.bundleDefinition?.items.map(({ componentVariantId, quantity }) => ({
+            variantId: componentVariantId,
+            quantity,
+          })) ?? [],
+      })),
+    );
+    const ids = stockedVariantIds(lines);
+    if (ids.length === 0) return new Set();
+    const balances = await this.prisma.inventoryBalance.findMany({
+      where: {
+        productVariantId: { in: ids },
+        warehouse: { status: 'ACTIVE', branch: { status: 'ACTIVE' } },
+      },
+      select: { warehouseId: true, productVariantId: true, onHand: true, reserved: true },
+    });
+    return inStockVariantIds(lines, balances);
   }
 
   /**
@@ -1443,10 +1605,7 @@ export class ProductsService {
     });
   }
 
-  private isLoadedVariantSellable(
-    productType: ProductType,
-    variant: Awaited<ReturnType<ProductsService['findProductForMapping']>>['variants'][number],
-  ): boolean {
+  private isLoadedVariantSellable(productType: ProductType, variant: SellabilityVariant): boolean {
     if (
       variant.status !== PRODUCT_VARIANT_STATUS.ACTIVE ||
       variant.prices.length === 0

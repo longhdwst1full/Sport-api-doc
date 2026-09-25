@@ -24,10 +24,12 @@ import {
   PRODUCT_BUNDLE_TYPE,
   PRODUCT_CURRENCY,
   PRODUCT_IDENTIFIER,
+  PRODUCT_LIST_SORT,
   PRODUCT_MEDIA_STATUS,
   PRODUCT_STATUS,
   PRODUCT_TYPE,
   PRODUCT_VARIANT_STATUS,
+  ProductListSort,
   ProductStatus,
   ProductMediaStatus,
   ProductType,
@@ -52,6 +54,13 @@ export class ProductVariantDto {
   @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI, nullable: true }) effectivePriceId?: string | null;
   @ApiPropertyOptional({ type: Number, example: 0, nullable: true }) effectivePriceVersion?: number | null;
   @ApiPropertyOptional({ type: () => ProductBundleDto, nullable: true }) bundle?: ProductBundleDto | null;
+  @ApiPropertyOptional({
+    type: Boolean,
+    description:
+      'Còn hàng ở ít nhất một kho chi nhánh đang hoạt động (tồn thực − đang giữ ≥ 1; combo tính theo thành phần thiếu nhất). ' +
+      'Chỉ có ở getCatalogProduct/getAdminProduct; response của lệnh ghi không tính.',
+  })
+  inStock?: boolean;
 }
 
 export class ProductMediaDto {
@@ -118,6 +127,15 @@ export class ProductSummaryDto {
   @ApiPropertyOptional({ type: String, example: '18990000.00', nullable: true }) minPrice?: string | null;
   @ApiProperty({ enum: Object.values(PRODUCT_CURRENCY), enumName: 'CurrencyCode', example: 'VND' }) currency: 'VND';
   @ApiPropertyOptional({ type: String, format: 'uri', nullable: true }) imageUrl?: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Mô tả ngắn cho thẻ sản phẩm' })
+  shortDescription?: string | null;
+  @ApiPropertyOptional({
+    type: Boolean,
+    description:
+      'Có ít nhất một SKU đang bán còn hàng ở một kho chi nhánh đang hoạt động. Có trong mọi response danh sách và chi tiết; ' +
+      'response của lệnh ghi không tính. Không lộ số lượng tồn.',
+  })
+  inStock?: boolean;
 }
 
 export class ProductDetailDto extends ProductSummaryDto {
@@ -128,7 +146,6 @@ export class ProductDetailDto extends ProductSummaryDto {
   specifications: ProductSpecificationDto[];
   @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI, nullable: true }) brandId?: string | null;
   @ApiPropertyOptional({ ...ENTITY_ID_OPENAPI, nullable: true }) primaryCategoryId?: string | null;
-  @ApiPropertyOptional() shortDescription?: string;
   @ApiPropertyOptional() description?: string;
   @ApiProperty({ type: [ProductVariantDto] }) variants: ProductVariantDto[];
   @ApiProperty({ type: [ProductMediaDto] }) media: ProductMediaDto[];
@@ -171,6 +188,20 @@ export class ListProductsQueryDto {
   @IsString() @IsOptional() category?: string;
   @ApiPropertyOptional({ enum: Object.values(PRODUCT_STATUS), enumName: 'ProductStatus' })
   @IsIn(Object.values(PRODUCT_STATUS)) @IsOptional() status?: ProductStatus;
+
+  @ApiPropertyOptional({
+    enum: Object.values(PRODUCT_LIST_SORT),
+    enumName: 'ProductListSort',
+    default: PRODUCT_LIST_SORT.NEWEST,
+    description: 'Giá so theo minPrice; sản phẩm chưa có giá luôn xếp cuối',
+  })
+  @IsIn(Object.values(PRODUCT_LIST_SORT)) @IsOptional() sort?: ProductListSort;
+
+  @ApiPropertyOptional({ type: String, pattern: '^\\d+(\\.\\d{1,2})?$', example: '1000000', description: 'minPrice ≥ giá trị này (VND)' })
+  @Matches(/^\d+(\.\d{1,2})?$/) @IsOptional() minPrice?: string;
+
+  @ApiPropertyOptional({ type: String, pattern: '^\\d+(\\.\\d{1,2})?$', example: '5000000', description: 'minPrice ≤ giá trị này (VND)' })
+  @Matches(/^\d+(\.\d{1,2})?$/) @IsOptional() maxPrice?: string;
 }
 
 export class CreateProductDto {

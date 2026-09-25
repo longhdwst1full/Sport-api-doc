@@ -1,10 +1,10 @@
 # Catalog Products module maintenance note
 
-> **Document version:** 1.5.0
+> **Document version:** 1.6.0
 >
 > **Last updated:** 2026-09-25
 >
-> **Change summary:** Idempotency theo `x-request-id` dùng chung (`request-idempotency.ts`) cho tạo sản phẩm, tạo giá và gắn ảnh.
+> **Change summary:** Danh sách/chi tiết trả `inStock` và `shortDescription`; danh sách xếp/lọc theo giá.
 
 ## Phạm vi và entrypoint
 
@@ -20,6 +20,18 @@ bundle use case; `ProductMediaService` sở hữu media link lifecycle.
 - Product là SPU; ProductVariant là sellable SKU. SKU/productNo/slug do Backend tự sinh và
   bất biến theo business rule.
 - Nest DTO/controller là OpenAPI producer; Admin/Client chỉ consume SDK generate.
+- Đọc thêm `inventory_balances` (chỉ đọc) để tính `inStock` trong `list`/`getBySlug`.
+
+## Danh sách, còn hàng và xếp giá
+
+- `inStock` (`services/product-availability.ts`): còn ≥ 1 ở **một** kho có kho và chi nhánh `ACTIVE`,
+  giống điều kiện checkout chọn kho; không cộng tồn giữa các kho; combo cần một kho đủ mọi thành phần.
+  Chỉ trả boolean, không lộ số lượng. Được gắn sau `toSummary`/`toDetail` trong `list`/`getBySlug`, nên
+  response của lệnh ghi Admin (dùng `toDetail`) không có trường này.
+- `sort=PRICE_ASC|PRICE_DESC` hoặc `minPrice`/`maxPrice` đi đường `listPageByPrice`: đọc bản nhẹ của mọi
+  sản phẩm khớp lọc, tính `minPrice` bằng đúng luật bán được, xếp/lọc rồi nạp một trang. Chưa có giá luôn
+  xếp cuối và bị loại khi có khoảng giá. Tuyến tính theo số sản phẩm (~600 ở V1).
+- `NEWEST` (mặc định) và `NAME_ASC` vẫn là một truy vấn phân trang ở DB.
 
 ## Invariant tạo sản phẩm
 
@@ -92,6 +104,7 @@ bundle use case; `ProductMediaService` sở hữu media link lifecycle.
 - Không đưa `variants` vào generic Product update DTO.
 - Giữ Product/Variant/category/audit cùng transaction create.
 - Regenerate OpenAPI và Admin SDK sau khi đổi DTO/controller.
+- Đổi luật "bán được" (`isLoadedVariantSellable`) thì kiểm cả `minPrice` của thẻ lẫn đường xếp giá.
 - Test provider success, shared-usage conflict và compensation khi provider lỗi.
 - Chạy unit, HTTP E2E catalog và PostgreSQL integration liên quan trước handoff.
 
@@ -99,6 +112,7 @@ bundle use case; `ProductMediaService` sở hữu media link lifecycle.
 
 | Version | Date | Change summary |
 | --- | --- | --- |
+| 1.6.0 | 2026-09-25 | `inStock`, `shortDescription` ở danh sách; `sort`/`minPrice`/`maxPrice`. |
 | 1.5.0 | 2026-09-25 | Idempotency dùng chung cho tạo giá và gắn ảnh. |
 | 1.4.0 | 2026-09-25 | Policy xuất bản dùng chung + setup-status; SKU nhập tay/mã ngắn. |
 | 1.3.0 | 2026-09-25 | Giá ban đầu + ảnh gắn trong transaction tạo sản phẩm. |

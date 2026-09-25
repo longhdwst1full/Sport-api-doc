@@ -57,6 +57,15 @@ export const PRODUCT_CURRENCY = {
   VND: 'VND',
 } as const;
 
+/** Thứ tự danh sách sản phẩm. Giá so theo `minPrice` — đúng con số khách thấy trên thẻ. */
+export const PRODUCT_LIST_SORT = {
+  NEWEST: 'NEWEST',
+  PRICE_ASC: 'PRICE_ASC',
+  PRICE_DESC: 'PRICE_DESC',
+  NAME_ASC: 'NAME_ASC',
+} as const;
+export type ProductListSort = (typeof PRODUCT_LIST_SORT)[keyof typeof PRODUCT_LIST_SORT];
+
 export const PRODUCT_IDENTIFIER = {
   PRODUCT_NO_PREFIX: 'PRD',
   PRODUCT_NO_RANDOM_LENGTH: 24,
