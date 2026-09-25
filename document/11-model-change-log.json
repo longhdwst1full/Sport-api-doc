@@ -6105,6 +6105,19 @@
           }
         }
       ]
+    },
+    {
+      "id": "OPS-20260925-MEDIA-ORPHAN-CLEANUP",
+      "date": "2026-09-25",
+      "scope": "API+MEDIA+OPS",
+      "summary": "Job dọn ảnh bằng chứng mồ côi: endpoint nội bộ GET /internal/jobs/media/orphans (CRON_SECRET, không thuộc OpenAPI), mặc định DRY_RUN, ?mode=delete mới xoá. Chỉ quét payment-evidence/, return-evidence/, refund-proof/ dưới CLOUDINARY_FOLDER; ứng viên là ảnh >24 giờ không có trong media_assets.public_id, return_requests.evidence_images, refunds.proof_images. DELETE tối đa 100/lượt, kiểm lại tham chiếu trước khi xoá, audit media.orphan.delete trước khi gọi Cloudinary. ObjectStorageClient thêm listImages (Cloudinary Admin API resources). Dry-run thật 2026-09-25: 0 ảnh trong 3 thư mục. Chưa đăng ký cron. Không đổi schema.",
+      "sources": [
+        "source:src/modules/media/orphan-cleanup/media-orphan-cleanup.service.ts",
+        "source:src/integrations/object-storage/cloudinary-object-storage.client.ts",
+        "test:src/modules/media/orphan-cleanup/media-orphan-cleanup.service.spec.ts",
+        "document:src/modules/media/README.md"
+      ],
+      "targets": []
     }
   ]
 }
