@@ -73,19 +73,21 @@ describe('ReportingService gom doanh thu theo kỳ', () => {
     { completedAt: new Date('2026-04-20T03:00:00.000Z'), grandTotal: '2000.00' },
   ];
 
-  function createService() {
+  function createService(refunds: unknown[] = []) {
     const emptyAggregate = { _sum: { grandTotal: null }, _count: { _all: 0 } };
+    const refundFindMany = jest.fn().mockResolvedValue(refunds);
     const prisma = {
+      refund: { findMany: refundFindMany },
       order: {
         aggregate: jest.fn().mockResolvedValue(emptyAggregate),
         findMany: jest.fn().mockImplementation(({ select }: { select: Record<string, unknown> }) =>
           Promise.resolve('completedAt' in select ? orders : []),
         ),
       },
-      // `revenue` chạy 5 truy vấn trong một transaction; ở đây chỉ cần chúng resolve theo đúng thứ tự.
+      // `revenue` chạy 6 truy vấn trong một transaction; ở đây chỉ cần chúng resolve theo đúng thứ tự.
       $transaction: (queries: Promise<unknown>[]) => Promise.all(queries),
     } as unknown as PrismaService;
-    return new ReportingService(prisma);
+    return Object.assign(new ReportingService(prisma), { refundFindMany });
   }
 
   it('gom theo ngày khi không chọn mức nào', async () => {
@@ -106,8 +108,46 @@ describe('ReportingService gom doanh thu theo kỳ', () => {
     );
 
     expect(report.series).toEqual([
-      { date: '2026-04', amount: '3000.00', orderCount: 2 },
+      { date: '2026-04', amount: '3000.00', orderCount: 2, refundAmount: '0.00', netAmount: '3000.00' },
     ]);
+  });
+
+  it('trừ hoàn tiền (kể cả một phần) vào kỳ hoàn tiền, không sửa kỳ của đơn gốc', async () => {
+    const service = createService([
+      // Hoàn một phần cho đơn tháng 4, tiền đi ra trong tháng 4 (giờ VN).
+      {
+        amount: '400.00',
+        processedAt: new Date('2026-04-25T02:00:00.000Z'),
+        returnRequest: { branch: { name: 'Hà Nội' } },
+      },
+      // Hoàn tháng 5: kỳ không có đơn hoàn tất vẫn phải có dòng để tổng series khớp netRevenue.
+      {
+        amount: '1000.00',
+        processedAt: new Date('2026-05-02T02:00:00.000Z'),
+        returnRequest: { branch: { name: 'Hà Nội' } },
+      },
+    ]);
+
+    const report = await service.revenue(
+      { from: '2026-01-01T00:00:00.000Z', to: '2026-12-31T00:00:00.000Z', granularity: 'MONTH' },
+      principal(),
+    );
+
+    expect(report).toMatchObject({
+      completedRevenue: '0.00',
+      refundedAmount: '1400.00',
+      refundCount: 2,
+      netRevenue: '-1400.00',
+    });
+    expect(report.series).toEqual([
+      { date: '2026-04', amount: '3000.00', orderCount: 2, refundAmount: '400.00', netAmount: '2600.00' },
+      { date: '2026-05', amount: '0.00', orderCount: 0, refundAmount: '1000.00', netAmount: '-1000.00' },
+    ]);
+    expect(report.byBranch).toEqual([
+      expect.objectContaining({ branchName: 'Hà Nội', refundedAmount: '1400.00', netRevenue: '-1400.00' }),
+    ]);
+    const where = (service.refundFindMany.mock.calls[0] as [{ where: Record<string, unknown> }])[0].where;
+    expect(where).toMatchObject({ status: 'SUCCEEDED', returnRequest: {} });
   });
 
   it('gom theo quý và theo năm', async () => {

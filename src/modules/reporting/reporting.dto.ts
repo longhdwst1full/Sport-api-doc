@@ -71,8 +71,13 @@ export class RevenuePointDto {
     description: 'Khoá kỳ theo mức gom: YYYY-MM-DD, YYYY-MM, YYYY-Qn hoặc YYYY.',
   })
   date: string;
-  @ApiProperty({ type: String, example: '15400000.00' }) amount: string;
+  @ApiProperty({ type: String, example: '15400000.00', description: 'Doanh thu gộp của đơn hoàn tất trong kỳ' })
+  amount: string;
   @ApiProperty({ example: 3 }) orderCount: number;
+  @ApiProperty({ type: String, example: '500000.00', description: 'Tiền đã hoàn thành công trong kỳ (theo mốc hoàn tiền)' })
+  refundAmount: string;
+  @ApiProperty({ type: String, example: '14900000.00', description: 'amount - refundAmount' })
+  netAmount: string;
 }
 
 export class BranchRevenueDto {
@@ -80,6 +85,9 @@ export class BranchRevenueDto {
   @ApiProperty({ type: String }) completedRevenue: string;
   @ApiProperty() completedOrderCount: number;
   @ApiProperty({ type: String }) expectedRevenue: string;
+  @ApiProperty({ type: String, description: 'Tiền đã hoàn thành công trong kỳ của chi nhánh' })
+  refundedAmount: string;
+  @ApiProperty({ type: String, description: 'completedRevenue - refundedAmount' }) netRevenue: string;
 }
 
 export class RevenueReportDto {
@@ -108,7 +116,19 @@ export class RevenueReportDto {
   })
   inProgressRevenue: string;
 
-  @ApiProperty({ type: String, description: 'Giá trị trung bình mỗi đơn đã hoàn tất' })
+  @ApiProperty({
+    type: String,
+    description:
+      'Tiền đã hoàn thành công (refund SUCCEEDED) trong kỳ, cắt theo mốc hoàn tiền; gồm cả hoàn một phần',
+  })
+  refundedAmount: string;
+
+  @ApiProperty({ description: 'Số lượt hoàn tiền thành công trong kỳ' }) refundCount: number;
+
+  @ApiProperty({ type: String, description: 'Doanh thu thuần = completedRevenue - refundedAmount' })
+  netRevenue: string;
+
+  @ApiProperty({ type: String, description: 'Giá trị trung bình mỗi đơn đã hoàn tất (gộp, trước hoàn tiền)' })
   averageOrderValue: string;
 
   @ApiProperty({

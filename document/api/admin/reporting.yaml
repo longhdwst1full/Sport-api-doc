@@ -609,9 +609,18 @@ components:
         inProgressRevenue:
           type: string
           description: Đơn đang xử lý (đã xác nhận tới đang giao); chưa tính vào hai nhóm trên
+        refundedAmount:
+          type: string
+          description: Tiền đã hoàn thành công (refund SUCCEEDED) trong kỳ, cắt theo mốc hoàn tiền; gồm cả hoàn một phần
+        refundCount:
+          type: number
+          description: Số lượt hoàn tiền thành công trong kỳ
+        netRevenue:
+          type: string
+          description: Doanh thu thuần = completedRevenue - refundedAmount
         averageOrderValue:
           type: string
-          description: Giá trị trung bình mỗi đơn đã hoàn tất
+          description: Giá trị trung bình mỗi đơn đã hoàn tất (gộp, trước hoàn tiền)
         granularity:
           description: Mức gom đã áp dụng cho `series`
           allOf:
@@ -634,6 +643,9 @@ components:
         - expectedRevenue
         - expectedOrderCount
         - inProgressRevenue
+        - refundedAmount
+        - refundCount
+        - netRevenue
         - averageOrderValue
         - granularity
         - series
@@ -720,13 +732,24 @@ components:
         amount:
           type: string
           example: "15400000.00"
+          description: Doanh thu gộp của đơn hoàn tất trong kỳ
         orderCount:
           type: number
           example: 3
+        refundAmount:
+          type: string
+          example: "500000.00"
+          description: Tiền đã hoàn thành công trong kỳ (theo mốc hoàn tiền)
+        netAmount:
+          type: string
+          example: "14900000.00"
+          description: amount - refundAmount
       required:
         - date
         - amount
         - orderCount
+        - refundAmount
+        - netAmount
     BranchRevenueDto:
       type: object
       properties:
@@ -738,11 +761,19 @@ components:
           type: number
         expectedRevenue:
           type: string
+        refundedAmount:
+          type: string
+          description: Tiền đã hoàn thành công trong kỳ của chi nhánh
+        netRevenue:
+          type: string
+          description: completedRevenue - refundedAmount
       required:
         - branchName
         - completedRevenue
         - completedOrderCount
         - expectedRevenue
+        - refundedAmount
+        - netRevenue
     LowStockItemDto:
       type: object
       properties:

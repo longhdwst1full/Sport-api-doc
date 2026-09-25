@@ -17,13 +17,15 @@ function principal(): AuthPrincipal {
 
 function createExporter() {
   const revenue = jest.fn().mockResolvedValue({
-    series: [{ date: '2026-09', amount: '15400000.00', orderCount: 3 }],
+    series: [{ date: '2026-09', amount: '15400000.00', orderCount: 3, refundAmount: '400000.00', netAmount: '15000000.00' }],
     byBranch: [
       {
         branchName: 'Chi nhánh Hà Nội',
         completedRevenue: '15400000.00',
         completedOrderCount: 3,
         expectedRevenue: '0.00',
+        refundedAmount: '400000.00',
+        netRevenue: '15000000.00',
       },
     ],
   });
@@ -71,8 +73,8 @@ describe('ReportExportService', () => {
     const file = await exporter.revenue({ granularity: 'MONTH', format: 'CSV' }, principal());
 
     expect(csv(file.body)).toEqual([
-      '"Kỳ","Doanh thu thực nhận","Số đơn hoàn tất"',
-      '"2026-09","15400000.00","3"',
+      '"Kỳ","Doanh thu thực nhận","Số đơn hoàn tất","Đã hoàn tiền","Doanh thu thuần"',
+      '"2026-09","15400000.00","3","400000.00","15000000.00"',
     ]);
   });
 
@@ -93,7 +95,7 @@ describe('ReportExportService', () => {
     const products = await exporter.topProducts({ limit: 10, format: 'CSV' }, actor);
     const customers = await exporter.topCustomers({ limit: 10, format: 'CSV' }, actor);
 
-    expect(csv(branch.body)[1]).toBe('"Chi nhánh Hà Nội","15400000.00","3","0.00"');
+    expect(csv(branch.body)[1]).toBe('"Chi nhánh Hà Nội","15400000.00","3","0.00","400000.00","15000000.00"');
     expect(csv(products.body)[1]).toBe('"SKU-1","Ống thép","4","400.00"');
     expect(csv(customers.body)[1]).toBe('"KH-1","Nguyễn A","2","200.00"');
   });

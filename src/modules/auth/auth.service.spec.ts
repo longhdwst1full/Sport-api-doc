@@ -9,6 +9,13 @@ import { AUTH_ERROR } from './auth.constants';
 import { AuthService } from './auth.service';
 import type { OutboxWriter } from '../notification/outbox.writer';
 
+/**
+ * Tham số argon2 nhẹ chỉ cho test: `verify` đọc tham số từ chính chuỗi hash nên cũng nhẹ theo.
+ * Tham số mặc định (64 MiB, 3 vòng) nhân với 5 lần đăng nhập sai làm ca khoá tài khoản chậm hẳn
+ * khi cả suite chạy song song; logic đếm/khoá không phụ thuộc độ mạnh của hash.
+ */
+const hashForTest = (password: string) => hash(password, { memoryCost: 1024, timeCost: 1 });
+
 describe('AuthService login protection', () => {
   it('locks atomically on the fifth consecutive wrong password and revokes sessions', async () => {
     let attempts = 0;
@@ -17,7 +24,7 @@ describe('AuthService login protection', () => {
       id: 101n,
       userType: 'STAFF',
       normalizedEmail: 'staff@example.com',
-      passwordHash: await hash('Correct-password-123!'),
+      passwordHash: await hashForTest('Correct-password-123!'),
       displayName: 'Staff',
       status,
     } as unknown as User;
@@ -73,7 +80,7 @@ describe('AuthService login protection', () => {
       isEnabled: jest.fn().mockReturnValue(true),
       user: {
         findFirst: jest.fn().mockResolvedValue({
-          passwordHash: await hash('Correct-password-123!'),
+          passwordHash: await hashForTest('Correct-password-123!'),
           status: 'LOCKED',
         }),
       },
@@ -98,7 +105,7 @@ describe('AuthService login protection', () => {
       id: 102n,
       userType: 'STAFF',
       normalizedEmail: 'staff.success@example.com',
-      passwordHash: await hash('Correct-password-123!'),
+      passwordHash: await hashForTest('Correct-password-123!'),
       displayName: 'Successful Staff',
       status: 'ACTIVE',
       failedLoginAttempts: 3,

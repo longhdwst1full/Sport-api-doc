@@ -34,6 +34,8 @@ export class ReportExportService {
         { key: 'date', header: 'Kỳ', kind: 'TEXT', width: 14 },
         { key: 'amount', header: 'Doanh thu thực nhận', kind: 'MONEY', width: 22 },
         { key: 'orderCount', header: 'Số đơn hoàn tất', kind: 'NUMBER', width: 18 },
+        { key: 'refundAmount', header: 'Đã hoàn tiền', kind: 'MONEY', width: 20 },
+        { key: 'netAmount', header: 'Doanh thu thuần', kind: 'MONEY', width: 22 },
       ],
       rows: report.series.map((point) => ({ ...point })),
     };
@@ -51,6 +53,8 @@ export class ReportExportService {
         { key: 'completedRevenue', header: 'Doanh thu thực nhận', kind: 'MONEY', width: 22 },
         { key: 'completedOrderCount', header: 'Số đơn hoàn tất', kind: 'NUMBER', width: 18 },
         { key: 'expectedRevenue', header: 'Dự thu', kind: 'MONEY', width: 20 },
+        { key: 'refundedAmount', header: 'Đã hoàn tiền', kind: 'MONEY', width: 20 },
+        { key: 'netRevenue', header: 'Doanh thu thuần', kind: 'MONEY', width: 22 },
       ],
       rows: report.byBranch.map((row) => ({ ...row })),
     };

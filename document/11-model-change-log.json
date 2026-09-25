@@ -5771,6 +5771,20 @@
         "document:src/modules/catalog/products/README.md"
       ],
       "targets": []
+    },
+    {
+      "id": "API-20260925-REVENUE-NET-OF-REFUNDS",
+      "date": "2026-09-25",
+      "scope": "API+REPORTING+OPENAPI+ADMIN",
+      "summary": "Báo cáo doanh thu trừ tiền hoàn: trước đây hoàn tiền chỉ đổi payments.status/orders.payment_status nên đơn COMPLETED đã hoàn (toàn bộ hoặc một phần) vẫn nằm nguyên trong completedRevenue. getAdminReportRevenue thêm refundedAmount, refundCount, netRevenue; mỗi điểm series thêm refundAmount/netAmount; byBranch thêm refundedAmount/netRevenue. Hoàn tiền tính là refund SUCCEEDED, cắt theo processed_at (kỳ tiền đi ra), không sửa lùi kỳ của đơn gốc; phạm vi chi nhánh qua return_requests.branch_id. Kỳ chỉ có hoàn tiền vẫn có điểm series. completedRevenue và averageOrderValue giữ nghĩa gộp. Export CSV/XLSX doanh thu và theo chi nhánh thêm cột Đã hoàn tiền/Doanh thu thuần. Contract chỉ thêm field, không đổi schema.",
+      "sources": [
+        "OpenAPI:getAdminReportRevenue",
+        "source:src/modules/reporting/reporting.service.ts",
+        "source:src/modules/reporting/report-export.service.ts",
+        "test:src/modules/reporting/reporting.service.spec.ts",
+        "test:src/modules/reporting/report-export.service.spec.ts"
+      ],
+      "targets": []
     }
   ]
 }

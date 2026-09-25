@@ -10,6 +10,7 @@ import {
   vietnamYearKey,
 } from '../../common/time/vietnam-time';
 import type { AuthPrincipal } from '../auth/auth.types';
+import { REFUND_STATUS } from '../return/return.constants';
 import {
   branchScopeWhere,
   customerBranchScopeWhere,
@@ -126,7 +127,16 @@ export class ReportingService {
     const completedWindow = { status: COMPLETED_STATUS, completedAt: { gte: from, lte: to } };
     const placedWindow = { placedAt: { gte: from, lte: to } };
 
-    const [completed, expected, inProgress, rows, branchRows] = await this.prisma.$transaction([
+    // CONTRACT: hoàn tiền trừ vào kỳ tiền thực sự đi ra (processed_at), không sửa lùi kỳ của đơn gốc:
+    // báo cáo tháng đã chốt không tự đổi số khi khách trả hàng tháng sau. Hoàn tiền không đổi
+    // `orders.status`, nên nếu không trừ ở đây đơn hoàn toàn bộ vẫn nằm trong doanh thu COMPLETED.
+    const refundWhere: Prisma.RefundWhereInput = {
+      status: REFUND_STATUS.SUCCEEDED,
+      processedAt: { gte: from, lte: to },
+      returnRequest: scope,
+    };
+
+    const [completed, expected, inProgress, rows, branchRows, refunds] = await this.prisma.$transaction([
       this.prisma.order.aggregate({
         where: { ...scope, ...completedWindow },
         _sum: { grandTotal: true },
@@ -157,6 +167,14 @@ export class ReportingService {
           branch: { select: { name: true } },
         },
       }),
+      this.prisma.refund.findMany({
+        where: refundWhere,
+        select: {
+          amount: true,
+          processedAt: true,
+          returnRequest: { select: { branch: { select: { name: true } } } },
+        },
+      }),
     ]);
 
     const completedTotal = completed._sum.grandTotal ?? new Prisma.Decimal(0);
@@ -165,34 +183,60 @@ export class ReportingService {
     // Gom theo ngày ở tầng ứng dụng: số đơn mỗi khoảng còn nhỏ, và làm vậy tránh phụ
     // thuộc vào múi giờ của database khi cắt ngày. Khoá ngày lấy theo giờ Việt Nam —
     // dùng UTC sẽ đẩy đơn đặt lúc 0h–7h sáng sang ngày hôm trước.
-    const byDate = new Map<string, { amount: Prisma.Decimal; orderCount: number }>();
+    const zero = () => new Prisma.Decimal(0);
+    const byDate = new Map<string, { amount: Prisma.Decimal; orderCount: number; refundAmount: Prisma.Decimal }>();
+    const pointFor = (key: string) => byDate.get(key) ?? { amount: zero(), orderCount: 0, refundAmount: zero() };
     for (const row of rows) {
       if (!row.completedAt) continue;
       const key = periodKey(row.completedAt);
-      const current = byDate.get(key) ?? { amount: new Prisma.Decimal(0), orderCount: 0 };
+      const current = pointFor(key);
       byDate.set(key, {
+        ...current,
         amount: current.amount.plus(row.grandTotal),
         orderCount: current.orderCount + 1,
       });
     }
+    let refundedTotal = zero();
+    for (const refund of refunds) {
+      refundedTotal = refundedTotal.plus(refund.amount);
+      // Kỳ chỉ có hoàn tiền (không có đơn hoàn tất) vẫn phải hiện để tổng series khớp netRevenue.
+      if (!refund.processedAt) continue;
+      const key = periodKey(refund.processedAt);
+      const current = pointFor(key);
+      byDate.set(key, { ...current, refundAmount: current.refundAmount.plus(refund.amount) });
+    }
 
     const byBranch = new Map<
       string,
-      { completedRevenue: Prisma.Decimal; completedOrderCount: number; expectedRevenue: Prisma.Decimal }
+      {
+        completedRevenue: Prisma.Decimal;
+        completedOrderCount: number;
+        expectedRevenue: Prisma.Decimal;
+        refundedAmount: Prisma.Decimal;
+      }
     >();
+    const branchFor = (key: string) =>
+      byBranch.get(key) ?? {
+        completedRevenue: zero(),
+        completedOrderCount: 0,
+        expectedRevenue: zero(),
+        refundedAmount: zero(),
+      };
     for (const row of branchRows) {
       const key = row.branch.name;
-      const current = byBranch.get(key) ?? {
-        completedRevenue: new Prisma.Decimal(0),
-        completedOrderCount: 0,
-        expectedRevenue: new Prisma.Decimal(0),
-      };
+      const current = branchFor(key);
       if (row.status === COMPLETED_STATUS) {
         current.completedRevenue = current.completedRevenue.plus(row.grandTotal);
         current.completedOrderCount += 1;
       } else {
         current.expectedRevenue = current.expectedRevenue.plus(row.grandTotal);
       }
+      byBranch.set(key, current);
+    }
+    for (const refund of refunds) {
+      const key = refund.returnRequest.branch.name;
+      const current = branchFor(key);
+      current.refundedAmount = current.refundedAmount.plus(refund.amount);
       byBranch.set(key, current);
     }
 
@@ -204,6 +248,9 @@ export class ReportingService {
       expectedRevenue: (expected._sum.grandTotal ?? new Prisma.Decimal(0)).toFixed(2),
       expectedOrderCount: expected._count._all,
       inProgressRevenue: (inProgress._sum.grandTotal ?? new Prisma.Decimal(0)).toFixed(2),
+      refundedAmount: refundedTotal.toFixed(2),
+      refundCount: refunds.length,
+      netRevenue: completedTotal.minus(refundedTotal).toFixed(2),
       averageOrderValue:
         completedOrderCount > 0 ? completedTotal.dividedBy(completedOrderCount).toFixed(2) : '0.00',
       granularity,
@@ -213,6 +260,8 @@ export class ReportingService {
           date,
           amount: value.amount.toFixed(2),
           orderCount: value.orderCount,
+          refundAmount: value.refundAmount.toFixed(2),
+          netAmount: value.amount.minus(value.refundAmount).toFixed(2),
         })),
       byBranch: [...byBranch.entries()]
         .map(([branchName, value]) => ({
@@ -220,6 +269,8 @@ export class ReportingService {
           completedRevenue: value.completedRevenue.toFixed(2),
           completedOrderCount: value.completedOrderCount,
           expectedRevenue: value.expectedRevenue.toFixed(2),
+          refundedAmount: value.refundedAmount.toFixed(2),
+          netRevenue: value.completedRevenue.minus(value.refundedAmount).toFixed(2),
         }))
         .sort((left, right) => Number(right.completedRevenue) - Number(left.completedRevenue)),
     };
