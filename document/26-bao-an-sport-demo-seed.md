@@ -69,9 +69,11 @@ yarn db:catalog:reset --confirm-destructive-reset
 - Trước khi xoá luôn ghi backup JSON của mọi bảng bị xoá vào `.backups/pre-catalog-reset-*.json`.
 - Xoá: catalog (sản phẩm, SKU, giá, media link, danh mục, thương hiệu, thuộc tính), tồn kho, giỏ/checkout, đơn, thanh toán, fulfillment, phiếu trả, review, flash sale; outbox chưa gửi của đơn/phiếu trả.
 - Giữ: kho/chi nhánh, user/phân quyền, khách hàng, audit log, `media_assets` (ảnh Cloudinary dùng lại theo `publicId`), bài viết (bỏ slug sản phẩm không còn).
-- Thông số: ~150 nhãn crawl gom về 29 thuộc tính TEXT; nhãn không map và bảng gốc giữ trong `seoJson`. Cân nặng và kích thước kiện của SKU chỉ lấy khi parse chắc chắn.
+- Thông số: ~150 nhãn crawl gom về 28 thuộc tính TEXT; nhãn không map và bảng gốc giữ trong `seoJson`. Cân nặng và kích thước kiện của SKU chỉ lấy khi parse chắc chắn.
 - Tồn: 10–30 mỗi SKU tại mỗi kho `ACTIVE`, cố định theo hash SKU + kho, ghi qua phiếu `OPENING_BALANCE` và movement `ADJUST`. Đây là số demo, không phải tồn thật.
 - Ảnh Cloudinary của sản phẩm bị xoá không bị script này xoá; dọn riêng sau khi kiểm tra không còn tham chiếu.
+- Ba bảng sổ cái `payment_transactions`, `fulfillment_status_history`, `inventory_movements` có trigger chặn DELETE. Chủ dự án tự tắt trigger trong Supabase SQL editor trước khi chạy và bật lại ngay sau đó; script không tự tắt trigger. `audit_logs` không bị xoá.
+- Lần chạy 2026-09-25 10:11 UTC: 95 sản phẩm, 20 thương hiệu, 60 danh mục, 28 thuộc tính, 190 movement; backup `.backups/pre-catalog-reset-2026-09-25T10-07-45-421Z.json`.
 
 ## Revision history
 
