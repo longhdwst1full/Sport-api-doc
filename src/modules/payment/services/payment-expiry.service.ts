@@ -13,6 +13,17 @@ import { PAYMENT_METHOD, PAYMENT_STATUS, PAYMENT_TRANSACTION_TYPE } from '../pay
 
 interface ClaimedOrder { id: bigint }
 
+/**
+ * VNPay: link hết hạn đúng `expires_at`, nhưng IPN của giao dịch vừa kịp trả có thể về trễ vài giây–phút.
+ * Chờ thêm khoảng này rồi mới huỷ, để không nhả hàng của đơn vừa được thanh toán.
+ */
+const VNPAY_IPN_GRACE_MINUTES = 5;
+
+const EXPIRY_BY_METHOD: Record<string, { provider: string; reason: string }> = {
+  [PAYMENT_METHOD.BANK_TRANSFER]: { provider: 'MANUAL_BANK_TRANSFER', reason: 'Hết thời gian thanh toán chuyển khoản' },
+  [PAYMENT_METHOD.VNPAY]: { provider: 'VNPAY', reason: 'Hết thời gian thanh toán VNPay' },
+};
+
 export interface PaymentExpiryRunResult {
   enabled: boolean;
   claimed: number;
@@ -47,9 +58,15 @@ export class PaymentExpiryService {
         JOIN payments payment ON payment.order_id = customer_order.id
         JOIN inventory_reservations reservation ON reservation.id = customer_order.reservation_id
         WHERE customer_order.status = ${ORDER_STATUS.PENDING_CONFIRMATION}
-          AND payment.method = ${PAYMENT_METHOD.BANK_TRANSFER}
-          AND payment.status = ${PAYMENT_STATUS.PENDING}
-          AND payment.expires_at <= ${cutoff}
+          AND (
+            (payment.method = ${PAYMENT_METHOD.BANK_TRANSFER}
+              AND payment.status = ${PAYMENT_STATUS.PENDING}
+              AND payment.expires_at <= ${cutoff})
+            -- VNPay FAILED (khách huỷ/thẻ lỗi) vẫn được thử lại tới hạn, quá hạn thì cũng phải nhả hàng.
+            OR (payment.method = ${PAYMENT_METHOD.VNPAY}
+              AND payment.status IN (${PAYMENT_STATUS.PENDING}, ${PAYMENT_STATUS.FAILED})
+              AND payment.expires_at + make_interval(mins => ${VNPAY_IPN_GRACE_MINUTES}) <= ${cutoff})
+          )
           AND reservation.status = ${INVENTORY_RESERVATION_STATUS.ACTIVE}
           AND NOT EXISTS (SELECT 1 FROM payment_evidences evidence WHERE evidence.payment_id = payment.id)
         ORDER BY payment.expires_at, customer_order.id
@@ -69,7 +86,11 @@ export class PaymentExpiryService {
             statusHistory: true,
           },
         });
-        if (!order.payment || order.payment.status !== PAYMENT_STATUS.PENDING || order.payment.evidences.length > 0) continue;
+        const expiry = order.payment ? EXPIRY_BY_METHOD[order.payment.method] : undefined;
+        const expirableStatus = order.payment?.method === PAYMENT_METHOD.VNPAY
+          ? order.payment.status === PAYMENT_STATUS.PENDING || order.payment.status === PAYMENT_STATUS.FAILED
+          : order.payment?.status === PAYMENT_STATUS.PENDING;
+        if (!order.payment || !expiry || !expirableStatus || order.payment.evidences.length > 0) continue;
         const variantIds = order.reservation.items.map((item) => item.productVariantId);
         if (variantIds.length === 0) throw new ServiceUnavailableException('Reservation của đơn hết hạn không có dòng tồn kho');
         await transaction.$queryRaw(Prisma.sql`
@@ -92,7 +113,7 @@ export class PaymentExpiryService {
             data: { reserved: { decrement: item.quantity }, version: { increment: 1 } },
           });
         }
-        const reason = 'Hết thời gian thanh toán chuyển khoản';
+        const reason = expiry.reason;
         const hash = createHash('sha256').update(`payment-expiry:${order.payment.id}`).digest('hex');
         await transaction.inventoryReservation.update({
           where: { id: order.reservationId },
@@ -111,7 +132,7 @@ export class PaymentExpiryService {
           data: {
             paymentId: order.payment.id,
             transactionType: PAYMENT_TRANSACTION_TYPE.EXPIRED,
-            provider: 'MANUAL_BANK_TRANSFER',
+            provider: expiry.provider,
             idempotencyKey: `payment-expiry:${order.payment.id}`,
             requestHash: hash,
             amount: 0,

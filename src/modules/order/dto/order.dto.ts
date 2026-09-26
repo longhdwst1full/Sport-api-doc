@@ -198,6 +198,19 @@ export class AdminOrderListDto {
 
 export class AccountOrderListDto extends AdminOrderListDto {}
 
+/**
+ * Vận chuyển của đơn cho khách theo dõi. `trackingUrl` chỉ có khi hãng có trang tra cứu công khai
+ * (hiện là GHN); vận đơn nhập tay của hãng khác chỉ hiện mã.
+ */
+export class OrderShipmentDto {
+  @ApiProperty({ description: 'Trạng thái fulfillment: PENDING, PICKING, PACKED, SHIPPED, DELIVERED, DELIVERY_FAILED, RETURNED…' }) status: string;
+  @ApiPropertyOptional({ type: String, nullable: true, example: 'GHN' }) carrierCode: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, example: 'LXQ7A9' }) trackingNo: string | null;
+  @ApiPropertyOptional({ type: String, format: 'uri', nullable: true }) trackingUrl: string | null;
+  @ApiPropertyOptional({ type: String, format: 'date-time', nullable: true }) shippedAt: string | null;
+  @ApiPropertyOptional({ type: String, format: 'date-time', nullable: true }) deliveredAt: string | null;
+}
+
 export class OrderDetailDto extends OrderSummaryDto {
   @ApiProperty() currencyCode: string;
   @ApiProperty() pricesIncludeTax: boolean;
@@ -208,6 +221,10 @@ export class OrderDetailDto extends OrderSummaryDto {
   @ApiPropertyOptional({ type: String, nullable: true }) customerNote: string | null;
   @ApiProperty({ type: [OrderItemDto] }) items: OrderItemDto[];
   @ApiProperty({ type: [OrderStatusHistoryDto] }) statusHistory: OrderStatusHistoryDto[];
+  @ApiPropertyOptional({ type: String, format: 'date-time', nullable: true, description: 'Lúc thanh toán được xác nhận thành công' })
+  paidAt: string | null;
+  @ApiPropertyOptional({ type: () => OrderShipmentDto, nullable: true, description: 'Null khi đơn chưa có fulfillment' })
+  shipment: OrderShipmentDto | null;
 }
 
 export class GuestOrderPlacementDto extends OrderDetailDto {

@@ -6146,6 +6146,24 @@
         "test:src/modules/catalog/products/services/product-availability.spec.ts"
       ],
       "targets": []
+    },
+    {
+      "id": "API-20260926-ORDER-TRACKING-VNPAY-RULES",
+      "date": "2026-09-26",
+      "scope": "API+ORDER+PAYMENT+OPENAPI+CLIENT",
+      "summary": "OrderDetailDto (getAccountOrder/getGuestOrder/getAdminOrder) thêm shipment {status, carrierCode, trackingNo, trackingUrl, shippedAt, deliveredAt} từ fulfillment và paidAt (payments.confirmed_at); trackingUrl theo CARRIER_TRACKING_URL (GHN). Luật VNPay: payment VNPAY có expires_at = lúc đặt + VNPAY_EXPIRE_MINUTES; vnp_ExpireDate của link không vượt expires_at, quá hạn không phát link; payment-expiry worker huỷ VNPay PENDING/FAILED sau expires_at + 5 phút (provider/lý do theo phương thức); IPN cho payment CANCELLED không lật SUCCESS; confirmAdminOrder chặn đơn VNPay chưa SUCCESS như chuyển khoản. Thay đổi bổ sung; không đổi schema.",
+      "sources": [
+        "OpenAPI:getAccountOrder/getGuestOrder/getAdminOrder/confirmAdminOrder",
+        "source:src/modules/order/services/order.service.ts",
+        "source:src/modules/payment/services/payment-expiry.service.ts",
+        "source:src/modules/payment/services/vnpay.service.ts",
+        "source:src/modules/payment/providers/vnpay.provider.ts",
+        "test:src/modules/order/services/order-payment-gate.spec.ts",
+        "test:src/modules/payment/providers/vnpay.provider.spec.ts",
+        "test:src/modules/payment/services/payment-expiry.service.spec.ts",
+        "test:src/modules/payment/services/vnpay.service.spec.ts"
+      ],
+      "targets": []
     }
   ]
 }

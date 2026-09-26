@@ -68,6 +68,15 @@ export class VnpayService {
         if (payment.status === PAYMENT_STATUS.SUCCESS || payment.status === PAYMENT_STATUS.REFUNDED) {
           return VNPAY_IPN_RESPONSE.ALREADY_CONFIRMED;
         }
+        // INVARIANT: payment đã bị huỷ (quá hạn, đơn đã nhả hàng) không được lật về SUCCESS. Link VNPay
+        // hết hạn trước khi job huỷ nên trường hợp này hiếm; nếu VNPay vẫn báo đã thu tiền thì cần hoàn
+        // tiền thủ công — ghi lỗi để vận hành đối soát, trả "đã xử lý" để VNPay ngừng gọi lại.
+        if (payment.status === PAYMENT_STATUS.CANCELLED) {
+          if (verification.isSuccess) {
+            this.logger.error(`VNPay báo thu tiền cho payment đã huỷ ${paymentRef} (mã GD ${verification.transactionNo ?? 'không rõ'}); cần hoàn tiền thủ công`);
+          }
+          return VNPAY_IPN_RESPONSE.ALREADY_CONFIRMED;
+        }
         const expected = new Prisma.Decimal(payment.expectedAmount);
         if (!expected.equals(new Prisma.Decimal(verification.amount))) {
           return VNPAY_IPN_RESPONSE.INVALID_AMOUNT;

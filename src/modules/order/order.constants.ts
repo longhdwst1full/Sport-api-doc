@@ -62,3 +62,15 @@ export const ORDER_TRANSACTION = {
   MAX_WAIT_MS: 10_000,
   TIMEOUT_MS: 30_000,
 } as const;
+
+/**
+ * Trang tra cứu vận đơn công khai theo hãng (mã hãng = `fulfillments.carrier_code`).
+ * Đường dẫn GHN chưa được xác minh bằng tài liệu chính thức (2026-09-26); hãng không có ở đây thì
+ * khách chỉ thấy mã vận đơn.
+ */
+export const CARRIER_TRACKING_URL: Readonly<Record<string, (trackingNo: string) => string>> = {
+  GHN: (trackingNo) => `https://donhang.ghn.vn/?order_code=${encodeURIComponent(trackingNo)}`,
+};
+
+/** Thanh toán trả trước: đơn chỉ được xác nhận/xuất kho sau khi tiền đã về (SUCCESS). */
+export const PREPAID_PAYMENT_METHODS: readonly string[] = ['BANK_TRANSFER', 'VNPAY'];

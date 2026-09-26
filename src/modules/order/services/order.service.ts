@@ -34,6 +34,7 @@ import {
 import { OutboxWriter } from '../../notification/outbox.writer';
 import { OUTBOX_EVENT_TYPE } from '../../notification/notification.constants';
 import {
+  CARRIER_TRACKING_URL,
   ORDER_AUDIT_ACTION,
   ORDER_CHANNEL,
   ORDER_FULFILLMENT_STATUS,
@@ -42,7 +43,21 @@ import {
   ORDER_STATUS_BY_GROUP,
   ORDER_TRANSACTION,
   ORDER_TRANSITION,
+  PREPAID_PAYMENT_METHODS,
 } from '../order.constants';
+
+/**
+ * INVARIANT: đơn trả trước (chuyển khoản, VNPay) chỉ xác nhận khi tiền đã về; xác nhận sớm sẽ xuất kho
+ * và đặt vận đơn cho đơn có thể không bao giờ được thanh toán. COD thu khi giao nên không chặn.
+ */
+export function assertPaymentAllowsConfirmation(paymentMethod: string, paymentStatus: string): void {
+  if (!PREPAID_PAYMENT_METHODS.includes(paymentMethod) || paymentStatus === ORDER_PAYMENT_STATUS.SUCCESS) return;
+  throw new ConflictException(
+    paymentMethod === 'VNPAY'
+      ? 'Đơn VNPay chỉ được xác nhận sau khi VNPay báo thanh toán thành công'
+      : 'Đơn chuyển khoản chỉ được xác nhận sau khi đã nhận đủ tiền',
+  );
+}
 
 type PlacementActor =
   | { type: 'GUEST'; cartId: bigint }
@@ -71,6 +86,8 @@ const orderInclude = {
     include: { components: { orderBy: { id: 'asc' as const } } },
   },
   statusHistory: { orderBy: { sequenceNo: 'asc' as const } },
+  payment: { select: { confirmedAt: true } },
+  fulfillment: { select: { status: true, carrierCode: true, trackingNo: true, shippedAt: true, deliveredAt: true } },
 } satisfies Prisma.OrderInclude;
 
 const orderSummaryInclude = {
@@ -178,9 +195,7 @@ export class OrderService {
         throw new ConflictException('Chỉ được xác nhận đơn đang chờ xử lý');
       }
       if (!locked.payment) throw new ConflictException('Đơn hàng chưa có thông tin thanh toán');
-      if (locked.checkoutSession.paymentMethod === 'BANK_TRANSFER' && locked.payment.status !== ORDER_PAYMENT_STATUS.SUCCESS) {
-        throw new ConflictException('Đơn chuyển khoản chỉ được xác nhận sau khi đã nhận đủ tiền');
-      }
+      assertPaymentAllowsConfirmation(locked.checkoutSession.paymentMethod, locked.payment.status);
       if (locked.reservation.status !== INVENTORY_RESERVATION_STATUS.ACTIVE) {
         throw new ConflictException('Giữ chỗ tồn kho của đơn không còn hiệu lực');
       }
@@ -763,9 +778,14 @@ export class OrderService {
           `);
           const orderNo = this.orderNo(now, sequence[0]?.value);
           const paymentTimeoutMinutes = this.config.get<number>('app.payment.timeoutMinutes') ?? 30;
+          // CONTRACT: VNPay có hạn riêng khớp `vnp_ExpireDate` của link (payments_expiry_check bắt buộc
+          // expires_at cho VNPAY PENDING); link ký lại sau này không bao giờ vượt quá hạn này.
+          const vnpayExpireMinutes = this.config.get<number>('vnpay.expireMinutes') ?? 15;
           const paymentExpiresAt = checkout.paymentMethod === 'BANK_TRANSFER'
             ? new Date(now.getTime() + paymentTimeoutMinutes * 60_000)
-            : null;
+            : checkout.paymentMethod === 'VNPAY'
+              ? new Date(now.getTime() + vnpayExpireMinutes * 60_000)
+              : null;
           const recipient = this.readRecipient(checkout.recipientSnapshot);
           const created = await transaction.order.create({
             data: {
@@ -1166,6 +1186,20 @@ export class OrderService {
         actorType: history.actorType,
         createdAt: history.createdAt.toISOString(),
       })),
+      paidAt: order.payment?.confirmedAt?.toISOString() ?? null,
+      shipment: order.fulfillment
+        ? {
+            status: order.fulfillment.status,
+            carrierCode: order.fulfillment.carrierCode,
+            trackingNo: order.fulfillment.trackingNo,
+            trackingUrl:
+              order.fulfillment.carrierCode && order.fulfillment.trackingNo
+                ? CARRIER_TRACKING_URL[order.fulfillment.carrierCode]?.(order.fulfillment.trackingNo) ?? null
+                : null,
+            shippedAt: order.fulfillment.shippedAt?.toISOString() ?? null,
+            deliveredAt: order.fulfillment.deliveredAt?.toISOString() ?? null,
+          }
+        : null,
     };
   }
 

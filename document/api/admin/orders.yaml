@@ -610,6 +610,17 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/OrderStatusHistoryDto"
+        paidAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Lúc thanh toán được xác nhận thành công
+        shipment:
+          nullable: true
+          description: Null khi đơn chưa có fulfillment
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/OrderShipmentDto"
       required:
         - id
         - orderNo
@@ -972,6 +983,34 @@ components:
         - toStatus
         - actorType
         - createdAt
+    OrderShipmentDto:
+      type: object
+      properties:
+        status:
+          type: string
+          description: "Trạng thái fulfillment: PENDING, PICKING, PACKED, SHIPPED, DELIVERED, DELIVERY_FAILED, RETURNED…"
+        carrierCode:
+          type: string
+          nullable: true
+          example: GHN
+        trackingNo:
+          type: string
+          nullable: true
+          example: LXQ7A9
+        trackingUrl:
+          type: string
+          format: uri
+          nullable: true
+        shippedAt:
+          type: string
+          format: date-time
+          nullable: true
+        deliveredAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - status
     OrderSummaryDto:
       type: object
       properties:

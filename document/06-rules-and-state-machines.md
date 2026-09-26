@@ -1,10 +1,10 @@
 # Business rules và state machine V1
 
-> **Document version:** 1.9.0
+> **Document version:** 1.10.0
 >
-> **Last updated:** 2026-09-24
+> **Last updated:** 2026-09-26
 >
-> **Change summary:** Thay state machine Return/Refund bằng bản V1 đã hiện thực (D60); payment REFUNDED khi hoàn đủ số đã thu.
+> **Change summary:** VNPay có hạn thanh toán, hết hạn thì huỷ đơn và nhả hàng; đơn trả trước chỉ xác nhận khi đã thanh toán.
 
 ## 0. Customer identity V1
 
@@ -70,6 +70,8 @@ PENDING -> AWAITING_CONFIRMATION -> SUCCESS
    └ late/ambiguous event ───────> NEED_REVIEW
 SUCCESS -> REFUNDED   (chỉ khi tổng refunds SUCCEEDED = received_amount; hoàn một phần giữ SUCCESS)
 ```
+
+VNPay: `PENDING`/`FAILED` (khách huỷ, thử lại được) → `SUCCESS` qua IPN; quá `expires_at` + 5 phút thì worker chuyển `CANCELLED`, huỷ đơn và nhả hàng. IPN đến sau khi payment đã `CANCELLED` không lật về `SUCCESS` (ghi log để hoàn tiền thủ công). Đơn chuyển khoản và VNPay chỉ được xác nhận (CONFIRMED) khi payment `SUCCESS`.
 
 `REFUND_PENDING` không dùng ở V1: lượt hoàn chờ xác nhận nằm ở `refunds.status = PENDING`, không đổi trạng thái payment (D60). IPN VNPay đến sau khi payment đã REFUNDED được coi như đã xác nhận, không ghi đè.
 
@@ -226,6 +228,7 @@ UPLOADING -> ACTIVE -> DELETING -> DELETED
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.10.0 | 2026-09-26 | Hạn thanh toán VNPay, huỷ khi quá hạn, IPN muộn không lật payment đã huỷ; đơn trả trước chỉ xác nhận khi đã thanh toán. | API-20260926-ORDER-TRACKING-VNPAY-RULES |
 | 1.9.0 | 2026-09-24 | State machine Return/Refund V1 theo D60; payment chỉ REFUNDED khi hoàn đủ; refund không qua approval. | API-20260924-RETURN-REFUND-V1 |
 | 1.8.0 | 2026-09-13 | Hiện thực Fulfillment, hàng hoàn SELLABLE và maintenance worker payment-expiry/auto-complete. | DBAPI-20260913-FULFILLMENT-S43 |
 | 1.7.1 | 2026-09-12 | Chốt manual complete không giới hạn trong ngày sau khi giao đủ và thu đủ tiền. | API-20260912-ORDER-GUEST-HARDENING |
