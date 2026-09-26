@@ -114,6 +114,7 @@ model User {
   createdStockTransfers     StockTransfer[]      @relation("StockTransferCreator")
   shippedStockTransfers     StockTransfer[]      @relation("StockTransferShipper")
   receivedStockTransfers    StockTransfer[]      @relation("StockTransferReceiver")
+  cancelledStockTransfers   StockTransfer[]      @relation("StockTransferCanceller")
   customerProfile           Customer?
   carts                     Cart[]
   confirmedPayments         Payment[]         @relation("PaymentConfirmer")
@@ -666,6 +667,9 @@ model StockTransfer {
   shippedAt       DateTime? @map("shipped_at") @db.Timestamptz(6)
   receivedBy      BigInt?   @map("received_by")
   receivedAt      DateTime? @map("received_at") @db.Timestamptz(6)
+  cancelledBy     BigInt?   @map("cancelled_by")
+  cancelledAt     DateTime? @map("cancelled_at") @db.Timestamptz(6)
+  cancelReason    String?   @map("cancel_reason")
   version         BigInt    @default(0)
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -675,6 +679,7 @@ model StockTransfer {
   creator       User                @relation("StockTransferCreator", fields: [createdBy], references: [id], onDelete: Restrict)
   shipper       User?               @relation("StockTransferShipper", fields: [shippedBy], references: [id], onDelete: Restrict)
   receiver      User?               @relation("StockTransferReceiver", fields: [receivedBy], references: [id], onDelete: Restrict)
+  canceller     User?               @relation("StockTransferCanceller", fields: [cancelledBy], references: [id], onDelete: Restrict)
   items         StockTransferItem[]
 
   @@index([fromWarehouseId, status, createdAt])

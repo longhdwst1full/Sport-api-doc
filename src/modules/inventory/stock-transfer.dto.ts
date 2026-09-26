@@ -44,6 +44,20 @@ export class StockTransferTransitionDto {
   version: string;
 }
 
+export class UpdateStockTransferDto extends StockTransferTransitionDto {
+  @ApiPropertyOptional({ minLength: 3, maxLength: 1000 })
+  @IsOptional() @IsString() @IsNotEmpty() @MinLength(3) @MaxLength(1000) reason?: string;
+
+  @ApiPropertyOptional({ type: [CreateStockTransferItemDto], description: 'Khi gửi thì thay toàn bộ danh sách hàng của phiếu' })
+  @IsOptional() @IsArray() @ArrayNotEmpty() @ValidateNested({ each: true }) @Type(() => CreateStockTransferItemDto)
+  items?: CreateStockTransferItemDto[];
+}
+
+export class CancelStockTransferDto extends StockTransferTransitionDto {
+  @ApiProperty({ minLength: 3, maxLength: 1000 })
+  @IsString() @IsNotEmpty() @MinLength(3) @MaxLength(1000) reason: string;
+}
+
 export class ReceiveStockTransferItemDto {
   @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(64) sku: string;
   @ApiProperty({ minimum: 0 }) @IsInt() @Min(0) receivedQuantity: number;
@@ -103,12 +117,15 @@ export class StockTransferSummaryDto {
   @ApiPropertyOptional({ type: String, format: 'date-time', nullable: true }) submittedAt?: string | null;
   @ApiPropertyOptional({ type: String, format: 'date-time', nullable: true }) shippedAt?: string | null;
   @ApiPropertyOptional({ type: String, format: 'date-time', nullable: true }) receivedAt?: string | null;
+  @ApiPropertyOptional({ type: String, format: 'date-time', nullable: true }) cancelledAt?: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) cancelReason?: string | null;
 }
 
 export class StockTransferDetailDto extends StockTransferSummaryDto {
   @ApiProperty({ type: [StockTransferItemDto] }) items: StockTransferItemDto[];
   @ApiPropertyOptional({ type: String, nullable: true }) shippedByDisplayName?: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) receivedByDisplayName?: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) cancelledByDisplayName?: string | null;
 }
 
 export class StockTransferListDto {

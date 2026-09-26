@@ -695,6 +695,9 @@ Table stock_transfers {
   shipped_at timestamptz
   received_by bigint
   received_at timestamptz
+  cancelled_by bigint
+  cancelled_at timestamptz
+  cancel_reason text
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
@@ -702,7 +705,7 @@ Table stock_transfers {
     (from_warehouse_id, status, created_at)
     (to_warehouse_id, status, created_at)
   }
-  Note: '[P1] DRAFT→SUBMITTED→SHIPPED→RECEIVED; source != destination; SHIPPED ghi TRANSFER_OUT toàn bộ, RECEIVED ghi TRANSFER_IN cho received_qty; command idempotent và optimistic lock.'
+  Note: '[P1] DRAFT→SUBMITTED→SHIPPED→RECEIVED; DRAFT/SUBMITTED→CANCELLED (cần cancelled_by/at + cancel_reason, không movement); sau SHIPPED không huỷ. DRAFT sửa được reason/items. source != destination; SHIPPED ghi TRANSFER_OUT toàn bộ, RECEIVED ghi TRANSFER_IN cho received_qty; command idempotent và optimistic lock.'
 }
 
 Table stock_transfer_items {
@@ -1418,6 +1421,7 @@ Ref: stock_transfers.to_warehouse_id > warehouses.id [delete: restrict]
 Ref: stock_transfers.created_by > users.id [delete: restrict]
 Ref: stock_transfers.shipped_by > users.id [delete: restrict]
 Ref: stock_transfers.received_by > users.id [delete: restrict]
+Ref: stock_transfers.cancelled_by > users.id [delete: restrict]
 Ref: stock_transfer_items.stock_transfer_id > stock_transfers.id [delete: cascade]
 Ref: stock_transfer_items.product_variant_id > product_variants.id [delete: restrict]
 Ref: carts.user_id > users.id [delete: restrict]

@@ -24,6 +24,7 @@ import {
   STOCK_ADJUSTMENT_REASON,
   STOCK_ADJUSTMENT_TYPE,
   type StockAdjustmentType,
+  INVENTORY_ERROR,
 } from './inventory.constants';
 
 const INVENTORY_AUDIT_ACTION = {
@@ -45,15 +46,15 @@ export class InventoryService {
   ): Promise<StockAdjustmentResultDto> {
     this.ensurePersistence();
     const key = idempotencyKey.trim();
-    if (!key) throw new BadRequestException('Idempotency-Key is required');
+    if (!key) throw new BadRequestException(INVENTORY_ERROR.IDEMPOTENCY_KEY_REQUIRED);
     if (key.length > 130) {
-      throw new BadRequestException('Idempotency-Key must not exceed 130 characters');
+      throw new BadRequestException(INVENTORY_ERROR.IDEMPOTENCY_KEY_TOO_LONG(130));
     }
     if (input.items.length === 0) {
-      throw new BadRequestException('Adjustment must contain at least one item');
+      throw new BadRequestException(INVENTORY_ERROR.ADJUSTMENT_EMPTY);
     }
     if (new Set(input.items.map(({ sku }) => sku.trim().toUpperCase())).size !== input.items.length) {
-      throw new BadRequestException('Adjustment items must contain unique SKU values');
+      throw new BadRequestException(INVENTORY_ERROR.DUPLICATE_SKU);
     }
     const adjustmentType = input.adjustmentType ?? STOCK_ADJUSTMENT_TYPE.CORRECTION;
     const reasonCode = input.reasonCode?.trim().toUpperCase() || STOCK_ADJUSTMENT_REASON.MANUAL;
@@ -66,9 +67,7 @@ export class InventoryService {
       && !isGlobal
       && input.items.some(({ quantityDelta }) => quantityDelta < -10)
     ) {
-      throw new ForbiddenException(
-        'Branch-scoped users may decrease at most 10 units per SKU in one adjustment',
-      );
+      throw new ForbiddenException(INVENTORY_ERROR.BRANCH_DECREASE_LIMIT);
     }
     const requestHash = this.requestHash(input);
     const replay = await this.findReplay(key, requestHash);
@@ -85,7 +84,7 @@ export class InventoryService {
           const warehouse = await transaction.warehouse.findFirst({
             where: { code: input.warehouseCode.trim().toUpperCase(), status: 'ACTIVE' },
           });
-          if (!warehouse) throw new BadRequestException('Active warehouse was not found');
+          if (!warehouse) throw new BadRequestException(INVENTORY_ERROR.WAREHOUSE_NOT_FOUND);
           this.assertWarehouseScope(principal, warehouse.branchId);
 
           const requestedSkus = input.items.map(({ sku }) => sku.trim().toUpperCase()).sort();
@@ -96,7 +95,7 @@ export class InventoryService {
           if (variants.length !== requestedSkus.length) {
             const found = new Set(variants.map(({ sku }) => sku));
             const missing = requestedSkus.filter((sku) => !found.has(sku));
-            throw new BadRequestException(`SKU not found: ${missing.join(', ')}`);
+            throw new BadRequestException(INVENTORY_ERROR.SKU_NOT_FOUND(missing));
           }
 
           if (adjustmentType === STOCK_ADJUSTMENT_TYPE.OPENING_BALANCE) {
@@ -108,9 +107,7 @@ export class InventoryService {
               select: { productVariant: { select: { sku: true } } },
             });
             if (existingMovement) {
-              throw new ConflictException(
-                `OPENING_BALANCE is only allowed before the first movement for ${existingMovement.productVariant.sku}`,
-              );
+              throw new ConflictException(INVENTORY_ERROR.OPENING_BALANCE_AFTER_MOVEMENT(existingMovement.productVariant.sku));
             }
           }
 
@@ -141,9 +138,7 @@ export class InventoryService {
             const balance = byVariant.get(variant.id)!;
             const nextOnHand = balance.onHand + item.quantityDelta;
             if (nextOnHand < balance.reserved) {
-              throw new BadRequestException(
-                `Adjustment would make ${sku} lower than reserved stock`,
-              );
+              throw new BadRequestException(INVENTORY_ERROR.BELOW_RESERVED(sku));
             }
             return { item, sku, variant, balance, nextOnHand };
           });
@@ -178,7 +173,7 @@ export class InventoryService {
               data: { onHand: change.nextOnHand, version: { increment: 1 } },
             });
             if (updated.count !== 1) {
-              throw new ConflictException('Inventory balance changed; retry with the same key');
+              throw new ConflictException(INVENTORY_ERROR.BALANCE_CHANGED);
             }
             await transaction.stockAdjustmentItem.create({
               data: {
@@ -269,16 +264,14 @@ export class InventoryService {
         const racedReplay = await this.findReplay(key, requestHash);
         if (racedReplay) return racedReplay;
         if (adjustmentType === STOCK_ADJUSTMENT_TYPE.MANUAL_RECEIPT) {
-          throw new ConflictException('Manual receipt reference already exists for this warehouse');
+          throw new ConflictException(INVENTORY_ERROR.RECEIPT_REFERENCE_DUPLICATE);
         }
       }
       if (this.isSerializationConflict(error)) {
-        throw new ConflictException('Inventory changed concurrently; retry with the same key');
+        throw new ConflictException(INVENTORY_ERROR.BALANCE_CHANGED);
       }
       if (this.isTransientDatabaseAvailabilityError(error)) {
-        throw new ServiceUnavailableException(
-          'Kho dữ liệu tồn kho đang bận hoặc tạm thời mất kết nối; vui lòng thử lại với cùng mã yêu cầu',
-        );
+        throw new ServiceUnavailableException(INVENTORY_ERROR.STORAGE_BUSY);
       }
       throw error;
     }
@@ -298,7 +291,7 @@ export class InventoryService {
     resultJson: Prisma.JsonValue,
   ): StockAdjustmentResultDto {
     if (storedHash !== requestHash) {
-      throw new ConflictException('Idempotency-Key was already used with another payload');
+      throw new ConflictException(INVENTORY_ERROR.IDEMPOTENCY_CONFLICT);
     }
     return resultJson as unknown as StockAdjustmentResultDto;
   }
@@ -326,16 +319,14 @@ export class InventoryService {
   ): void {
     if (adjustmentType !== STOCK_ADJUSTMENT_TYPE.CORRECTION
       && input.items.some(({ quantityDelta }) => quantityDelta < 1)) {
-      throw new BadRequestException(`${adjustmentType} only accepts positive quantities`);
+      throw new BadRequestException(INVENTORY_ERROR.POSITIVE_QUANTITY_ONLY(adjustmentType));
     }
     if (adjustmentType === STOCK_ADJUSTMENT_TYPE.MANUAL_RECEIPT && !externalReference) {
-      throw new BadRequestException('MANUAL_RECEIPT requires externalReference');
+      throw new BadRequestException(INVENTORY_ERROR.RECEIPT_REFERENCE_REQUIRED);
     }
     if (adjustmentType !== STOCK_ADJUSTMENT_TYPE.MANUAL_RECEIPT
       && (externalReference || sourceName)) {
-      throw new BadRequestException(
-        'externalReference and sourceName are only allowed for MANUAL_RECEIPT',
-      );
+      throw new BadRequestException(INVENTORY_ERROR.RECEIPT_FIELDS_NOT_ALLOWED);
     }
   }
 
@@ -345,7 +336,7 @@ export class InventoryService {
       (scope) => scope.type === ScopeType.GLOBAL
         || (scope.type === ScopeType.BRANCH && scope.branchId === publicBranchId),
     );
-    if (!allowed) throw new ForbiddenException('Warehouse is outside the assigned branch scope');
+    if (!allowed) throw new ForbiddenException(INVENTORY_ERROR.WAREHOUSE_OUT_OF_SCOPE);
   }
 
   private stockStatus(
@@ -372,9 +363,7 @@ export class InventoryService {
         throw error;
       }
     }
-    throw new ServiceUnavailableException(
-      'Không thể điều chỉnh tồn kho do dữ liệu đang được cập nhật đồng thời; vui lòng thử lại',
-    );
+    throw new ServiceUnavailableException(INVENTORY_ERROR.CONCURRENT_UPDATE);
   }
 
   private isSerializationConflict(error: unknown): boolean {
@@ -393,7 +382,7 @@ export class InventoryService {
 
   private ensurePersistence(): void {
     if (!this.prisma.isEnabled()) {
-      throw new ServiceUnavailableException('Durable inventory storage is not enabled');
+      throw new ServiceUnavailableException(INVENTORY_ERROR.STORAGE_DISABLED);
     }
   }
 }

@@ -8672,6 +8672,224 @@
         "x-required-permissions": [
           "inventory.transfer.view"
         ]
+      },
+      "patch": {
+        "description": "Chỉ phiếu DRAFT; phiếu đã gửi duyệt phải huỷ rồi tạo lại. 409 STOCK_TRANSFER_INVALID_STATUS khi không phải DRAFT, STOCK_TRANSFER_VERSION_STALE khi version cũ.",
+        "operationId": "updateStockTransfer",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStockTransferDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockTransferDetailDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Sửa lý do và/hoặc thay toàn bộ danh sách hàng của phiếu DRAFT",
+        "tags": [
+          "Admin Inventory Transfers"
+        ],
+        "x-required-permissions": [
+          "inventory.transfer.create"
+        ]
+      }
+    },
+    "/api/v1/admin/inventory/transfers/{id}/cancel": {
+      "post": {
+        "description": "Không phát sinh movement vì chưa xuất kho. Phiếu đã SHIPPED/RECEIVED trả 409 STOCK_TRANSFER_CANCEL_AFTER_SHIPPED; phiếu đã CANCELLED trả lại trạng thái hiện tại.",
+        "operationId": "cancelStockTransfer",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelStockTransferDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockTransferDetailDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Huỷ phiếu DRAFT hoặc từ chối phiếu SUBMITTED",
+        "tags": [
+          "Admin Inventory Transfers"
+        ],
+        "x-required-permissions": [
+          "inventory.transfer.create"
+        ]
       }
     },
     "/api/v1/admin/inventory/transfers/{id}/submit": {
@@ -21905,7 +22123,8 @@
           "DRAFT",
           "SUBMITTED",
           "SHIPPED",
-          "RECEIVED"
+          "RECEIVED",
+          "CANCELLED"
         ]
       },
       "StockTransferSummaryDto": {
@@ -21963,6 +22182,15 @@
           "receivedAt": {
             "type": "string",
             "format": "date-time",
+            "nullable": true
+          },
+          "cancelledAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "cancelReason": {
+            "type": "string",
             "nullable": true
           }
         },
@@ -22103,6 +22331,15 @@
             "format": "date-time",
             "nullable": true
           },
+          "cancelledAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "cancelReason": {
+            "type": "string",
+            "nullable": true
+          },
           "items": {
             "type": "array",
             "items": {
@@ -22114,6 +22351,10 @@
             "nullable": true
           },
           "receivedByDisplayName": {
+            "type": "string",
+            "nullable": true
+          },
+          "cancelledByDisplayName": {
             "type": "string",
             "nullable": true
           }
@@ -22172,6 +22413,52 @@
           "toWarehouseCode",
           "reason",
           "items"
+        ]
+      },
+      "UpdateStockTransferDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1",
+            "description": "Current optimistic-lock version"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 1000
+          },
+          "items": {
+            "description": "Khi gửi thì thay toàn bộ danh sách hàng của phiếu",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateStockTransferItemDto"
+            }
+          }
+        },
+        "required": [
+          "version"
+        ]
+      },
+      "CancelStockTransferDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "example": "1",
+            "description": "Current optimistic-lock version"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "version",
+          "reason"
         ]
       },
       "StockTransferTransitionDto": {

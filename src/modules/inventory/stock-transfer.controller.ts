@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Param, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Param, Patch, Post, Query, Req } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -19,12 +19,14 @@ import { ParseEntityIdPipe } from '../../common/identifiers/entity-id';
 import { AuthenticatedRequest, getAuthPrincipal } from '../../common/request/request-context';
 import { STOCK_TRANSFER_PERMISSION } from './stock-transfer.constants';
 import {
+  CancelStockTransferDto,
   CreateStockTransferDto,
   ReceiveStockTransferDto,
   StockTransferDetailDto,
   StockTransferListDto,
   StockTransferQueryDto,
   StockTransferTransitionDto,
+  UpdateStockTransferDto,
 } from './stock-transfer.dto';
 import { StockTransferQueryService } from './stock-transfer-query.service';
 import { StockTransferService } from './stock-transfer.service';
@@ -72,6 +74,44 @@ export class StockTransferController {
     @Req() request: AuthenticatedRequest,
   ) {
     return this.transfers.create(input, idempotencyKey, getAuthPrincipal(request), this.requestId(request));
+  }
+
+  @Patch(':id')
+  @RequirePermissions(STOCK_TRANSFER_PERMISSION.CREATE)
+  @ApiOperation({
+    operationId: 'updateStockTransfer',
+    summary: 'Sửa lý do và/hoặc thay toàn bộ danh sách hàng của phiếu DRAFT',
+    description: 'Chỉ phiếu DRAFT; phiếu đã gửi duyệt phải huỷ rồi tạo lại. 409 STOCK_TRANSFER_INVALID_STATUS khi không phải DRAFT, STOCK_TRANSFER_VERSION_STALE khi version cũ.',
+  })
+  @ApiOkResponse({ type: StockTransferDetailDto })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  update(
+    @Param('id', new ParseEntityIdPipe()) id: string,
+    @Body() input: UpdateStockTransferDto,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.transfers.update(id, input, getAuthPrincipal(request), this.requestId(request));
+  }
+
+  @Post(':id/cancel')
+  @RequirePermissions(STOCK_TRANSFER_PERMISSION.CREATE)
+  @ApiOperation({
+    operationId: 'cancelStockTransfer',
+    summary: 'Huỷ phiếu DRAFT hoặc từ chối phiếu SUBMITTED',
+    description: 'Không phát sinh movement vì chưa xuất kho. Phiếu đã SHIPPED/RECEIVED trả 409 STOCK_TRANSFER_CANCEL_AFTER_SHIPPED; phiếu đã CANCELLED trả lại trạng thái hiện tại.',
+  })
+  @ApiOkResponse({ type: StockTransferDetailDto })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  cancel(
+    @Param('id', new ParseEntityIdPipe()) id: string,
+    @Body() input: CancelStockTransferDto,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.transfers.cancel(id, input, getAuthPrincipal(request), this.requestId(request));
   }
 
   @Post(':id/submit')
