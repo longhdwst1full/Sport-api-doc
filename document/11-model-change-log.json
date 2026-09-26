@@ -6146,6 +6146,20 @@
         "test:src/modules/catalog/products/services/product-availability.spec.ts"
       ],
       "targets": []
+    },
+    {
+      "id": "API-20260926-CATALOG-PRODUCT-FORM-SPECS",
+      "date": "2026-09-26",
+      "scope": "API+CATALOG+OPENAPI+ADMIN",
+      "summary": "CreateProductDto và UpdateProductDto thêm specifications (tuỳ chọn, ≤60 ProductSpecificationInputDto), kiểm bằng AttributesService.validateSpecifications trong cùng transaction của createAdminProduct/updateAdminProduct; update gửi thì ghi đè cả bộ trong cùng lần tăng version, bỏ trống thì giữ nguyên, audit lưu before.specifications. UpdateProductDto.shortDescription thêm maxLength 1000 cho khớp create. replaceAdminProductSpecifications giữ nguyên. Thay đổi bổ sung, tương thích ngược; không đổi schema (products.specifications JSONB đã có từ D61).",
+      "sources": [
+        "OpenAPI:createAdminProduct/updateAdminProduct",
+        "source:src/modules/catalog/products/dto/product.dto.ts",
+        "source:src/modules/catalog/products/services/products.service.ts",
+        "test:src/modules/catalog/products/services/products.service.spec.ts",
+        "test:src/modules/catalog/products/dto/product.dto.spec.ts"
+      ],
+      "targets": []
     }
   ]
 }
