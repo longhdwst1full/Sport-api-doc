@@ -103,9 +103,7 @@ describe('StockTransferService', () => {
     await expect(service.receive('10', {
       version: '2',
       items: [{ sku: 'RUN-X1', receivedQuantity: 3, damagedQuantity: 1 }],
-    }, principal, 'request')).rejects.toThrow(
-      'receivedQuantity + damagedQuantity must equal shippedQuantity for RUN-X1',
-    );
+    }, principal, 'request')).rejects.toMatchObject({ response: { code: 'STOCK_TRANSFER_RECEIVE_QUANTITY_MISMATCH' } });
   });
 
   it('rejects shipping when source available stock is insufficient', async () => {
@@ -198,8 +196,6 @@ describe('StockTransferService', () => {
     } as unknown as PrismaService;
     const service = new StockTransferService(prisma, {} as AuditWriter);
 
-    await expect(service.ship('10', { version: '1' }, principal, 'request')).rejects.toThrow(
-      'Inventory changed concurrently; retry the transfer command',
-    );
+    await expect(service.ship('10', { version: '1' }, principal, 'request')).rejects.toMatchObject({ response: { code: 'STOCK_TRANSFER_CONCURRENT_UPDATE' } });
   });
 });

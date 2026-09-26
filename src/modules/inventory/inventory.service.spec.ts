@@ -57,7 +57,7 @@ describe('InventoryService', () => {
         owner,
         'request-empty-items',
       ),
-    ).rejects.toThrow('Adjustment must contain at least one item');
+    ).rejects.toMatchObject({ response: { code: 'INVENTORY_ADJUSTMENT_EMPTY' } });
   });
 
   it('rejects duplicate SKU lines before persistence mutation', async () => {
@@ -86,9 +86,7 @@ describe('InventoryService', () => {
       warehouseCode: 'KHO-HCM-01',
       reason: 'Giảm tồn vượt ngưỡng chi nhánh',
       items: [{ sku: 'RUN-X1', quantityDelta: -11 }],
-    }, 'branch-limit', branchManager, 'request')).rejects.toThrow(
-      'Branch-scoped users may decrease at most 10 units per SKU in one adjustment',
-    );
+    }, 'branch-limit', branchManager, 'request')).rejects.toMatchObject({ response: { code: 'INVENTORY_BRANCH_DECREASE_LIMIT' } });
   });
 
   it('requires one external document reference for a manual receipt', async () => {
@@ -101,9 +99,7 @@ describe('InventoryService', () => {
       reasonCode: 'EXTERNAL_RECEIPT',
       reason: 'Nhập hàng từ nhà cung cấp',
       items: [{ sku: 'RUN-X1', quantityDelta: 3 }],
-    }, 'receipt-without-reference', owner, 'request')).rejects.toThrow(
-      'MANUAL_RECEIPT requires externalReference',
-    );
+    }, 'receipt-without-reference', owner, 'request')).rejects.toMatchObject({ response: { code: 'INVENTORY_RECEIPT_REFERENCE_REQUIRED' } });
   });
 
   it('never accepts a negative opening or receipt quantity', async () => {
@@ -116,9 +112,7 @@ describe('InventoryService', () => {
       reasonCode: 'INITIAL_STOCK',
       reason: 'Tồn đầu kỳ',
       items: [{ sku: 'RUN-X1', quantityDelta: -1 }],
-    }, 'negative-opening', owner, 'request')).rejects.toThrow(
-      'OPENING_BALANCE only accepts positive quantities',
-    );
+    }, 'negative-opening', owner, 'request')).rejects.toMatchObject({ response: { code: 'INVENTORY_POSITIVE_QUANTITY_ONLY' } });
   });
 
   it('maps a PostgreSQL serialization conflict to a retryable inventory conflict', async () => {
@@ -137,9 +131,7 @@ describe('InventoryService', () => {
       warehouseCode: 'KHO-HCM-01',
       reason: 'Điều chỉnh đồng thời',
       items: [{ sku: 'RUN-X1', quantityDelta: 1 }],
-    }, 'concurrent-adjustment', owner, 'request')).rejects.toThrow(
-      'Inventory changed concurrently; retry with the same key',
-    );
+    }, 'concurrent-adjustment', owner, 'request')).rejects.toMatchObject({ response: { code: 'INVENTORY_BALANCE_CHANGED' } });
     expect(transaction).toHaveBeenCalledTimes(3);
   });
 

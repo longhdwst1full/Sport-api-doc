@@ -4,7 +4,7 @@
 >
 > **Last updated:** 2026-09-26
 >
-> **Change summary:** Summary tồn kho gộp tại PostgreSQL thay vì tải từng dòng về API.
+> **Change summary:** Summary tồn kho gộp tại PostgreSQL; lỗi đi qua catalog mã + message tiếng Việt.
 
 ## Phạm vi và entrypoint
 
@@ -27,6 +27,12 @@ Reservation checkout do module `checkout` sở hữu; trừ kho khi giao do `ful
 - `summarizeBalances` gộp bằng một câu SQL (`COUNT ... FILTER`, `SUM`), chỉ một dòng qua mạng. Bộ lọc
   sinh từ `balanceFilter` dùng chung với `balanceWhere` của danh sách; `CASE` phân loại phải cùng thứ tự
   với `classifyInventoryBalance`. Bằng chứng khớp trên PostgreSQL: `test/inventory-summary.integration-spec.ts`.
+
+## Lỗi trả về FE
+
+- Mọi lỗi ném qua `INVENTORY_ERROR` (`inventory.constants.ts`) hoặc `STOCK_TRANSFER_ERROR`
+  (`stock-transfer.constants.ts`) dạng `{ code, message }`; message tiếng Việt, `code` là contract ổn định.
+- Không viết câu trực tiếp trong service: `inventory-errors.spec.ts` fail nếu có `new XxxException('...')`.
 
 ## Concurrency và recovery
 
@@ -55,5 +61,5 @@ Reservation checkout do module `checkout` sở hữu; trừ kho khi giao do `ful
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
-| 1.1.0 | 2026-09-26 | Summary tồn kho aggregate tại PostgreSQL. | API-20260926-INVENTORY-SUMMARY-SQL |
+| 1.1.0 | 2026-09-26 | Summary tồn kho aggregate tại PostgreSQL; catalog lỗi tiếng Việt. | API-20260926-INVENTORY-SUMMARY-SQL, API-20260926-INVENTORY-ERROR-CATALOG |
 | 1.0.0 | 2026-09-21 | Tạo bản đồ bảo trì và chuẩn hoá retry/timeout cho adjustment. | API-20260921-INVENTORY-ADJUSTMENT-RESILIENCE |

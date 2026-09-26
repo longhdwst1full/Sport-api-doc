@@ -13,7 +13,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { AuditWriter } from '../audit/audit.writer';
 import type { AuthPrincipal } from '../auth/auth.types';
 import { ScopeType } from '../iam/iam.types';
-import { INVENTORY_MOVEMENT_TYPE, INVENTORY_REFERENCE_TYPE } from './inventory.constants';
+import { INVENTORY_MOVEMENT_TYPE, INVENTORY_REFERENCE_TYPE, INVENTORY_ERROR } from './inventory.constants';
 import {
   CreateStockTransferDto,
   ReceiveStockTransferDto,
@@ -21,7 +21,7 @@ import {
   StockTransferTransitionDto,
 } from './stock-transfer.dto';
 import { mapStockTransferDetail, stockTransferInclude, type StockTransferRecord } from './stock-transfer.mapper';
-import { STOCK_TRANSFER_STATUS } from './stock-transfer.constants';
+import { STOCK_TRANSFER_STATUS, STOCK_TRANSFER_ERROR } from './stock-transfer.constants';
 
 const TRANSFER_AUDIT_ACTION = {
   CREATE: 'inventory.stock_transfer.create',
@@ -56,13 +56,13 @@ export class StockTransferService {
       return await this.prisma.$transaction(async (transaction) => {
         const codes = [input.fromWarehouseCode, input.toWarehouseCode]
           .map((code) => code.trim().toUpperCase());
-        if (codes[0] === codes[1]) throw new BadRequestException('Source and destination warehouses must differ');
+        if (codes[0] === codes[1]) throw new BadRequestException(STOCK_TRANSFER_ERROR.SAME_WAREHOUSE);
         const warehouses = await transaction.warehouse.findMany({
           where: { code: { in: codes }, status: 'ACTIVE' },
         });
         const source = warehouses.find(({ code }) => code === codes[0]);
         const destination = warehouses.find(({ code }) => code === codes[1]);
-        if (!source || !destination) throw new BadRequestException('Both warehouses must be active');
+        if (!source || !destination) throw new BadRequestException(STOCK_TRANSFER_ERROR.WAREHOUSE_INACTIVE);
         this.assertBranchScope(principal, source.branchId, 'source');
 
         const skus = input.items.map(({ sku }) => sku.trim().toUpperCase()).sort();
@@ -72,7 +72,7 @@ export class StockTransferService {
         });
         if (variants.length !== skus.length) {
           const found = new Set(variants.map(({ sku }) => sku));
-          throw new BadRequestException(`Active standard SKU not found: ${skus.filter((sku) => !found.has(sku)).join(', ')}`);
+          throw new BadRequestException(STOCK_TRANSFER_ERROR.SKU_NOT_FOUND(skus.filter((sku) => !found.has(sku))));
         }
         const bySku = new Map(variants.map((variant) => [variant.sku, variant]));
         const transferNo = this.transferNo();
@@ -133,24 +133,24 @@ export class StockTransferService {
           return mapStockTransferDetail(transfer);
         }
         if (transfer.status !== STOCK_TRANSFER_STATUS.SHIPPED) {
-          throw new ConflictException('Only a SHIPPED transfer can be received');
+          throw new ConflictException(STOCK_TRANSFER_ERROR.RECEIVE_REQUIRES_SHIPPED);
         }
         this.assertVersion(transfer.version, input.version);
         const receivedBySku = new Map(input.items.map((item) => [item.sku.trim().toUpperCase(), item]));
         if (receivedBySku.size !== transfer.items.length) {
-          throw new BadRequestException('Receive payload must contain every transfer SKU exactly once');
+          throw new BadRequestException(STOCK_TRANSFER_ERROR.RECEIVE_ITEMS_MISMATCH);
         }
         for (const item of transfer.items) {
           const received = receivedBySku.get(item.productVariant.sku);
-          if (!received) throw new BadRequestException(`Missing receive result for ${item.productVariant.sku}`);
+          if (!received) throw new BadRequestException(STOCK_TRANSFER_ERROR.RECEIVE_ITEM_MISSING(item.productVariant.sku));
           if (received.receivedQuantity + received.damagedQuantity !== item.shippedQty) {
-            throw new BadRequestException(`receivedQuantity + damagedQuantity must equal shippedQuantity for ${item.productVariant.sku}`);
+            throw new BadRequestException(STOCK_TRANSFER_ERROR.RECEIVE_QUANTITY_MISMATCH(item.productVariant.sku));
           }
           if (received.damagedQuantity > 0 && !received.damageReason?.trim()) {
-            throw new BadRequestException(`damageReason is required for damaged SKU ${item.productVariant.sku}`);
+            throw new BadRequestException(STOCK_TRANSFER_ERROR.DAMAGE_REASON_REQUIRED(item.productVariant.sku));
           }
           if (received.damagedQuantity === 0 && received.damageReason?.trim()) {
-            throw new BadRequestException(`damageReason is only allowed when damagedQuantity is positive for ${item.productVariant.sku}`);
+            throw new BadRequestException(STOCK_TRANSFER_ERROR.DAMAGE_REASON_NOT_ALLOWED(item.productVariant.sku));
           }
         }
 
@@ -235,7 +235,7 @@ export class StockTransferService {
           : transfer.status === STOCK_TRANSFER_STATUS.SHIPPED
             || transfer.status === STOCK_TRANSFER_STATUS.RECEIVED;
         if (alreadyReached) return mapStockTransferDetail(transfer);
-        if (transfer.status !== expected) throw new ConflictException(`Only a ${expected} transfer can move to ${target}`);
+        if (transfer.status !== expected) throw new ConflictException(STOCK_TRANSFER_ERROR.INVALID_STATUS(expected, target));
         this.assertVersion(transfer.version, version);
         const now = new Date();
         if (target === STOCK_TRANSFER_STATUS.SHIPPED) {
@@ -279,7 +279,7 @@ export class StockTransferService {
     for (const item of transfer.items) {
       const balance = byVariant.get(item.productVariantId);
       if (!balance || balance.onHand - balance.reserved < item.requestedQty) {
-        throw new ConflictException(`Insufficient available stock for ${item.productVariant.sku}`);
+        throw new ConflictException(STOCK_TRANSFER_ERROR.INSUFFICIENT_STOCK(item.productVariant.sku));
       }
       const nextOnHand = balance.onHand - item.requestedQty;
       await this.updateBalance(transaction, balance.id, balance.version, nextOnHand);
@@ -308,7 +308,7 @@ export class StockTransferService {
     const transfer = await transaction.stockTransfer.findUnique({
       where: { id: databaseId }, include: stockTransferInclude,
     });
-    if (!transfer) throw new NotFoundException('Stock transfer was not found');
+    if (!transfer) throw new NotFoundException(STOCK_TRANSFER_ERROR.NOT_FOUND);
     return transfer;
   }
 
@@ -330,7 +330,7 @@ export class StockTransferService {
     const result = await transaction.inventoryBalance.updateMany({
       where: { id, version }, data: { onHand, version: { increment: 1 } },
     });
-    if (result.count !== 1) throw new ConflictException('Inventory changed concurrently; retry');
+    if (result.count !== 1) throw new ConflictException(STOCK_TRANSFER_ERROR.CONCURRENT_UPDATE);
   }
 
   private assertReceiveReplay(transfer: StockTransferRecord, input: ReceiveStockTransferDto): void {
@@ -342,29 +342,29 @@ export class StockTransferService {
         && value.damagedQuantity === item.damagedQty
         && (value.damageReason?.trim() || null) === item.damageReason;
     });
-    if (!same) throw new ConflictException('Transfer was already received with another result');
+    if (!same) throw new ConflictException(STOCK_TRANSFER_ERROR.ALREADY_RECEIVED_DIFFERENTLY);
   }
 
   private assertBranchScope(principal: AuthPrincipal, branchId: bigint, side: 'source' | 'destination'): void {
     const allowed = principal.scopes.some((scope) => scope.type === ScopeType.GLOBAL
       || (scope.type === ScopeType.BRANCH && scope.branchId === toEntityId(branchId)));
-    if (!allowed) throw new ForbiddenException(`Transfer ${side} is outside the assigned branch scope`);
+    if (!allowed) throw new ForbiddenException(STOCK_TRANSFER_ERROR.OUT_OF_SCOPE(side));
   }
 
   private assertVersion(actual: bigint, expected: string): void {
-    if (actual !== toDatabaseId(expected)) throw new ConflictException('Stock transfer version is stale');
+    if (actual !== toDatabaseId(expected)) throw new ConflictException(STOCK_TRANSFER_ERROR.VERSION_STALE);
   }
 
   private assertUniqueSkus(skus: string[]): void {
     if (new Set(skus.map((sku) => sku.trim().toUpperCase())).size !== skus.length) {
-      throw new BadRequestException('Transfer items must contain unique SKU values');
+      throw new BadRequestException(STOCK_TRANSFER_ERROR.DUPLICATE_SKU);
     }
   }
 
   private requireIdempotencyKey(value: string): string {
     const key = value.trim();
-    if (!key) throw new BadRequestException('Idempotency-Key is required');
-    if (key.length > 150) throw new BadRequestException('Idempotency-Key must not exceed 150 characters');
+    if (!key) throw new BadRequestException(INVENTORY_ERROR.IDEMPOTENCY_KEY_REQUIRED);
+    if (key.length > 150) throw new BadRequestException(INVENTORY_ERROR.IDEMPOTENCY_KEY_TOO_LONG(150));
     return key;
   }
 
@@ -382,7 +382,7 @@ export class StockTransferService {
 
   private replayCreate(record: StockTransferRecord, requestHash: string): StockTransferDetailDto {
     if (record.requestHash !== requestHash) {
-      throw new ConflictException('Idempotency-Key was already used with another payload');
+      throw new ConflictException(INVENTORY_ERROR.IDEMPOTENCY_CONFLICT);
     }
     return mapStockTransferDetail(record);
   }
@@ -420,12 +420,12 @@ export class StockTransferService {
 
   private rethrowConcurrency(error: unknown): never {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034') {
-      throw new ConflictException('Inventory changed concurrently; retry the transfer command');
+      throw new ConflictException(STOCK_TRANSFER_ERROR.CONCURRENT_UPDATE);
     }
     throw error;
   }
 
   private ensurePersistence(): void {
-    if (!this.prisma.isEnabled()) throw new ServiceUnavailableException('Durable inventory storage is not enabled');
+    if (!this.prisma.isEnabled()) throw new ServiceUnavailableException(INVENTORY_ERROR.STORAGE_DISABLED);
   }
 }

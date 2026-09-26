@@ -10,7 +10,7 @@ import { PrismaService } from '../../database/prisma.service';
 import type { AuthPrincipal } from '../auth/auth.types';
 import { requireVisibleBranchIds, warehouseBranchScopeWhere } from '../../common/security/branch-scope';
 import { InventoryBalanceListDto, InventoryBalanceSummaryDto } from './inventory.dto';
-import { classifyInventoryBalance } from './inventory.constants';
+import { classifyInventoryBalance, INVENTORY_ERROR } from './inventory.constants';
 import {
   InventoryBalanceQueryDto,
   InventoryMovementListDto,
@@ -292,7 +292,7 @@ export class InventoryQueryService {
         _count: { select: { items: true } },
       },
     });
-    if (!row) throw new NotFoundException('Stock adjustment not found');
+    if (!row) throw new NotFoundException(INVENTORY_ERROR.ADJUSTMENT_NOT_FOUND);
     return {
       ...this.adjustmentSummary(row),
       items: row.items.map((item) => ({
@@ -359,19 +359,19 @@ export class InventoryQueryService {
       toDatabaseId(cursor.id);
       return cursor;
     } catch {
-      throw new BadRequestException('Inventory cursor is invalid');
+      throw new BadRequestException(INVENTORY_ERROR.CURSOR_INVALID);
     }
   }
 
   private assertDateRange(from?: string, to?: string): void {
     if (from && to && new Date(from) > new Date(to)) {
-      throw new BadRequestException('Inventory date range is invalid');
+      throw new BadRequestException(INVENTORY_ERROR.DATE_RANGE_INVALID);
     }
   }
 
   private ensurePersistence(): void {
     if (!this.prisma.isEnabled()) {
-      throw new ServiceUnavailableException('Durable inventory storage is not enabled');
+      throw new ServiceUnavailableException(INVENTORY_ERROR.STORAGE_DISABLED);
     }
   }
 }

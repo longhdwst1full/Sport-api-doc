@@ -68,7 +68,7 @@ describe('InventoryQueryService', () => {
       isEnabled: jest.fn().mockReturnValue(true),
     } as unknown as PrismaService);
     await expect(service.listMovements({ limit: 25, cursor: 'invalid' }, owner))
-      .rejects.toThrow('Inventory cursor is invalid');
+      .rejects.toMatchObject({ response: { code: 'INVENTORY_CURSOR_INVALID' } });
   });
 
   it('rejects an inverted inventory date range', async () => {
@@ -80,7 +80,7 @@ describe('InventoryQueryService', () => {
       limit: 25,
       from: '2026-09-06T00:00:00.000Z',
       to: '2026-09-05T00:00:00.000Z',
-    }, owner)).rejects.toThrow('Inventory date range is invalid');
+    }, owner)).rejects.toMatchObject({ response: { code: 'INVENTORY_DATE_RANGE_INVALID' } });
   });
 
   it('lists adjustment history with a stable cursor and branch scope', async () => {

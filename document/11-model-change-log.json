@@ -6178,6 +6178,20 @@
         "test:src/modules/catalog/products/dto/product.dto.spec.ts"
       ],
       "targets": []
+    },
+    {
+      "id": "API-20260926-INVENTORY-ERROR-CATALOG",
+      "date": "2026-09-26",
+      "scope": "API+INVENTORY+ERROR-CONTRACT",
+      "summary": "Inventory và Stock transfer ném lỗi qua catalog INVENTORY_ERROR/STOCK_TRANSFER_ERROR ({ code, message } tiếng Việt) thay cho câu tiếng Anh viết trong service. Error envelope V1 giữ nguyên hình dạng; trường code đổi từ mã HTTP chung (BAD_REQUEST, CONFLICT, NOT_FOUND, FORBIDDEN, SERVICE_UNAVAILABLE) sang mã nghiệp vụ ổn định (vd. INVENTORY_SKU_NOT_FOUND, STOCK_TRANSFER_INSUFFICIENT_STOCK, STOCK_TRANSFER_INVALID_STATUS). HTTP status không đổi; Admin/Client không so khớp mã hay câu cũ. Không đổi schema. Kèm summarizeBalances gộp tại PostgreSQL (API-20260926-INVENTORY-SUMMARY-SQL), không đổi DTO.",
+      "sources": [
+        "source:src/modules/inventory/inventory.constants.ts",
+        "source:src/modules/inventory/stock-transfer.constants.ts",
+        "source:src/modules/inventory/inventory.service.ts",
+        "source:src/modules/inventory/stock-transfer.service.ts",
+        "test:src/modules/inventory/inventory-errors.spec.ts"
+      ],
+      "targets": []
     }
   ]
 }

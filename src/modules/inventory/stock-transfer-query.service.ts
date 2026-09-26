@@ -6,6 +6,8 @@ import type { AuthPrincipal } from '../auth/auth.types';
 import { requireVisibleBranchIds } from '../../common/security/branch-scope';
 import { StockTransferDetailDto, StockTransferListDto, StockTransferQueryDto } from './stock-transfer.dto';
 import { mapStockTransferDetail, mapStockTransferSummary, stockTransferInclude } from './stock-transfer.mapper';
+import { INVENTORY_ERROR } from './inventory.constants';
+import { STOCK_TRANSFER_ERROR } from './stock-transfer.constants';
 
 @Injectable()
 export class StockTransferQueryService {
@@ -49,7 +51,7 @@ export class StockTransferQueryService {
       where: { id: toDatabaseId(id), AND: [this.scopeWhere(principal)] },
       include: stockTransferInclude,
     });
-    if (!record) throw new NotFoundException('Stock transfer was not found');
+    if (!record) throw new NotFoundException(STOCK_TRANSFER_ERROR.NOT_FOUND);
     return mapStockTransferDetail(record);
   }
 
@@ -68,7 +70,7 @@ export class StockTransferQueryService {
 
   private ensurePersistence(): void {
     if (!this.prisma.isEnabled()) {
-      throw new ServiceUnavailableException('Durable inventory storage is not enabled');
+      throw new ServiceUnavailableException(INVENTORY_ERROR.STORAGE_DISABLED);
     }
   }
 }
