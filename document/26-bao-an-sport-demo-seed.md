@@ -1,16 +1,18 @@
 # Bảo An Sport demo seed
 
-> **Document version:** 1.2.0
+> **Document version:** 1.3.0
 >
-> **Last updated:** 2026-09-25
+> **Last updated:** 2026-09-26
 >
-> **Change summary:** Thêm reset catalog demo (`db:catalog:reset`): xoá catalog + giao dịch thử, seed lại 95 sản phẩm từ snapshot crawl.
+> **Change summary:** Chủ dự án cho phép dùng nguyên văn nội dung baoansport.vn; thêm `db:catalog:enrich` (không phá huỷ) bổ sung mô tả, thương hiệu, thông số, gallery và 20 bài viết.
 
 ## Phạm vi
 
 - Nguồn tham khảo: `https://baoansport.vn` và 16 trang chi tiết sản phẩm công khai.
 - Dữ liệu lấy theo thời điểm 2026-09-06: tên model, giá bán hiển thị, ảnh đại diện và URL nguồn.
-- Mô tả ngắn trong hệ thống được biên soạn lại; không sao chép mô tả dài của website nguồn.
+- ~~Mô tả ngắn trong hệ thống được biên soạn lại; không sao chép mô tả dài của website nguồn.~~ Thay bởi quyết
+  định 2026-09-26: chủ dự án cho phép dùng **nguyên văn** mô tả sản phẩm và bài viết của baoansport.vn (giữ
+  `sourceUrl` để truy vết). Xem mục "Bổ sung dữ liệu từ web".
 - Đây là dữ liệu demo phục vụ phát triển/QA, không phải feed thương mại và không tự đồng bộ giá về sau.
 - Ảnh được Cloudinary fetch vào folder `<CLOUDINARY_FOLDER>/demo/bao-an-sport`; metadata giữ URL nguồn để truy vết.
 
@@ -75,10 +77,32 @@ yarn db:catalog:reset --confirm-destructive-reset
 - Ba bảng sổ cái `payment_transactions`, `fulfillment_status_history`, `inventory_movements` có trigger chặn DELETE. Chủ dự án tự tắt trigger trong Supabase SQL editor trước khi chạy và bật lại ngay sau đó; script không tự tắt trigger. `audit_logs` không bị xoá.
 - Lần chạy 2026-09-25 10:11 UTC: 95 sản phẩm, 20 thương hiệu, 60 danh mục, 28 thuộc tính, 190 movement; backup `.backups/pre-catalog-reset-2026-09-25T10-07-45-421Z.json`.
 
+## Bổ sung dữ liệu từ web (SEED-20260926-CATALOG-ENRICH)
+
+```bash
+yarn db:catalog:enrich --confirm-manual-seed
+```
+
+- Nguồn: trang chi tiết của 95 sản phẩm trong `catalog-demo.json` và 20 URL trong `https://baoansport.vn/sitemap-post.xml`
+  (robots.txt cho phép), crawl ngày 2026-09-26. Kết quả lưu ở `catalog-demo.json` (sản phẩm) và `content-demo.json` (bài viết).
+- Sản phẩm: mô tả dài nguyên văn (văn bản thuần, tiêu đề là dòng riêng, gạch đầu dòng `•`), thương hiệu theo khối
+  "Thương hiệu" của trang (thêm 7 hãng; 4 sản phẩm đổi hãng so với crawl cũ), bảng thông số + Xuất xứ/Bảo hành
+  (thêm thuộc tính `ORIGIN`, `WARRANTY`), gallery thật. Bộ ảnh cũ lẫn banner quảng cáo và ảnh "Sản phẩm cùng loại"
+  của sản phẩm khác đã được thay. 83/95 sản phẩm trên web chỉ có 1 ảnh.
+- Cân nặng/kích thước chỉ điền khi SKU còn trống và parse chắc chắn; 37/95 SKU vẫn 0g vì web ghi "Đang cập nhật".
+- Bài viết: thân bài theo quy ước `## `/`### `/`- ` của storefront; `postType` theo chuyên mục (chính sách → POLICY,
+  tư vấn thiết bị → PRODUCT_GUIDE, kiến thức thể thao → TRAINING_GUIDE, thông báo → NEWS). Sản phẩm liên quan: slug được
+  bài link tới nếu có trong catalog, bổ sung theo danh mục cụ thể nhất bài link tới (tối đa 4).
+- Không phá huỷ: cập nhật theo `product_no` / `sku` / `code` / `slug`; không đụng đơn, tồn, giỏ, giá, review. Bài viết không
+  thuộc snapshot giữ nguyên. Luôn backup `.backups/pre-catalog-enrich-*.json` trước khi ghi; chạy lại cho cùng kết quả.
+- Lần chạy 2026-09-26 14:43 UTC: 95 sản phẩm, 27 hãng, +2 thuộc tính, +11 ảnh, 1 bài tạo mới, 19 bài cập nhật; backup
+  `.backups/pre-catalog-enrich-2026-09-26T14-43-06-655Z.json`. Chạy lần 2 không tạo thêm bản ghi.
+
 ## Revision history
 
 | Version | Date | Change summary |
 | --- | --- | --- |
+| 1.3.0 | 2026-09-26 | Cho phép nội dung nguyên văn từ web; thêm enrich không phá huỷ và 20 bài viết. |
 | 1.2.0 | 2026-09-25 | Thêm reset catalog demo từ snapshot crawl, backup bắt buộc và tồn demo. |
 | 1.1.0 | 2026-09-06 | Manual-only guard, create-only mặc định, scoped price và Cloudinary reuse. |
 | 1.0.0 | 2026-09-06 | Tạo manifest và quy tắc import 16 sản phẩm Bảo An Sport. |

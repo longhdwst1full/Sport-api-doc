@@ -51,7 +51,7 @@ interface DemoDataset {
  * Gom ~150 nhãn thông số crawl về một từ điển nhỏ. Thứ tự alias quan trọng: nhãn đầu tiên có giá trị
  * thắng (ví dụ "Trọng lượng" trước "Trọng lượng máy"). Nhãn không map giữ lại trong seoJson.
  */
-const ATTRIBUTES: Array<{ code: string; name: string; aliases: RegExp }> = [
+export const ATTRIBUTES: Array<{ code: string; name: string; aliases: RegExp }> = [
   { code: 'MODEL_CODE', name: 'Mã model', aliases: /^mã sản phẩm$/ },
   { code: 'COLOR', name: 'Màu sắc', aliases: /^màu sắc$/ },
   { code: 'MATERIAL', name: 'Chất liệu', aliases: /^(chất liệu|vật liệu)$/ },
@@ -80,6 +80,9 @@ const ATTRIBUTES: Array<{ code: string; name: string; aliases: RegExp }> = [
   { code: 'SIZE', name: 'Size', aliases: /^size( bóng)?$/ },
   { code: 'INCLUDED', name: 'Phụ kiện đi kèm', aliases: /^(phụ kiện đi kèm|bộ sản phẩm|bộ vợt gồm|lưới đi kèm|bóng đi kèm|bóng tặng kèm|cọc lưới đi kèm|bánh tạ đi kèm|đòn tạ đi kèm|túi đựng|hộp đựng)$/ },
   { code: 'TARGET_USER', name: 'Đối tượng sử dụng', aliases: /^đối tượng sử dụng$/ },
+  // Hai dòng dưới lấy từ khối "Thương hiệu / Bảo hành / Xuất xứ" của trang sản phẩm, không phải bảng thông số.
+  { code: 'ORIGIN', name: 'Xuất xứ', aliases: /^xuất xứ$/ },
+  { code: 'WARRANTY', name: 'Bảo hành', aliases: /^bảo hành$/ },
 ];
 
 const UNKNOWN_VALUE = /^(đang cập nhật|updating|n\/a|-)$/i;
