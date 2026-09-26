@@ -100,6 +100,33 @@ describe('Admin authentication', () => {
     await expect(auth.refresh(pair.refreshToken!)).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
+  it('keeps a pre-rotation access token valid only while the next session is alive', async () => {
+    const first = await auth.login({ identifier: email, password });
+    const second = await auth.refresh(first.refreshToken!);
+    // Request đang chạy bằng token cũ lúc rotate không được nhận 401.
+    await expect(auth.authorizeAccessToken(first.accessToken)).resolves.toMatchObject({ userId: userId.toString() });
+
+    const third = await auth.refresh(second.refreshToken!);
+    // Chỉ xét một bước: token cách hai lần xoay bị từ chối, token liền trước vẫn dùng được.
+    await expect(auth.authorizeAccessToken(first.accessToken)).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(auth.authorizeAccessToken(second.accessToken)).resolves.toMatchObject({ userId: userId.toString() });
+
+    // Logout thu hồi session kế tiếp → token liền trước mất hiệu lực ngay.
+    await auth.logout(third.refreshToken!);
+    await expect(auth.authorizeAccessToken(second.accessToken)).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(auth.authorizeAccessToken(third.accessToken)).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('lets exactly one of two concurrent refreshes win, the other gets a stable code', async () => {
+    const pair = await auth.login({ identifier: email, password });
+    const results = await Promise.allSettled([auth.refresh(pair.refreshToken!), auth.refresh(pair.refreshToken!)]);
+
+    expect(results.filter(({ status }) => status === 'fulfilled')).toHaveLength(1);
+    const loser = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+    expect(['AUTH_REFRESH_REUSED', 'AUTH_REFRESH_CONFLICT'])
+      .toContain((loser?.reason as { response?: { code?: string } }).response?.code);
+  });
+
   it('locks on the fifth consecutive failure, revokes active sessions, and writes audit', async () => {
     await auth.login({ identifier: email, password });
     for (let attempt = 1; attempt <= 5; attempt += 1) {

@@ -1,7 +1,8 @@
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import type { User } from '@prisma/client';
-import { UnauthorizedException } from '@nestjs/common';
+import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { hash } from 'argon2';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditWriter } from '../audit/audit.writer';
@@ -255,3 +256,111 @@ describe('AuthService permission grant cache', () => {
     expect(findManyAssignments).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('AuthService refresh rotation', () => {
+  const activeUser = { id: 101n, status: 'ACTIVE', displayName: 'Owner', permissionVersion: 1n, mustChangePassword: false };
+  const conflict = () => new Prisma.PrismaClientKnownRequestError('serialization failure', { code: 'P2034', clientVersion: 'test' });
+
+  function buildRefreshService(options: { session?: Record<string, unknown> | null; revokeCount?: number; failures?: Error[] } = {}) {
+    const failures: Error[] = [...(options.failures ?? [])];
+    const createSession = jest.fn().mockResolvedValue({});
+    const transaction = {
+      authSession: {
+        findUnique: jest.fn().mockResolvedValue(options.session === undefined
+          ? { id: 9n, revokedAt: null, revokeReason: null, expiresAt: new Date(Date.now() + 60_000), user: activeUser }
+          : options.session),
+        updateMany: jest.fn().mockResolvedValue({ count: options.revokeCount ?? 1 }),
+        create: createSession,
+      },
+    };
+    const $transaction = jest.fn((work: (client: typeof transaction) => unknown) => {
+      const failure = failures.shift();
+      return failure ? Promise.reject(failure) : Promise.resolve(work(transaction));
+    });
+    const prisma = { isEnabled: jest.fn().mockReturnValue(true), $transaction } as unknown as PrismaService;
+    const service = new AuthService(
+      prisma,
+      { signAsync: jest.fn().mockResolvedValue('access-token') } as unknown as JwtService,
+      new ConfigService({ app: { jwt: { accessTtlSeconds: 900, refreshTtlSeconds: 3600 } } }),
+      { write: jest.fn() } as unknown as AuditWriter,
+      { append: jest.fn().mockResolvedValue(undefined) } as unknown as OutboxWriter,
+    );
+    return { service, transaction, $transaction };
+  }
+
+  it('xoay session: cũ ROTATED, cấp session kế tiếp trỏ về session cũ', async () => {
+    const { service, transaction } = buildRefreshService();
+
+    await expect(service.refresh('refresh-token')).resolves.toMatchObject({ accessToken: 'access-token' });
+    expect(transaction.authSession.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 9n, revokedAt: null },
+      data: expect.objectContaining({ revokeReason: 'ROTATED' }) as unknown,
+    }));
+  });
+
+  it('token đã xoay dùng lại → 401 AUTH_REFRESH_REUSED', async () => {
+    const { service } = buildRefreshService({
+      session: { id: 9n, revokedAt: new Date(), revokeReason: 'ROTATED', expiresAt: new Date(Date.now() + 60_000), user: activeUser },
+    });
+
+    await expect(service.refresh('refresh-token')).rejects.toMatchObject({ response: { code: 'AUTH_REFRESH_REUSED' } });
+  });
+
+  it('thua race khi thu hồi → 401 AUTH_REFRESH_REUSED', async () => {
+    const { service } = buildRefreshService({ revokeCount: 0 });
+
+    await expect(service.refresh('refresh-token')).rejects.toMatchObject({ response: { code: 'AUTH_REFRESH_REUSED' } });
+  });
+
+  it.each([
+    ['không tồn tại', null],
+    ['đã đăng xuất', { id: 9n, revokedAt: new Date(), revokeReason: 'LOGOUT', expiresAt: new Date(Date.now() + 60_000), user: activeUser }],
+    ['hết hạn', { id: 9n, revokedAt: null, revokeReason: null, expiresAt: new Date(Date.now() - 1), user: activeUser }],
+  ])('token %s → 401 AUTH_REFRESH_INVALID', async (_case, session) => {
+    const { service } = buildRefreshService({ session });
+
+    await expect(service.refresh('refresh-token')).rejects.toMatchObject({ response: { code: 'AUTH_REFRESH_INVALID' } });
+  });
+
+  it('xung đột serialization một lần thì tự chạy lại và thành công', async () => {
+    const { service, $transaction } = buildRefreshService({ failures: [conflict()] });
+
+    await expect(service.refresh('refresh-token')).resolves.toMatchObject({ accessToken: 'access-token' });
+    expect($transaction).toHaveBeenCalledTimes(2);
+  });
+
+  it('xung đột serialization kéo dài → 409 AUTH_REFRESH_CONFLICT (FE thử lại, không đăng xuất)', async () => {
+    const { service } = buildRefreshService({ failures: [conflict(), conflict()] });
+
+    const error = await service.refresh('refresh-token').catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(ConflictException);
+    expect(error).toMatchObject({ response: { code: 'AUTH_REFRESH_CONFLICT' } });
+  });
+
+  it('access token cấp trước lần xoay vẫn hợp lệ khi session kế tiếp còn sống', async () => {
+    const findFirst = jest.fn().mockResolvedValue({ id: 9n, user: activeUser });
+    const service = new AuthService(
+      {
+        isEnabled: jest.fn().mockReturnValue(true),
+        authSession: { findFirst },
+        userRoleAssignment: { findMany: jest.fn().mockResolvedValue([]) },
+      } as unknown as PrismaService,
+      { verifyAsync: jest.fn().mockResolvedValue({ sub: '101', sid: '9', pv: '1', typ: 'access' }) } as unknown as JwtService,
+      new ConfigService({ app: { jwt: { accessTtlSeconds: 900 } } }),
+      { write: jest.fn() } as unknown as AuditWriter,
+      { append: jest.fn() } as unknown as OutboxWriter,
+    );
+
+    await service.authorizeAccessToken('token');
+    const where = (findFirst.mock.calls[0] as [{ where: { OR: Array<Record<string, unknown>> } }])[0].where;
+    expect(where.OR[0]).toEqual({ revokedAt: null });
+    expect(where.OR[1]).toMatchObject({
+      revokeReason: 'ROTATED',
+      rotations: { some: { revokedAt: null } },
+    });
+    const rotatedAfter = (where.OR[1].revokedAt as { gt: Date }).gt.getTime();
+    expect(Date.now() - rotatedAfter).toBeGreaterThanOrEqual(900_000 - 1_000);
+    expect(Date.now() - rotatedAfter).toBeLessThanOrEqual(900_000 + 1_000);
+  });
+});
+

@@ -110,6 +110,20 @@ describe('AuthTokenTransportService', () => {
     );
   });
 
+  it('thiếu refresh cookie → 401 AUTH_REFRESH_MISSING để FE đăng xuất, không phải 400', () => {
+    const service = new AuthTokenTransportService(
+      new ConfigService({ app: { authTokenTransport: 'COOKIE', corsOrigins: ['*'] } }),
+    );
+
+    let error: unknown;
+    try {
+      service.readRefreshToken({ headers: {} } as unknown as Request, {}, 'admin');
+    } catch (caught) {
+      error = caught;
+    }
+    expect(error).toMatchObject({ status: 401, response: { code: 'AUTH_REFRESH_MISSING' } });
+  });
+
   describe('chặn CSRF cho lệnh chạy bằng cookie', () => {
     const cookieService = (corsOrigins: string[]) =>
       new AuthTokenTransportService(

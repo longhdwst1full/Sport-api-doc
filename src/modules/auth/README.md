@@ -1,10 +1,10 @@
 # Auth module — maintenance note
 
-> **Document version:** 1.3.0
+> **Document version:** 1.4.0
 >
-> **Last updated:** 2026-09-21
+> **Last updated:** 2026-09-26
 >
-> **Change summary:** Hoàn thiện remember-me cho COOKIE transport và giữ lựa chọn qua refresh rotation.
+> **Change summary:** Refresh ổn định: access token cũ sống qua lần xoay, mã lỗi refresh riêng, xung đột serialization trả 409 thay vì 500.
 
 ## Trách nhiệm
 
@@ -36,6 +36,12 @@ Source of truth của quyền là `modules/iam`. Auth chỉ **chiếu** (project
 - `users.permission_version` được nhúng vào access token claim `pv`. Token có `pv` khác giá trị hiện tại bị từ chối ngay — đây là cơ chế thu hồi quyền tức thì, thay cho TTL.
 - Session bị revoke hoặc hết hạn bị loại ở **mọi** request; không bao giờ cache session.
 - Assignment chỉ có hiệu lực khi `status = ACTIVE`, `valid_from <= now`, `valid_to` null hoặc tương lai, và `role.status = ACTIVE`.
+- **Refresh rotation**: session cũ `ROTATED`, session mới trỏ `rotated_from_id`. Access token của session đã xoay
+  vẫn được `authorizeAccessToken` chấp nhận tới khi tự hết hạn (≤ `JWT_ACCESS_TTL_SECONDS`) **nếu** session kế tiếp còn
+  sống; chỉ xét một bước. Logout/đổi mật khẩu/khoá tài khoản thu hồi session kế tiếp nên token cũ mất hiệu lực ngay.
+- **Mã lỗi refresh** (`AUTH_ERROR`): 401 `AUTH_REFRESH_INVALID` / `AUTH_REFRESH_REUSED` / `AUTH_REFRESH_MISSING` (thiếu
+  cookie/token, trước đây 400) → FE đăng xuất; 409 `AUTH_REFRESH_CONFLICT` (serialization conflict sau 2 lượt chạy) → FE
+  thử lại, không đăng xuất.
 - `rememberMe=false` tạo refresh cookie theo phiên trình duyệt; `rememberMe=true` mới có `Max-Age` bằng `JWT_REFRESH_TTL_SECONDS`. Refresh rotation giữ lựa chọn ban đầu và logout xóa cả refresh/remember cookie.
 
 ## Cache permission
@@ -80,5 +86,6 @@ thay vì chép tay permission code.
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.4.0 | 2026-09-26 | Ổn định refresh: token cũ sống qua lần xoay, mã lỗi refresh, 409 khi xung đột. | API-20260926-AUTH-REFRESH-STABILITY |
 | 1.3.0 | 2026-09-21 | Phân biệt session/persistent refresh cookie và giữ preference qua rotation. | API-20260921-AUTH-REMEMBER-ME |
 | 1.2.0 | 2026-09-15 | Không cache assignment có `valid_to` tương lai; OpenAPI xuất permission requirement. | Auth permission cache hardening |

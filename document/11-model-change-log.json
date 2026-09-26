@@ -6391,6 +6391,20 @@
           }
         }
       ]
+    },
+    {
+      "id": "API-20260926-AUTH-REFRESH-STABILITY",
+      "date": "2026-09-26",
+      "scope": "API+AUTH+ERROR-CONTRACT+OPENAPI+ADMIN+STOREFRONT",
+      "summary": "Refresh token ổn định: (1) authorizeAccessToken chấp nhận session revokeReason=ROTATED trong vòng JWT_ACCESS_TTL_SECONDS nếu session kế tiếp (rotated_from_id) còn sống, để request đang chạy bằng access token cũ không nhận 401 và kích hoạt refresh dây chuyền; logout/đổi mật khẩu/khoá tài khoản vẫn vô hiệu hoá ngay. (2) refreshAdminToken/refreshCustomerToken trả mã ổn định: 401 AUTH_REFRESH_INVALID, AUTH_REFRESH_REUSED, AUTH_REFRESH_MISSING (thiếu cookie/token đổi từ 400 sang 401), 409 AUTH_REFRESH_CONFLICT khi PostgreSQL báo serialization conflict sau 2 lượt (trước đây 500). Không đổi schema, không đổi hình dạng TokenPairDto.",
+      "sources": [
+        "source:src/modules/auth/auth.service.ts",
+        "source:src/modules/auth/auth-token-transport.service.ts",
+        "OpenAPI:refreshAdminToken/refreshCustomerToken",
+        "test:src/modules/auth/auth.service.spec.ts",
+        "test:test/auth.integration-spec.ts"
+      ],
+      "targets": []
     }
   ]
 }

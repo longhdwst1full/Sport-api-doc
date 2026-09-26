@@ -1,7 +1,7 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
-import { AUTH_TOKEN_TRANSPORT } from './auth.constants';
+import { AUTH_ERROR, AUTH_TOKEN_TRANSPORT } from './auth.constants';
 import type { RefreshTokenDto, TokenPairDto } from './auth.dto';
 
 type AuthAudience = 'admin' | 'customer';
@@ -64,12 +64,14 @@ export class AuthTokenTransportService {
   ): string {
     const fromBody = input.refreshToken?.trim();
     if (!this.usesCookie()) {
-      if (!fromBody) throw new BadRequestException('refreshToken is required');
+      if (!fromBody) throw new UnauthorizedException(AUTH_ERROR.REFRESH_MISSING);
       return fromBody;
     }
     this.assertTrustedOrigin(request);
     const fromCookie = this.parseCookies(request.headers.cookie)[REFRESH_COOKIE_NAMES[audience]];
-    if (!fromCookie) throw new BadRequestException('Refresh cookie is required');
+    // CONTRACT: thiếu cookie là "không có phiên" (401), không phải payload sai (400): FE dùng 401 để
+    // quyết định đăng xuất, còn 400 bị coi là lỗi tạm thời và giữ phiên hỏng mãi.
+    if (!fromCookie) throw new UnauthorizedException(AUTH_ERROR.REFRESH_MISSING);
     return fromCookie;
   }
 
