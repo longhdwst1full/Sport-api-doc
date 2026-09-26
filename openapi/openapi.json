@@ -20909,6 +20909,14 @@
             "items": {
               "$ref": "#/components/schemas/CreateProductMediaDto"
             }
+          },
+          "specifications": {
+            "maxItems": 60,
+            "description": "Thông số kỹ thuật lưu cùng transaction; giá trị kiểm theo từ điển thuộc tính như replaceAdminProductSpecifications. Ở updateAdminProduct: gửi thì ghi đè cả bộ, bỏ trống thì giữ nguyên.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductSpecificationInputDto"
+            }
           }
         },
         "required": [
@@ -20947,6 +20955,14 @@
             "pattern": "^[1-9][0-9]*$",
             "example": "1"
           },
+          "specifications": {
+            "maxItems": 60,
+            "description": "Thông số kỹ thuật lưu cùng transaction; giá trị kiểm theo từ điển thuộc tính như replaceAdminProductSpecifications. Ở updateAdminProduct: gửi thì ghi đè cả bộ, bỏ trống thì giữ nguyên.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductSpecificationInputDto"
+            }
+          },
           "slug": {
             "type": "string",
             "description": "Only mutable while the product is DRAFT"
@@ -20959,6 +20975,7 @@
           },
           "shortDescription": {
             "type": "string",
+            "maxLength": 1000,
             "nullable": true
           },
           "description": {
