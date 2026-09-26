@@ -1,15 +1,18 @@
 # Inventory module — maintenance note
 
-> **Document version:** 1.1.0
+> **Document version:** 1.2.0
 >
 > **Last updated:** 2026-09-26
 >
-> **Change summary:** Summary tồn kho gộp tại PostgreSQL; lỗi đi qua catalog mã + message tiếng Việt.
+> **Change summary:** Sửa phiếu DRAFT, huỷ DRAFT/SUBMITTED; summary gộp tại PostgreSQL; catalog lỗi tiếng Việt.
 
 ## Phạm vi và entrypoint
 
 - `InventoryController`: đọc balance, movement, adjustment và ghi phiếu điều chỉnh.
-- `StockTransferController`: tạo và chuyển trạng thái phiếu chuyển kho.
+- `StockTransferController`: tạo, sửa (DRAFT), huỷ (DRAFT/SUBMITTED) và chuyển trạng thái phiếu chuyển kho.
+  `DRAFT → SUBMITTED → SHIPPED → RECEIVED`; `DRAFT/SUBMITTED → CANCELLED` (bắt buộc lý do, không movement vì
+  submit chưa giữ tồn). Sau `SHIPPED` không huỷ: nhận hàng rồi xử lý bằng phiếu điều chỉnh bù. Sửa/huỷ dùng
+  quyền `inventory.transfer.create`, scope theo chi nhánh kho xuất; `version` bắt đầu từ 0, so như bộ đếm.
 - `InventoryQueryService`: truy vấn server-side; không thay đổi ledger.
 - `InventoryService.adjust`: command atomic ghi `stock_adjustments`, items, balance, movement và audit.
 - OpenAPI chính: `createStockAdjustment`, `listInventoryBalances`, `listInventoryMovements`, `listStockAdjustments`.
@@ -61,5 +64,6 @@ Reservation checkout do module `checkout` sở hữu; trừ kho khi giao do `ful
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.2.0 | 2026-09-26 | Update DRAFT, cancel DRAFT/SUBMITTED; sửa lỗi version 0. | DBAPI-20260926-STOCK-TRANSFER-UPDATE-CANCEL |
 | 1.1.0 | 2026-09-26 | Summary tồn kho aggregate tại PostgreSQL; catalog lỗi tiếng Việt. | API-20260926-INVENTORY-SUMMARY-SQL, API-20260926-INVENTORY-ERROR-CATALOG |
 | 1.0.0 | 2026-09-21 | Tạo bản đồ bảo trì và chuẩn hoá retry/timeout cho adjustment. | API-20260921-INVENTORY-ADJUSTMENT-RESILIENCE |

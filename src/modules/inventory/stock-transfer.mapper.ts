@@ -9,6 +9,7 @@ export const stockTransferInclude = {
   creator: true,
   shipper: true,
   receiver: true,
+  canceller: true,
   items: {
     include: { productVariant: { include: { product: true } } },
     orderBy: { id: 'asc' },
@@ -34,6 +35,8 @@ export function mapStockTransferSummary(record: StockTransferRecord): StockTrans
     submittedAt: record.submittedAt?.toISOString() ?? null,
     shippedAt: record.shippedAt?.toISOString() ?? null,
     receivedAt: record.receivedAt?.toISOString() ?? null,
+    cancelledAt: record.cancelledAt?.toISOString() ?? null,
+    cancelReason: record.cancelReason,
   };
 }
 
@@ -42,6 +45,7 @@ export function mapStockTransferDetail(record: StockTransferRecord): StockTransf
     ...mapStockTransferSummary(record),
     shippedByDisplayName: record.shipper?.displayName ?? null,
     receivedByDisplayName: record.receiver?.displayName ?? null,
+    cancelledByDisplayName: record.canceller?.displayName ?? null,
     items: record.items.map((item) => ({
       id: toEntityId(item.id),
       sku: item.productVariant.sku,

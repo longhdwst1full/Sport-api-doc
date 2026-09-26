@@ -3,6 +3,8 @@ export const STOCK_TRANSFER_STATUS = {
   SUBMITTED: 'SUBMITTED',
   SHIPPED: 'SHIPPED',
   RECEIVED: 'RECEIVED',
+  /** Chỉ đạt được từ DRAFT/SUBMITTED; sau SHIPPED hàng đã rời kho nên phải nhận rồi xử lý bù. */
+  CANCELLED: 'CANCELLED',
 } as const;
 
 export type StockTransferStatus =
@@ -79,6 +81,18 @@ export const STOCK_TRANSFER_ERROR = {
       ? 'Kho xuất nằm ngoài phạm vi chi nhánh được giao.'
       : 'Kho nhận nằm ngoài phạm vi chi nhánh được giao.',
   }),
+  UPDATE_REQUIRES_DRAFT: {
+    code: 'STOCK_TRANSFER_INVALID_STATUS',
+    message: 'Chỉ sửa được phiếu chuyển kho ở trạng thái nháp (DRAFT).',
+  },
+  UPDATE_EMPTY: {
+    code: 'STOCK_TRANSFER_UPDATE_EMPTY',
+    message: 'Cần gửi lý do hoặc danh sách hàng mới để sửa phiếu.',
+  },
+  CANCEL_AFTER_SHIPPED: {
+    code: 'STOCK_TRANSFER_CANCEL_AFTER_SHIPPED',
+    message: 'Phiếu đã xuất kho nên không huỷ được; hãy nhận hàng rồi xử lý bằng phiếu điều chỉnh bù.',
+  },
   VERSION_STALE: {
     code: 'STOCK_TRANSFER_VERSION_STALE',
     message: 'Phiếu chuyển kho vừa được cập nhật. Vui lòng tải lại rồi thử lại.',

@@ -6192,6 +6192,96 @@
         "test:src/modules/inventory/inventory-errors.spec.ts"
       ],
       "targets": []
+    },
+    {
+      "id": "DBAPI-20260926-STOCK-TRANSFER-UPDATE-CANCEL",
+      "date": "2026-09-26",
+      "scope": "DB+API+INVENTORY+OPENAPI+ADMIN",
+      "summary": "Phiếu chuyển kho: thêm updateStockTransfer (PATCH, chỉ DRAFT, sửa reason và/hoặc thay toàn bộ items) và cancelStockTransfer (POST :id/cancel, DRAFT/SUBMITTED → CANCELLED, bắt buộc reason; SHIPPED/RECEIVED trả 409 STOCK_TRANSFER_CANCEL_AFTER_SHIPPED; đã CANCELLED trả trạng thái hiện tại). Không phát sinh movement vì submit chưa giữ tồn. Migration 20260926120000_stock_transfer_cancel thêm cancelled_by (FK users), cancelled_at, cancel_reason, mở rộng status CHECK và state/timestamp CHECK. Quyền dùng lại inventory.transfer.create, scope theo chi nhánh kho xuất. Sửa kèm lỗi version 0: assertVersion từng dùng toDatabaseId nên phiếu vừa tạo không submit được (400 INVALID_ENTITY_ID). DTO summary/detail bổ sung cancelledAt, cancelReason, cancelledByDisplayName (tương thích ngược).",
+      "sources": [
+        "migration:prisma/migrations/20260926120000_stock_transfer_cancel/migration.sql",
+        "OpenAPI:updateStockTransfer/cancelStockTransfer",
+        "source:src/modules/inventory/stock-transfer.service.ts",
+        "test:src/modules/inventory/stock-transfer.service.spec.ts"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": {
+            "Tên bảng": "stock_transfers"
+          },
+          "columns": [
+            "Khóa ngoại quan trọng",
+            "Unique / CHECK",
+            "Các cột chính"
+          ],
+          "set": {
+            "Khóa ngoại quan trọng": "from/to_warehouse_id→warehouses; created/shipped/received/cancelled_by→users",
+            "Unique / CHECK": "transfer_no UQ; idempotency_key UQ; source<>destination; status/timestamp/actor consistency; CANCELLED cần cancelled_by/at + cancel_reason và chưa SHIPPED",
+            "Các cột chính": "status,reason,idempotency_key,request_hash,submitted_at,shipped_at,received_at,cancelled_at,cancel_reason,version"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "stock_transfers",
+            "Tên cột": "status"
+          },
+          "columns": [
+            "Ý nghĩa / trạng thái cho phép"
+          ],
+          "set": {
+            "Ý nghĩa / trạng thái cho phép": "DRAFT→SUBMITTED→SHIPPED→RECEIVED; DRAFT/SUBMITTED→CANCELLED; sau SHIPPED không huỷ"
+          }
+        }
+      ],
+      "upsertRows": [
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "stock_transfers",
+            "Tên cột": "cancelled_by"
+          },
+          "values": {
+            "Tên bảng": "stock_transfers",
+            "STT": "12A",
+            "Tên cột": "cancelled_by",
+            "Kiểu dữ liệu": "bigint",
+            "Cho phép NULL": "YES",
+            "Ý nghĩa / trạng thái cho phép": "Tham chiếu users.id BIGINT; người huỷ/từ chối phiếu"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "stock_transfers",
+            "Tên cột": "cancelled_at"
+          },
+          "values": {
+            "Tên bảng": "stock_transfers",
+            "STT": "12B",
+            "Tên cột": "cancelled_at",
+            "Kiểu dữ liệu": "timestamptz",
+            "Cho phép NULL": "YES",
+            "Ý nghĩa / trạng thái cho phép": "Thời điểm huỷ; chỉ có khi status = CANCELLED"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "stock_transfers",
+            "Tên cột": "cancel_reason"
+          },
+          "values": {
+            "Tên bảng": "stock_transfers",
+            "STT": "12C",
+            "Tên cột": "cancel_reason",
+            "Kiểu dữ liệu": "text",
+            "Cho phép NULL": "YES",
+            "Ý nghĩa / trạng thái cho phép": "Lý do huỷ bắt buộc khi CANCELLED"
+          }
+        }
+      ]
     }
   ]
 }
