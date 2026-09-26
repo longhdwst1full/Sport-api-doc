@@ -1,10 +1,10 @@
 # Checkout module — maintenance note
 
-> **Document version:** 1.2.0
+> **Document version:** 1.2.1
 >
-> **Last updated:** 2026-09-25
+> **Last updated:** 2026-09-26
 >
-> **Change summary:** Không chi nhánh nào đủ cả giỏ nhưng cả chuỗi đủ thì chuyển chờ tư vấn (tách kho) thay vì 409.
+> **Change summary:** Chốt phí tư vấn đọc lại tồn của toàn bộ giỏ (combo tách linh kiện), không chỉ phần `stockShortages`.
 
 ## Trách nhiệm
 
@@ -50,9 +50,11 @@ QUOTED ──confirm──> CONFIRMED ──TTL worker──> EXPIRED
 - Ngược lại checkout được tạo ở kho đáp ứng nhiều số lượng nhất (hoà thì id nhỏ), status
   `AWAITING_SHIPPING_CONSULTATION`, `shipping_rule_snapshot.consultationReason = STOCK_SPLIT_ACROSS_BRANCHES`
   và `stockShortages` (theo số lượng vật lý, combo đã tách linh kiện). Không gọi carrier.
-- Admin thấy lý do + phần thiếu qua `AdminShippingConsultationDto`. `updateManualShipping` đọc lại tồn
-  trong transaction và trả 409 `CHECKOUT_STOCK_NOT_TRANSFERRED` tới khi kho đã nhận đủ hàng chuyển sang
-  (phiếu chuyển kho thuộc Inventory, checkout không tự tạo).
+- Admin thấy lý do + phần thiếu qua `AdminShippingConsultationDto`. `updateManualShipping` đọc lại tồn của
+  **mọi dòng giỏ** tại kho đã chọn (demand vật lý dùng chung `InventoryReservationService.buildPhysicalDemand`)
+  trong transaction và trả 409 `CHECKOUT_STOCK_NOT_TRANSFERRED` tới khi kho đủ cả giỏ — kể cả dòng lúc báo giá
+  vốn đủ nhưng đã bị đơn khác giữ trong lúc chờ chuyển kho (phiếu chuyển kho thuộc Inventory, checkout không tự tạo).
+  Áp dụng cho mọi checkout chờ tư vấn, vì bước xác nhận giữ hàng sẽ fail y hệt nếu kho thiếu.
 - Storefront không nhận chi tiết tồn; chỉ thấy trạng thái chờ tư vấn như trường hợp giao hàng.
 
 ## Reservation expiry worker
@@ -93,6 +95,7 @@ Giá trị phải được đồng bộ ở `.env.example`, `.env.local.example`
 
 | Version | Date | Change summary | Source |
 | --- | --- | --- | --- |
+| 1.2.1 | 2026-09-26 | Re-check toàn bộ giỏ khi chốt phí sau chuyển kho. | API-20260926-CHECKOUT-RECHECK-FULL-CART |
 | 1.2.0 | 2026-09-25 | Tách kho → chờ tư vấn + chặn chốt phí khi chưa chuyển kho. | API-20260925-CHECKOUT-SPLIT-STOCK-CONSULTATION |
 | 1.1.0 | 2026-09-10 | Ghi nhận mapping lỗi serialization và integration test tranh SKU cuối/idempotency trên Supabase. | API-20260910-CHECKOUT-CONCURRENCY |
 | 1.0.0 | 2026-09-09 | Tạo maintenance note cho Checkout/Reservation expiry. | DOC-20260909-FEATURE-MAINTENANCE-NOTES |

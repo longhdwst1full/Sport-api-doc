@@ -1,10 +1,10 @@
 # Catalog Products module maintenance note
 
-> **Document version:** 1.6.0
+> **Document version:** 1.7.0
 >
-> **Last updated:** 2026-09-25
+> **Last updated:** 2026-09-26
 >
-> **Change summary:** Danh sách/chi tiết trả `inStock` và `shortDescription`; danh sách xếp/lọc theo giá.
+> **Change summary:** `createAdminProduct`/`updateAdminProduct` nhận `specifications` trong cùng transaction; update giới hạn `shortDescription` 1000 ký tự.
 
 ## Phạm vi và entrypoint
 
@@ -46,6 +46,17 @@ bundle use case; `ProductMediaService` sở hữu media link lifecycle.
   toàn bộ payload SKU.
 - `createAdminProductVariant` vẫn tồn tại để thêm SKU sau khi Product đang DRAFT.
 - Update Product không nhận `variants`; SKU dùng operation lifecycle/update riêng.
+
+## Thông số kỹ thuật trong create/update
+
+- `createAdminProduct` và `updateAdminProduct` nhận `specifications` tuỳ chọn (≤60), để workspace sản phẩm
+  của Admin lưu thông số cùng nút chính ở cả Tạo và Sửa. Giá trị đi qua đúng
+  `AttributesService.validateSpecifications` (D61) trong transaction của lệnh; sai một giá trị thì rollback cả lệnh.
+- Update: gửi thì ghi đè cả bộ trong cùng lần tăng `version`, bỏ trống thì giữ nguyên. Audit
+  `catalog.product.update` lưu `before.specifications` khi có ghi đè.
+- `replaceAdminProductSpecifications` giữ nguyên cho client khác; Admin không còn gọi riêng.
+- Trường mới là tuỳ chọn: payload cũ không có khoá `specifications` vẫn cho cùng fingerprint, nên
+  không tăng `PRODUCT_CREATE_IDEMPOTENCY.FINGERPRINT_VERSION`.
 
 ## Idempotency tạo sản phẩm
 
@@ -112,6 +123,7 @@ bundle use case; `ProductMediaService` sở hữu media link lifecycle.
 
 | Version | Date | Change summary |
 | --- | --- | --- |
+| 1.7.0 | 2026-09-26 | `specifications` trong create/update (API-20260926-CATALOG-PRODUCT-FORM-SPECS); `shortDescription` ≤1000 ở update. |
 | 1.6.0 | 2026-09-25 | `inStock`, `shortDescription` ở danh sách; `sort`/`minPrice`/`maxPrice`. |
 | 1.5.0 | 2026-09-25 | Idempotency dùng chung cho tạo giá và gắn ảnh. |
 | 1.4.0 | 2026-09-25 | Policy xuất bản dùng chung + setup-status; SKU nhập tay/mã ngắn. |

@@ -665,6 +665,93 @@ describe('ProductsService', () => {
       ((service as unknown as { prisma: { $transaction: jest.Mock } }).prisma.$transaction).mock.calls.length;
   });
 
+  describe('specifications inside create/update (same form save)', () => {
+    const stored = [{ code: 'MAX_LOAD', values: [120] }];
+
+    it('validates specifications with the attribute dictionary and stores them on create', async () => {
+      const transaction = {
+        $queryRaw: jest.fn().mockResolvedValue([{ '?column?': 1 }]),
+        brand: { count: jest.fn() },
+        category: { count: jest.fn().mockResolvedValue(1) },
+        product: { create: jest.fn().mockResolvedValue({ id: 1n }) },
+        productCategory: { createMany: jest.fn().mockResolvedValue({ count: 1 }) },
+        productVariant: { create: jest.fn().mockResolvedValue({ id: 11n }) },
+      };
+      const prisma = {
+        $transaction: jest.fn((work: (client: typeof transaction) => unknown) => work(transaction)),
+      } as unknown as PrismaService;
+      const validateSpecifications = jest.fn().mockResolvedValue(stored);
+      const service = new ProductsService(
+        prisma,
+        { write: jest.fn().mockResolvedValue(undefined) } as unknown as AuditWriter,
+        { findByRequestId: jest.fn().mockResolvedValue([]) } as unknown as AuditReader,
+        {} as ProductMediaService,
+        { validateSpecifications, resolve: jest.fn().mockResolvedValue([]), readStored: jest.fn().mockReturnValue([]) } as unknown as AttributesService,
+      );
+      jest.spyOn(service as unknown as { getById(id: bigint): Promise<unknown> }, 'getById').mockResolvedValue({ id: '1' });
+
+      await service.create({
+        name: 'Ghế tập', categoryIds: ['1'], primaryCategoryId: '1',
+        variants: [{ name: 'Đen' }],
+        specifications: [{ code: 'MAX_LOAD', values: ['120'] }],
+      }, { requestId: 'req-spec', actorUserId: '2' });
+
+      expect(validateSpecifications).toHaveBeenCalledWith(transaction, [{ code: 'MAX_LOAD', values: ['120'] }], []);
+      const createCalls = transaction.product.create.mock.calls as unknown as Array<[{ data: Record<string, unknown> }]>;
+      expect(createCalls[0][0].data.specifications).toEqual(stored);
+    });
+
+    const buildUpdate = (validateSpecifications: jest.Mock) => {
+      const transaction = {
+        $queryRaw: jest.fn().mockResolvedValue([]),
+        brand: { count: jest.fn() },
+        category: { count: jest.fn() },
+        product: {
+          findUnique: jest.fn().mockResolvedValue({
+            productType: 'STANDARD', status: 'DRAFT', slug: 's', specifications: [], _count: { variants: 1 },
+          }),
+          updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        },
+      };
+      const prisma = {
+        $transaction: jest.fn((work: (client: typeof transaction) => unknown) => work(transaction)),
+      } as unknown as PrismaService;
+      const service = new ProductsService(
+        prisma,
+        { write: jest.fn().mockResolvedValue(undefined) } as unknown as AuditWriter,
+        {} as AuditReader,
+        {} as ProductMediaService,
+        { validateSpecifications, resolve: jest.fn().mockResolvedValue([]), readStored: jest.fn().mockReturnValue([]) } as unknown as AttributesService,
+      );
+      jest.spyOn(service as unknown as { getById(id: string): Promise<unknown> }, 'getById').mockResolvedValue({ id: '1' });
+      return { service, transaction };
+    };
+
+    it('replaces specifications in the same versioned update', async () => {
+      const validateSpecifications = jest.fn().mockResolvedValue(stored);
+      const { service, transaction } = buildUpdate(validateSpecifications);
+
+      await service.update('1', { name: 'Ghế tập', specifications: [{ code: 'MAX_LOAD', values: [120] }], expectedVersion: 3 }, { requestId: 'r', actorUserId: '2' });
+
+      expect(validateSpecifications).toHaveBeenCalledTimes(1);
+      expect(transaction.product.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({ version: 3n }) as unknown,
+        data: expect.objectContaining({ name: 'Ghế tập', specifications: stored }) as unknown,
+      }));
+    });
+
+    it('keeps stored specifications when the update omits them', async () => {
+      const validateSpecifications = jest.fn();
+      const { service, transaction } = buildUpdate(validateSpecifications);
+
+      await service.update('1', { name: 'Ghế tập', expectedVersion: 3 }, { requestId: 'r', actorUserId: '2' });
+
+      expect(validateSpecifications).not.toHaveBeenCalled();
+      const calls = transaction.product.updateMany.mock.calls as unknown as Array<[{ data: Record<string, unknown> }]>;
+      expect(calls[0][0].data).not.toHaveProperty('specifications');
+    });
+  });
+
   describe('manual SKU', () => {
     const build = () => {
       const transaction = {

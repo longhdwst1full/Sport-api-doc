@@ -9,6 +9,7 @@ import { FlashSaleService } from '../promotion/services/flash-sale.service';
 import { ScopeType } from '../iam/iam.types';
 import { CreateCheckoutQuoteDto } from './checkout.dto';
 import { CheckoutService } from './checkout.service';
+import { InventoryReservationService } from './inventory-reservation.service';
 
 describe('CheckoutService', () => {
   const resolveGuestCartId = jest.fn().mockResolvedValue(1n);
@@ -28,6 +29,7 @@ describe('CheckoutService', () => {
     cart: { findFirst: jest.fn() },
     checkoutSession: { create: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
     inventoryBalance: { findMany: jest.fn() },
+    productVariant: { findMany: jest.fn().mockResolvedValue([]) },
   };
   const prisma = {
     cart: { findFirst: findCart },
@@ -45,6 +47,8 @@ describe('CheckoutService', () => {
     { write: jest.fn() } as unknown as AuditWriter,
     // Không có campaign flash nào đang chạy trong các case này.
     { resolveActiveDeals } as unknown as FlashSaleService,
+    // buildPhysicalDemand là hàm thuần; dùng bản thật để combo được tách linh kiện đúng như bước giữ hàng.
+    new InventoryReservationService({} as PrismaService, {} as ConfigService, {} as AuditWriter, {} as FlashSaleService),
   );
   const input: CreateCheckoutQuoteDto = {
     recipient: {
@@ -272,32 +276,90 @@ describe('CheckoutService', () => {
       expect(transaction.checkoutSession.create).not.toHaveBeenCalled();
     });
 
-    it('blocks staff from quoting a split checkout until the shortage is transferred in', async () => {
-      transaction.checkoutSession.findUnique.mockResolvedValue({
-        id: 31n,
-        branchId: 5n,
-        warehouseId: 5n,
-        status: 'AWAITING_SHIPPING_CONSULTATION',
-        version: 0n,
-        itemSubtotal: new Prisma.Decimal(1500000),
-        shippingRuleSnapshot: {
-          consultationReason: 'STOCK_SPLIT_ACROSS_BRANCHES',
-          stockShortages: [{ productVariantId: '7', sku: 'SKU-7', name: 'Tạ tay', requested: 3, availableAtBranch: 2 }],
-        },
-        branch: { name: 'Hà Nội' },
-        items: [],
-      });
-      transaction.inventoryBalance.findMany.mockResolvedValue([{ productVariantId: 7n, onHand: 2, reserved: 0 }]);
-      const principal = {
-        userId: '2', sessionId: '3', displayName: 'Owner', permissionVersion: '1',
-        permissions: [], scopes: [{ type: ScopeType.GLOBAL }], mustChangePassword: false,
-      };
-      const quote = { shippingFee: '300000', etaMinDays: 2, etaMaxDays: 4, agreementNote: 'Gọi khách', expectedVersion: 0 };
+    const principal = {
+      userId: '2', sessionId: '3', displayName: 'Owner', permissionVersion: '1',
+      permissions: [], scopes: [{ type: ScopeType.GLOBAL }], mustChangePassword: false,
+    };
+    const manualQuote = { shippingFee: '300000', etaMinDays: 2, etaMaxDays: 4, agreementNote: 'Gọi khách', expectedVersion: 0 };
+    const standard = (productVariantId: bigint, quantity: number) =>
+      ({ itemType: 'STANDARD', productVariantId, quantity, componentSnapshot: null });
+    const splitCheckout = (items: unknown[]) => ({
+      id: 31n,
+      branchId: 5n,
+      warehouseId: 5n,
+      status: 'AWAITING_SHIPPING_CONSULTATION',
+      version: 0n,
+      itemSubtotal: new Prisma.Decimal(1500000),
+      shippingTotal: new Prisma.Decimal(0),
+      shippingRuleSnapshot: {
+        consultationReason: 'STOCK_SPLIT_ACROSS_BRANCHES',
+        stockShortages: [{ productVariantId: '7', sku: 'SKU-7', name: 'Tạ tay', requested: 3, availableAtBranch: 2 }],
+      },
+      branch: { name: 'Hà Nội' },
+      items,
+    });
 
-      await expect(service.updateManualShipping('token', quote, principal, 'request-7')).rejects.toMatchObject({
+    it('blocks staff from quoting a split checkout until the shortage is transferred in', async () => {
+      transaction.checkoutSession.findUnique.mockResolvedValue(splitCheckout([standard(7n, 3)]));
+      transaction.inventoryBalance.findMany.mockResolvedValue([{ productVariantId: 7n, onHand: 2, reserved: 0 }]);
+      transaction.productVariant.findMany.mockResolvedValue([{ id: 7n, sku: 'SKU-7' }]);
+
+      await expect(service.updateManualShipping('token', manualQuote, principal, 'request-7')).rejects.toMatchObject({
         response: { code: 'CHECKOUT_STOCK_NOT_TRANSFERRED' },
       });
       expect(transaction.checkoutSession.update).not.toHaveBeenCalled();
+    });
+
+    it('re-checks every cart line, not only the recorded shortage, after the transfer arrives', async () => {
+      // SKU-7 đã chuyển đủ về, nhưng SKU-8 (lúc báo giá vốn đủ) nay đã bị đơn khác giữ.
+      transaction.checkoutSession.findUnique.mockResolvedValue(splitCheckout([standard(7n, 3), standard(8n, 2)]));
+      transaction.inventoryBalance.findMany.mockResolvedValue([
+        { productVariantId: 7n, onHand: 3, reserved: 0 },
+        { productVariantId: 8n, onHand: 2, reserved: 1 },
+      ]);
+      transaction.productVariant.findMany.mockResolvedValue([{ id: 8n, sku: 'SKU-8' }]);
+
+      await expect(service.updateManualShipping('token', manualQuote, principal, 'request-9')).rejects.toMatchObject({
+        response: { code: 'CHECKOUT_STOCK_NOT_TRANSFERRED', message: expect.stringContaining('SKU-8') as unknown },
+      });
+      expect(transaction.checkoutSession.update).not.toHaveBeenCalled();
+    });
+
+    it('expands combo lines into components when re-checking stock', async () => {
+      const combo = { itemType: 'BUNDLE', productVariantId: 20n, quantity: 2, componentSnapshot: [{ productVariantId: '8', quantity: 2 }] };
+      transaction.checkoutSession.findUnique.mockResolvedValue(splitCheckout([standard(7n, 3), combo]));
+      // Combo x2, mỗi combo 2 linh kiện SKU-8 → cần 4; kho chỉ còn 3.
+      transaction.inventoryBalance.findMany.mockResolvedValue([
+        { productVariantId: 7n, onHand: 3, reserved: 0 },
+        { productVariantId: 8n, onHand: 3, reserved: 0 },
+      ]);
+      transaction.productVariant.findMany.mockResolvedValue([{ id: 8n, sku: 'SKU-8' }]);
+
+      await expect(service.updateManualShipping('token', manualQuote, principal, 'request-10')).rejects.toMatchObject({
+        response: { code: 'CHECKOUT_STOCK_NOT_TRANSFERRED' },
+      });
+      const lookup = (transaction.inventoryBalance.findMany.mock.calls.at(-1) as [{ where: { productVariantId: { in: bigint[] } } }])[0];
+      expect(lookup.where.productVariantId.in).toEqual([7n, 8n]);
+    });
+
+    it('quotes the split checkout once every line is covered at the branch', async () => {
+      const checkout = splitCheckout([standard(7n, 3), standard(8n, 2)]);
+      transaction.checkoutSession.findUnique.mockResolvedValue(checkout);
+      transaction.inventoryBalance.findMany.mockResolvedValue([
+        { productVariantId: 7n, onHand: 3, reserved: 0 },
+        { productVariantId: 8n, onHand: 5, reserved: 3 },
+      ]);
+      transaction.checkoutSession.update.mockImplementation(({ data }: { data: Record<string, unknown> }) => Promise.resolve({
+        ...checkout,
+        ...data,
+        checkoutToken: 'token',
+        version: 1n,
+        items: [],
+        recipientSnapshot: {},
+      }));
+
+      await expect(service.updateManualShipping('token', manualQuote, principal, 'request-11')).resolves.toMatchObject({ status: 'QUOTED' });
+      expect(transaction.checkoutSession.update).toHaveBeenCalledTimes(1);
     });
   });
 
