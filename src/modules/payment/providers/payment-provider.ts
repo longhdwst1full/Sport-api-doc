@@ -5,6 +5,8 @@ export interface PaymentInstructionInput {
   orderId: string;
   amountMinor: number;
   currency: 'VND';
+  /** Hạn thanh toán của payment; link cổng online không được sống lâu hơn mốc này. */
+  expiresAt?: Date | null;
 }
 
 export interface PaymentInstruction {

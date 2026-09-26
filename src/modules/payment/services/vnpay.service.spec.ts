@@ -108,6 +108,19 @@ describe('VnpayService.handleIpn', () => {
     expect(paymentUpdate).not.toHaveBeenCalled();
   });
 
+  it('IPN thành công đến sau khi đơn đã huỷ vì quá hạn không lật payment về SUCCESS', async () => {
+    const { service, paymentUpdate } = createService({
+      verification: {},
+      payment: {
+        id: 1n, orderId: 2n, status: PAYMENT_STATUS.CANCELLED, method: 'VNPAY',
+        expectedAmount: new Prisma.Decimal(500_000), currencyCode: 'VND',
+      },
+    });
+    // Trả "đã xử lý" để VNPay ngừng gọi lại; việc hoàn tiền (nếu có) được ghi log cho vận hành.
+    await expect(service.handleIpn(query)).resolves.toEqual(VNPAY_IPN_RESPONSE.ALREADY_CONFIRMED);
+    expect(paymentUpdate).not.toHaveBeenCalled();
+  });
+
   it('đánh dấu thất bại khi VNPay trả mã lỗi', async () => {
     const { service, paymentUpdate } = createService({
       verification: { isSuccess: false, responseCode: '24' },

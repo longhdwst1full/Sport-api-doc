@@ -1,8 +1,8 @@
 # Payment module
 
-> **Document version:** 1.2.0  
-> **Last updated:** 2026-09-24  
-> **Change summary:** Payment có thể chuyển REFUNDED do module Return; IPN VNPay và review thủ công không ghi đè trạng thái này.
+> **Document version:** 1.3.0  
+> **Last updated:** 2026-09-26  
+> **Change summary:** VNPay có hạn thanh toán, link không sống quá hạn, worker hết hạn xử lý VNPay, IPN muộn không lật payment đã huỷ.
 
 ## Responsibility and boundary
 
@@ -19,6 +19,8 @@
 - COD không có evidence chuyển khoản và chỉ được xác nhận thu đủ khi Order đã `DELIVERED`.
 - Evidence không tự chứng minh tiền đã vào tài khoản; asset phải được object-storage adapter verify trước khi lưu.
 - Payment và Order summary status, transaction ledger và audit phải được ghi atomically.
+- VNPay: `expires_at` = lúc đặt + `VNPAY_EXPIRE_MINUTES` (mặc định 15). Link ký lại mỗi lần đọc nhưng `vnp_ExpireDate` không vượt `expires_at`; quá hạn thì không phát link.
+- IPN VNPay cho payment `CANCELLED` (đơn đã huỷ vì quá hạn) không lật về `SUCCESS`; nếu VNPay báo đã thu tiền thì ghi log lỗi để hoàn tiền thủ công.
 
 ## Concurrency, security and recovery
 
@@ -26,7 +28,7 @@
 - Cùng `Idempotency-Key` + cùng request hash trả kết quả cũ; khác payload trả `409`.
 - Admin query luôn áp GLOBAL/BRANCH scope ở backend; Guest/Account dùng cart ownership, không tin order ID đơn lẻ.
 - Signed upload sống ngắn; API không proxy file. Log/audit không lưu token hoặc raw credential.
-- `PAYMENT_TIMEOUT_MINUTES` mặc định 30 phút. Worker chỉ expire chuyển khoản `PENDING` chưa có evidence; reservation/payment/order/fulfillment và audit đổi cùng transaction.
+- `PAYMENT_TIMEOUT_MINUTES` mặc định 30 phút. Worker expire chuyển khoản `PENDING` chưa có evidence và VNPay `PENDING`/`FAILED` sau `expires_at` + 5 phút (chờ IPN trễ); reservation/payment/order/fulfillment và audit đổi cùng transaction.
 
 ## Change checklist
 
@@ -38,6 +40,7 @@
 
 | Version | Date | Change summary |
 | --- | --- | --- |
+| 1.3.0 | 2026-09-26 | Luật hạn thanh toán VNPay, worker hết hạn cho VNPay, chặn IPN muộn trên payment đã huỷ. |
 | 1.2.0 | 2026-09-24 | REFUNDED là trạng thái kết thúc; refund thủ công do Return sở hữu. |
 | 1.1.0 | 2026-09-13 | Thêm payment-expiry worker, race evidence guard và unit test. |
 | 1.0.0 | 2026-09-12 | Tạo maintenance map cho Payment V1 persisted. |

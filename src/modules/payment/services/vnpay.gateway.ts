@@ -8,6 +8,8 @@ export interface BuildPaymentUrlInput {
   /** Số tiền VND nguyên bản; thư viện tự nhân 100 theo đặc tả VNPay. */
   amount: number;
   ipAddress?: string;
+  /** Hạn thanh toán của payment; `vnp_ExpireDate` lấy mốc sớm hơn giữa hạn này và now + expireMinutes. */
+  expiresAt?: Date;
 }
 
 export interface VnpayVerification {
@@ -57,7 +59,7 @@ export class VnpayGateway {
       vnp_OrderInfo: `Thanh toan don ${input.orderNo}`,
       vnp_IpAddr: input.ipAddress ?? '127.0.0.1',
       vnp_ReturnUrl: this.config.getOrThrow<string>('vnpay.returnUrl'),
-      vnp_ExpireDate: this.expireDate(expireMinutes),
+      vnp_ExpireDate: this.expireDate(expireMinutes, input.expiresAt),
     });
   }
 
@@ -92,8 +94,9 @@ export class VnpayGateway {
   }
 
   /** VNPay yêu cầu yyyyMMddHHmmss theo giờ GMT+7, truyền dưới dạng số. */
-  private expireDate(minutes: number): number {
-    const gmt7 = new Date(Date.now() + minutes * 60_000 + 7 * 3_600_000);
+  private expireDate(minutes: number, cap?: Date): number {
+    const deadline = Math.min(Date.now() + minutes * 60_000, cap?.getTime() ?? Number.POSITIVE_INFINITY);
+    const gmt7 = new Date(deadline + 7 * 3_600_000);
     return Number(gmt7.toISOString().replace(/[-:T]/g, '').slice(0, 14));
   }
 }

@@ -45,7 +45,7 @@ describe('PaymentExpiryService', () => {
     warehouseId: 3n,
     reservationId: 21n,
     statusHistory: [{ sequenceNo: 1 }],
-    payment: { id: 31n, status: 'PENDING', currencyCode: 'VND', evidences: [] },
+    payment: { id: 31n, method: 'BANK_TRANSFER', status: 'PENDING', currencyCode: 'VND', evidences: [] },
     reservation: {
       id: 21n,
       items: [{ productVariantId: 41n, quantity: 2 }],
@@ -100,6 +100,26 @@ describe('PaymentExpiryService', () => {
       entityId: '31',
     });
     expect(auditWrite.mock.calls[0]?.[1]).toBe(transaction);
+  });
+
+  it('also expires a VNPay order the customer never paid (FAILED keeps retry until the deadline)', async () => {
+    findOrder.mockResolvedValue({ ...order, payment: { ...order.payment, method: 'VNPAY', status: 'FAILED' } });
+
+    await expect(service.run('cron-vnpay')).resolves.toMatchObject({ claimed: 1, expired: 1 });
+    expect(updatePayment.mock.calls[0]?.[0]).toMatchObject({ data: { status: 'CANCELLED', failureReason: 'Hết thời gian thanh toán VNPay' } });
+    const transactionCall = createTransaction.mock.calls[0] as unknown[] | undefined;
+    expect(transactionCall?.[0]).toMatchObject({ data: { provider: 'VNPAY', transactionType: 'EXPIRED' } });
+    // Câu SQL claim có nhánh VNPay kèm thời gian chờ IPN trễ.
+    const claimCall = queryRaw.mock.calls[0] as unknown[] | undefined;
+    const claimSql = ((claimCall?.[0] as { strings?: string[] } | undefined)?.strings ?? []).join('?');
+    expect(claimSql).toContain('make_interval');
+  });
+
+  it('never expires a bank transfer that is only FAILED (not a VNPay retry state)', async () => {
+    findOrder.mockResolvedValue({ ...order, payment: { ...order.payment, status: 'FAILED' } });
+
+    await expect(service.run('cron-bank-failed')).resolves.toMatchObject({ claimed: 1, expired: 0 });
+    expect(updateBalance).not.toHaveBeenCalled();
   });
 
   it('reports a claimed row as skipped when evidence appears before mutation', async () => {

@@ -530,6 +530,7 @@ export class PaymentService {
       orderId: payment.order.orderNo,
       amountMinor: Number(payment.expectedAmount),
       currency: 'VND',
+      expiresAt: payment.expiresAt,
     });
     return {
       id: toEntityId(payment.id),
