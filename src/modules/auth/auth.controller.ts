@@ -72,7 +72,11 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ operationId: 'refreshAdminToken', summary: 'Rotate a refresh token' })
   @ApiOkResponse({ type: TokenPairDto })
-  @ApiUnauthorizedResponse({ description: 'Invalid, expired, or reused refresh token' })
+  @ApiUnauthorizedResponse({
+    type: ErrorResponseDto,
+    description: 'AUTH_REFRESH_INVALID (hết hạn/đã thu hồi), AUTH_REFRESH_REUSED (đã được xoay), AUTH_REFRESH_MISSING (thiếu cookie/token). FE đăng xuất.',
+  })
+  @ApiConflictResponse({ type: ErrorResponseDto, description: 'AUTH_REFRESH_CONFLICT: xung đột tạm thời, thử lại; không đăng xuất.' })
   async refresh(
     @Body() input: RefreshTokenDto,
     @Req() request: Request,
@@ -199,7 +203,11 @@ export class StorefrontAuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ operationId: 'refreshCustomerToken', summary: 'Rotate a customer refresh token' })
   @ApiOkResponse({ type: TokenPairDto })
-  @ApiUnauthorizedResponse({ type: ErrorResponseDto })
+  @ApiUnauthorizedResponse({
+    type: ErrorResponseDto,
+    description: 'AUTH_REFRESH_INVALID (hết hạn/đã thu hồi), AUTH_REFRESH_REUSED (đã được xoay), AUTH_REFRESH_MISSING (thiếu cookie/token). FE đăng xuất.',
+  })
+  @ApiConflictResponse({ type: ErrorResponseDto, description: 'AUTH_REFRESH_CONFLICT: xung đột tạm thời, thử lại; không đăng xuất.' })
   async refresh(
     @Body() input: RefreshTokenDto,
     @Req() request: Request,

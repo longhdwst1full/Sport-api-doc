@@ -23,7 +23,13 @@ import {
   USER_TYPE,
 } from '../iam/iam.constants';
 import { ScopeType } from '../iam/iam.types';
-import { AUTH_AUDIT_ACTION, AUTH_ERROR, AUTH_SECURITY } from './auth.constants';
+import {
+  AUTH_AUDIT_ACTION,
+  AUTH_ERROR,
+  AUTH_REFRESH_MAX_ATTEMPTS,
+  AUTH_SECURITY,
+  AUTH_SESSION_REVOKE_REASON,
+} from './auth.constants';
 import { ChangePasswordDto, LoginDto, RegisterCustomerDto, TokenPairDto } from './auth.dto';
 import { AccessTokenPayload, AuthPrincipal, AuthScope } from './auth.types';
 import {
@@ -269,50 +275,71 @@ export class AuthService {
     }
   }
 
+  /**
+   * Xoay refresh token: session cũ ROTATED, cấp session kế tiếp (`rotated_from_id`).
+   *
+   * IDEMPOTENCY: refresh token dùng một lần — `updateMany ... revokedAt: null` và UQ `rotated_from_id`
+   * là chốt atomic, lượt thua nhận 401 AUTH_REFRESH_REUSED. Xung đột serialization của PostgreSQL
+   * (hai lượt refresh đồng thời) không phải lỗi phiên: chạy lại transaction, hết lượt thì 409
+   * AUTH_REFRESH_CONFLICT để FE thử lại thay vì đăng xuất (trước đây lọt thành 500).
+   */
   async refresh(rawRefreshToken: string): Promise<TokenPairDto> {
     this.ensureDatabaseEnabled();
     const refreshTokenHash = this.hashRefreshToken(rawRefreshToken);
-    try {
-      return await this.prisma.$transaction(
-        async (transaction) => {
-          const session = await transaction.authSession.findUnique({
-            where: { refreshTokenHash },
-            include: { user: true },
-          });
-          if (
-            !session ||
-            session.revokedAt ||
-            session.expiresAt <= new Date() ||
-            session.user.status !== USER_STATUS.ACTIVE
-          ) {
-            throw new UnauthorizedException('Refresh token is invalid or expired');
-          }
-
-          const revoked = await transaction.authSession.updateMany({
-            where: { id: session.id, revokedAt: null },
-            data: { revokedAt: new Date(), revokeReason: 'ROTATED', lastUsedAt: new Date() },
-          });
-          if (revoked.count !== 1) {
-            throw new UnauthorizedException('Refresh token has already been used');
-          }
-          return this.createSession(transaction, session.user, session.id);
-        },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-      );
-    } catch (error) {
-      if (error instanceof UnauthorizedException) throw error;
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        throw new UnauthorizedException('Refresh token has already been used');
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await this.rotateSession(refreshTokenHash);
+      } catch (error) {
+        if (error instanceof UnauthorizedException) throw error;
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+          throw new UnauthorizedException(AUTH_ERROR.REFRESH_REUSED);
+        }
+        if (isSerializationConflict(error)) {
+          if (attempt < AUTH_REFRESH_MAX_ATTEMPTS) continue;
+          throw new ConflictException(AUTH_ERROR.REFRESH_CONFLICT);
+        }
+        throw error;
       }
-      throw error;
     }
+  }
+
+  private rotateSession(refreshTokenHash: string): Promise<TokenPairDto> {
+    return this.prisma.$transaction(
+      async (transaction) => {
+        const session = await transaction.authSession.findUnique({
+          where: { refreshTokenHash },
+          include: { user: true },
+        });
+        if (session?.revokedAt && session.revokeReason === AUTH_SESSION_REVOKE_REASON.ROTATED) {
+          throw new UnauthorizedException(AUTH_ERROR.REFRESH_REUSED);
+        }
+        if (
+          !session ||
+          session.revokedAt ||
+          session.expiresAt <= new Date() ||
+          session.user.status !== USER_STATUS.ACTIVE
+        ) {
+          throw new UnauthorizedException(AUTH_ERROR.REFRESH_INVALID);
+        }
+
+        const revoked = await transaction.authSession.updateMany({
+          where: { id: session.id, revokedAt: null },
+          data: { revokedAt: new Date(), revokeReason: AUTH_SESSION_REVOKE_REASON.ROTATED, lastUsedAt: new Date() },
+        });
+        if (revoked.count !== 1) {
+          throw new UnauthorizedException(AUTH_ERROR.REFRESH_REUSED);
+        }
+        return this.createSession(transaction, session.user, session.id);
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
   }
 
   async logout(rawRefreshToken: string): Promise<void> {
     this.ensureDatabaseEnabled();
     await this.prisma.authSession.updateMany({
       where: { refreshTokenHash: this.hashRefreshToken(rawRefreshToken), revokedAt: null },
-      data: { revokedAt: new Date(), revokeReason: 'LOGOUT' },
+      data: { revokedAt: new Date(), revokeReason: AUTH_SESSION_REVOKE_REASON.LOGOUT },
     });
   }
 
@@ -331,12 +358,25 @@ export class AuthService {
     const now = new Date();
     // SECURITY: Session row is re-checked on every request so a revoked or expired session stops
     // working immediately; only the role/permission projection below is cached.
+    const accessTtlMs = (this.config.get<number>('app.jwt.accessTtlSeconds') ?? 900) * 1_000;
     const session = await this.prisma.authSession.findFirst({
       where: {
         id: toDatabaseId(payload.sid),
         userId: toDatabaseId(payload.sub),
-        revokedAt: null,
         expiresAt: { gt: now },
+        OR: [
+          { revokedAt: null },
+          // SECURITY: access token cấp trước lần xoay vẫn dùng được tới khi tự hết hạn, miễn session kế
+          // tiếp còn sống. Nếu không, mỗi lần refresh giết mọi request đang chạy bằng token cũ → 401 →
+          // thêm lượt refresh → refresh dây chuyền và đăng xuất. Logout/đổi mật khẩu/khoá tài khoản
+          // thu hồi session kế tiếp nên token cũ vẫn mất hiệu lực ngay. Chỉ xét một bước: token của
+          // session đã xoay hai lần nhận 401 và FE thử lại bằng token mới nhất.
+          {
+            revokeReason: AUTH_SESSION_REVOKE_REASON.ROTATED,
+            revokedAt: { gt: new Date(now.getTime() - accessTtlMs) },
+            rotations: { some: { revokedAt: null, expiresAt: { gt: now } } },
+          },
+        ],
       },
       select: {
         id: true,
@@ -585,4 +625,10 @@ export class AuthService {
       throw new UnauthorizedException('Authentication is unavailable');
     }
   }
+}
+
+/** PostgreSQL SQLSTATE 40001 lộ ra dưới dạng P2034, hoặc P2010 (raw query) mang meta.code 40001. */
+function isSerializationConflict(error: unknown): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
+  return error.code === 'P2034' || (error.code === 'P2010' && (error.meta as { code?: string } | undefined)?.code === '40001');
 }

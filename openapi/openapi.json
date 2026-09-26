@@ -2515,7 +2515,24 @@
             }
           },
           "401": {
-            "description": "Invalid, expired, or reused refresh token"
+            "description": "AUTH_REFRESH_INVALID (hết hạn/đã thu hồi), AUTH_REFRESH_REUSED (đã được xoay), AUTH_REFRESH_MISSING (thiếu cookie/token). FE đăng xuất.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "AUTH_REFRESH_CONFLICT: xung đột tạm thời, thử lại; không đăng xuất.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "summary": "Rotate a refresh token",
@@ -2749,7 +2766,17 @@
             }
           },
           "401": {
-            "description": "",
+            "description": "AUTH_REFRESH_INVALID (hết hạn/đã thu hồi), AUTH_REFRESH_REUSED (đã được xoay), AUTH_REFRESH_MISSING (thiếu cookie/token). FE đăng xuất.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "AUTH_REFRESH_CONFLICT: xung đột tạm thời, thử lại; không đăng xuất.",
             "content": {
               "application/json": {
                 "schema": {
