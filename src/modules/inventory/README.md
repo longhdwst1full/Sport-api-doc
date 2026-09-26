@@ -1,10 +1,10 @@
 # Inventory module — maintenance note
 
-> **Document version:** 1.0.0
+> **Document version:** 1.1.0
 >
-> **Last updated:** 2026-09-21
+> **Last updated:** 2026-09-26
 >
-> **Change summary:** Ghi nhận transaction, idempotency, retry và error semantics của điều chỉnh/chuyển kho.
+> **Change summary:** Summary tồn kho gộp tại PostgreSQL thay vì tải từng dòng về API.
 
 ## Phạm vi và entrypoint
 
@@ -24,6 +24,9 @@ Reservation checkout do module `checkout` sở hữu; trừ kho khi giao do `ful
 - Sau mutation luôn giữ `0 <= reserved <= on_hand`; online không được âm available.
 - `Idempotency-Key` là unique command key: cùng key/cùng payload replay; cùng key/khác payload trả conflict.
 - Scope warehouse được suy ra qua branch của principal; UI không phải ranh giới bảo mật.
+- `summarizeBalances` gộp bằng một câu SQL (`COUNT ... FILTER`, `SUM`), chỉ một dòng qua mạng. Bộ lọc
+  sinh từ `balanceFilter` dùng chung với `balanceWhere` của danh sách; `CASE` phân loại phải cùng thứ tự
+  với `classifyInventoryBalance`. Bằng chứng khớp trên PostgreSQL: `test/inventory-summary.integration-spec.ts`.
 
 ## Concurrency và recovery
 
@@ -52,4 +55,5 @@ Reservation checkout do module `checkout` sở hữu; trừ kho khi giao do `ful
 
 | Version | Date | Change summary | Source / Change ID |
 | --- | --- | --- | --- |
+| 1.1.0 | 2026-09-26 | Summary tồn kho aggregate tại PostgreSQL. | API-20260926-INVENTORY-SUMMARY-SQL |
 | 1.0.0 | 2026-09-21 | Tạo bản đồ bảo trì và chuẩn hoá retry/timeout cho adjustment. | API-20260921-INVENTORY-ADJUSTMENT-RESILIENCE |

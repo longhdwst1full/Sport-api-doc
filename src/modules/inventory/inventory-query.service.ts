@@ -8,7 +8,7 @@ import { Prisma } from '@prisma/client';
 import { toDatabaseId, toEntityId } from '../../common/identifiers/entity-id';
 import { PrismaService } from '../../database/prisma.service';
 import type { AuthPrincipal } from '../auth/auth.types';
-import { warehouseBranchScopeWhere } from '../../common/security/branch-scope';
+import { requireVisibleBranchIds, warehouseBranchScopeWhere } from '../../common/security/branch-scope';
 import { InventoryBalanceListDto, InventoryBalanceSummaryDto } from './inventory.dto';
 import { classifyInventoryBalance } from './inventory.constants';
 import {
@@ -68,45 +68,80 @@ export class InventoryQueryService {
   }
 
   /**
-   * Số liệu tổng hợp của toàn bộ dòng tồn khớp bộ lọc.
+   * Số liệu tổng hợp của toàn bộ dòng tồn khớp bộ lọc, gộp NGAY TẠI PostgreSQL.
    *
-   * Đọc cả tập khớp bộ lọc rồi gộp ở tầng ứng dụng, KHÔNG gộp bằng SQL: `LOW_STOCK` và
-   * `OUT_OF_STOCK` là so sánh giữa ba cột (`on_hand - reserved` với `reorder_point`), mà Prisma
-   * không diễn đạt được so sánh cột-với-cột trong `where`. Viết lại bộ lọc bằng raw SQL là cách
-   * để bộ lọc của thẻ số liệu và của bảng bên dưới lệch nhau dần theo thời gian.
+   * Bản trước tải mọi dòng khớp về Node rồi cộng: SKU × kho tăng thì bộ nhớ API, lưu lượng
+   * Supabase và thời gian tải dashboard tăng theo. Giờ chỉ một dòng kết quả đi qua mạng.
    *
-   * `select` chỉ lấy ba cột số nên một lượt đi database là đủ; ở quy mô hiện tại chi phí nằm ở
-   * đường truyền (~450ms/lượt), không ở số dòng.
+   * `LOW_STOCK`/`OUT_OF_STOCK` so sánh giữa các cột (`on_hand - reserved` với `reorder_point`) mà
+   * Prisma `where` không diễn đạt được, nên dùng raw SQL. Để thẻ số liệu không lệch bảng bên dưới:
+   * - bộ lọc của cả hai sinh từ cùng `balanceFilter` (phạm vi chi nhánh, mã kho, từ khoá);
+   * - `CASE` giữ đúng thứ tự của `classifyInventoryBalance` (hết hàng trước, rồi sắp hết). Sửa quy tắc
+   *   phân loại thì sửa cả hai chỗ và test đi kèm.
    */
   async summarizeBalances(
     query: InventoryBalanceQueryDto,
     principal: AuthPrincipal,
   ): Promise<InventoryBalanceSummaryDto> {
     this.ensurePersistence();
-    const rows = await this.prisma.inventoryBalance.findMany({
-      where: this.balanceWhere(query, principal),
-      select: { onHand: true, reserved: true, reorderPoint: true },
-    });
-
-    const summary: InventoryBalanceSummaryDto = {
-      trackedBalances: rows.length,
-      inStock: 0,
-      lowStock: 0,
-      outOfStock: 0,
-      totalOnHand: 0,
-      totalReserved: 0,
-      totalAvailable: 0,
-    };
-    for (const row of rows) {
-      const status = classifyInventoryBalance(row);
-      if (status === 'IN_STOCK') summary.inStock += 1;
-      if (status === 'LOW_STOCK') summary.lowStock += 1;
-      if (status === 'OUT_OF_STOCK') summary.outOfStock += 1;
-      summary.totalOnHand += row.onHand;
-      summary.totalReserved += row.reserved;
-      summary.totalAvailable += row.onHand - row.reserved;
+    const filter = this.balanceFilter(query, principal);
+    const conditions: Prisma.Sql[] = [];
+    if (filter.branchIds) {
+      // SECURITY: phạm vi chi nhánh rỗng vẫn phải ra 0 dòng, không được rơi về "không lọc".
+      conditions.push(filter.branchIds.length > 0
+        ? Prisma.sql`w.branch_id IN (${Prisma.join(filter.branchIds)})`
+        : Prisma.sql`FALSE`);
     }
-    return summary;
+    if (filter.warehouseCode) conditions.push(Prisma.sql`w.code = ${filter.warehouseCode}`);
+    if (filter.search) {
+      // Giống `contains` của Prisma: khớp chuỗi con, không coi `%`/`_` của người dùng là wildcard.
+      const pattern = `%${filter.search.replace(/[\\%_]/g, (character) => `\\${character}`)}%`;
+      conditions.push(Prisma.sql`(v.sku ILIKE ${pattern} OR p.name ILIKE ${pattern})`);
+    }
+    const where = conditions.length > 0 ? Prisma.sql`WHERE ${Prisma.join(conditions, ' AND ')}` : Prisma.empty;
+
+    const [row] = await this.prisma.$queryRaw<Array<{
+      tracked: bigint;
+      in_stock: bigint;
+      low_stock: bigint;
+      out_of_stock: bigint;
+      total_on_hand: bigint | null;
+      total_reserved: bigint | null;
+    }>>(Prisma.sql`
+      SELECT
+        COUNT(*) AS tracked,
+        COUNT(*) FILTER (WHERE b.on_hand - b.reserved <> 0 AND b.on_hand - b.reserved > b.reorder_point) AS in_stock,
+        COUNT(*) FILTER (WHERE b.on_hand - b.reserved <> 0 AND b.on_hand - b.reserved <= b.reorder_point) AS low_stock,
+        COUNT(*) FILTER (WHERE b.on_hand - b.reserved = 0) AS out_of_stock,
+        SUM(b.on_hand) AS total_on_hand,
+        SUM(b.reserved) AS total_reserved
+      FROM inventory_balances b
+      JOIN warehouses w ON w.id = b.warehouse_id
+      JOIN product_variants v ON v.id = b.product_variant_id
+      JOIN products p ON p.id = v.product_id
+      ${where}
+    `);
+    const totalOnHand = Number(row?.total_on_hand ?? 0);
+    const totalReserved = Number(row?.total_reserved ?? 0);
+    return {
+      trackedBalances: Number(row?.tracked ?? 0),
+      inStock: Number(row?.in_stock ?? 0),
+      lowStock: Number(row?.low_stock ?? 0),
+      outOfStock: Number(row?.out_of_stock ?? 0),
+      totalOnHand,
+      totalReserved,
+      totalAvailable: totalOnHand - totalReserved,
+    };
+  }
+
+  /** Bộ lọc tồn kho đã chuẩn hoá; nguồn DUY NHẤT cho cả Prisma `where` lẫn SQL tổng hợp. */
+  private balanceFilter(query: InventoryBalanceQueryDto, principal: AuthPrincipal) {
+    return {
+      // Cùng quy tắc strict với `scopeWhere`: không có phạm vi hợp lệ thì ném 403 thay vì trả rỗng.
+      branchIds: requireVisibleBranchIds(principal),
+      warehouseCode: query.warehouseCode ? query.warehouseCode.toUpperCase() : undefined,
+      search: query.search || undefined,
+    };
   }
 
   /**
@@ -119,18 +154,18 @@ export class InventoryQueryService {
     query: InventoryBalanceQueryDto,
     principal: AuthPrincipal,
   ): Prisma.InventoryBalanceWhereInput {
-    const scope = this.scopeWhere(principal);
+    const filter = this.balanceFilter(query, principal);
+    const branchScope = filter.branchIds ? { branchId: { in: filter.branchIds } } : undefined;
     return {
-      ...scope,
-      ...(query.warehouseCode
-        ? { warehouse: { ...scope.warehouse, code: query.warehouseCode.toUpperCase() } }
+      ...(branchScope || filter.warehouseCode
+        ? { warehouse: { ...branchScope, ...(filter.warehouseCode ? { code: filter.warehouseCode } : {}) } }
         : {}),
-      ...(query.search
+      ...(filter.search
         ? {
             productVariant: {
               OR: [
-                { sku: { contains: query.search, mode: 'insensitive' } },
-                { product: { name: { contains: query.search, mode: 'insensitive' } } },
+                { sku: { contains: filter.search, mode: 'insensitive' } },
+                { product: { name: { contains: filter.search, mode: 'insensitive' } } },
               ],
             },
           }

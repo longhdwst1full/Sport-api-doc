@@ -174,24 +174,21 @@ describe('InventoryQueryService tổng hợp tồn kho', () => {
     scopes: [{ type: ScopeType.BRANCH, branchId: '7' }],
   };
 
-  function createService(rows: Array<{ onHand: number; reserved: number; reorderPoint: number }>) {
-    const findMany = jest
-      .fn<Promise<unknown[]>, [Record<string, unknown>]>()
-      .mockResolvedValue(rows);
+  type SqlCall = { sql: string; values: unknown[] };
+  function createService(row: Record<string, bigint | null>) {
+    const findMany = jest.fn();
+    const queryRaw = jest.fn<Promise<unknown[]>, [SqlCall]>().mockResolvedValue([row]);
     const prisma = {
       isEnabled: jest.fn().mockReturnValue(true),
-      inventoryBalance: { findMany, count: jest.fn().mockResolvedValue(rows.length) },
+      inventoryBalance: { findMany },
+      $queryRaw: queryRaw,
     } as unknown as PrismaService;
-    return { service: new InventoryQueryService(prisma), findMany };
+    return { service: new InventoryQueryService(prisma), findMany, queryRaw };
   }
+  const aggregate = { tracked: 4n, in_stock: 2n, low_stock: 1n, out_of_stock: 1n, total_on_hand: 30n, total_reserved: 8n };
 
-  it('đếm theo toàn bộ dòng khớp bộ lọc và cộng đúng ba tổng', async () => {
-    const { service } = createService([
-      { onHand: 12, reserved: 2, reorderPoint: 3 }, // available 10 → IN_STOCK
-      { onHand: 5, reserved: 2, reorderPoint: 3 }, // available 3 → LOW_STOCK (chạm ngưỡng)
-      { onHand: 4, reserved: 4, reorderPoint: 3 }, // available 0 → OUT_OF_STOCK
-      { onHand: 9, reserved: 0, reorderPoint: 0 }, // available 9 → IN_STOCK
-    ]);
+  it('gộp tại PostgreSQL, không tải từng dòng tồn về API', async () => {
+    const { service, findMany, queryRaw } = createService(aggregate);
 
     await expect(service.summarizeBalances({ page: 1, limit: 25 }, owner)).resolves.toEqual({
       trackedBalances: 4,
@@ -202,45 +199,58 @@ describe('InventoryQueryService tổng hợp tồn kho', () => {
       totalReserved: 8,
       totalAvailable: 22,
     });
+    expect(findMany).not.toHaveBeenCalled();
+    expect(queryRaw).toHaveBeenCalledTimes(1);
+  });
+
+  it('trả 0 khi không có dòng nào khớp (SUM là NULL)', async () => {
+    const { service } = createService({ ...aggregate, tracked: 0n, in_stock: 0n, low_stock: 0n, out_of_stock: 0n, total_on_hand: null, total_reserved: null });
+
+    await expect(service.summarizeBalances({ page: 1, limit: 25 }, owner)).resolves.toMatchObject({
+      trackedBalances: 0, totalOnHand: 0, totalAvailable: 0,
+    });
   });
 
   /** Hết hàng bán là `available = 0`, không phải `onHand = 0`: hàng đang giữ vẫn nằm trong kho. */
-  it('phân loại hết hàng theo tồn khả dụng, không theo tồn vật lý', async () => {
-    const { service } = createService([{ onHand: 20, reserved: 20, reorderPoint: 5 }]);
+  it('phân loại theo tồn khả dụng, cùng thứ tự với classifyInventoryBalance', async () => {
+    const { service, queryRaw } = createService(aggregate);
 
-    const summary = await service.summarizeBalances({ page: 1, limit: 25 }, owner);
+    await service.summarizeBalances({ page: 1, limit: 25 }, owner);
 
-    expect(summary.outOfStock).toBe(1);
-    expect(summary.totalOnHand).toBe(20);
-    expect(summary.totalAvailable).toBe(0);
+    const { sql } = queryRaw.mock.calls[0][0];
+    expect(sql).toContain('FILTER (WHERE b.on_hand - b.reserved = 0) AS out_of_stock');
+    expect(sql).toContain('b.on_hand - b.reserved <> 0 AND b.on_hand - b.reserved <= b.reorder_point) AS low_stock');
+    expect(sql).not.toMatch(/on_hand = 0\b/);
   });
 
   /** Thẻ số liệu và bảng bên dưới phải dùng CÙNG bộ lọc, kể cả phạm vi chi nhánh. */
   it('áp cùng bộ lọc và phạm vi chi nhánh như danh sách', async () => {
-    const { service, findMany } = createService([]);
+    const { service, queryRaw } = createService(aggregate);
 
-    await service.summarizeBalances(
-      { page: 1, limit: 25, search: 'run', warehouseCode: 'kho-hcm-01' },
-      branchManager,
-    );
+    await service.summarizeBalances({ page: 1, limit: 25, search: 'run', warehouseCode: 'kho-hcm-01' }, branchManager);
 
-    const where = findMany.mock.calls[0]?.[0].where as Record<string, unknown>;
-    expect(where.warehouse).toEqual({ branchId: { in: [7n] }, code: 'KHO-HCM-01' });
-    expect(where.productVariant).toEqual({
-      OR: [
-        { sku: { contains: 'run', mode: 'insensitive' } },
-        { product: { name: { contains: 'run', mode: 'insensitive' } } },
-      ],
-    });
+    const { sql, values } = queryRaw.mock.calls[0][0];
+    expect(sql).toContain('w.branch_id IN (');
+    expect(sql).toContain('w.code = ');
+    expect(sql).toContain('v.sku ILIKE');
+    expect(values).toEqual([7n, 'KHO-HCM-01', '%run%', '%run%']);
   });
 
-  it('không phân trang: tổng không được phụ thuộc trang đang xem', async () => {
-    const { service, findMany } = createService([]);
+  it('không coi % và _ của người dùng là wildcard', async () => {
+    const { service, queryRaw } = createService(aggregate);
+
+    await service.summarizeBalances({ page: 1, limit: 25, search: '50%_off' }, owner);
+
+    expect(queryRaw.mock.calls[0][0].values).toEqual(['%50\\%\\_off%', '%50\\%\\_off%']);
+  });
+
+  it('không phân trang và không lọc khi phạm vi toàn chuỗi', async () => {
+    const { service, queryRaw } = createService(aggregate);
 
     await service.summarizeBalances({ page: 3, limit: 25 }, owner);
 
-    const call = findMany.mock.calls[0]?.[0];
-    expect(call.skip).toBeUndefined();
-    expect(call.take).toBeUndefined();
+    const { sql, values } = queryRaw.mock.calls[0][0];
+    expect(sql).not.toMatch(/LIMIT|OFFSET|WHERE w\./);
+    expect(values).toEqual([]);
   });
 });
