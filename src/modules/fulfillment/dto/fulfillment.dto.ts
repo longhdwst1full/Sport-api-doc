@@ -2,7 +2,7 @@ import { Transform, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
 import { ENTITY_ID_OPENAPI } from '../../../common/identifiers/entity-id';
-import { FULFILLMENT_STATUS, RETURN_CONDITION } from '../fulfillment.constants';
+import { CARRIER_SHIPMENT_STATUS, FULFILLMENT_STATUS, RETURN_CONDITION } from '../fulfillment.constants';
 
 const trimOptional = ({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() || undefined : value;
 
@@ -73,6 +73,15 @@ export class FulfillmentSummaryDto {
   @ApiProperty({ enum: Object.values(FULFILLMENT_STATUS), enumName: 'FulfillmentStatus' }) status: string;
   @ApiPropertyOptional({ type: String, nullable: true }) carrierCode: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) trackingNo: string | null;
+  @ApiPropertyOptional({
+    enum: Object.values(CARRIER_SHIPMENT_STATUS),
+    enumName: 'CarrierShipmentStatus',
+    nullable: true,
+    description: 'Vận đơn GHN tự tạo sau thanh toán/xác nhận COD. null = không áp dụng (tạo vận đơn lúc ship như trước).',
+  })
+  carrierShipmentStatus: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Lý do lần tạo vận đơn gần nhất thất bại' })
+  carrierShipmentError: string | null;
   @ApiProperty() recipientName: string;
   @ApiProperty() recipientPhone: string;
   @ApiPropertyOptional({ type: String, nullable: true }) recipientEmail: string | null;

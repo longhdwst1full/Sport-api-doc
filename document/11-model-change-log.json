@@ -6178,6 +6178,115 @@
         "test:src/modules/catalog/products/dto/product.dto.spec.ts"
       ],
       "targets": []
+    },
+    {
+      "id": "DBAPI-20260926-FULFILLMENT-AUTO-CARRIER-SHIPMENT",
+      "date": "2026-09-26",
+      "scope": "DB+API+FULFILLMENT+PAYMENT+ORDER+OPENAPI+ADMIN",
+      "summary": "Tự tạo vận đơn GHN cho đơn báo giá qua GHN (checkout_sessions.shipping_provider = GHN): cờ fulfillments.carrier_shipment_status = PENDING đặt trong cùng transaction với IPN VNPay SUCCESS, Admin xác nhận chuyển khoản đủ tiền, hoặc Admin xác nhận đơn COD; job order-maintenance gọi CarrierShipmentService.run (claim SKIP LOCKED → CREATING, gọi hãng ngoài transaction, CREATED + tracking_no; lỗi thử lại 1/5/15 phút tối đa 3 lần rồi CREATE_FAILED; CREATING quá 10 phút được thu hồi). Admin retryAdminFulfillmentCarrierShipment (POST /admin/fulfillments/:id/carrier-shipment/retry, quyền fulfillment.ship) chạy lại một lượt cho CREATE_FAILED. Ship không tạo vận đơn thứ hai khi đã có mã; PENDING thì ship nhận việc về luồng cũ; CREATING trả 409 FULFILLMENT_CARRIER_SHIPMENT_IN_PROGRESS. Tham số CARRIER_SHIPMENT_JOB_ENABLED (mặc định bật, chỉ có tác dụng khi GHN bật). FulfillmentSummaryDto thêm carrierShipmentStatus/carrierShipmentError (tương thích ngược). Theo rule huỷ đơn hiện tại (chỉ đơn chưa thanh toán, chưa xác nhận) không có đơn nào vừa có vận đơn tự tạo vừa huỷ được; khi mở huỷ đơn đã thanh toán phải huỷ bù vận đơn ở hãng.",
+      "sources": [
+        "migration:prisma/migrations/20260926140000_fulfillment_carrier_shipment/migration.sql",
+        "OpenAPI:retryAdminFulfillmentCarrierShipment",
+        "source:src/modules/fulfillment/services/carrier-shipment.service.ts",
+        "source:src/modules/fulfillment/services/fulfillment.service.ts",
+        "source:src/modules/payment/services/vnpay.service.ts",
+        "source:src/modules/order/services/order.service.ts",
+        "test:src/modules/fulfillment/services/carrier-shipment.service.spec.ts"
+      ],
+      "targets": [
+        {
+          "sheet": "Tables",
+          "match": {
+            "Tên bảng": "fulfillments"
+          },
+          "columns": [
+            "Unique / CHECK",
+            "Các cột chính"
+          ],
+          "set": {
+            "Unique / CHECK": "order_id UQ; fulfillment_no UQ; status/timestamp/return condition CHECK; carrier_shipment status/attempts/CREATED⇒tracking CHECK; RLS ON",
+            "Các cột chính": "status,carrier_code,tracking_no,picked_at,packed_at,shipped_at,delivered_at,delivery_failure_reason_code,returned_to_warehouse_at,return_condition,carrier_shipment_status,carrier_shipment_attempts,carrier_shipment_next_attempt_at,carrier_shipment_error,version"
+          }
+        }
+      ],
+      "upsertRows": [
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "fulfillments",
+            "Tên cột": "carrier_shipment_status"
+          },
+          "values": {
+            "Tên bảng": "fulfillments",
+            "STT": "21A",
+            "Tên cột": "carrier_shipment_status",
+            "Kiểu dữ liệu": "varchar(24)",
+            "Cho phép NULL": "YES",
+            "Ý nghĩa / trạng thái cho phép": "NULL không áp dụng; PENDING → CREATING → CREATED | CREATE_FAILED (vận đơn GHN tự tạo)"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "fulfillments",
+            "Tên cột": "carrier_shipment_attempts"
+          },
+          "values": {
+            "Tên bảng": "fulfillments",
+            "STT": "21B",
+            "Tên cột": "carrier_shipment_attempts",
+            "Kiểu dữ liệu": "int",
+            "Cho phép NULL": "NO",
+            "Ý nghĩa / trạng thái cho phép": "Số lần đã gọi hãng tạo vận đơn; tự thử tối đa 3",
+            "Default": "0"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "fulfillments",
+            "Tên cột": "carrier_shipment_next_attempt_at"
+          },
+          "values": {
+            "Tên bảng": "fulfillments",
+            "STT": "21C",
+            "Tên cột": "carrier_shipment_next_attempt_at",
+            "Kiểu dữ liệu": "timestamptz",
+            "Cho phép NULL": "YES",
+            "Ý nghĩa / trạng thái cho phép": "Mốc sớm nhất worker được thử lại (backoff)"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "fulfillments",
+            "Tên cột": "carrier_shipment_locked_at"
+          },
+          "values": {
+            "Tên bảng": "fulfillments",
+            "STT": "21D",
+            "Tên cột": "carrier_shipment_locked_at",
+            "Kiểu dữ liệu": "timestamptz",
+            "Cho phép NULL": "YES",
+            "Ý nghĩa / trạng thái cho phép": "Thời điểm claim CREATING; quá 10 phút được thu hồi"
+          }
+        },
+        {
+          "sheet": "Columns",
+          "match": {
+            "Tên bảng": "fulfillments",
+            "Tên cột": "carrier_shipment_error"
+          },
+          "values": {
+            "Tên bảng": "fulfillments",
+            "STT": "21E",
+            "Tên cột": "carrier_shipment_error",
+            "Kiểu dữ liệu": "varchar(500)",
+            "Cho phép NULL": "YES",
+            "Ý nghĩa / trạng thái cho phép": "Thông báo lỗi gần nhất của hãng, đã cắt độ dài"
+          }
+        }
+      ]
     }
   ]
 }

@@ -62,6 +62,7 @@ function buildService(overrides: {
   fulfillment?: unknown;
   partnerEnabled?: boolean;
   transactionFails?: boolean;
+  takeOverCount?: number;
 }) {
   const createShipment = jest.fn(
     (input: Record<string, unknown>): Promise<unknown> => {
@@ -81,6 +82,7 @@ function buildService(overrides: {
     isEnabled: () => true,
     fulfillment: {
       findFirst: jest.fn().mockResolvedValue(overrides.fulfillment ?? buildFulfillment('COD')),
+      updateMany: jest.fn().mockResolvedValue({ count: overrides.takeOverCount ?? 1 }),
     },
     $transaction: jest.fn().mockImplementation(() => {
       if (overrides.transactionFails) return Promise.reject(new ConflictException('Tồn kho vừa thay đổi'));
@@ -94,7 +96,7 @@ function buildService(overrides: {
     partner,
     { append: jest.fn().mockResolvedValue(undefined) } as unknown as OutboxWriter,
   );
-  return { service, createShipment, cancelShipment };
+  return { service, createShipment, cancelShipment, prisma };
 }
 
 const shipInput = { expectedVersion: '1' } as never;
@@ -213,5 +215,49 @@ describe('FulfillmentService partner shipment', () => {
       service.ship('5', shipInput, 'idem-key-0007', 'req-7', principal),
     ).rejects.toBeInstanceOf(ConflictException);
     expect(createShipment).not.toHaveBeenCalled();
+  });
+
+  describe('vận đơn tự tạo sau thanh toán', () => {
+    const withCarrier = (carrier: Record<string, unknown>) => ({ ...buildFulfillment('BANK_TRANSFER'), ...carrier });
+
+    it('đã có mã vận đơn tự tạo thì ship không đặt thêm vận đơn', async () => {
+      const { service, createShipment } = buildService({
+        fulfillment: withCarrier({ carrierShipmentStatus: 'CREATED', trackingNo: 'GHN-AUTO', carrierCode: 'GHN' }),
+      });
+
+      await service.ship('5', shipInput, 'idem-key-0101', 'req-a', principal);
+      expect(createShipment).not.toHaveBeenCalled();
+    });
+
+    it('worker đang gọi hãng thì 409, không tạo song song', async () => {
+      const { service, createShipment } = buildService({ fulfillment: withCarrier({ carrierShipmentStatus: 'CREATING' }) });
+
+      await expect(service.ship('5', shipInput, 'idem-key-0102', 'req-b', principal))
+        .rejects.toMatchObject({ response: { code: 'FULFILLMENT_CARRIER_SHIPMENT_IN_PROGRESS' } });
+      expect(createShipment).not.toHaveBeenCalled();
+    });
+
+    it('còn PENDING thì ship nhận việc tạo vận đơn về mình (claim có điều kiện) rồi tạo như cũ', async () => {
+      const { service, createShipment, prisma } = buildService({ fulfillment: withCarrier({ carrierShipmentStatus: 'PENDING' }) });
+
+      await service.ship('5', shipInput, 'idem-key-0103', 'req-c', principal);
+      const takeOver = (prisma.fulfillment.updateMany as jest.Mock).mock.calls as Array<[unknown]>;
+      expect(takeOver[0][0]).toMatchObject({
+        where: { id: 5n, carrierShipmentStatus: 'PENDING' },
+        data: { carrierShipmentStatus: null },
+      });
+      expect(createShipment).toHaveBeenCalledTimes(1);
+    });
+
+    it('worker vừa claim trước thì 409 thay vì tạo vận đơn thứ hai', async () => {
+      const { service, createShipment } = buildService({
+        fulfillment: withCarrier({ carrierShipmentStatus: 'PENDING' }),
+        takeOverCount: 0,
+      });
+
+      await expect(service.ship('5', shipInput, 'idem-key-0104', 'req-d', principal))
+        .rejects.toMatchObject({ response: { code: 'FULFILLMENT_CARRIER_SHIPMENT_IN_PROGRESS' } });
+      expect(createShipment).not.toHaveBeenCalled();
+    });
   });
 });

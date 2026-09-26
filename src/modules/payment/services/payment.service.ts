@@ -36,6 +36,7 @@ import {
   PAYMENT_TRANSACTION_TYPE,
 } from '../payment.constants';
 import { PaymentProviderRegistry } from './payment-provider.registry';
+import { CarrierShipmentService } from '../../fulfillment/services/carrier-shipment.service';
 
 type CustomerPaymentActor =
   | { type: 'GUEST'; cartId: bigint; accessHash: string }
@@ -70,6 +71,7 @@ export class PaymentService {
     private readonly providers: PaymentProviderRegistry,
     private readonly config: ConfigService,
     private readonly audit: AuditWriter,
+    private readonly carrierShipments: CarrierShipmentService,
   ) {}
 
   async getGuest(cartToken: string, orderNo: string): Promise<PaymentDetailDto> {
@@ -403,6 +405,9 @@ export class PaymentService {
           });
         }
         await transaction.order.update({ where: { id: payment.orderId }, data: { paymentStatus: nextStatus, version: { increment: 1 } } });
+        // TRANSACTION: chuyển khoản vừa được xác nhận đủ tiền → yêu cầu vận đơn GHN cùng transaction.
+        // COD thu tiền sau khi giao nên fulfillment đã qua bước tạo vận đơn; requestForOrder tự bỏ qua.
+        if (isExact) await this.carrierShipments.requestForOrder(transaction, payment.orderId);
         await transaction.paymentTransaction.create({
           data: {
             paymentId: payment.id,

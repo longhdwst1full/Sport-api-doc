@@ -1013,10 +1013,15 @@ Table fulfillments {
   delivery_failure_reason_code varchar(64)
   returned_to_warehouse_at timestamptz
   return_condition varchar(24)
+  carrier_shipment_status varchar(24) [note: 'NULL | PENDING | CREATING | CREATED | CREATE_FAILED']
+  carrier_shipment_attempts int [not null, default: 0]
+  carrier_shipment_next_attempt_at timestamptz
+  carrier_shipment_locked_at timestamptz
+  carrier_shipment_error varchar(500)
   version bigint [not null, default: 0]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
-  Note: '[P0] V1 one fulfillment/order; giao thất bại trả đúng warehouse xuất và phải có lý do/inspection.'
+  Note: '[P0] V1 one fulfillment/order; giao thất bại trả đúng warehouse xuất và phải có lý do/inspection. Vận đơn GHN tự tạo: cờ carrier_shipment_* đặt PENDING cùng transaction với payment SUCCESS (trả trước) hoặc Admin xác nhận đơn COD; worker gọi hãng ngoài transaction; CREATED bắt buộc có tracking_no; partial index (next_attempt_at, id) WHERE PENDING/CREATING.'
 }
 
 Table fulfillment_status_history {

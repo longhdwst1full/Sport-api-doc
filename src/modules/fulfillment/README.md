@@ -1,10 +1,10 @@
 # Fulfillment module — maintenance note
 
-> **Document version:** 1.2.1
+> **Document version:** 1.3.0
 >
-> **Last updated:** 2026-09-25
+> **Last updated:** 2026-09-26
 >
-> **Change summary:** Bán tại quầy giao ngay không đặt vận đơn ở hãng vận chuyển.
+> **Change summary:** Tự tạo vận đơn GHN sau thanh toán/xác nhận COD bằng worker, có CREATE_FAILED và tạo lại.
 
 ## Phạm vi và ranh giới
 
@@ -34,6 +34,25 @@
 - Secret webhook nhận qua query string vì cổng GHN chỉ lưu được URL, không thêm được header; đổi lại secret nằm trong access log nên phải xoay được độc lập.
 - Transition do webhook kích hoạt đứng tên tài khoản dịch vụ `GHN_WEBHOOK_ACTOR_USER_ID` vì `audit_logs` khoá ngoại tới `users`; không cấu hình thì webhook từ chối thay vì bịa actor.
 - URL in phiếu giao do hãng phát hành và sống rất ngắn: không lưu DB, không đưa vào audit.
+
+## Vận đơn GHN tự tạo (`CarrierShipmentService`)
+
+- Áp cho đơn báo giá qua GHN (`checkout_sessions.shipping_provider = 'GHN'`). BRANCH_FREE, MANUAL_EXTERNAL
+  ("Nhờ shop gửi"), POS và đơn cũ có cờ `NULL` → giữ luồng tạo vận đơn lúc ship.
+- **Kích hoạt** (`requestForOrder`, chạy TRONG transaction của caller, gọi lặp là no-op): IPN VNPay SUCCESS,
+  Admin xác nhận chuyển khoản đủ tiền, Admin xác nhận đơn COD. Không đặt cờ khi GHN tắt hoặc tham số
+  `CARRIER_SHIPMENT_JOB_ENABLED` tắt.
+- **Worker** chạy trong job `order-maintenance` (5 phút): claim `SKIP LOCKED` PENDING đến hạn → CREATING, gọi
+  hãng ngoài transaction, lưu `tracking_no` → CREATED. Lỗi: thử lại sau 1/5/15 phút, tối đa 3 lần rồi
+  CREATE_FAILED; thiếu địa chỉ/mã địa giới chi nhánh là lỗi dữ liệu → CREATE_FAILED ngay. CREATING quá 10 phút
+  được thu hồi (GHN chặn trùng `client_order_code` = orderNo nên không sinh vận đơn thứ hai). Dòng bị lượt khác
+  xử lý trong lúc gọi hãng → huỷ bù vận đơn vừa tạo.
+- **Admin tạo lại**: `retryAdminFulfillmentCarrierShipment` (quyền `fulfillment.ship`), claim có điều kiện
+  CREATE_FAILED → CREATING rồi chạy ngay một lượt; lỗi thì về CREATE_FAILED, không tự thử tiếp.
+- **Ship**: đã có mã → không đặt thêm vận đơn và không ghi đè mã; PENDING → ship claim về luồng cũ
+  (PENDING → NULL) nên tắt job giữa chừng không làm đơn kẹt; CREATING → 409 `FULFILLMENT_CARRIER_SHIPMENT_IN_PROGRESS`.
+- **Huỷ đơn**: rule hiện tại chỉ cho huỷ đơn chưa thanh toán và chưa xác nhận, nên chưa có đơn nào vừa có vận
+  đơn tự tạo vừa huỷ được. Khi mở "huỷ đơn đã thanh toán" phải huỷ bù vận đơn ở hãng (`cancelShipment`).
 
 ## Cân nặng và kích thước kiện hàng
 
@@ -67,6 +86,7 @@ Cước vận chuyển tính trên số này, nên nó là dữ liệu nghiệp 
 
 | Version | Date | Change summary | Source |
 | --- | --- | --- | --- |
+| 1.3.0 | 2026-09-26 | Vận đơn GHN tự tạo sau thanh toán/xác nhận COD, CREATE_FAILED và tạo lại. | DBAPI-20260926-FULFILLMENT-AUTO-CARRIER-SHIPMENT |
 | 1.2.1 | 2026-09-25 | POS giao tại quầy bỏ bước tạo vận đơn GHN. | API-20260925-POS-NO-CARRIER |
 | 1.2.0 | 2026-09-24 | Cân nặng/kích thước vận đơn lấy từ sản phẩm; thêm trọng lượng quy đổi thể tích. | API-20260924-SHIPMENT-WEIGHT-AND-DIMENSIONS |
 | 1.1.0 | 2026-09-17 | Tạo/huỷ vận đơn GHN ngoài transaction kèm huỷ bù, webhook đồng bộ trạng thái và in phiếu giao. | API-20260916-GHN-SHIPPING |

@@ -4,6 +4,7 @@ import type { PrismaService } from '../../../database/prisma.service';
 import { PAYMENT_STATUS, VNPAY_IPN_RESPONSE } from '../payment.constants';
 import type { VnpayGateway, VnpayVerification } from './vnpay.gateway';
 import { VnpayService } from './vnpay.service';
+import type { CarrierShipmentService } from '../../fulfillment/services/carrier-shipment.service';
 
 describe('VnpayService.handleIpn', () => {
   const query = { vnp_TxnRef: 'PAY-ORD-1' } as unknown as ReturnQueryFromVNPay;
@@ -18,6 +19,7 @@ describe('VnpayService.handleIpn', () => {
       jest.fn<Promise<unknown>, [{ data: Record<string, unknown> }]>().mockResolvedValue({});
     const orderUpdate = jest.fn().mockResolvedValue({});
     const transactionCreate = jest.fn().mockResolvedValue({});
+    const requestForOrder = jest.fn().mockResolvedValue(true);
     const tx = {
       payment: {
         findUnique: jest.fn().mockResolvedValue(
@@ -53,7 +55,8 @@ describe('VnpayService.handleIpn', () => {
       }),
     } as unknown as VnpayGateway;
 
-    return { service: new VnpayService(prisma, gateway), paymentUpdate, orderUpdate, transactionCreate };
+    const carrierShipments = { requestForOrder } as unknown as CarrierShipmentService;
+    return { service: new VnpayService(prisma, gateway, carrierShipments), paymentUpdate, orderUpdate, transactionCreate, requestForOrder, tx };
   }
 
   it('từ chối khi chữ ký không hợp lệ và không ghi gì', async () => {
@@ -135,5 +138,19 @@ describe('VnpayService.handleIpn', () => {
     const { service, paymentUpdate } = createService({ verification: {}, enabled: false });
     await expect(service.handleIpn(query)).resolves.toEqual(VNPAY_IPN_RESPONSE.UNKNOWN_ERROR);
     expect(paymentUpdate).not.toHaveBeenCalled();
+  });
+
+  it('yêu cầu tạo vận đơn GHN trong cùng transaction khi thanh toán thành công', async () => {
+    const { service, requestForOrder, tx } = createService({ verification: {} });
+
+    await expect(service.handleIpn(query)).resolves.toEqual(VNPAY_IPN_RESPONSE.SUCCESS);
+    expect(requestForOrder).toHaveBeenCalledWith(tx, 2n);
+  });
+
+  it('không yêu cầu vận đơn khi VNPay báo giao dịch thất bại', async () => {
+    const { service, requestForOrder } = createService({ verification: { isSuccess: false, responseCode: '24' } });
+
+    await expect(service.handleIpn(query)).resolves.toEqual(VNPAY_IPN_RESPONSE.SUCCESS);
+    expect(requestForOrder).not.toHaveBeenCalled();
   });
 });

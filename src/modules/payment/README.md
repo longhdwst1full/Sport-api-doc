@@ -1,8 +1,8 @@
 # Payment module
 
-> **Document version:** 1.3.0  
+> **Document version:** 1.4.0  
 > **Last updated:** 2026-09-26  
-> **Change summary:** VNPay có hạn thanh toán, link không sống quá hạn, worker hết hạn xử lý VNPay, IPN muộn không lật payment đã huỷ.
+> **Change summary:** Payment SUCCESS (IPN VNPay, xác nhận chuyển khoản) yêu cầu vận đơn GHN tự tạo trong cùng transaction.
 
 ## Responsibility and boundary
 
@@ -21,6 +21,8 @@
 - Payment và Order summary status, transaction ledger và audit phải được ghi atomically.
 - VNPay: `expires_at` = lúc đặt + `VNPAY_EXPIRE_MINUTES` (mặc định 15). Link ký lại mỗi lần đọc nhưng `vnp_ExpireDate` không vượt `expires_at`; quá hạn thì không phát link.
 - IPN VNPay cho payment `CANCELLED` (đơn đã huỷ vì quá hạn) không lật về `SUCCESS`; nếu VNPay báo đã thu tiền thì ghi log lỗi để hoàn tiền thủ công.
+- Payment chuyển SUCCESS qua IPN VNPay hoặc Admin xác nhận chuyển khoản đủ tiền gọi
+  `CarrierShipmentService.requestForOrder` trong cùng transaction (chỉ đặt cờ; gọi GHN do worker Fulfillment).
 
 ## Concurrency, security and recovery
 
@@ -40,6 +42,7 @@
 
 | Version | Date | Change summary |
 | --- | --- | --- |
+| 1.4.0 | 2026-09-26 | Payment SUCCESS yêu cầu vận đơn GHN tự tạo. |
 | 1.3.0 | 2026-09-26 | Luật hạn thanh toán VNPay, worker hết hạn cho VNPay, chặn IPN muộn trên payment đã huỷ. |
 | 1.2.0 | 2026-09-24 | REFUNDED là trạng thái kết thúc; refund thủ công do Return sở hữu. |
 | 1.1.0 | 2026-09-13 | Thêm payment-expiry worker, race evidence guard và unit test. |
