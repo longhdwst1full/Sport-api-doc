@@ -1,10 +1,10 @@
 # Order module — maintenance note
 
-> **Document version:** 1.4.1
+> **Document version:** 1.5.0
 >
-> **Last updated:** 2026-09-25
+> **Last updated:** 2026-09-26
 >
-> **Change summary:** Giao ngay tại quầy không đặt vận đơn ở hãng vận chuyển.
+> **Change summary:** Chi tiết đơn trả `shipment` (mã vận đơn, link tra cứu) và `paidAt`; đơn VNPay chỉ xác nhận khi đã thanh toán.
 
 ## Phạm vi hiện tại
 
@@ -47,6 +47,9 @@
 - Đơn tại quầy mặc định chạy hết vòng giao hàng; đơn giao hàng mặc định dừng lại cho kho xử lý, trừ khi nhân viên bật `handOverImmediately` vì khách lấy ngay tại cửa hàng. Giao ngay (`handOver`) không bao giờ đặt vận đơn GHN: bước ship truyền `handedOverAtCounter`.
 - Đơn có giao hàng dùng `STANDARD_DELIVERY` và snapshot địa chỉ của khách; đơn tại quầy dùng `BRANCH_FREE` và snapshot địa chỉ chi nhánh — không bịa địa chỉ giao cho khách cầm hàng về.
 
+- `assertPaymentAllowsConfirmation`: đơn trả trước (`PREPAID_PAYMENT_METHODS` = chuyển khoản, VNPay) chỉ xác nhận khi payment `SUCCESS`; COD không chặn.
+- Chi tiết đơn có `shipment` từ fulfillment (trạng thái, hãng, mã vận đơn, thời điểm xuất/giao) và `trackingUrl` theo `CARRIER_TRACKING_URL` (hiện chỉ GHN; đường dẫn chưa xác minh bằng tài liệu chính thức). `paidAt` = `payments.confirmed_at`.
+
 ## Checklist khi sửa
 
 - [ ] Impact analysis trước khi sửa service/controller/state.
@@ -60,6 +63,7 @@
 
 | Version | Date | Change summary | Source |
 | --- | --- | --- | --- |
+| 1.5.0 | 2026-09-26 | `shipment`/`paidAt` trong chi tiết đơn; cổng xác nhận áp cho VNPay. | API-20260926-ORDER-TRACKING-VNPAY-RULES |
 | 1.4.1 | 2026-09-25 | Giao ngay tại quầy không gọi hãng vận chuyển. | API-20260925-POS-NO-CARRIER |
 | 1.4.0 | 2026-09-17 | Đơn nhân viên lập có địa chỉ giao, COD và tuỳ chọn giao ngay; quy tắc gom vào `resolveOrderCreationPlan`. | API-20260917-STAFF-DELIVERY-ORDER |
 | 1.3.0 | 2026-09-13 | Admin confirm và worker auto-complete sau hold time. | DBAPI-20260913-FULFILLMENT-S43 |
