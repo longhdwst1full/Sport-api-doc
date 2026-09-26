@@ -26,6 +26,7 @@ import {
   CHECKOUT_STATUS,
   type CheckoutConsultationReason,
 } from './checkout.constants';
+import { InventoryReservationService } from './inventory-reservation.service';
 import { AdminShippingConsultationDto, AdminShippingConsultationListDto, AdminShippingConsultationQueryDto, CheckoutQuoteDto, CheckoutRecipientDto, CreateCheckoutQuoteDto, UpdateManualShippingQuoteDto } from './checkout.dto';
 
 type ActorContext = { type: 'GUEST' | 'USER'; userId?: string; requestId: string };
@@ -41,6 +42,7 @@ export class CheckoutService {
     private readonly config: ConfigService,
     private readonly audit: AuditWriter,
     private readonly flashSales: FlashSaleService,
+    private readonly reservations: InventoryReservationService,
   ) {}
 
   async quoteGuest(rawCartToken: string, input: CreateCheckoutQuoteDto, idempotencyKey: string, requestId: string): Promise<CheckoutQuoteDto> {
@@ -99,7 +101,7 @@ export class CheckoutService {
       if (!scoped) throw new ForbiddenException('Checkout is outside the assigned branch scope');
       if (current.status !== CHECKOUT_STATUS.AWAITING_SHIPPING_CONSULTATION) throw new ConflictException('Checkout is not awaiting shipping consultation');
       if (Number(current.version) !== input.expectedVersion) throw new ConflictException('Checkout changed; reload and retry');
-      await this.assertShortagesTransferred(transaction, current.warehouseId, current.shippingRuleSnapshot);
+      await this.assertCartCoveredAtWarehouse(transaction, current.warehouseId, current.items);
       const updated = await transaction.checkoutSession.update({
         where: { id: current.id },
         data: {
@@ -517,28 +519,34 @@ export class CheckoutService {
   }
 
   /**
-   * INVARIANT: báo giá chờ chuyển kho chỉ được chốt khi kho đã chọn đủ hàng cho phần từng thiếu; nếu
-   * không, khách xác nhận xong sẽ vấp lỗi giữ hàng. Đọc lại tồn ngay trong transaction báo giá.
+   * INVARIANT: báo giá chờ tư vấn chỉ được chốt khi kho đã chọn còn đủ hàng cho TOÀN BỘ giỏ, không chỉ
+   * phần `stockShortages` lúc báo giá: trong lúc chờ chuyển kho, dòng vốn đủ có thể đã bị đơn khác giữ.
+   * Chốt khi thiếu thì khách xác nhận xong mới vấp lỗi giữ hàng. Đọc lại tồn ngay trong transaction báo giá;
+   * demand vật lý dùng chung `buildPhysicalDemand` với bước giữ hàng để combo tách linh kiện giống hệt.
    */
-  private async assertShortagesTransferred(
+  private async assertCartCoveredAtWarehouse(
     transaction: Prisma.TransactionClient,
     warehouseId: bigint,
-    snapshot: Prisma.JsonValue,
+    items: Parameters<InventoryReservationService['buildPhysicalDemand']>[0],
   ): Promise<void> {
-    const shortages = this.readShortages(snapshot);
-    if (shortages.length === 0) return;
+    const demand = this.reservations.buildPhysicalDemand(items);
+    if (demand.length === 0) return;
     const balances = await transaction.inventoryBalance.findMany({
-      where: { warehouseId, productVariantId: { in: shortages.map(({ productVariantId }) => toDatabaseId(productVariantId)) } },
+      where: { warehouseId, productVariantId: { in: demand.map(({ productVariantId }) => productVariantId) } },
       select: { productVariantId: true, onHand: true, reserved: true },
     });
-    const stillShort = shortages.filter((shortage) =>
-      this.availableAt({ inventoryBalances: balances }, toDatabaseId(shortage.productVariantId)) < shortage.requested);
-    if (stillShort.length > 0) {
-      throw new ConflictException({
-        code: CHECKOUT_ERROR_CODE.STOCK_NOT_TRANSFERRED,
-        message: `Kho chi nhánh chưa đủ hàng (${stillShort.map(({ sku }) => sku).join(', ')}); chuyển kho phần thiếu rồi báo giá lại.`,
-      });
-    }
+    const stillShort = demand.filter((item) =>
+      this.availableAt({ inventoryBalances: balances }, item.productVariantId) < item.quantity);
+    if (stillShort.length === 0) return;
+    const variants = await transaction.productVariant.findMany({
+      where: { id: { in: stillShort.map(({ productVariantId }) => productVariantId) } },
+      select: { id: true, sku: true },
+    });
+    const skus = stillShort.map((item) => variants.find(({ id }) => id === item.productVariantId)?.sku ?? toEntityId(item.productVariantId));
+    throw new ConflictException({
+      code: CHECKOUT_ERROR_CODE.STOCK_NOT_TRANSFERRED,
+      message: `Kho chi nhánh chưa đủ hàng (${skus.join(', ')}); chuyển kho phần thiếu rồi báo giá lại.`,
+    });
   }
 
   private readShortages(snapshot: Prisma.JsonValue): StockShortage[] {

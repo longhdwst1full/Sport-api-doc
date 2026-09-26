@@ -431,7 +431,7 @@ export class ProductsService {
     const fingerprint = requestFingerprint(PRODUCT_CREATE_IDEMPOTENCY.OPERATION, 'POST', context, input);
     const productNo = generateProductNo();
     const slug = generateProductSlug(input.name, productNo);
-    const { variants, media = [], ...productInput } = input;
+    const { variants, media = [], specifications: specificationInput, ...productInput } = input;
     if (new Set(media.map(({ mediaAssetId }) => mediaAssetId)).size !== media.length) {
       throw new UnprocessableEntityException('Media assets must be unique');
     }
@@ -457,6 +457,11 @@ export class ProductsService {
         if (replayedId !== undefined) return toDatabaseId(replayedId);
 
         await this.validateReferences(transaction, input.brandId, input.categoryIds);
+        // INVARIANT: thông số tạo cùng sản phẩm đi qua đúng validator của replaceSpecifications (D61);
+        // sai một giá trị thì rollback cả sản phẩm thay vì để lại SPU thiếu thông số.
+        const specifications = specificationInput
+          ? await this.attributes.validateSpecifications(transaction, specificationInput, [])
+          : undefined;
         const product = await transaction.product.create({
           data: {
             productType: input.productType ?? PRODUCT_TYPE.STANDARD,
@@ -466,6 +471,7 @@ export class ProductsService {
             brandId: toOptionalDatabaseId(input.brandId),
             shortDescription: input.shortDescription,
             description: input.description,
+            ...(specifications ? { specifications: specifications as unknown as Prisma.InputJsonValue } : {}),
             createdBy: toOptionalDatabaseId(context.actorUserId),
             updatedBy: toOptionalDatabaseId(context.actorUserId),
           },
@@ -544,6 +550,7 @@ export class ProductsService {
               slug,
               variantCount: variants.length,
               mediaCount: media.length,
+              ...(specifications ? { specifications } : {}),
               // IDEMPOTENCY: dấu vân tay để lần gửi lại cùng x-request-id so với payload gốc.
               idempotency: fingerprint,
             } as unknown as Prisma.InputJsonValue,
@@ -565,7 +572,7 @@ export class ProductsService {
     context: MutationContext,
   ): Promise<ProductDetailDto> {
     const databaseId = toDatabaseId(id);
-    const { expectedVersion, categoryIds, primaryCategoryId, brandId, ...fields } = input;
+    const { expectedVersion, categoryIds, primaryCategoryId, brandId, specifications: specificationInput, ...fields } = input;
     if ((categoryIds && !primaryCategoryId) || (!categoryIds && primaryCategoryId)) {
       throw new UnprocessableEntityException('categoryIds and primaryCategoryId must be sent together');
     }
@@ -575,7 +582,13 @@ export class ProductsService {
         await this.lockProductIds(transaction, [databaseId]);
         const current = await transaction.product.findUnique({
           where: { id: databaseId },
-          select: { productType: true, status: true, slug: true, _count: { select: { variants: true } } },
+          select: {
+            productType: true,
+            status: true,
+            slug: true,
+            specifications: true,
+            _count: { select: { variants: true } },
+          },
         });
         if (!current) throw new NotFoundException(PRODUCT_ERROR.NOT_FOUND);
         if (
@@ -595,6 +608,15 @@ export class ProductsService {
           );
         }
         await this.validateReferences(transaction, brandId, categoryIds);
+        // TRANSACTION: thông số sửa cùng thông tin sản phẩm trong một lần tăng version, để form Sửa lưu
+        // một lần như form Tạo. Không gửi `specifications` thì giữ nguyên bộ cũ.
+        const specifications = specificationInput
+          ? await this.attributes.validateSpecifications(
+              transaction,
+              specificationInput,
+              this.attributes.readStored(current.specifications),
+            )
+          : undefined;
         const updated = await transaction.product.updateMany({
           where: {
             id: databaseId,
@@ -604,6 +626,7 @@ export class ProductsService {
           data: {
             ...fields,
             ...(brandId !== undefined ? { brandId: toOptionalDatabaseId(brandId) } : {}),
+            ...(specifications ? { specifications: specifications as unknown as Prisma.InputJsonValue } : {}),
             version: { increment: 1 },
             updatedBy: toOptionalDatabaseId(context.actorUserId),
           },
@@ -629,7 +652,10 @@ export class ProductsService {
             action: PRODUCT_AUDIT_ACTION.UPDATE,
             entityType: 'PRODUCT',
             entityId: id,
-            after: input as unknown as Prisma.InputJsonValue,
+            ...(specifications
+              ? { before: { specifications: current.specifications } as unknown as Prisma.InputJsonValue }
+              : {}),
+            after: { ...input, ...(specifications ? { specifications } : {}) } as unknown as Prisma.InputJsonValue,
           },
           transaction,
         );

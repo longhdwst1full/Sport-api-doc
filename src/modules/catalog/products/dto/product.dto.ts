@@ -36,7 +36,8 @@ import {
   ProductVariantStatus,
 } from '../product.constants';
 import { normalizeSku } from '../product-identifiers';
-import { ProductSpecificationDto } from '../../attributes/attribute.dto';
+import { ProductSpecificationDto, ProductSpecificationInputDto } from '../../attributes/attribute.dto';
+import { ATTRIBUTE_LIMIT } from '../../attributes/attribute.constants';
 import { PRODUCT_READINESS_ISSUE, type ProductReadinessIssueCode } from '../product-publish.policy';
 
 export class ProductVariantDto {
@@ -241,6 +242,20 @@ export class CreateProductDto {
   @Type(() => CreateProductMediaDto)
   @IsOptional()
   media?: CreateProductMediaDto[];
+
+  @ApiPropertyOptional({
+    type: () => [ProductSpecificationInputDto],
+    maxItems: ATTRIBUTE_LIMIT.MAX_SPECIFICATIONS_PER_PRODUCT,
+    description:
+      'Thông số kỹ thuật lưu cùng transaction; giá trị kiểm theo từ điển thuộc tính như replaceAdminProductSpecifications. ' +
+      'Ở updateAdminProduct: gửi thì ghi đè cả bộ, bỏ trống thì giữ nguyên.',
+  })
+  @IsArray()
+  @ArrayMaxSize(ATTRIBUTE_LIMIT.MAX_SPECIFICATIONS_PER_PRODUCT)
+  @ValidateNested({ each: true })
+  @Type(() => ProductSpecificationInputDto)
+  @IsOptional()
+  specifications?: ProductSpecificationInputDto[];
 }
 
 export class UpdateProductFieldsDto extends PartialType(
@@ -258,8 +273,9 @@ export class UpdateProductFieldsDto extends PartialType(
   @IsOptional()
   brandId?: string | null;
 
-  @ApiPropertyOptional({ type: String, nullable: true })
+  @ApiPropertyOptional({ type: String, maxLength: 1000, nullable: true })
   @IsString()
+  @MaxLength(1000)
   @IsOptional()
   shortDescription?: string | null;
 

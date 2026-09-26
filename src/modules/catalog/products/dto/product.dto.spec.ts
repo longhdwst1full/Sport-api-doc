@@ -1,6 +1,6 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import { CreateProductDto } from './product.dto';
+import { CreateProductDto, UpdateProductDto } from './product.dto';
 
 describe('CreateProductDto', () => {
   const base = {
@@ -47,5 +47,23 @@ describe('CreateProductDto', () => {
     const invalid = plainToInstance(CreateProductDto, { ...base, variants: [{ name: 'x', sku: 'TD 02' }] });
     const errors = await validate(invalid);
     expect(JSON.stringify(errors)).toContain('matches');
+  });
+});
+
+describe('UpdateProductDto', () => {
+  it('limits shortDescription to 1000 characters like CreateProductDto', async () => {
+    const errors = await validate(
+      plainToInstance(UpdateProductDto, { expectedVersion: 0, shortDescription: 'x'.repeat(1001) }),
+    );
+
+    expect(errors.find(({ property }) => property === 'shortDescription')?.constraints).toHaveProperty('maxLength');
+  });
+
+  it('validates nested specifications when they are sent', async () => {
+    const errors = await validate(
+      plainToInstance(UpdateProductDto, { expectedVersion: 0, specifications: [{ code: 'MAX_LOAD', values: 'x' }] }),
+    );
+
+    expect(errors.some(({ property }) => property === 'specifications')).toBe(true);
   });
 });
