@@ -13,6 +13,7 @@ import { VnpayPaymentProvider } from '../src/modules/payment/providers/vnpay.pro
 import { VnpayGateway } from '../src/modules/payment/services/vnpay.gateway';
 import { PaymentProviderRegistry } from '../src/modules/payment/services/payment-provider.registry';
 import { PaymentService } from '../src/modules/payment/services/payment.service';
+import { CarrierShipmentService } from '../src/modules/fulfillment/services/carrier-shipment.service';
 
 describe('Payment review persistence and idempotency', () => {
   const cleanup = new PrismaClient();
@@ -39,6 +40,7 @@ describe('Payment review persistence and idempotency', () => {
     ),
     config,
     audit,
+    { requestForOrder: jest.fn().mockResolvedValue(false) } as unknown as CarrierShipmentService
   );
   let branchId = 0n;
   let warehouseId = 0n;

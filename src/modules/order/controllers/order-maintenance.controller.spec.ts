@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { PaymentExpiryService } from '../../payment/services/payment-expiry.service';
 import { OrderMaintenanceController } from './order-maintenance.controller';
 import { OrderCompletionService } from '../services/order-completion.service';
+import type { CarrierShipmentService } from '../../fulfillment/services/carrier-shipment.service';
 
 const parameters = {
   getBoolean: jest.fn().mockResolvedValue(true),
@@ -14,6 +15,8 @@ const parameters = {
 describe('OrderMaintenanceController', () => {
   const paymentRun = jest.fn().mockResolvedValue({ enabled: true, claimed: 0, expired: 0 });
   const completionRun = jest.fn().mockResolvedValue({ enabled: true, claimed: 0, completed: 0 });
+  const carrierRun = jest.fn().mockResolvedValue({ enabled: true, claimed: 0, created: 0, retried: 0, failed: 0 });
+  const carrierEnabled = jest.fn().mockResolvedValue(true);
   const secret = 's'.repeat(40);
   const config = {
     get: jest.fn().mockReturnValue(true),
@@ -23,6 +26,7 @@ describe('OrderMaintenanceController', () => {
     config,
     { run: paymentRun } as unknown as PaymentExpiryService,
     { run: completionRun } as unknown as OrderCompletionService,
+    { run: carrierRun, isEnabled: carrierEnabled } as unknown as CarrierShipmentService,
     parameters,
     { track: jest.fn((_job: string, _id: string, work: () => Promise<unknown>) => work()) } as unknown as JobHealthService,
   );
@@ -39,5 +43,20 @@ describe('OrderMaintenanceController', () => {
     await expect(controller.run(`Bearer ${secret}`, request)).resolves.toHaveProperty('orderCompletion');
     expect(paymentRun).toHaveBeenCalledWith('request-maintenance-1:payment-expiry');
     expect(completionRun).toHaveBeenCalledWith('request-maintenance-1:order-completion');
+    expect(carrierRun).toHaveBeenCalledTimes(1);
+  });
+
+  it('không gọi hãng vận chuyển khi job vận đơn tắt, kể cả khi hai job kia đang chạy', async () => {
+    carrierEnabled.mockResolvedValueOnce(false);
+
+    await expect(controller.run(`Bearer ${secret}`, request)).resolves.toMatchObject({ carrierShipment: { enabled: false } });
+    expect(carrierRun).not.toHaveBeenCalled();
+  });
+
+  it('vẫn đòi secret khi chỉ job vận đơn bật', async () => {
+    (parameters.getBoolean as jest.Mock).mockResolvedValueOnce(false).mockResolvedValueOnce(false);
+
+    await expect(controller.run('Bearer invalid', request)).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(carrierRun).not.toHaveBeenCalled();
   });
 });

@@ -52,6 +52,7 @@ export const SYSTEM_PARAMETER_CODE = {
   RESERVATION_EXPIRY_JOB_ENABLED: 'RESERVATION_EXPIRY_JOB_ENABLED',
   PAYMENT_EXPIRY_JOB_ENABLED: 'PAYMENT_EXPIRY_JOB_ENABLED',
   ORDER_COMPLETION_JOB_ENABLED: 'ORDER_COMPLETION_JOB_ENABLED',
+  CARRIER_SHIPMENT_JOB_ENABLED: 'CARRIER_SHIPMENT_JOB_ENABLED',
   FLASH_SALE_QUOTA_EXPIRY_JOB_BATCH_SIZE: 'FLASH_SALE_QUOTA_EXPIRY_JOB_BATCH_SIZE',
 
   // --- Tích hợp vận chuyển GHN ---
@@ -487,6 +488,16 @@ export const SYSTEM_PARAMETER_CATALOG: readonly SystemParameterDefinition[] = [
     valueType: SYSTEM_PARAMETER_VALUE_TYPE.BOOLEAN,
     defaultValue: 'false', sortOrder: 92,
     envFallback: 'ORDER_COMPLETION_JOB_ENABLED',
+  },
+  {
+    code: SYSTEM_PARAMETER_CODE.CARRIER_SHIPMENT_JOB_ENABLED,
+    groupCode: SYSTEM_PARAMETER_GROUP.SHIPPING,
+    label: 'Tự tạo vận đơn GHN sau thanh toán',
+    description:
+      'Bật thì đơn báo giá qua GHN tự đặt vận đơn khi đã thanh toán (hoặc khi xác nhận đơn COD). '
+      + 'Tắt thì quay về tạo vận đơn lúc bàn giao vận chuyển như trước. Chỉ có tác dụng khi đã bật tích hợp GHN.',
+    valueType: SYSTEM_PARAMETER_VALUE_TYPE.BOOLEAN,
+    defaultValue: 'true', sortOrder: 93,
   },
 
 ];

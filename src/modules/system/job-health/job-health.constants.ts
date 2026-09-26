@@ -40,7 +40,11 @@ export const JOB_DEFINITIONS: ReadonlyArray<{ name: JobName; cadence: string; en
   {
     name: JOB_NAME.ORDER_MAINTENANCE,
     cadence: '2-59/5',
-    enabledParameters: [SYSTEM_PARAMETER_CODE.PAYMENT_EXPIRY_JOB_ENABLED, SYSTEM_PARAMETER_CODE.ORDER_COMPLETION_JOB_ENABLED],
+    enabledParameters: [
+      SYSTEM_PARAMETER_CODE.PAYMENT_EXPIRY_JOB_ENABLED,
+      SYSTEM_PARAMETER_CODE.ORDER_COMPLETION_JOB_ENABLED,
+      SYSTEM_PARAMETER_CODE.CARRIER_SHIPMENT_JOB_ENABLED,
+    ],
   },
   { name: JOB_NAME.NOTIFICATION_DISPATCH, cadence: '* (mỗi phút)', enabledParameters: [] },
 ];

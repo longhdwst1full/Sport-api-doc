@@ -10,6 +10,7 @@ import {
   VNPAY_IPN_RESPONSE,
 } from '../payment.constants';
 import { VnpayGateway } from './vnpay.gateway';
+import { CarrierShipmentService } from '../../fulfillment/services/carrier-shipment.service';
 
 export interface VnpayIpnResult {
   RspCode: string;
@@ -34,6 +35,7 @@ export class VnpayService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly gateway: VnpayGateway,
+    private readonly carrierShipments: CarrierShipmentService,
   ) {}
 
   /**
@@ -104,6 +106,8 @@ export class VnpayService {
           where: { id: payment.orderId },
           data: { paymentStatus: nextStatus, version: { increment: 1 } },
         });
+        // TRANSACTION: yêu cầu tạo vận đơn GHN commit cùng lúc tiền được ghi nhận; worker gọi hãng sau.
+        if (succeeded) await this.carrierShipments.requestForOrder(transaction, payment.orderId);
         await transaction.paymentTransaction.create({
           data: {
             paymentId: payment.id,

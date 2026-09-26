@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { FulfillmentModule } from '../fulfillment/fulfillment.module';
 import { SystemModule } from '../system/system.module';
 import { AuditModule } from '../audit/audit.module';
 import { CartModule } from '../cart/cart.module';
@@ -15,7 +16,7 @@ import { PaymentService } from './services/payment.service';
 import { PaymentExpiryService } from './services/payment-expiry.service';
 
 @Module({
-  imports: [SystemModule, AuditModule, CartModule, ObjectStorageModule],
+  imports: [SystemModule, AuditModule, CartModule, ObjectStorageModule, FulfillmentModule],
   controllers: [GuestPaymentController, AccountPaymentController, AdminPaymentController, VnpayController],
   providers: [CodPaymentProvider, BankTransferPaymentProvider, VnpayGateway, VnpayPaymentProvider, PaymentProviderRegistry, PaymentService, PaymentExpiryService, VnpayService],
   exports: [PaymentProviderRegistry, PaymentService, PaymentExpiryService, VnpayService],

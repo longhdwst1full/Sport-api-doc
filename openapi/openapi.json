@@ -13955,6 +13955,76 @@
         ]
       }
     },
+    "/api/v1/admin/fulfillments/{id}/carrier-shipment/retry": {
+      "post": {
+        "description": "Chỉ áp cho carrierShipmentStatus = CREATE_FAILED; chạy ngay một lượt và trả giao vận mới. 409 FULFILLMENT_CARRIER_SHIPMENT_NOT_RETRYABLE khi không ở trạng thái lỗi hoặc đang có lượt khác chạy.",
+        "operationId": "retryAdminFulfillmentCarrierShipment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FulfillmentDetailDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Tạo lại vận đơn GHN tự động đang ở trạng thái tạo lỗi",
+        "tags": [
+          "Admin Fulfillments"
+        ],
+        "x-required-permissions": [
+          "fulfillment.ship"
+        ]
+      }
+    },
     "/api/v1/admin/fulfillments/{id}/label": {
       "post": {
         "operationId": "createAdminFulfillmentLabel",
@@ -25581,6 +25651,16 @@
           "CANCELLED"
         ]
       },
+      "CarrierShipmentStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "CREATING",
+          "CREATED",
+          "CREATE_FAILED"
+        ],
+        "description": "Vận đơn GHN tự tạo sau thanh toán/xác nhận COD. null = không áp dụng (tạo vận đơn lúc ship như trước)."
+      },
       "FulfillmentSummaryDto": {
         "type": "object",
         "properties": {
@@ -25622,6 +25702,20 @@
           "trackingNo": {
             "type": "string",
             "nullable": true
+          },
+          "carrierShipmentStatus": {
+            "nullable": true,
+            "description": "Vận đơn GHN tự tạo sau thanh toán/xác nhận COD. null = không áp dụng (tạo vận đơn lúc ship như trước).",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CarrierShipmentStatus"
+              }
+            ]
+          },
+          "carrierShipmentError": {
+            "type": "string",
+            "nullable": true,
+            "description": "Lý do lần tạo vận đơn gần nhất thất bại"
           },
           "recipientName": {
             "type": "string"
@@ -25754,6 +25848,20 @@
           "trackingNo": {
             "type": "string",
             "nullable": true
+          },
+          "carrierShipmentStatus": {
+            "nullable": true,
+            "description": "Vận đơn GHN tự tạo sau thanh toán/xác nhận COD. null = không áp dụng (tạo vận đơn lúc ship như trước).",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CarrierShipmentStatus"
+              }
+            ]
+          },
+          "carrierShipmentError": {
+            "type": "string",
+            "nullable": true,
+            "description": "Lý do lần tạo vận đơn gần nhất thất bại"
           },
           "recipientName": {
             "type": "string"

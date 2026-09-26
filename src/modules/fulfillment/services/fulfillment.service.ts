@@ -10,10 +10,10 @@ import {
 import { Prisma } from '@prisma/client';
 import { toDatabaseId, toEntityId } from '../../../common/identifiers/entity-id';
 import {
-  PartnerPickupPoint,
   PartnerShipmentResult,
   ShippingPartnerClient,
 } from '../../../integrations/shipping-partner/shipping-partner.client';
+import { buildPartnerShipmentRequest } from './partner-shipment-request';
 import { PrismaService } from '../../../database/prisma.service';
 import type { AuthPrincipal } from '../../auth/auth.types';
 import { orderBranchScopeWhere } from '../../../common/security/branch-scope';
@@ -22,10 +22,6 @@ import { INVENTORY_RESERVATION_STATUS } from '../../checkout/checkout.constants'
 import { INVENTORY_MOVEMENT_TYPE, INVENTORY_REFERENCE_TYPE } from '../../inventory/inventory.constants';
 import { ORDER_FULFILLMENT_STATUS, ORDER_PAYMENT_STATUS, ORDER_STATUS } from '../../order/order.constants';
 import { PAYMENT_METHOD } from '../../payment/payment.constants';
-import {
-  measurePackageFrom,
-  type PackageMeasurement,
-} from '../../shipping/package-measurement';
 import {
   AdminFulfillmentListDto,
   AdminFulfillmentQueryDto,
@@ -39,6 +35,8 @@ import {
 import { OutboxWriter } from '../../notification/outbox.writer';
 import { OUTBOX_EVENT_TYPE } from '../../notification/notification.constants';
 import {
+  CARRIER_SHIPMENT_ERROR,
+  CARRIER_SHIPMENT_STATUS,
   FULFILLMENT_ACTION,
   FULFILLMENT_STATUS,
   FULFILLMENT_TRANSACTION,
@@ -216,48 +214,39 @@ export class FulfillmentService {
     intent: TransitionIntent,
     principal: AuthPrincipal,
   ): Promise<PartnerShipmentResult | undefined> {
-    if (input.trackingNo?.trim() || !this.shippingPartner.isEnabled()) return undefined;
-
     const fulfillment = await this.loadForMutation(this.prisma, fulfillmentId, principal);
     if (this.replay(fulfillment, intent)) return undefined;
+    // IDEMPOTENCY: worker đang gọi hãng tạo vận đơn → không tạo song song (kể cả nhập tay), nếu không
+    // cùng một kiện có hai vận đơn ở hãng. Kiểm lại trong transaction ship để chặn race.
+    this.assertCarrierShipmentIdle(fulfillment);
+    // Vận đơn tự tạo sau thanh toán đã có mã → ship chỉ ghi nhận bàn giao, không đặt thêm vận đơn.
+    if (fulfillment.trackingNo) return undefined;
     if (fulfillment.status !== FULFILLMENT_STATUS.PACKED) return undefined;
-
-    const address = fulfillment.order.addresses[0];
-    if (!address) {
-      throw new ConflictException('Đơn hàng chưa có địa chỉ giao để tạo vận đơn');
+    if (fulfillment.carrierShipmentStatus === CARRIER_SHIPMENT_STATUS.PENDING) {
+      await this.takeOverPendingCarrierShipment(fulfillment.id);
     }
+    if (input.trackingNo?.trim() || !this.shippingPartner.isEnabled()) return undefined;
+    return this.shippingPartner.createShipment(buildPartnerShipmentRequest(fulfillment, input.note));
+  }
 
-    const pickup = this.branchPickupPoint(fulfillment);
-    const measurement = this.measurePackage(fulfillment);
-    const isCod = fulfillment.order.checkoutSession.paymentMethod === PAYMENT_METHOD.COD;
-    const grandTotal = Math.round(Number(fulfillment.order.grandTotal));
-    return this.shippingPartner.createShipment({
-      orderId: toEntityId(fulfillment.orderId),
-      orderNo: fulfillment.order.orderNo,
-      pickup,
-      recipientName: address.recipientName,
-      recipientPhone: address.recipientPhone,
-      addressLine: address.addressLine,
-      provinceCode: address.provinceCode,
-      ...(address.districtCode ? { districtCode: address.districtCode } : {}),
-      ...(address.wardCode ? { wardCode: address.wardCode } : {}),
-      // Khối lượng và kích thước lấy từ đúng số đã khai ở sản phẩm. Trước đây chỗ này nhân số
-      // lượng với một hằng số 500g và KHÔNG gửi kích thước, nên hãng vận chuyển báo cước trên một
-      // kiện tưởng tượng: hàng cồng kềnh nhẹ cân bị tính như bao diêm, và phần chênh sau khi hãng
-      // cân lại rơi vào cửa hàng.
-      weightGrams: measurement.chargeableWeightGrams,
-      ...(measurement.hasDimensions
-        ? {
-            lengthCm: measurement.lengthCm,
-            widthCm: measurement.widthCm,
-            heightCm: measurement.heightCm,
-          }
-        : {}),
-      // COD chỉ thu khi chưa thanh toán trước; chuyển khoản/VNPay đã thu nên cod_amount phải là 0.
-      codAmount: isCod ? grandTotal : 0,
-      declaredValue: grandTotal,
-      ...(input.note?.trim() ? { note: input.note.trim() } : {}),
+  /** Worker đang gọi hãng (CREATING): chờ nó xong thay vì đặt vận đơn thứ hai. */
+  private assertCarrierShipmentIdle(fulfillment: { carrierShipmentStatus: string | null }): void {
+    if (fulfillment.carrierShipmentStatus === CARRIER_SHIPMENT_STATUS.CREATING) {
+      throw new ConflictException(CARRIER_SHIPMENT_ERROR.IN_PROGRESS);
+    }
+  }
+
+  /**
+   * Yêu cầu tự tạo còn chờ worker mà Admin đã bàn giao: ship nhận việc tạo vận đơn về mình (luồng cũ)
+   * bằng claim có điều kiện PENDING → null, để worker không tạo thêm. Worker vừa claim trước thì 409.
+   * Nhờ vậy tắt job giữa chừng cũng không làm đơn kẹt ở "đang tạo vận đơn".
+   */
+  private async takeOverPendingCarrierShipment(fulfillmentId: bigint): Promise<void> {
+    const released = await this.prisma.fulfillment.updateMany({
+      where: { id: fulfillmentId, carrierShipmentStatus: CARRIER_SHIPMENT_STATUS.PENDING },
+      data: { carrierShipmentStatus: null, carrierShipmentNextAttemptAt: null },
     });
+    if (released.count !== 1) throw new ConflictException(CARRIER_SHIPMENT_ERROR.IN_PROGRESS);
   }
 
   /**
@@ -276,26 +265,6 @@ export class FulfillmentService {
     return { trackingNo: fulfillment.trackingNo, labelUrl: url };
   }
 
-  /**
-   * Điểm lấy hàng là địa chỉ chi nhánh sở hữu kho xuất, không phải cấu hình toàn hệ thống:
-   * mỗi chi nhánh giao từ địa chỉ của chính nó. Mã quận/phường do Admin chọn qua API địa giới
-   * của hãng vận chuyển và nằm trong `branches.address_json`.
-   */
-  private branchPickupPoint(fulfillment: LoadedFulfillment): PartnerPickupPoint {
-    const address = fulfillment.warehouse.branch.addressJson as {
-      districtCode?: unknown;
-      wardCode?: unknown;
-    } | null;
-    const districtCode = typeof address?.districtCode === 'string' ? address.districtCode : '';
-    const wardCode = typeof address?.wardCode === 'string' ? address.wardCode : '';
-    if (!districtCode || !wardCode) {
-      throw new ConflictException(
-        'Chi nhánh xuất hàng chưa có mã quận/huyện và phường/xã của hãng vận chuyển',
-      );
-    }
-    return { districtCode, wardCode };
-  }
-
   private async cancelPartnerShipment(trackingCode: string, reason: string): Promise<void> {
     try {
       await this.shippingPartner.cancelShipment(trackingCode, reason);
@@ -307,19 +276,6 @@ export class FulfillmentService {
         error: cancelError instanceof Error ? cancelError.message : 'unknown error',
       });
     }
-  }
-
-  /** GHN tính cước theo gram; chưa có cân thật nên dùng khối lượng tối thiểu cho mỗi sản phẩm. */
-  private measurePackage(fulfillment: LoadedFulfillment): PackageMeasurement {
-    return measurePackageFrom(
-      fulfillment.order.reservation.items.map((item) => ({
-        quantity: item.quantity,
-        weightGrams: item.productVariant.weightGrams,
-        lengthMm: item.productVariant.lengthMm,
-        widthMm: item.productVariant.widthMm,
-        heightMm: item.productVariant.heightMm,
-      })),
-    );
   }
 
   private shipWithinTransaction(
@@ -337,6 +293,7 @@ export class FulfillmentService {
       const replay = this.replay(fulfillment, intent);
       if (replay) return replay;
       this.assertVersion(fulfillment, input.expectedVersion);
+      this.assertCarrierShipmentIdle(fulfillment);
       if (fulfillment.status !== FULFILLMENT_STATUS.PACKED || fulfillment.order.status !== ORDER_STATUS.PACKED) {
         throw new ConflictException('Chỉ được bàn giao vận chuyển sau khi đơn đã đóng gói');
       }
@@ -403,8 +360,13 @@ export class FulfillmentService {
       return this.persistTransition(transaction, fulfillment, FULFILLMENT_STATUS.SHIPPED, ORDER_STATUS.SHIPPED,
         ORDER_FULFILLMENT_STATUS.SHIPPED, input.note, intent, requestId, principal, {
           shippedAt: now,
-          carrierCode,
-          trackingNo,
+          // Vận đơn tự tạo trước đó giữ nguyên; không được ghi đè thành null khi ship không gửi mã.
+          carrierCode: carrierCode ?? fulfillment.carrierCode,
+          trackingNo: trackingNo ?? fulfillment.trackingNo,
+          // Vận đơn tự tạo từng lỗi, nay Admin ship với vận đơn nhập tay/tạo lúc ship → coi như đã có vận đơn.
+          ...(fulfillment.carrierShipmentStatus === CARRIER_SHIPMENT_STATUS.CREATE_FAILED && (trackingNo ?? fulfillment.trackingNo)
+            ? { carrierShipmentStatus: CARRIER_SHIPMENT_STATUS.CREATED, carrierShipmentError: null }
+            : {}),
         });
     }, this.transactionOptions()));
   }
@@ -811,6 +773,8 @@ export class FulfillmentService {
       status: fulfillment.status,
       carrierCode: fulfillment.carrierCode,
       trackingNo: fulfillment.trackingNo,
+      carrierShipmentStatus: fulfillment.carrierShipmentStatus,
+      carrierShipmentError: fulfillment.carrierShipmentError,
       recipientName: recipient?.recipientName ?? '',
       recipientPhone: recipient?.recipientPhone ?? '',
       recipientEmail: recipient?.recipientEmail ?? null,

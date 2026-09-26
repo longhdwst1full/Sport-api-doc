@@ -24,6 +24,7 @@ import {
   ShipFulfillmentDto,
   FulfillmentLabelDto,
 } from '../dto/fulfillment.dto';
+import { CarrierShipmentService } from '../services/carrier-shipment.service';
 import { FulfillmentService } from '../services/fulfillment.service';
 
 const IDEMPOTENCY_HEADER = 'idempotency-key';
@@ -33,7 +34,10 @@ const IDEMPOTENCY_HEADER = 'idempotency-key';
 @ApiUnauthorizedResponse({ type: ErrorResponseDto })
 @Controller('admin/fulfillments')
 export class AdminFulfillmentController {
-  constructor(private readonly fulfillments: FulfillmentService) {}
+  constructor(
+    private readonly fulfillments: FulfillmentService,
+    private readonly carrierShipments: CarrierShipmentService,
+  ) {}
 
   @Get()
   @RequirePermissions('fulfillment.view')
@@ -95,6 +99,21 @@ export class AdminFulfillmentController {
     @Headers(IDEMPOTENCY_HEADER) key: string, @Req() request: AuthenticatedRequest) {
     const context = getMutationContext(request);
     return this.fulfillments.ship(id, input, key ?? '', context.requestId, getAuthPrincipal(request));
+  }
+
+  @Post(':id/carrier-shipment/retry')
+  @RequirePermissions('fulfillment.ship')
+  @ApiOperation({
+    operationId: 'retryAdminFulfillmentCarrierShipment',
+    summary: 'Tạo lại vận đơn GHN tự động đang ở trạng thái tạo lỗi',
+    description: 'Chỉ áp cho carrierShipmentStatus = CREATE_FAILED; chạy ngay một lượt và trả giao vận mới. '
+      + '409 FULFILLMENT_CARRIER_SHIPMENT_NOT_RETRYABLE khi không ở trạng thái lỗi hoặc đang có lượt khác chạy.',
+  })
+  @ApiOkResponse({ type: FulfillmentDetailDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
+  retryCarrierShipment(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
+    return this.carrierShipments.retry(id, getAuthPrincipal(request), getMutationContext(request).requestId);
   }
 
   @Post(':id/label')

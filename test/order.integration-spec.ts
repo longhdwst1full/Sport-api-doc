@@ -12,6 +12,7 @@ import { OUTBOX_EVENT_TYPE } from '../src/modules/notification/notification.cons
 import { ScopeType } from '../src/modules/iam/iam.types';
 import { createApplication } from '../src/platform/app.factory';
 import request from 'supertest';
+import { CarrierShipmentService } from '../src/modules/fulfillment/services/carrier-shipment.service';
 
 describe('Order placement persistence and idempotency', () => {
   const cleanup = new PrismaClient();
@@ -49,6 +50,7 @@ describe('Order placement persistence and idempotency', () => {
     // OutboxWriter THẬT, không mock: giá trị của bài test này là chứng minh ý định gửi email được
     // ghi trong CÙNG transaction đặt đơn. Mock ở đây sẽ làm đúng cái cần chứng minh biến mất.
     new OutboxWriter(prisma),
+    { requestForOrder: jest.fn().mockResolvedValue(false) } as unknown as CarrierShipmentService
   );
 
   beforeAll(async () => {

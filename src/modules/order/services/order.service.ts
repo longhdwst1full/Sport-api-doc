@@ -16,7 +16,7 @@ import { branchScopeWhere } from '../../../common/security/branch-scope';
 import { AuditWriter } from '../../audit/audit.writer';
 import { FlashSaleService } from '../../promotion/services/flash-sale.service';
 import { CartService } from '../../cart/cart.service';
-import { CHECKOUT_ITEM_TYPE, CHECKOUT_STATUS, INVENTORY_RESERVATION_STATUS } from '../../checkout/checkout.constants';
+import { CHECKOUT_ITEM_TYPE, CHECKOUT_PAYMENT_METHOD, CHECKOUT_STATUS, INVENTORY_RESERVATION_STATUS } from '../../checkout/checkout.constants';
 import { ScopeType } from '../../iam/iam.types';
 import {
   AccountOrderListDto,
@@ -45,6 +45,7 @@ import {
   ORDER_TRANSITION,
   PREPAID_PAYMENT_METHODS,
 } from '../order.constants';
+import { CarrierShipmentService } from '../../fulfillment/services/carrier-shipment.service';
 
 /**
  * INVARIANT: đơn trả trước (chuyển khoản, VNPay) chỉ xác nhận khi tiền đã về; xác nhận sớm sẽ xuất kho
@@ -110,6 +111,7 @@ export class OrderService {
     private readonly config: ConfigService,
     private readonly flashSales: FlashSaleService,
     private readonly outbox: OutboxWriter,
+    private readonly carrierShipments: CarrierShipmentService,
   ) {}
 
   async placeGuest(
@@ -210,6 +212,11 @@ export class OrderService {
         },
         include: orderInclude,
       });
+      // TRANSACTION: COD chỉ đủ điều kiện giao khi Admin xác nhận đơn → yêu cầu vận đơn GHN cùng lúc.
+      // Đơn trả trước đã được yêu cầu từ lúc payment SUCCESS, không đặt lại ở đây.
+      if (locked.checkoutSession.paymentMethod === CHECKOUT_PAYMENT_METHOD.COD) {
+        await this.carrierShipments.requestForOrder(transaction, orderId);
+      }
       await this.audit.write({
         requestId,
         sequenceNo: 1,

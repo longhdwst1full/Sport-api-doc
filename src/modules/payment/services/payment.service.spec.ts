@@ -12,6 +12,7 @@ import { VnpayPaymentProvider } from '../providers/vnpay.provider';
 import { VnpayGateway } from './vnpay.gateway';
 import { PaymentProviderRegistry } from './payment-provider.registry';
 import { PaymentService } from './payment.service';
+import { CarrierShipmentService } from '../../fulfillment/services/carrier-shipment.service';
 
 
 /** Gateway giả: không cấu hình VNPay thì không sinh link, đủ cho test registry. */
@@ -42,6 +43,7 @@ describe('PaymentService', () => {
     providers,
     { get: jest.fn((key: string) => key === 'cloudinary.folder' ? 'sport-sys/sport' : undefined) } as unknown as ConfigService,
     {} as AuditWriter,
+    { requestForOrder: jest.fn().mockResolvedValue(false) } as unknown as CarrierShipmentService
   );
   const principal = (scopes: AuthPrincipal['scopes']): AuthPrincipal => ({
     userId: '9',
